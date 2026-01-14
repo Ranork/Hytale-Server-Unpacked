@@ -1,24 +1,20 @@
-# Hytale Server Plugin API Documentation
+# Hytale Sunucu Eklenti API Dokümantasyonu
 
-## Languages
-[Türkçe (Turkish)](README_TR.md)
-
-
-This documentation is auto-generated from the decompiled source code.
+Bu dokümantasyon, derlenmiş kaynak kodundan otomatik olarak oluşturulmuştur.
 
 ## AssetEditor
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.asseteditor.AssetEditorPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.asseteditor.AssetEditorPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## BlockSpawner
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.blockspawner.BlockSpawnerPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.blockspawner.BlockSpawnerPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static BlockSpawnerPlugin get();
 public Query<ChunkStore> getQuery();
@@ -32,10 +28,10 @@ public Query<ChunkStore> getQuery();
 ---
 
 ## BlockTick
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.blocktick.BlockTickPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.blocktick.BlockTickPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static BlockTickPlugin get();
 public TickProcedure getTickProcedure(int blockId);
@@ -45,10 +41,10 @@ public int discoverTickingBlocks(@Nonnull Holder<ChunkStore> holder, @Nonnull Wo
 ---
 
 ## BlockPhysics
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.blockphysics.BlockPhysicsPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.blockphysics.BlockPhysicsPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static void validatePrefabs(@Nonnull LoadAssetEvent event);
 ```
@@ -56,59 +52,59 @@ public static void validatePrefabs(@Nonnull LoadAssetEvent event);
 ---
 
 ## BuilderTools
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## Crafting
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.crafting.CraftingPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.crafting.CraftingPlugin`
 
-### Description
-Manages the crafting system, including recipes, crafting benches (stations), and player unlocked recipes.
-It handles checking if a player has the required materials and if a specific recipe is valid for a given bench.
+### Açıklama
+Reçeteler, üretim tezgahları (istasyonları) ve oyuncu tarafından açılan reçeteleri içeren üretim sistemini yönetir.
+Bir oyuncunun gerekli malzemelere sahip olup olmadığını ve belirli bir reçetenin verilen tezgah için geçerli olup olmadığını kontrol eder.
 
-### Public Methods
+### Genel Metotlar
 ```java
-// Returns the singleton instance
+// Tekil (singleton) örneği döndürür
 public static CraftingPlugin get();
 
-// Gets all available recipe IDs for a specific bench ID and category.
+// Belirli bir tezgah kimliği ve kategori için mevcut tüm reçete kimliklerini getirir.
 public static Set<String> getAvailableRecipesForCategory(String benchId, String benchCategoryId);
 
-// Checks if an item stack can be used as a material in the current state of a bench.
+// Bir eşya yığınının, bir tezgahın mevcut durumunda malzeme olarak kullanılıp kullanılamayacağını kontrol eder.
 public static boolean isValidCraftingMaterialForBench(BenchState benchState, ItemStack itemStack);
 
-// Checks if an item is valid for upgrading a bench.
+// Bir eşyanın bir tezgahı yükseltmek için geçerli olup olmadığını kontrol eder.
 public static boolean isValidUpgradeMaterialForBench(BenchState benchState, ItemStack itemStack);
 
-// Gets a list of all recipes available for a given Bench block.
+// Verilen bir Tezgah bloğu için mevcut tüm reçetelerin bir listesini getirir.
 public static List<CraftingRecipe> getBenchRecipes(@Nonnull Bench bench);
 
-// Gets recipes for a bench type (e.g. Crafting, Diagram, Structural) and name.
+// Bir tezgah türü (ör. Üretim, Diyagram, Yapısal) ve adı için reçeteleri getirir.
 public static List<CraftingRecipe> getBenchRecipes(BenchType benchType, String name);
 
-// Unlocks a recipe for a player ("learns" it). Returns true if it was newly learned.
-// Requires the specific player Entity Reference.
+// Bir oyuncu için bir reçetenin kilidini açar ("öğrenir"). Eğer yeni öğrenildiyse true döndürür.
+// Belirli bir oyuncu Varlık Referansı gerektirir.
 public static boolean learnRecipe(@Nonnull Ref<EntityStore> ref, @Nonnull String recipeId, @Nonnull ComponentAccessor<EntityStore> componentAccessor);
 
-// Locks a recipe for a player ("forgets" it).
+// Bir oyuncu için bir reçeteyi kilitler ("unutturur").
 public static boolean forgetRecipe(@Nonnull Ref<EntityStore> ref, @Nonnull String itemId, @Nonnull ComponentAccessor<EntityStore> componentAccessor);
 
-// Sends a packet to the client syncing their list of known recipes.
+// İstemciye, bildikleri reçetelerin listesini senkronize eden bir paket gönderir.
 public static void sendKnownRecipes(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor);
 ```
 
 ---
 
 ## CommandMacro
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.commandmacro.MacroCommandPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.commandmacro.MacroCommandPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static MacroCommandPlugin get();
 public void loadCommandMacroAsset(@Nonnull LoadedAssetsEvent<String, MacroCommandBuilder, DefaultAssetMap<String, MacroCommandBuilder>> event);
@@ -117,18 +113,18 @@ public void loadCommandMacroAsset(@Nonnull LoadedAssetsEvent<String, MacroComman
 ---
 
 ## Instances
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.instances.InstancesPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.instances.InstancesPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## LANDiscovery
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.landiscovery.LANDiscoveryPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.landiscovery.LANDiscoveryPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static LANDiscoveryPlugin get();
 public void setLANDiscoveryEnabled(boolean enabled);
@@ -139,55 +135,55 @@ public LANDiscoveryThread getLanDiscoveryThread();
 ---
 
 ## NPC
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.server.npc.NPCPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.server.npc.NPCPlugin`
 
-### Description
-The NPC System is one of the most complex systems in Hytale Server. It manages the lifecycle, AI, behavior, and data of all Non-Player Characters.
-It uses a "Builder" pattern to construct NPCs from assets and registers various AI components like Sensors (eyes/ears), Actions (attacks/movements), and Motions.
-It also interacts heavily with the `EntityStore` to manage components like `Blackboard` (memory), `CombatData`, and `Timers`.
+### Açıklama
+NPC Sistemi, Hytale Sunucusu'ndaki en karmaşık sistemlerden biridir. Tüm Oyuncu Olmayan Karakterlerin (NPC'ler) yaşam döngüsünü, yapay zekasını, davranışlarını ve verilerini yönetir.
+NPC'leri varlıklardan oluşturmak için bir "Builder" (İnşa Edici) deseni kullanır ve Sensörler (gözler/kulaklar), Eylemler (saldırılar/hareketler) ve Hareketler gibi çeşitli yapay zeka bileşenlerini kaydeder.
+Ayrıca, `Blackboard` (hafıza), `CombatData` ve `Timers` gibi bileşenleri yönetmek için `EntityStore` ile yoğun bir şekilde etkileşime girer.
 
-### Public Methods
+### Genel Metotlar
 ```java
-// Returns the singleton instance of the NPCPlugin
+// NPCPlugin'in tekil (singleton) örneğini döndürür
 public static NPCPlugin get();
 
-// Spawns an NPC of a specific type (role) at a location.
-// Returns a Pair containing the Entity reference and the NPC component.
+// Bir konumda belirli bir türde (rol) bir NPC oluşturur.
+// Varlık referansı ve NPC bileşenini içeren bir Çift (Pair) döndürür.
 public Pair<Ref<EntityStore>, INonPlayerCharacter> spawnNPC(@Nonnull Store<EntityStore> store, @Nonnull String npcType, @Nullable String groupType, @Nonnull Vector3d position, @Nonnull Vector3f rotation);
 
-// Reloads all active NPCs that share a specific role index. Useful for live-updating AI behavior.
+// Belirli bir rol indeksini paylaşan tüm aktif NPC'leri yeniden yükler. Canlı yapay zeka davranışı güncellemeleri için kullanışlıdır.
 public static void reloadNPCsWithRole(int roleIndex);
 
-// Gets the manager responsible for NPC blueprints/templates.
+// NPC planlarından/şablonlarından sorumlu yöneticiyi getirir.
 public BuilderManager getBuilderManager();
 
-// Gets the map of attitudes (Friendly, Hostile, Neutral) between different factions/groups.
+// Farklı hizipler/gruplar arasındaki tutum haritasını (Dostça, Düşmanca, Nötr) getirir.
 public AttitudeMap getAttitudeMap();
 
-// Gets the map determining how NPCs react to specific items (e.g. holding a weapon vs a flower).
+// NPC'lerin belirli eşyalara (örneğin bir silah tutmaya karşı bir çiçek tutmaya) nasıl tepki vereceğini belirleyen haritayı getirir.
 public ItemAttitudeMap getItemAttitudeMap();
 
-// Determines if a specific role name (e.g. "kweebec_guard") exists.
+// Belirli bir rol adının (örneğin "kweebec_guard") var olup olmadığını belirler.
 public boolean hasRoleName(String roleName);
 
-// Registers all the core AI factories (Actions, Sensors, Motions). Internal use mostly but good to know.
+// Tüm temel yapay zeka fabrikalarını (Eylemler, Sensörler, Hareketler) kaydeder. Genellikle dahili kullanım içindir ancak bilinmesi iyidir.
 public void setupNPCLoading();
 
-// Gets the human-readable name of a builder index.
+// Bir inşa edici indeksinin insan tarafından okunabilir adını getirir.
 public String getName(int builderIndex);
 
-// Benchmarking methods for performance testing AI roles.
+// Yapay zeka rollerinin performans testi için kıyaslama metotları.
 public boolean startRoleBenchmark(double seconds, @Nonnull Consumer<Int2ObjectMap<TimeDistributionRecorder>> onFinished);
 ```
 
 ---
 
 ## NPCObjectives
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.npcobjectives.NPCObjectivesPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.npcobjectives.NPCObjectivesPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static NPCObjectivesPlugin get();
 public static boolean hasTask(@Nonnull UUID playerUUID, @Nonnull UUID npcId, @Nonnull String taskId);
@@ -198,10 +194,10 @@ public static void startObjective(@Nonnull Ref<EntityStore> playerReference, @No
 ---
 
 ## ObjectiveReputation
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.objectivereputation.ObjectiveReputationPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.objectivereputation.ObjectiveReputationPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static ObjectiveReputationPlugin get();
 ```
@@ -209,58 +205,58 @@ public static ObjectiveReputationPlugin get();
 ---
 
 ## Objectives
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin`
 
-### Description
-Handles the questing and objective system. Requires `Objectives` plugin.
-Manages "Objective Lines" (quest chains) and individual "Objectives".
-Tracks progress for players, handles task completion (e.g. "Gather Wood", "Kill skeletons"), and rewards.
+### Açıklama
+Görev ve hedef sistemini yönetir. `Objectives` eklentisini gerektirir.
+"Hedef Satırları" (görev zincirleri) ve bireysel "Hedefleri" yönetir.
+Oyuncular için ilerlemeyi takip eder, görev tamamlamayı (örneğin "Odun Topla", "İskeletleri Öldür") ve ödülleri yönetir.
 
-### Public Methods
+### Genel Metotlar
 ```java
-// Returns the singleton instance
+// Tekil (singleton) örneği döndürür
 public static ObjectivePlugin get();
 
-// Starts a specific objective for one or more players.
-// If markerUUID is provided, it might show a location marker.
+// Bir veya daha fazla oyuncu için belirli bir hedefi başlatır.
+// Eğer markerUUID sağlanırsa, bir konum işaretçisi gösterebilir.
 public Objective startObjective(@Nonnull String objectiveId, @Nonnull Set<UUID> playerUUIDs, @Nonnull UUID worldUUID, @Nullable UUID markerUUID, @Nonnull Store<EntityStore> store);
 
-// Starts a whole chain of objectives (Objective Line).
+// Bütün bir hedef zincirini (Hedef Satırı) başlatır.
 public Objective startObjectiveLine(@Nonnull Store<EntityStore> store, @Nonnull String objectiveLineId, @Nonnull Set<UUID> playerUUIDs, @Nonnull UUID worldUUID, @Nullable UUID markerUUID);
 
-// Checks if a player is allowed to start an objective (e.g. if they are not already doing it).
+// Bir oyuncunun bir hedefi başlatıp başlatamayacağını (örneğin halihazırda yapmıyorsa) kontrol eder.
 public boolean canPlayerDoObjective(@Nonnull Player player, @Nonnull String objectiveAssetId);
 
-// Checks if a player can start an objective line.
+// Bir oyuncunun bir hedef satırını başlatıp başlatamayacağını kontrol eder.
 public boolean canPlayerDoObjectiveLine(@Nonnull Player player, @Nonnull String objectiveLineId);
 
-// Marks an objective as completed for the associated players and handles rewards/next steps.
+// İlgili oyuncular için bir hedefi tamamlandı olarak işaretler ve ödülleri/sonraki adımları yönetir.
 public void objectiveCompleted(@Nonnull Objective objective, @Nonnull Store<EntityStore> store);
 
-// Cancels an active objective.
+// Aktif bir hedefi iptal eder.
 public void cancelObjective(@Nonnull UUID objectiveUUID, @Nonnull Store<EntityStore> store);
 
-// Adds a player to an already running objective instance (co-op quests).
+// Bir oyuncuyu halihazırda çalışan bir hedef örneğine (ortak görevler) ekler.
 public void addPlayerToExistingObjective(@Nonnull Store<EntityStore> store, @Nonnull UUID playerUUID, @Nonnull UUID objectiveUUID);
 
-// Removes a player from an objective.
+// Bir oyuncuyu bir hedeften kaldırır.
 public void removePlayerFromExistingObjective(@Nonnull Store<EntityStore> store, @Nonnull UUID playerUUID, @Nonnull UUID objectiveUUID);
 
-// Stops tracking an objective for a specific player (client side update).
+// Belirli bir oyuncu için bir hedefin takibini durdurur (istemci tarafı güncellemesi).
 public void untrackObjectiveForPlayer(@Nonnull Objective objective, @Nonnull UUID playerUUID);
 
-// Returns a debug dump of current objective data.
+// Mevcut hedef verisinin bir hata ayıklama dökümünü döndürür.
 public String getObjectiveDataDump();
 ```
 
 ---
 
 ## ObjectiveShop
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.objectiveshop.ObjectiveShopPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.objectiveshop.ObjectiveShopPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static ObjectiveShopPlugin get();
 ```
@@ -268,18 +264,18 @@ public static ObjectiveShopPlugin get();
 ---
 
 ## Path
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.path.PathPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.path.PathPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## Reputation
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.reputation.ReputationPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.reputation.ReputationPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static ReputationPlugin get();
 public int changeReputation(@Nonnull Player player, @Nonnull Ref<EntityStore> npcRef, int value, @Nonnull ComponentAccessor<EntityStore> componentAccessor);
@@ -300,18 +296,18 @@ public Attitude getAttitude(@Nonnull Store<EntityStore> store, @Nonnull Ref<Enti
 ---
 
 ## NPCReputation
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.npcreputation.NPCReputationPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.npcreputation.NPCReputationPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## Shop
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.shop.ShopPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.shop.ShopPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static ShopPlugin get();
 ```
@@ -319,34 +315,34 @@ public static ShopPlugin get();
 ---
 
 ## ShopReputation
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.shopreputation.ShopReputationPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.shopreputation.ShopReputationPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## NPCShop
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.npcshop.NPCShopPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.npcshop.NPCShopPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## NPCEditor
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.npceditor.NPCEditorPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.npceditor.NPCEditorPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## Stash
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.stash.StashPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.stash.StashPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static ListTransaction<ItemStackTransaction> stash(@Nonnull ItemContainerState containerState, boolean clearDropList);
 public Query<ChunkStore> getQuery();
@@ -358,10 +354,10 @@ public Set<Dependency<ChunkStore>> getDependencies();
 ---
 
 ## TagSet
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.tagset.TagSetPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.tagset.TagSetPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static TagSetPlugin get();
 public boolean tagInSet(int tagSet, int tagIndex);
@@ -371,45 +367,45 @@ public IntSet getSet(int tagSet);
 ---
 
 ## Teleport
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.teleport.TeleportPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.teleport.TeleportPlugin`
 
-### Description
-Manages "Warps" and teleportation logic.
-Allows creating, saving, and loading named Warp points in the world.
-Used by commands like `/warp` and `/tppos`.
+### Açıklama
+"Warp"ları (ışınlanma noktaları) ve ışınlanma mantığını yönetir.
+Dünyada isimlendirilmiş Warp noktaları oluşturmaya, kaydetmeye ve yüklemeye izin verir.
+`/warp` ve `/tppos` gibi komutlar tarafından kullanılır.
 
-### Public Methods
+### Genel Metotlar
 ```java
-// Returns the singleton instance
+// Tekil (singleton) örneği döndürür
 public static TeleportPlugin get();
 
-// Checks if warps have been loaded from disk.
+// Warp'ların diskten yüklenip yüklenmediğini kontrol eder.
 public boolean isWarpsLoaded();
 
-// Loads warps from `warps.json` or `warps.bson` in the universe directory.
+// Evren dizinindeki `warps.json` veya `warps.bson` dosyasından warp'ları yükler.
 public void loadWarps();
 
-// Saves current warps to `warps.json`.
+// Mevcut warp'ları `warps.json` dosyasına kaydeder.
 public void saveWarps();
 
-// Creates a Warp entity (marker) in the world.
+// Dünyada bir Warp varlığı (işaretçi) oluşturur.
 public Holder<EntityStore> createWarp(@Nonnull Warp warp, @Nonnull Store<EntityStore> store);
 
-// Returns the map of loaded warps. (Note: Inferred from logic, method name generic in decompiled code usually `getWarps()`)
+// Yüklü warp'ların haritasını döndürür. (Not: Mantıktan çıkarılmıştır, derlenmiş koddaki metot adı genellikle `getWarps()` şeklindedir)
 public Map<String, Warp> getWarps();
 
-// Updates markers on the map for players within range.
+// Menzil içindeki oyuncular için haritadaki işaretçileri günceller.
 public void update(@Nonnull World world, @Nonnull GameplayConfig gameplayConfig, @Nonnull WorldMapTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ);
 ```
 
 ---
 
 ## Fluid
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.fluid.FluidPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.fluid.FluidPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static FluidPlugin get();
 public FluidSection getFluidSection(int cx, int cy, int cz);
@@ -420,10 +416,10 @@ public void setBlock(int x, int y, int z, int blockId);
 ---
 
 ## Weather
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.weather.WeatherPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.weather.WeatherPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static WeatherPlugin get();
 ```
@@ -431,10 +427,10 @@ public static WeatherPlugin get();
 ---
 
 ## WorldGen
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.worldgen.WorldGenPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.worldgen.WorldGenPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static WorldGenPlugin get();
 ```
@@ -442,10 +438,10 @@ public static WorldGenPlugin get();
 ---
 
 ## Farming
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.farming.FarmingPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.farming.FarmingPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static FarmingPlugin get();
 ```
@@ -453,26 +449,26 @@ public static FarmingPlugin get();
 ---
 
 ## Camera
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.camera.CameraPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.camera.CameraPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## WorldLocationCondition
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.worldlocationcondition.WorldLocationConditionPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.worldlocationcondition.WorldLocationConditionPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## NPCCombatActionEvaluator
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.npccombatactionevaluator.NPCCombatActionEvaluatorPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.npccombatactionevaluator.NPCCombatActionEvaluatorPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static NPCCombatActionEvaluatorPlugin get();
 ```
@@ -480,55 +476,55 @@ public static NPCCombatActionEvaluatorPlugin get();
 ---
 
 ## Model
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.model.ModelPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.model.ModelPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## Mantling
-- **Version**: 1.0.0
-- **Description**: Enable mantling
-- **Main Class**: `com.hypixel.hytale.builtin.mantling.MantlingPlugin`
+- **Sürüm**: 1.0.0
+- **Açıklama**: Tırmanmayı (mantling) etkinleştir
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.mantling.MantlingPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## SafetyRoll
-- **Version**: 1.0.0
-- **Description**: Enable Safety Roll
-- **Main Class**: `com.hypixel.hytale.builtin.safetyroll.SafetyRollPlugin`
+- **Sürüm**: 1.0.0
+- **Açıklama**: Güvenli Yuvarlanmayı (Safety Roll) Etkinleştir
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.safetyroll.SafetyRollPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## SprintForce
-- **Version**: 1.0.0
-- **Description**: Enable sprint acceleration/deceleration
-- **Main Class**: `com.hypixel.hytale.builtin.sprintforce.SprintForcePlugin`
+- **Sürüm**: 1.0.0
+- **Açıklama**: Sprint hızlanmasını/yavaşlamasını etkinleştir
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.sprintforce.SprintForcePlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## CrouchSlide
-- **Version**: 1.0.0
-- **Description**: Enable Crouch Sliding
-- **Main Class**: `com.hypixel.hytale.builtin.crouchslide.CrouchSlidePlugin`
+- **Sürüm**: 1.0.0
+- **Açıklama**: Eğilerek Kaymayı (Crouch Sliding) Etkinleştir
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.crouchslide.CrouchSlidePlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## Parkour
-- **Version**: 1.0.0
-- **Description**: Module to add a timer with a checkpoint system
-- **Main Class**: `com.hypixel.hytale.builtin.parkour.ParkourPlugin`
+- **Sürüm**: 1.0.0
+- **Açıklama**: Kontrol noktası sistemine sahip bir zamanlayıcı eklemek için modül
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.parkour.ParkourPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static ParkourPlugin get();
 public Model getParkourCheckpointModel();
@@ -544,11 +540,11 @@ public void resetPlayer(UUID playerUuid);
 ---
 
 ## Mounts
-- **Version**: 1.0.0
-- **Description**: Module to add mounts
-- **Main Class**: `com.hypixel.hytale.builtin.mounts.MountPlugin`
+- **Sürüm**: 1.0.0
+- **Açıklama**: Binekleri eklemek için modül
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.mounts.MountPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static MountPlugin getInstance();
 public static void checkDismountNpc(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull Player playerComponent);
@@ -559,10 +555,10 @@ public static void resetOriginalPlayerMovementSettings(@Nonnull PlayerRef player
 ---
 
 ## HytaleGenerator
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.hytalegenerator.plugin.HytaleGenerator`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.hytalegenerator.plugin.HytaleGenerator`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public CompletableFuture<GeneratedChunk> submitChunkRequest(@Nonnull ChunkRequest request);
 public NStagedChunkGenerator createStagedChunkGenerator(@Nonnull ChunkRequest.GeneratorProfile generatorProfile, @Nonnull WorldStructureAsset worldStructureAsset, @Nonnull SettingsAsset settingsAsset);
@@ -571,18 +567,18 @@ public NStagedChunkGenerator createStagedChunkGenerator(@Nonnull ChunkRequest.Ge
 ---
 
 ## Teleporter
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.teleporter.TeleporterPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.teleporter.TeleporterPlugin`
 
-_No public methods found or file parse error._
+_Hiçbir genel (public) metot bulunamadı veya dosya ayrıştırma hatası._
 
 ---
 
 ## Memories
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.adventure.memories.MemoriesPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.adventure.memories.MemoriesPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static MemoriesPlugin get();
 public MemoriesPluginConfig getConfig();
@@ -603,10 +599,10 @@ public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason 
 ---
 
 ## Deployables
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.deployables.DeployablesPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.deployables.DeployablesPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static DeployablesPlugin get();
 ```
@@ -614,11 +610,11 @@ public static DeployablesPlugin get();
 ---
 
 ## Portals
-- **Version**: 1.0.0
-- **Description**: Module to add portals
-- **Main Class**: `com.hypixel.hytale.builtin.portals.PortalsPlugin`
+- **Sürüm**: 1.0.0
+- **Açıklama**: Portalları eklemek için modül
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.portals.PortalsPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static PortalsPlugin getInstance();
 public int countActiveFragments();
@@ -627,11 +623,11 @@ public int countActiveFragments();
 ---
 
 ## Beds
-- **Version**: 1.0.0
-- **Description**: Module to handle beds and sleeping in them
-- **Main Class**: `com.hypixel.hytale.builtin.beds.BedsPlugin`
+- **Sürüm**: 1.0.0
+- **Açıklama**: Yatakları ve yataklarda uymayı yönetmek için modül
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.beds.BedsPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static BedsPlugin getInstance();
 ```
@@ -639,10 +635,10 @@ public static BedsPlugin getInstance();
 ---
 
 ## Ambience
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.ambience.AmbiencePlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.ambience.AmbiencePlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static AmbiencePlugin get();
 public Model getAmbientEmitterModel();
@@ -651,10 +647,10 @@ public Model getAmbientEmitterModel();
 ---
 
 ## CreativeHub
-- **Version**: 1.0.0
-- **Main Class**: `com.hypixel.hytale.builtin.creativehub.CreativeHubPlugin`
+- **Sürüm**: 1.0.0
+- **Ana Sınıf**: `com.hypixel.hytale.builtin.creativehub.CreativeHubPlugin`
 
-### Public Methods
+### Genel Metotlar
 ```java
 public static CreativeHubPlugin get();
 public World getOrSpawnHubInstance(@Nonnull World parentWorld, @Nonnull CreativeHubWorldConfig hubConfig, @Nonnull Transform returnPoint);
@@ -662,6 +658,3 @@ public World getActiveHubInstance(@Nonnull World parentWorld);
 public void clearHubInstance(@Nonnull UUID parentWorldUuid);
 public CompletableFuture<World> spawnPermanentWorldFromTemplate(@Nonnull String instanceAssetName, @Nonnull String permanentWorldName);
 ```
-
----
-

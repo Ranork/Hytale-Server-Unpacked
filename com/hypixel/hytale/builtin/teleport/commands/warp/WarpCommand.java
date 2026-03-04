@@ -1,105 +1,69 @@
-/*    */ package com.hypixel.hytale.builtin.teleport.commands.warp;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.teleport.TeleportPlugin;
-/*    */ import com.hypixel.hytale.builtin.teleport.Warp;
-/*    */ import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
-/*    */ import com.hypixel.hytale.component.Component;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.math.vector.Vector3d;
-/*    */ import com.hypixel.hytale.math.vector.Vector3f;
-/*    */ import com.hypixel.hytale.server.core.Message;
-/*    */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*    */ import com.hypixel.hytale.server.core.command.system.CommandContext;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
-/*    */ import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
-/*    */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*    */ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
-/*    */ import com.hypixel.hytale.server.core.universe.Universe;
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class WarpCommand
-/*    */   extends AbstractCommandCollection {
-/*    */   @Nonnull
-/* 26 */   private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_NOT_LOADED = Message.translation("server.commands.teleport.warp.notLoaded");
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public WarpCommand() {
-/* 32 */     super("warp", "server.commands.warp.desc");
-/*    */ 
-/*    */     
-/* 35 */     addUsageVariant((AbstractCommand)new WarpGoVariantCommand());
-/*    */ 
-/*    */     
-/* 38 */     addSubCommand((AbstractCommand)new WarpGoCommand());
-/* 39 */     addSubCommand((AbstractCommand)new WarpSetCommand());
-/* 40 */     addSubCommand((AbstractCommand)new WarpListCommand());
-/* 41 */     addSubCommand((AbstractCommand)new WarpRemoveCommand());
-/* 42 */     addSubCommand((AbstractCommand)new WarpReloadCommand());
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   static void tryGo(@Nonnull CommandContext context, @Nonnull String warp, @Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-/* 61 */     if (!TeleportPlugin.get().isWarpsLoaded()) {
-/* 62 */       context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_NOT_LOADED);
-/*    */       
-/*    */       return;
-/*    */     } 
-/*    */     
-/* 67 */     Warp targetWarp = (Warp)TeleportPlugin.get().getWarps().get(warp.toLowerCase());
-/* 68 */     if (targetWarp == null) {
-/* 69 */       context.sendMessage(Message.translation("server.commands.teleport.warp.unknownWarp")
-/* 70 */           .param("name", warp));
-/*    */       
-/*    */       return;
-/*    */     } 
-/* 74 */     String worldName = targetWarp.getWorld();
-/* 75 */     World world = Universe.get().getWorld(worldName);
-/* 76 */     Teleport teleportComponent = targetWarp.toTeleport();
-/* 77 */     if (world == null || teleportComponent == null) {
-/* 78 */       context.sendMessage(Message.translation("server.commands.teleport.warp.worldNameForWarpNotFound")
-/* 79 */           .param("worldName", worldName)
-/* 80 */           .param("warp", warp));
-/*    */       
-/*    */       return;
-/*    */     } 
-/* 84 */     TransformComponent transformComponent = (TransformComponent)store.getComponent(ref, TransformComponent.getComponentType());
-/* 85 */     assert transformComponent != null;
-/*    */     
-/* 87 */     HeadRotation headRotationComponent = (HeadRotation)store.getComponent(ref, HeadRotation.getComponentType());
-/* 88 */     assert headRotationComponent != null;
-/*    */     
-/* 90 */     Vector3d playerPosition = transformComponent.getPosition();
-/* 91 */     Vector3f playerHeadRotation = headRotationComponent.getRotation();
-/*    */     
-/* 93 */     ((TeleportHistory)store.ensureAndGetComponent(ref, TeleportHistory.getComponentType())).append(world, playerPosition.clone(), playerHeadRotation.clone(), "Warp '" + warp + "'");
-/*    */     
-/* 95 */     store.addComponent(ref, Teleport.getComponentType(), (Component)teleportComponent);
-/* 96 */     context.sendMessage(Message.translation("server.commands.teleport.warp.warpedTo")
-/* 97 */         .param("name", warp));
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.teleport.commands.warp;
 
+import com.hypixel.hytale.builtin.teleport.TeleportPlugin;
+import com.hypixel.hytale.builtin.teleport.Warp;
+import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\teleport\commands\warp\WarpCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class WarpCommand extends AbstractCommandCollection {
+   @Nonnull
+   private static final Message MESSAGE_COMMANDS_TELEPORT_WARP_NOT_LOADED = Message.translation("server.commands.teleport.warp.notLoaded");
+
+   public WarpCommand() {
+      super("warp", "server.commands.warp.desc");
+      this.addUsageVariant(new WarpGoVariantCommand());
+      this.addSubCommand(new WarpGoCommand());
+      this.addSubCommand(new WarpSetCommand());
+      this.addSubCommand(new WarpListCommand());
+      this.addSubCommand(new WarpRemoveCommand());
+      this.addSubCommand(new WarpReloadCommand());
+   }
+
+   static void tryGo(@Nonnull CommandContext context, @Nonnull String warp, @Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+      if (!TeleportPlugin.get().isWarpsLoaded()) {
+         context.sendMessage(MESSAGE_COMMANDS_TELEPORT_WARP_NOT_LOADED);
+      } else {
+         Warp targetWarp = TeleportPlugin.get().getWarps().get(warp.toLowerCase());
+         if (targetWarp == null) {
+            context.sendMessage(Message.translation("server.commands.teleport.warp.unknownWarp").param("name", warp));
+         } else {
+            String worldName = targetWarp.getWorld();
+            World world = Universe.get().getWorld(worldName);
+            Teleport teleportComponent = targetWarp.toTeleport();
+            if (world != null && teleportComponent != null) {
+               TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+
+               assert transformComponent != null;
+
+               HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
+
+               assert headRotationComponent != null;
+
+               Vector3d playerPosition = transformComponent.getPosition();
+               Vector3f playerHeadRotation = headRotationComponent.getRotation();
+               store.ensureAndGetComponent(ref, TeleportHistory.getComponentType())
+                  .append(world, playerPosition.clone(), playerHeadRotation.clone(), "Warp '" + warp + "'");
+               store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+               context.sendMessage(Message.translation("server.commands.teleport.warp.warpedTo").param("name", warp));
+            } else {
+               context.sendMessage(
+                  Message.translation("server.commands.teleport.warp.worldNameForWarpNotFound").param("worldName", worldName).param("warp", warp)
+               );
+            }
+         }
+      }
+   }
+}

@@ -1,246 +1,246 @@
-/*     */ package com.hypixel.hytale.server.npc.movement.controllers;
-/*     */ 
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.math.shape.Box;
-/*     */ import com.hypixel.hytale.math.vector.Vector3d;
-/*     */ import com.hypixel.hytale.protocol.MovementStates;
-/*     */ import com.hypixel.hytale.server.core.asset.type.model.config.Model;
-/*     */ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.physics.component.PhysicsValues;
-/*     */ import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
-/*     */ import com.hypixel.hytale.server.core.modules.splitvelocity.VelocityConfig;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import com.hypixel.hytale.server.npc.movement.MovementState;
-/*     */ import com.hypixel.hytale.server.npc.movement.NavState;
-/*     */ import com.hypixel.hytale.server.npc.movement.Steering;
-/*     */ import com.hypixel.hytale.server.npc.role.Role;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public interface MotionController
-/*     */ {
-/*     */   static {
-/*  28 */     if (null.$assertionsDisabled);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   default boolean matchesType(@Nonnull Class<? extends MotionController> clazz) {
-/* 180 */     return clazz.isInstance(this);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   default void clearOverrides() {}
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   default double getSquaredDistance(@Nonnull Vector3d p1, @Nonnull Vector3d p2, boolean useProjectedDistance) {
-/* 191 */     return useProjectedDistance ? waypointDistanceSquared(p1, p2) : p1.distanceSquaredTo(p2);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   static boolean isInMovementState(@Nonnull Ref<EntityStore> ref, @Nonnull MovementState state, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-/* 197 */     MovementStatesComponent movementStatesComponent = (MovementStatesComponent)componentAccessor.getComponent(ref, MovementStatesComponent.getComponentType());
-/* 198 */     if (!null.$assertionsDisabled && movementStatesComponent == null) throw new AssertionError();
-/*     */     
-/* 200 */     Velocity velocityComponent = (Velocity)componentAccessor.getComponent(ref, Velocity.getComponentType());
-/* 201 */     if (!null.$assertionsDisabled && velocityComponent == null) throw new AssertionError();
-/*     */     
-/* 203 */     MovementStates states = movementStatesComponent.getMovementStates();
-/* 204 */     switch (state) { default: throw new MatchException(null, null);case CLIMBING: case FALLING: case CROUCHING: case FLYING: case JUMPING: case SPRINTING: case RUNNING: case IDLE: case WALKING: return 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */           
-/* 213 */           (!velocityComponent.getVelocity().closeToZero(0.001D) && !states.falling && !states.climbing && !states.flying && !states.running && !states.sprinting && !states.jumping && !states.crouching);
-/*     */       case ANY:
-/*     */         break; }
-/*     */     
-/*     */     return true;
-/*     */   } String getType(); Role getRole(); void setRole(Role paramRole); void setInertia(double paramDouble); void setKnockbackScale(double paramDouble); double getGravity(); void setHeadPitchAngleRange(@Nullable float[] paramArrayOffloat); void spawned(); void activate(); void deactivate(); void updateModelParameters(@Nullable Ref<EntityStore> paramRef, Model paramModel, Box paramBox, @Nullable ComponentAccessor<EntityStore> paramComponentAccessor); double steer(@Nonnull Ref<EntityStore> paramRef, @Nonnull Role paramRole, @Nonnull Steering paramSteering1, @Nonnull Steering paramSteering2, double paramDouble, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor); double probeMove(@Nonnull Ref<EntityStore> paramRef, Vector3d paramVector3d1, Vector3d paramVector3d2, ProbeMoveData paramProbeMoveData, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor); double probeMove(@Nonnull Ref<EntityStore> paramRef, ProbeMoveData paramProbeMoveData, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor); void constrainRotations(Role paramRole, TransformComponent paramTransformComponent); double getCurrentMaxBodyRotationSpeed(); void updateMovementState(@Nonnull Ref<EntityStore> paramRef, @Nonnull MovementStates paramMovementStates, @Nonnull Steering paramSteering, @Nonnull Vector3d paramVector3d, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor); boolean isValidPosition(Vector3d paramVector3d, ComponentAccessor<EntityStore> paramComponentAccessor); boolean canAct(@Nonnull Ref<EntityStore> paramRef, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor); boolean isInProgress(); boolean isObstructed(); boolean inAir(); boolean inWater(); boolean onGround(); boolean standingOnBlockOfType(int paramInt); double getMaximumSpeed(); double getCurrentSpeed(); boolean estimateVelocity(Steering paramSteering, Vector3d paramVector3d); double getCurrentTurnRadius(); double waypointDistance(Vector3d paramVector3d1, Vector3d paramVector3d2); double waypointDistanceSquared(Vector3d paramVector3d1, Vector3d paramVector3d2); double waypointDistance(@Nonnull Ref<EntityStore> paramRef, Vector3d paramVector3d, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor); double waypointDistanceSquared(@Nonnull Ref<EntityStore> paramRef, Vector3d paramVector3d, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor); float getMaxClimbAngle(); float getMaxSinkAngle(); boolean translateToAccessiblePosition(Vector3d paramVector3d, Box paramBox, double paramDouble1, double paramDouble2, ComponentAccessor<EntityStore> paramComponentAccessor); Vector3d getComponentSelector(); Vector3d getPlanarComponentSelector(); void setComponentSelector(Vector3d paramVector3d); boolean is2D(); Vector3d getWorldNormal(); Vector3d getWorldAntiNormal(); void addForce(@Nonnull Vector3d paramVector3d, @Nullable VelocityConfig paramVelocityConfig); Vector3d getForce(); void forceVelocity(@Nonnull Vector3d paramVector3d, @Nullable VelocityConfig paramVelocityConfig, boolean paramBoolean); VerticalRange getDesiredVerticalRange(@Nonnull Ref<EntityStore> paramRef, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor); double getWanderVerticalMovementRatio(); void setAvoidingBlockDamage(boolean paramBoolean); boolean isAvoidingBlockDamage(); boolean willReceiveBlockDamage(); void requirePreciseMovement(Vector3d paramVector3d); void requireDepthProbing(); void enableHeadingBlending(double paramDouble1, Vector3d paramVector3d, double paramDouble2); void enableHeadingBlending(); void setRelaxedMoveConstraints(boolean paramBoolean); boolean isRelaxedMoveConstraints(); NavState getNavState(); double getThrottleDuration();
-/*     */   double getTargetDeltaSquared();
-/*     */   void setNavState(NavState paramNavState, double paramDouble1, double paramDouble2);
-/*     */   void setForceRecomputePath(boolean paramBoolean);
-/*     */   boolean isForceRecomputePath();
-/*     */   boolean canRestAtPlace();
-/*     */   void beforeInstructionSensorsAndActions(double paramDouble);
-/*     */   void beforeInstructionMotion(double paramDouble);
-/*     */   double getDesiredAltitudeWeight();
-/*     */   double getHeightOverGround();
-/*     */   void updatePhysicsValues(PhysicsValues paramPhysicsValues);
-/*     */   public static class VerticalRange { public double current;
-/*     */     public void assign(double current, double min, double max) {
-/* 231 */       this.current = current;
-/* 232 */       this.min = min;
-/* 233 */       this.max = max;
-/*     */     }
-/*     */     public double min; public double max;
-/*     */     public boolean isWithinRange() {
-/* 237 */       return (this.current >= this.min && this.current <= this.max);
-/*     */     } }
-/*     */ 
-/*     */ }
+package com.hypixel.hytale.server.npc.movement.controllers;
 
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.shape.Box;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.protocol.MovementStates;
+import com.hypixel.hytale.server.core.asset.type.model.config.Model;
+import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.physics.component.PhysicsValues;
+import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
+import com.hypixel.hytale.server.core.modules.splitvelocity.VelocityConfig;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.movement.MovementState;
+import com.hypixel.hytale.server.npc.movement.NavState;
+import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
+import java.util.EnumSet;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\movement\controllers\MotionController.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface MotionController extends DebugSupport.DebugFlagsChangeListener {
+   String getType();
+
+   Role getRole();
+
+   void setRole(Role var1);
+
+   void setInertia(double var1);
+
+   void setKnockbackScale(double var1);
+
+   double getGravity();
+
+   void setHeadPitchAngleRange(@Nullable float[] var1);
+
+   void spawned();
+
+   void activate();
+
+   void deactivate();
+
+   void updateModelParameters(@Nullable Ref<EntityStore> var1, Model var2, Box var3, @Nullable ComponentAccessor<EntityStore> var4);
+
+   double steer(
+      @Nonnull Ref<EntityStore> var1,
+      @Nonnull Role var2,
+      @Nonnull Steering var3,
+      @Nonnull Steering var4,
+      double var5,
+      @Nonnull ComponentAccessor<EntityStore> var7
+   );
+
+   double probeMove(@Nonnull Ref<EntityStore> var1, Vector3d var2, Vector3d var3, ProbeMoveData var4, @Nonnull ComponentAccessor<EntityStore> var5);
+
+   double probeMove(@Nonnull Ref<EntityStore> var1, ProbeMoveData var2, @Nonnull ComponentAccessor<EntityStore> var3);
+
+   void constrainRotations(Role var1, TransformComponent var2);
+
+   double getCurrentMaxBodyRotationSpeed();
+
+   void updateMovementState(
+      @Nonnull Ref<EntityStore> var1,
+      @Nonnull MovementStates var2,
+      @Nonnull Steering var3,
+      @Nonnull Vector3d var4,
+      @Nonnull ComponentAccessor<EntityStore> var5
+   );
+
+   boolean isValidPosition(Vector3d var1, ComponentAccessor<EntityStore> var2);
+
+   boolean canAct(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+
+   boolean isInProgress();
+
+   boolean isObstructed();
+
+   boolean inAir();
+
+   boolean inWater();
+
+   boolean onGround();
+
+   boolean standingOnBlockOfType(int var1);
+
+   double getMaximumSpeed();
+
+   double getCurrentSpeed();
+
+   boolean estimateVelocity(Steering var1, Vector3d var2);
+
+   double getCurrentTurnRadius();
+
+   double waypointDistance(Vector3d var1, Vector3d var2);
+
+   double waypointDistanceSquared(Vector3d var1, Vector3d var2);
+
+   double waypointDistance(@Nonnull Ref<EntityStore> var1, Vector3d var2, @Nonnull ComponentAccessor<EntityStore> var3);
+
+   double waypointDistanceSquared(@Nonnull Ref<EntityStore> var1, Vector3d var2, @Nonnull ComponentAccessor<EntityStore> var3);
+
+   float getMaxClimbAngle();
+
+   float getMaxSinkAngle();
+
+   boolean translateToAccessiblePosition(Vector3d var1, Box var2, double var3, double var5, ComponentAccessor<EntityStore> var7);
+
+   Vector3d getComponentSelector();
+
+   Vector3d getPlanarComponentSelector();
+
+   void setComponentSelector(Vector3d var1);
+
+   boolean is2D();
+
+   Vector3d getWorldNormal();
+
+   Vector3d getWorldAntiNormal();
+
+   void addForce(@Nonnull Vector3d var1, @Nullable VelocityConfig var2);
+
+   Vector3d getForce();
+
+   void forceVelocity(@Nonnull Vector3d var1, @Nullable VelocityConfig var2, boolean var3);
+
+   MotionController.VerticalRange getDesiredVerticalRange(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+
+   double getWanderVerticalMovementRatio();
+
+   void setAvoidingBlockDamage(boolean var1);
+
+   boolean isAvoidingBlockDamage();
+
+   boolean willReceiveBlockDamage();
+
+   void requirePreciseMovement(Vector3d var1);
+
+   void requireDepthProbing();
+
+   void enableHeadingBlending(double var1, Vector3d var3, double var4);
+
+   void enableHeadingBlending();
+
+   void setRelaxedMoveConstraints(boolean var1);
+
+   boolean isRelaxedMoveConstraints();
+
+   NavState getNavState();
+
+   double getThrottleDuration();
+
+   double getTargetDeltaSquared();
+
+   void setNavState(NavState var1, double var2, double var4);
+
+   void setForceRecomputePath(boolean var1);
+
+   boolean isForceRecomputePath();
+
+   boolean canRestAtPlace();
+
+   void beforeInstructionSensorsAndActions(double var1);
+
+   void beforeInstructionMotion(double var1);
+
+   default boolean matchesType(@Nonnull Class<? extends MotionController> clazz) {
+      return clazz.isInstance(this);
+   }
+
+   double getDesiredAltitudeWeight();
+
+   double getHeightOverGround();
+
+   default void clearOverrides() {
+   }
+
+   default double getSquaredDistance(@Nonnull Vector3d p1, @Nonnull Vector3d p2, boolean useProjectedDistance) {
+      return useProjectedDistance ? this.waypointDistanceSquared(p1, p2) : p1.distanceSquaredTo(p2);
+   }
+
+   void updatePhysicsValues(PhysicsValues var1);
+
+   // $VF: Unable to simplify switch on enum
+   // Please report this to the Vineflower issue tracker, at https://github.com/Vineflower/vineflower/issues with a copy of the class file (if you have the rights to distribute it!)
+   static boolean isInMovementState(@Nonnull Ref<EntityStore> ref, @Nonnull MovementState state, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      MovementStatesComponent movementStatesComponent = componentAccessor.getComponent(ref, MovementStatesComponent.getComponentType());
+      if (!<unrepresentable>.$assertionsDisabled && movementStatesComponent == null) {
+         throw new AssertionError();
+      } else {
+         Velocity velocityComponent = componentAccessor.getComponent(ref, Velocity.getComponentType());
+         if (!<unrepresentable>.$assertionsDisabled && velocityComponent == null) {
+            throw new AssertionError();
+         } else {
+            MovementStates states = movementStatesComponent.getMovementStates();
+
+            return switch (state) {
+               case CLIMBING -> states.climbing;
+               case FALLING -> states.falling;
+               case CROUCHING -> states.crouching;
+               case FLYING -> states.flying;
+               case JUMPING -> states.jumping;
+               case SPRINTING -> states.sprinting;
+               case RUNNING -> states.running;
+               case IDLE -> velocityComponent.getVelocity().closeToZero(0.001);
+               case WALKING -> !velocityComponent.getVelocity().closeToZero(0.001)
+                  && !states.falling
+                  && !states.climbing
+                  && !states.flying
+                  && !states.running
+                  && !states.sprinting
+                  && !states.jumping
+                  && !states.crouching;
+               case ANY -> true;
+            };
+         }
+      }
+   }
+
+   @Override
+   default void onDebugFlagsChanged(EnumSet<RoleDebugFlags> newFlags) {
+   }
+
+   static {
+      if (<unrepresentable>.$assertionsDisabled) {
+      }
+   }
+
+   public static class VerticalRange {
+      public double current;
+      public double min;
+      public double max;
+
+      public void assign(double current, double min, double max) {
+         this.current = current;
+         this.min = min;
+         this.max = max;
+      }
+
+      public boolean isWithinRange() {
+         return this.current >= this.min && this.current <= this.max;
+      }
+   }
+}

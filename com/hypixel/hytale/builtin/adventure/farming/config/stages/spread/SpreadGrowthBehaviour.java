@@ -1,50 +1,46 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.farming.config.stages.spread;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*    */ import com.hypixel.hytale.codec.lookup.CodecMapCodec;
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-/*    */ import com.hypixel.hytale.server.core.universe.world.worldlocationcondition.WorldLocationCondition;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public abstract class SpreadGrowthBehaviour
-/*    */ {
-/* 18 */   public static final CodecMapCodec<SpreadGrowthBehaviour> CODEC = new CodecMapCodec("Type");
-/*    */ 
-/*    */   
-/*    */   public static final BuilderCodec<SpreadGrowthBehaviour> BASE_CODEC;
-/*    */   
-/*    */   protected WorldLocationCondition[] worldLocationConditions;
-/*    */ 
-/*    */   
-/*    */   static {
-/* 27 */     BASE_CODEC = ((BuilderCodec.Builder)BuilderCodec.abstractBuilder(SpreadGrowthBehaviour.class).append(new KeyedCodec("LocationConditions", (Codec)new ArrayCodec((Codec)WorldLocationCondition.CODEC, x$0 -> new WorldLocationCondition[x$0])), (spreadGrowthBehaviour, worldLocationConditions) -> spreadGrowthBehaviour.worldLocationConditions = worldLocationConditions, spreadGrowthBehaviour -> spreadGrowthBehaviour.worldLocationConditions).documentation("Defines the possible location conditions a position has to fulfill to be considered as valid.").add()).build();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   protected boolean validatePosition(World world, int worldX, int worldY, int worldZ) {
-/* 34 */     if (this.worldLocationConditions == null) return true;
-/*    */     
-/* 36 */     for (int i = 0; i < this.worldLocationConditions.length; i++) {
-/* 37 */       if (!this.worldLocationConditions[i].test(world, worldX, worldY, worldZ)) return false;
-/*    */     
-/*    */     } 
-/* 40 */     return true;
-/*    */   }
-/*    */   
-/*    */   public abstract void execute(ComponentAccessor<ChunkStore> paramComponentAccessor, Ref<ChunkStore> paramRef1, Ref<ChunkStore> paramRef2, int paramInt1, int paramInt2, int paramInt3, float paramFloat);
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.farming.config.stages.spread;
 
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.lookup.CodecMapCodec;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import com.hypixel.hytale.server.core.universe.world.worldlocationcondition.WorldLocationCondition;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\farming\config\stages\spread\SpreadGrowthBehaviour.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class SpreadGrowthBehaviour {
+   @Nonnull
+   public static final CodecMapCodec<SpreadGrowthBehaviour> CODEC = new CodecMapCodec<>("Type");
+   @Nonnull
+   public static final BuilderCodec<SpreadGrowthBehaviour> BASE_CODEC = BuilderCodec.abstractBuilder(SpreadGrowthBehaviour.class)
+      .append(
+         new KeyedCodec<>("LocationConditions", new ArrayCodec<>(WorldLocationCondition.CODEC, WorldLocationCondition[]::new)),
+         (spreadGrowthBehaviour, worldLocationConditions) -> spreadGrowthBehaviour.worldLocationConditions = worldLocationConditions,
+         spreadGrowthBehaviour -> spreadGrowthBehaviour.worldLocationConditions
+      )
+      .documentation("Defines the possible location conditions a position has to fulfill to be considered as valid.")
+      .add()
+      .build();
+   protected WorldLocationCondition[] worldLocationConditions;
+
+   public abstract void execute(
+      @Nonnull ComponentAccessor<ChunkStore> var1, @Nonnull Ref<ChunkStore> var2, @Nonnull Ref<ChunkStore> var3, int var4, int var5, int var6, float var7
+   );
+
+   protected boolean validatePosition(@Nonnull World world, int worldX, int worldY, int worldZ) {
+      if (this.worldLocationConditions == null) {
+         return true;
+      } else {
+         for (int i = 0; i < this.worldLocationConditions.length; i++) {
+            if (!this.worldLocationConditions[i].test(world, worldX, worldY, worldZ)) {
+               return false;
+            }
+         }
+
+         return true;
+      }
+   }
+}

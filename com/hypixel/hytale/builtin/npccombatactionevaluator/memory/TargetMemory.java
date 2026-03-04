@@ -1,88 +1,75 @@
-/*    */ package com.hypixel.hytale.builtin.npccombatactionevaluator.memory;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.npccombatactionevaluator.NPCCombatActionEvaluatorPlugin;
-/*    */ import com.hypixel.hytale.component.Component;
-/*    */ import com.hypixel.hytale.component.ComponentType;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
-/*    */ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-/*    */ import java.util.List;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class TargetMemory
-/*    */   implements Component<EntityStore>
-/*    */ {
-/*    */   public static ComponentType<EntityStore, TargetMemory> getComponentType() {
-/* 25 */     return NPCCombatActionEvaluatorPlugin.get().getTargetMemoryComponentType();
-/*    */   }
-/*    */   
-/* 28 */   private final Int2FloatOpenHashMap knownFriendlies = new Int2FloatOpenHashMap();
-/* 29 */   private final List<Ref<EntityStore>> knownFriendliesList = (List<Ref<EntityStore>>)new ObjectArrayList();
-/*    */   
-/* 31 */   private final Int2FloatOpenHashMap knownHostiles = new Int2FloatOpenHashMap();
-/* 32 */   private final List<Ref<EntityStore>> knownHostilesList = (List<Ref<EntityStore>>)new ObjectArrayList();
-/*    */   
-/*    */   private final float rememberFor;
-/*    */   
-/*    */   private Ref<EntityStore> closestHostile;
-/*    */   
-/*    */   public TargetMemory(float rememberFor) {
-/* 39 */     this.rememberFor = rememberFor;
-/* 40 */     this.knownFriendlies.defaultReturnValue(-1.0F);
-/* 41 */     this.knownHostiles.defaultReturnValue(-1.0F);
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public Int2FloatOpenHashMap getKnownFriendlies() {
-/* 46 */     return this.knownFriendlies;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public List<Ref<EntityStore>> getKnownFriendliesList() {
-/* 51 */     return this.knownFriendliesList;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public Int2FloatOpenHashMap getKnownHostiles() {
-/* 56 */     return this.knownHostiles;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public List<Ref<EntityStore>> getKnownHostilesList() {
-/* 61 */     return this.knownHostilesList;
-/*    */   }
-/*    */   
-/*    */   public float getRememberFor() {
-/* 65 */     return this.rememberFor;
-/*    */   }
-/*    */   
-/*    */   public Ref<EntityStore> getClosestHostile() {
-/* 69 */     return this.closestHostile;
-/*    */   }
-/*    */   
-/*    */   public void setClosestHostile(Ref<EntityStore> ref) {
-/* 73 */     this.closestHostile = ref;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Component<EntityStore> clone() {
-/* 80 */     return new TargetMemory(this.rememberFor);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.npccombatactionevaluator.memory;
 
+import com.hypixel.hytale.builtin.npccombatactionevaluator.NPCCombatActionEvaluatorPlugin;
+import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.util.List;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\npccombatactionevaluator\memory\TargetMemory.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class TargetMemory implements Component<EntityStore> {
+   @Nonnull
+   private final Int2FloatOpenHashMap knownFriendlies = new Int2FloatOpenHashMap();
+   @Nonnull
+   private final List<Ref<EntityStore>> knownFriendliesList = new ObjectArrayList();
+   @Nonnull
+   private final Int2FloatOpenHashMap knownHostiles = new Int2FloatOpenHashMap();
+   @Nonnull
+   private final List<Ref<EntityStore>> knownHostilesList = new ObjectArrayList();
+   private final float rememberFor;
+   @Nullable
+   private Ref<EntityStore> closestHostile;
+
+   public static ComponentType<EntityStore, TargetMemory> getComponentType() {
+      return NPCCombatActionEvaluatorPlugin.get().getTargetMemoryComponentType();
+   }
+
+   public TargetMemory(float rememberFor) {
+      this.rememberFor = rememberFor;
+      this.knownFriendlies.defaultReturnValue(-1.0F);
+      this.knownHostiles.defaultReturnValue(-1.0F);
+   }
+
+   @Nonnull
+   public Int2FloatOpenHashMap getKnownFriendlies() {
+      return this.knownFriendlies;
+   }
+
+   @Nonnull
+   public List<Ref<EntityStore>> getKnownFriendliesList() {
+      return this.knownFriendliesList;
+   }
+
+   @Nonnull
+   public Int2FloatOpenHashMap getKnownHostiles() {
+      return this.knownHostiles;
+   }
+
+   @Nonnull
+   public List<Ref<EntityStore>> getKnownHostilesList() {
+      return this.knownHostilesList;
+   }
+
+   public float getRememberFor() {
+      return this.rememberFor;
+   }
+
+   @Nullable
+   public Ref<EntityStore> getClosestHostile() {
+      return this.closestHostile;
+   }
+
+   public void setClosestHostile(@Nullable Ref<EntityStore> ref) {
+      this.closestHostile = ref;
+   }
+
+   @Nonnull
+   @Override
+   public Component<EntityStore> clone() {
+      return new TargetMemory(this.rememberFor);
+   }
+}

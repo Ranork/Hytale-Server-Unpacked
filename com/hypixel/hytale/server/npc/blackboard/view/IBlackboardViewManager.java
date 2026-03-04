@@ -8,27 +8,21 @@ import com.hypixel.hytale.server.npc.blackboard.Blackboard;
 import java.util.function.Consumer;
 
 public interface IBlackboardViewManager<View extends IBlackboardView<View>> {
-  View get(Ref<EntityStore> paramRef, Blackboard paramBlackboard, ComponentAccessor<EntityStore> paramComponentAccessor);
-  
-  View get(Vector3d paramVector3d, Blackboard paramBlackboard);
-  
-  View get(int paramInt1, int paramInt2, Blackboard paramBlackboard);
-  
-  View get(long paramLong, Blackboard paramBlackboard);
-  
-  View getIfExists(long paramLong);
-  
-  void cleanup();
-  
-  void onWorldRemoved();
-  
-  void forEachView(Consumer<View> paramConsumer);
-  
-  void clear();
+   View get(Ref<EntityStore> var1, Blackboard var2, ComponentAccessor<EntityStore> var3);
+
+   View get(Vector3d var1, Blackboard var2);
+
+   View get(int var1, int var2, Blackboard var3);
+
+   View get(long var1, Blackboard var3);
+
+   View getIfExists(long var1);
+
+   void cleanup();
+
+   void onWorldRemoved();
+
+   void forEachView(Consumer<View> var1);
+
+   void clear();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\blackboard\view\IBlackboardViewManager.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

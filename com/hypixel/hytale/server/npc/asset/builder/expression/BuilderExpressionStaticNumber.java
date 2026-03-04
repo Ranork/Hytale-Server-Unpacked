@@ -1,51 +1,40 @@
-/*    */ package com.hypixel.hytale.server.npc.asset.builder.expression;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
-/*    */ import com.hypixel.hytale.server.npc.util.expression.StdScope;
-/*    */ import com.hypixel.hytale.server.npc.util.expression.ValueType;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class BuilderExpressionStaticNumber
-/*    */   extends BuilderExpression
-/*    */ {
-/*    */   private final double number;
-/*    */   
-/*    */   public BuilderExpressionStaticNumber(double number) {
-/* 17 */     this.number = number;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public ValueType getType() {
-/* 23 */     return ValueType.NUMBER;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean isStatic() {
-/* 28 */     return true;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getNumber(ExecutionContext executionContext) {
-/* 33 */     return this.number;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void addToScope(String name, @Nonnull StdScope scope) {
-/* 38 */     scope.addVar(name, this.number);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void updateScope(@Nonnull StdScope scope, String name, ExecutionContext executionContext) {
-/* 43 */     scope.changeValue(name, this.number);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.asset.builder.expression;
 
+import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
+import com.hypixel.hytale.server.npc.util.expression.StdScope;
+import com.hypixel.hytale.server.npc.util.expression.ValueType;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\asset\builder\expression\BuilderExpressionStaticNumber.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BuilderExpressionStaticNumber extends BuilderExpression {
+   private final double number;
+
+   public BuilderExpressionStaticNumber(double number) {
+      this.number = number;
+   }
+
+   @Nonnull
+   @Override
+   public ValueType getType() {
+      return ValueType.NUMBER;
+   }
+
+   @Override
+   public boolean isStatic() {
+      return true;
+   }
+
+   @Override
+   public double getNumber(ExecutionContext executionContext) {
+      return this.number;
+   }
+
+   @Override
+   public void addToScope(String name, @Nonnull StdScope scope) {
+      scope.addVar(name, this.number);
+   }
+
+   @Override
+   public void updateScope(@Nonnull StdScope scope, String name, ExecutionContext executionContext) {
+      scope.changeValue(name, this.number);
+   }
+}

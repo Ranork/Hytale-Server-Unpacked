@@ -8,12 +8,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public interface OperationFactory {
-  @Nonnull
-  ToolOperation create(@Nonnull Ref<EntityStore> paramRef, @Nonnull Player paramPlayer, @Nonnull BuilderToolOnUseInteraction paramBuilderToolOnUseInteraction, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
+   @Nonnull
+   ToolOperation create(
+      @Nonnull Ref<EntityStore> var1, @Nonnull Player var2, @Nonnull BuilderToolOnUseInteraction var3, @Nonnull ComponentAccessor<EntityStore> var4
+   );
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\buildertools\tooloperations\OperationFactory.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

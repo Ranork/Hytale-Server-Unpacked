@@ -1,345 +1,323 @@
-/*     */ package com.hypixel.hytale.server.core.cosmetics;
-/*     */ 
-/*     */ import com.hypixel.hytale.common.plugin.PluginManifest;
-/*     */ import com.hypixel.hytale.common.util.ArrayUtil;
-/*     */ import com.hypixel.hytale.common.util.RandomUtil;
-/*     */ import com.hypixel.hytale.logger.HytaleLogger;
-/*     */ import com.hypixel.hytale.protocol.PlayerSkin;
-/*     */ import com.hypixel.hytale.server.core.Options;
-/*     */ import com.hypixel.hytale.server.core.asset.AssetModule;
-/*     */ import com.hypixel.hytale.server.core.asset.LoadAssetEvent;
-/*     */ import com.hypixel.hytale.server.core.asset.type.model.config.Model;
-/*     */ import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
-/*     */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*     */ import com.hypixel.hytale.server.core.cosmetics.commands.EmoteCommand;
-/*     */ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
-/*     */ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-/*     */ import java.util.Map;
-/*     */ import java.util.Random;
-/*     */ import java.util.logging.Level;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ public class CosmeticsModule extends JavaPlugin {
-/*  24 */   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(CosmeticsModule.class)
-/*  25 */     .build();
-/*     */   
-/*     */   private static CosmeticsModule INSTANCE;
-/*     */   
-/*     */   private CosmeticRegistry registry;
-/*     */   
-/*     */   public CosmeticsModule(@Nonnull JavaPluginInit init) {
-/*  32 */     super(init);
-/*  33 */     INSTANCE = this;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void setup() {
-/*  38 */     this.registry = new CosmeticRegistry(AssetModule.get().getBaseAssetPack());
-/*     */     
-/*  40 */     getCommandRegistry().registerCommand((AbstractCommand)new EmoteCommand());
-/*     */     
-/*  42 */     if (Options.getOptionSet().has(Options.VALIDATE_ASSETS)) {
-/*  43 */       getEventRegistry().register((short)64, LoadAssetEvent.class, this::validateGeneratedSkin);
-/*     */     }
-/*     */   }
-/*     */   
-/*     */   public CosmeticRegistry getRegistry() {
-/*  48 */     return this.registry;
-/*     */   }
-/*     */   
-/*     */   private void validateGeneratedSkin(@Nonnull LoadAssetEvent eventType) {
-/*  52 */     for (int i = 0; i < 10; i++) {
-/*  53 */       PlayerSkin skin = generateRandomSkin(new Random(i));
-/*     */       try {
-/*  55 */         validateSkin(skin);
-/*  56 */       } catch (InvalidSkinException e) {
-/*  57 */         eventType.failed(true, e.getMessage());
-/*     */         return;
-/*     */       } 
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public Model createRandomModel(@Nonnull Random random) {
-/*  65 */     PlayerSkin skin = generateRandomSkin(random);
-/*  66 */     return get().createModel(skin);
-/*     */   }
-/*     */   @Nullable
-/*     */   public Model createModel(@Nonnull PlayerSkin skin) {
-/*  70 */     return createModel(skin, 1.0F);
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public Model createModel(@Nonnull PlayerSkin skin, float scale) {
-/*     */     try {
-/*  76 */       validateSkin(skin);
-/*  77 */     } catch (InvalidSkinException e) {
-/*  78 */       ((HytaleLogger.Api)getLogger().at(Level.WARNING).withCause(e)).log("Was passed an invalid skin %s", skin);
-/*  79 */       return null;
-/*     */     } 
-/*  81 */     ModelAsset modelAsset = (ModelAsset)ModelAsset.getAssetMap().getAsset("Player");
-/*  82 */     return Model.createScaledModel(modelAsset, scale, null);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void validateSkin(@Nonnull PlayerSkin skin) throws InvalidSkinException {
-/*  88 */     if (skin == null) throw new InvalidSkinException("skin", null);
-/*     */     
-/*  90 */     if (skin.face == null || !this.registry.getFaces().containsKey(skin.face)) {
-/*  91 */       throw new InvalidSkinException("face", skin.face);
-/*     */     }
-/*     */     
-/*  94 */     if (skin.ears == null || !this.registry.getEars().containsKey(skin.ears)) {
-/*  95 */       throw new InvalidSkinException("ears", skin.ears);
-/*     */     }
-/*     */     
-/*  98 */     if (skin.mouth == null || !this.registry.getMouths().containsKey(skin.mouth)) {
-/*  99 */       throw new InvalidSkinException("mouth", skin.mouth);
-/*     */     }
-/*     */     
-/* 102 */     if (!isValidAttachment(this.registry.getBodyCharacteristics(), skin.bodyCharacteristic, true)) {
-/* 103 */       throw new InvalidSkinException("body", skin.bodyCharacteristic);
-/*     */     }
-/* 105 */     if (!isValidAttachment(this.registry.getUnderwear(), skin.underwear, true)) {
-/* 106 */       throw new InvalidSkinException("underwear", skin.underwear);
-/*     */     }
-/* 108 */     if (!isValidAttachment(this.registry.getEyes(), skin.eyes, true)) {
-/* 109 */       throw new InvalidSkinException("eyes", skin.eyes);
-/*     */     }
-/* 111 */     if (!isValidAttachment(this.registry.getSkinFeatures(), skin.skinFeature)) {
-/* 112 */       throw new InvalidSkinException("skin feature", skin.skinFeature);
-/*     */     }
-/* 114 */     if (!isValidAttachment(this.registry.getEyebrows(), skin.eyebrows)) {
-/* 115 */       throw new InvalidSkinException("eyebrows", skin.eyebrows);
-/*     */     }
-/* 117 */     if (!isValidAttachment(this.registry.getPants(), skin.pants)) {
-/* 118 */       throw new InvalidSkinException("pants", skin.pants);
-/*     */     }
-/* 120 */     if (!isValidAttachment(this.registry.getOverpants(), skin.overpants)) {
-/* 121 */       throw new InvalidSkinException("overpants", skin.overpants);
-/*     */     }
-/* 123 */     if (!isValidAttachment(this.registry.getShoes(), skin.shoes)) {
-/* 124 */       throw new InvalidSkinException("shoes", skin.shoes);
-/*     */     }
-/* 126 */     if (!isValidAttachment(this.registry.getUndertops(), skin.undertop)) {
-/* 127 */       throw new InvalidSkinException("undertop", skin.undertop);
-/*     */     }
-/* 129 */     if (!isValidAttachment(this.registry.getOvertops(), skin.overtop)) {
-/* 130 */       throw new InvalidSkinException("overtop", skin.overtop);
-/*     */     }
-/* 132 */     if (!isValidAttachment(this.registry.getGloves(), skin.gloves)) {
-/* 133 */       throw new InvalidSkinException("gloves", skin.gloves);
-/*     */     }
-/* 135 */     if (!isValidAttachment(this.registry.getHeadAccessories(), skin.headAccessory)) {
-/* 136 */       throw new InvalidSkinException("head accessory", skin.headAccessory);
-/*     */     }
-/* 138 */     if (!isValidAttachment(this.registry.getFaceAccessories(), skin.faceAccessory)) {
-/* 139 */       throw new InvalidSkinException("face accessory", skin.faceAccessory);
-/*     */     }
-/* 141 */     if (!isValidAttachment(this.registry.getEarAccessories(), skin.earAccessory)) {
-/* 142 */       throw new InvalidSkinException("ear accessory", skin.earAccessory);
-/*     */     }
-/* 144 */     if (!isValidHaircutAttachment(skin.haircut, skin.headAccessory)) {
-/* 145 */       throw new InvalidSkinException("haircut", skin.haircut);
-/*     */     }
-/* 147 */     if (!isValidAttachment(this.registry.getFacialHairs(), skin.facialHair)) {
-/* 148 */       throw new InvalidSkinException("facial hair", skin.facialHair);
-/*     */     }
-/* 150 */     if (!isValidAttachment(this.registry.getCapes(), skin.cape)) {
-/* 151 */       throw new InvalidSkinException("cape", skin.cape);
-/*     */     }
-/*     */   }
-/*     */   
-/*     */   private boolean isValidAttachment(@Nonnull Map<String, PlayerSkinPart> map, String id) {
-/* 156 */     return isValidAttachment(map, id, false);
-/*     */   }
-/*     */   
-/*     */   private boolean isValidTexture(@Nonnull PlayerSkinPart part, String variantId, String textureId) {
-/* 160 */     if (part.getGradientSet() != null && (
-/* 161 */       (PlayerSkinGradientSet)this.registry.getGradientSets().get(part.getGradientSet())).getGradients().containsKey(textureId)) return true;
-/*     */ 
-/*     */     
-/* 164 */     if (part.getVariants() != null) {
-/* 165 */       return ((PlayerSkinPart.Variant)part.getVariants().get(variantId)).getTextures().containsKey(textureId);
-/*     */     }
-/* 167 */     return part.getTextures().containsKey(textureId);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   private boolean isValidAttachment(@Nonnull Map<String, PlayerSkinPart> map, @Nullable String id, boolean required) {
-/* 172 */     if (id == null) return !required;
-/*     */     
-/* 174 */     String[] idParts = id.split("\\.");
-/*     */     
-/* 176 */     PlayerSkinPart skinPart = map.get(idParts[0]);
-/* 177 */     if (skinPart == null) return false;
-/*     */     
-/* 179 */     String variantId = (idParts.length > 2 && !idParts[2].isEmpty()) ? idParts[2] : null;
-/* 180 */     if (skinPart.getVariants() != null && !skinPart.getVariants().containsKey(variantId)) return false; 
-/* 181 */     return isValidTexture(skinPart, variantId, idParts[1]);
-/*     */   }
-/*     */   
-/*     */   private boolean isValidHaircutAttachment(@Nullable String haircutId, @Nullable String headAccessoryId) {
-/* 185 */     if (haircutId == null) return true; 
-/* 186 */     Map<String, PlayerSkinPart> haircuts = this.registry.getHaircuts();
-/*     */     
-/* 188 */     String[] idParts = haircutId.split("\\.");
-/* 189 */     String haircutAssetId = idParts[0];
-/* 190 */     String haircutAssetTextureId = (idParts.length > 1 && !idParts[1].isEmpty()) ? idParts[1] : null;
-/*     */     
-/* 192 */     if (headAccessoryId != null) {
-/* 193 */       idParts = headAccessoryId.split("\\.");
-/* 194 */       String headAccessoryAssetId = idParts[0];
-/*     */       
-/* 196 */       PlayerSkinPart headAccessoryPart = this.registry.getHeadAccessories().get(headAccessoryAssetId);
-/* 197 */       if (headAccessoryPart != null) {
-/* 198 */         PlayerSkinPart haircutPart; switch (headAccessoryPart.getHeadAccessoryType()) {
-/*     */           case HalfCovering:
-/* 200 */             haircutPart = haircuts.get(haircutAssetId);
-/* 201 */             if (haircutPart == null) return false; 
-/* 202 */             if (haircutPart.doesRequireGenericHaircut()) {
-/* 203 */               PlayerSkinPart baseHaircutPart = haircuts.get("Generic" + String.valueOf(haircutPart.getHairType()));
-/* 204 */               return isValidAttachment(haircuts, baseHaircutPart.getId() + "." + baseHaircutPart.getId(), false);
-/*     */             } 
-/*     */             break;
-/*     */           case FullyCovering:
-/* 208 */             return isValidAttachment(haircuts, haircutId);
-/*     */         } 
-/*     */       
-/*     */       } 
-/*     */     } 
-/* 213 */     return isValidAttachment(haircuts, haircutId);
-/*     */   }
-/*     */   
-/*     */   public static CosmeticsModule get() {
-/* 217 */     return INSTANCE;
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   public PlayerSkin generateRandomSkin(@Nonnull Random random) {
-/* 222 */     String bodyCharacteristic = randomSkinPart(this.registry.getBodyCharacteristics(), true, random);
-/* 223 */     String underwear = randomSkinPart(this.registry.getUnderwear(), true, random);
-/* 224 */     String face = randomSkinPart(this.registry.getFaces(), true, false, random);
-/* 225 */     String ears = randomSkinPart(this.registry.getEars(), true, false, random);
-/* 226 */     String mouth = randomSkinPart(this.registry.getMouths(), true, false, random);
-/* 227 */     String eyes = randomSkinPart(this.registry.getEyes(), true, random);
-/* 228 */     String facialHair = null;
-/* 229 */     if (random.nextInt(10) > 4) {
-/* 230 */       facialHair = randomSkinPart(this.registry.getFacialHairs(), random);
-/*     */     }
-/* 232 */     String haircut = randomSkinPart(this.registry.getHaircuts(), random);
-/* 233 */     String eyebrows = randomSkinPart(this.registry.getEyebrows(), random);
-/* 234 */     String pants = randomSkinPart(this.registry.getPants(), random);
-/* 235 */     String overpants = null;
-/* 236 */     String undertop = randomSkinPart(this.registry.getUndertops(), random);
-/* 237 */     String overtop = randomSkinPart(this.registry.getOvertops(), random);
-/* 238 */     String shoes = randomSkinPart(this.registry.getShoes(), random);
-/* 239 */     String headAccessory = null;
-/* 240 */     if (random.nextInt(10) > 8) {
-/* 241 */       headAccessory = randomSkinPart(this.registry.getHeadAccessories(), random);
-/*     */     }
-/* 243 */     String faceAccessory = null;
-/* 244 */     if (random.nextInt(10) > 8) {
-/* 245 */       faceAccessory = randomSkinPart(this.registry.getFaceAccessories(), random);
-/*     */     }
-/* 247 */     String earAccessory = null;
-/* 248 */     if (random.nextInt(10) > 8) {
-/* 249 */       earAccessory = randomSkinPart(this.registry.getEarAccessories(), random);
-/*     */     }
-/* 251 */     String skinFeature = null;
-/* 252 */     if (random.nextInt(10) > 8) {
-/* 253 */       skinFeature = randomSkinPart(this.registry.getSkinFeatures(), random);
-/*     */     }
-/* 255 */     String gloves = null;
-/* 256 */     return new PlayerSkin(bodyCharacteristic, underwear, face, eyes, ears, mouth, facialHair, haircut, eyebrows, pants, overpants, undertop, overtop, shoes, headAccessory, faceAccessory, earAccessory, skinFeature, gloves, null);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nullable
-/*     */   private String randomSkinPart(@Nonnull Map<String, PlayerSkinPart> map, @Nonnull Random random) {
-/* 282 */     return randomSkinPart(map, false, random);
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   private String randomSkinPart(@Nonnull Map<String, PlayerSkinPart> map, boolean required, @Nonnull Random random) {
-/* 287 */     return randomSkinPart(map, required, true, random);
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   private String randomSkinPart(@Nonnull Map<String, PlayerSkinPart> map, boolean required, boolean color, @Nonnull Random random) {
-/* 292 */     PlayerSkinPart[] arr = (PlayerSkinPart[])map.values().toArray(x$0 -> new PlayerSkinPart[x$0]);
-/* 293 */     PlayerSkinPart part = required ? (PlayerSkinPart)RandomUtil.selectRandom((Object[])arr, random) : (PlayerSkinPart)RandomUtil.selectRandomOrNull((Object[])arr, random);
-/* 294 */     if (part == null) return null;
-/*     */     
-/* 296 */     if (!color) return part.getId();
-/*     */     
-/* 298 */     String[] colors = ArrayUtil.EMPTY_STRING_ARRAY;
-/* 299 */     if (part.getGradientSet() != null) {
-/* 300 */       colors = (String[])((PlayerSkinGradientSet)this.registry.getGradientSets().get(part.getGradientSet())).getGradients().keySet().toArray(x$0 -> new String[x$0]);
-/*     */     }
-/*     */     
-/* 303 */     Map<String, PlayerSkinPartTexture> textures = part.getTextures();
-/* 304 */     String variantId = null;
-/* 305 */     if (part.getVariants() != null) {
-/* 306 */       variantId = (String)RandomUtil.selectRandom(part.getVariants().keySet().toArray(x$0 -> new String[x$0]), random);
-/* 307 */       textures = ((PlayerSkinPart.Variant)part.getVariants().get(variantId)).getTextures();
-/*     */     } 
-/*     */     
-/* 310 */     if (textures != null) {
-/* 311 */       colors = (String[])ArrayUtil.combine((Object[])colors, textures.keySet().toArray(x$0 -> new String[x$0]));
-/*     */     }
-/*     */     
-/* 314 */     String colorId = (String)RandomUtil.selectRandom((Object[])colors, random);
-/*     */     
-/* 316 */     if (variantId == null) return part.getId() + "." + part.getId(); 
-/* 317 */     return part.getId() + "." + part.getId() + "." + colorId;
-/*     */   }
-/*     */   
-/*     */   public static class InvalidSkinException extends Exception {
-/*     */     private final String partType;
-/*     */     private final String partId;
-/*     */     
-/*     */     public InvalidSkinException(String partType, @Nullable String partId) {
-/* 325 */       super(formatMessage(partType, partId));
-/* 326 */       this.partType = partType;
-/* 327 */       this.partId = partId;
-/*     */     }
-/*     */     
-/*     */     private static String formatMessage(String partType, @Nullable String partId) {
-/* 331 */       return (partId == null) ? ("Missing required " + partType) : ("Unknown " + 
-/* 332 */         partType + ": " + partId);
-/*     */     }
-/*     */     
-/* 335 */     public String getPartType() { return this.partType; } @Nullable
-/* 336 */     public String getPartId() { return this.partId; }
-/*     */   
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.cosmetics;
 
+import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.common.util.ArrayUtil;
+import com.hypixel.hytale.common.util.RandomUtil;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.Options;
+import com.hypixel.hytale.server.core.asset.AssetModule;
+import com.hypixel.hytale.server.core.asset.LoadAssetEvent;
+import com.hypixel.hytale.server.core.asset.type.model.config.Model;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
+import com.hypixel.hytale.server.core.cosmetics.commands.EmoteCommand;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import java.util.Map;
+import java.util.Random;
+import java.util.logging.Level;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\cosmetics\CosmeticsModule.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class CosmeticsModule extends JavaPlugin {
+   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(CosmeticsModule.class).build();
+   private static CosmeticsModule INSTANCE;
+   private CosmeticRegistry registry;
+
+   public CosmeticsModule(@Nonnull JavaPluginInit init) {
+      super(init);
+      INSTANCE = this;
+   }
+
+   @Override
+   protected void setup() {
+      this.registry = new CosmeticRegistry(AssetModule.get().getBaseAssetPack());
+      this.getCommandRegistry().registerCommand(new EmoteCommand());
+      if (Options.getOptionSet().has(Options.VALIDATE_ASSETS)) {
+         this.getEventRegistry().register((short)64, LoadAssetEvent.class, this::validateGeneratedSkin);
+      }
+   }
+
+   public CosmeticRegistry getRegistry() {
+      return this.registry;
+   }
+
+   private void validateGeneratedSkin(@Nonnull LoadAssetEvent eventType) {
+      for (int i = 0; i < 10; i++) {
+         com.hypixel.hytale.protocol.PlayerSkin skin = this.generateRandomSkin(new Random(i));
+
+         try {
+            this.validateSkin(skin);
+         } catch (CosmeticsModule.InvalidSkinException var5) {
+            eventType.failed(true, var5.getMessage());
+            return;
+         }
+      }
+   }
+
+   @Nullable
+   public Model createRandomModel(@Nonnull Random random) {
+      com.hypixel.hytale.protocol.PlayerSkin skin = this.generateRandomSkin(random);
+      return get().createModel(skin);
+   }
+
+   @Nullable
+   public Model createModel(@Nonnull com.hypixel.hytale.protocol.PlayerSkin skin) {
+      return this.createModel(skin, 1.0F);
+   }
+
+   @Nullable
+   public Model createModel(@Nonnull com.hypixel.hytale.protocol.PlayerSkin skin, float scale) {
+      try {
+         this.validateSkin(skin);
+      } catch (CosmeticsModule.InvalidSkinException var4) {
+         ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var4)).log("Was passed an invalid skin %s", skin);
+         return null;
+      }
+
+      ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("Player");
+      return Model.createScaledModel(modelAsset, scale, null);
+   }
+
+   public void validateSkin(@Nonnull com.hypixel.hytale.protocol.PlayerSkin skin) throws CosmeticsModule.InvalidSkinException {
+      if (skin == null) {
+         throw new CosmeticsModule.InvalidSkinException("skin", null);
+      } else if (skin.face == null || !this.registry.getFaces().containsKey(skin.face)) {
+         throw new CosmeticsModule.InvalidSkinException("face", skin.face);
+      } else if (skin.ears == null || !this.registry.getEars().containsKey(skin.ears)) {
+         throw new CosmeticsModule.InvalidSkinException("ears", skin.ears);
+      } else if (skin.mouth == null || !this.registry.getMouths().containsKey(skin.mouth)) {
+         throw new CosmeticsModule.InvalidSkinException("mouth", skin.mouth);
+      } else if (!this.isValidAttachment(this.registry.getBodyCharacteristics(), skin.bodyCharacteristic, true)) {
+         throw new CosmeticsModule.InvalidSkinException("body", skin.bodyCharacteristic);
+      } else if (!this.isValidAttachment(this.registry.getUnderwear(), skin.underwear, true)) {
+         throw new CosmeticsModule.InvalidSkinException("underwear", skin.underwear);
+      } else if (!this.isValidAttachment(this.registry.getEyes(), skin.eyes, true)) {
+         throw new CosmeticsModule.InvalidSkinException("eyes", skin.eyes);
+      } else if (!this.isValidAttachment(this.registry.getSkinFeatures(), skin.skinFeature)) {
+         throw new CosmeticsModule.InvalidSkinException("skin feature", skin.skinFeature);
+      } else if (!this.isValidAttachment(this.registry.getEyebrows(), skin.eyebrows)) {
+         throw new CosmeticsModule.InvalidSkinException("eyebrows", skin.eyebrows);
+      } else if (!this.isValidAttachment(this.registry.getPants(), skin.pants)) {
+         throw new CosmeticsModule.InvalidSkinException("pants", skin.pants);
+      } else if (!this.isValidAttachment(this.registry.getOverpants(), skin.overpants)) {
+         throw new CosmeticsModule.InvalidSkinException("overpants", skin.overpants);
+      } else if (!this.isValidAttachment(this.registry.getShoes(), skin.shoes)) {
+         throw new CosmeticsModule.InvalidSkinException("shoes", skin.shoes);
+      } else if (!this.isValidAttachment(this.registry.getUndertops(), skin.undertop)) {
+         throw new CosmeticsModule.InvalidSkinException("undertop", skin.undertop);
+      } else if (!this.isValidAttachment(this.registry.getOvertops(), skin.overtop)) {
+         throw new CosmeticsModule.InvalidSkinException("overtop", skin.overtop);
+      } else if (!this.isValidAttachment(this.registry.getGloves(), skin.gloves)) {
+         throw new CosmeticsModule.InvalidSkinException("gloves", skin.gloves);
+      } else if (!this.isValidAttachment(this.registry.getHeadAccessories(), skin.headAccessory)) {
+         throw new CosmeticsModule.InvalidSkinException("head accessory", skin.headAccessory);
+      } else if (!this.isValidAttachment(this.registry.getFaceAccessories(), skin.faceAccessory)) {
+         throw new CosmeticsModule.InvalidSkinException("face accessory", skin.faceAccessory);
+      } else if (!this.isValidAttachment(this.registry.getEarAccessories(), skin.earAccessory)) {
+         throw new CosmeticsModule.InvalidSkinException("ear accessory", skin.earAccessory);
+      } else if (!this.isValidHaircutAttachment(skin.haircut, skin.headAccessory)) {
+         throw new CosmeticsModule.InvalidSkinException("haircut", skin.haircut);
+      } else if (!this.isValidAttachment(this.registry.getFacialHairs(), skin.facialHair)) {
+         throw new CosmeticsModule.InvalidSkinException("facial hair", skin.facialHair);
+      } else if (!this.isValidAttachment(this.registry.getCapes(), skin.cape)) {
+         throw new CosmeticsModule.InvalidSkinException("cape", skin.cape);
+      }
+   }
+
+   private boolean isValidAttachment(@Nonnull Map<String, PlayerSkinPart> map, String id) {
+      return this.isValidAttachment(map, id, false);
+   }
+
+   private boolean isValidTexture(@Nonnull PlayerSkinPart part, String variantId, String textureId) {
+      if (part.getGradientSet() != null && this.registry.getGradientSets().get(part.getGradientSet()).getGradients().containsKey(textureId)) {
+         return true;
+      } else {
+         return part.getVariants() != null ? part.getVariants().get(variantId).getTextures().containsKey(textureId) : part.getTextures().containsKey(textureId);
+      }
+   }
+
+   private boolean isValidAttachment(@Nonnull Map<String, PlayerSkinPart> map, @Nullable String id, boolean required) {
+      if (id == null) {
+         return !required;
+      } else {
+         String[] idParts = id.split("\\.");
+         PlayerSkinPart skinPart = map.get(idParts[0]);
+         if (skinPart == null) {
+            return false;
+         } else {
+            String variantId = idParts.length > 2 && !idParts[2].isEmpty() ? idParts[2] : null;
+            return skinPart.getVariants() != null && !skinPart.getVariants().containsKey(variantId)
+               ? false
+               : this.isValidTexture(skinPart, variantId, idParts[1]);
+         }
+      }
+   }
+
+   private boolean isValidHaircutAttachment(@Nullable String haircutId, @Nullable String headAccessoryId) {
+      if (haircutId == null) {
+         return true;
+      } else {
+         Map<String, PlayerSkinPart> haircuts = this.registry.getHaircuts();
+         String[] idParts = haircutId.split("\\.");
+         String haircutAssetId = idParts[0];
+         String haircutAssetTextureId = idParts.length > 1 && !idParts[1].isEmpty() ? idParts[1] : null;
+         if (headAccessoryId != null) {
+            idParts = headAccessoryId.split("\\.");
+            String headAccessoryAssetId = idParts[0];
+            PlayerSkinPart headAccessoryPart = this.registry.getHeadAccessories().get(headAccessoryAssetId);
+            if (headAccessoryPart != null) {
+               switch (headAccessoryPart.getHeadAccessoryType()) {
+                  case HalfCovering:
+                     PlayerSkinPart haircutPart = haircuts.get(haircutAssetId);
+                     if (haircutPart == null) {
+                        return false;
+                     }
+
+                     if (haircutPart.doesRequireGenericHaircut()) {
+                        PlayerSkinPart baseHaircutPart = haircuts.get("Generic" + haircutPart.getHairType());
+                        return this.isValidAttachment(haircuts, baseHaircutPart.getId() + "." + haircutAssetTextureId, false);
+                     }
+                     break;
+                  case FullyCovering:
+                     return this.isValidAttachment(haircuts, haircutId);
+               }
+            }
+         }
+
+         return this.isValidAttachment(haircuts, haircutId);
+      }
+   }
+
+   public static CosmeticsModule get() {
+      return INSTANCE;
+   }
+
+   @Nonnull
+   public com.hypixel.hytale.protocol.PlayerSkin generateRandomSkin(@Nonnull Random random) {
+      String bodyCharacteristic = this.randomSkinPart(this.registry.getBodyCharacteristics(), true, random);
+      String underwear = this.randomSkinPart(this.registry.getUnderwear(), true, random);
+      String face = this.randomSkinPart(this.registry.getFaces(), true, false, random);
+      String ears = this.randomSkinPart(this.registry.getEars(), true, false, random);
+      String mouth = this.randomSkinPart(this.registry.getMouths(), true, false, random);
+      String eyes = this.randomSkinPart(this.registry.getEyes(), true, random);
+      String facialHair = null;
+      if (random.nextInt(10) > 4) {
+         facialHair = this.randomSkinPart(this.registry.getFacialHairs(), random);
+      }
+
+      String haircut = this.randomSkinPart(this.registry.getHaircuts(), random);
+      String eyebrows = this.randomSkinPart(this.registry.getEyebrows(), random);
+      String pants = this.randomSkinPart(this.registry.getPants(), random);
+      String overpants = null;
+      String undertop = this.randomSkinPart(this.registry.getUndertops(), random);
+      String overtop = this.randomSkinPart(this.registry.getOvertops(), random);
+      String shoes = this.randomSkinPart(this.registry.getShoes(), random);
+      String headAccessory = null;
+      if (random.nextInt(10) > 8) {
+         headAccessory = this.randomSkinPart(this.registry.getHeadAccessories(), random);
+      }
+
+      String faceAccessory = null;
+      if (random.nextInt(10) > 8) {
+         faceAccessory = this.randomSkinPart(this.registry.getFaceAccessories(), random);
+      }
+
+      String earAccessory = null;
+      if (random.nextInt(10) > 8) {
+         earAccessory = this.randomSkinPart(this.registry.getEarAccessories(), random);
+      }
+
+      String skinFeature = null;
+      if (random.nextInt(10) > 8) {
+         skinFeature = this.randomSkinPart(this.registry.getSkinFeatures(), random);
+      }
+
+      String gloves = null;
+      return new com.hypixel.hytale.protocol.PlayerSkin(
+         bodyCharacteristic,
+         underwear,
+         face,
+         eyes,
+         ears,
+         mouth,
+         facialHair,
+         haircut,
+         eyebrows,
+         pants,
+         overpants,
+         undertop,
+         overtop,
+         shoes,
+         headAccessory,
+         faceAccessory,
+         earAccessory,
+         skinFeature,
+         gloves,
+         null
+      );
+   }
+
+   @Nullable
+   private String randomSkinPart(@Nonnull Map<String, PlayerSkinPart> map, @Nonnull Random random) {
+      return this.randomSkinPart(map, false, random);
+   }
+
+   @Nullable
+   private String randomSkinPart(@Nonnull Map<String, PlayerSkinPart> map, boolean required, @Nonnull Random random) {
+      return this.randomSkinPart(map, required, true, random);
+   }
+
+   @Nullable
+   private String randomSkinPart(@Nonnull Map<String, PlayerSkinPart> map, boolean required, boolean color, @Nonnull Random random) {
+      PlayerSkinPart[] arr = map.values().toArray(PlayerSkinPart[]::new);
+      PlayerSkinPart part = required ? RandomUtil.selectRandom(arr, random) : RandomUtil.selectRandomOrNull(arr, random);
+      if (part == null) {
+         return null;
+      } else if (!color) {
+         return part.getId();
+      } else {
+         String[] colors = ArrayUtil.EMPTY_STRING_ARRAY;
+         if (part.getGradientSet() != null) {
+            colors = this.registry.getGradientSets().get(part.getGradientSet()).getGradients().keySet().toArray(String[]::new);
+         }
+
+         Map<String, PlayerSkinPartTexture> textures = part.getTextures();
+         String variantId = null;
+         if (part.getVariants() != null) {
+            variantId = RandomUtil.selectRandom(part.getVariants().keySet().toArray(String[]::new), random);
+            textures = part.getVariants().get(variantId).getTextures();
+         }
+
+         if (textures != null) {
+            colors = ArrayUtil.combine(colors, textures.keySet().toArray(String[]::new));
+         }
+
+         String colorId = RandomUtil.selectRandom(colors, random);
+         return variantId == null ? part.getId() + "." + colorId : part.getId() + "." + colorId + "." + variantId;
+      }
+   }
+
+   public static class InvalidSkinException extends Exception {
+      private final String partType;
+      private final String partId;
+
+      public InvalidSkinException(String partType, @Nullable String partId) {
+         super(formatMessage(partType, partId));
+         this.partType = partType;
+         this.partId = partId;
+      }
+
+      private static String formatMessage(String partType, @Nullable String partId) {
+         return partId == null ? "Missing required " + partType : "Unknown " + partType + ": " + partId;
+      }
+
+      public String getPartType() {
+         return this.partType;
+      }
+
+      @Nullable
+      public String getPartId() {
+         return this.partId;
+      }
+   }
+}

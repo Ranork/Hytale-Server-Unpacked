@@ -1,39 +1,28 @@
-/*    */ package com.hypixel.hytale.procedurallib.supplier;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class ConstantDoubleCoordinateHashSupplier
-/*    */   implements IDoubleCoordinateHashSupplier
-/*    */ {
-/* 10 */   public static final ConstantDoubleCoordinateHashSupplier ZERO = new ConstantDoubleCoordinateHashSupplier(0.0D);
-/* 11 */   public static final ConstantDoubleCoordinateHashSupplier ONE = new ConstantDoubleCoordinateHashSupplier(1.0D);
-/*    */   
-/*    */   protected final double result;
-/*    */   
-/*    */   public ConstantDoubleCoordinateHashSupplier(double result) {
-/* 16 */     this.result = result;
-/*    */   }
-/*    */   
-/*    */   public double getResult() {
-/* 20 */     return this.result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double get(int seed, int x, int y, long hash) {
-/* 25 */     return this.result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 31 */     return "ConstantDoubleCoordinateHashSupplier{result=" + this.result + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.supplier;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\supplier\ConstantDoubleCoordinateHashSupplier.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ConstantDoubleCoordinateHashSupplier implements IDoubleCoordinateHashSupplier {
+   public static final ConstantDoubleCoordinateHashSupplier ZERO = new ConstantDoubleCoordinateHashSupplier(0.0);
+   public static final ConstantDoubleCoordinateHashSupplier ONE = new ConstantDoubleCoordinateHashSupplier(1.0);
+   protected final double result;
+
+   public ConstantDoubleCoordinateHashSupplier(double result) {
+      this.result = result;
+   }
+
+   public double getResult() {
+      return this.result;
+   }
+
+   @Override
+   public double get(int seed, int x, int y, long hash) {
+      return this.result;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ConstantDoubleCoordinateHashSupplier{result=" + this.result + "}";
+   }
+}

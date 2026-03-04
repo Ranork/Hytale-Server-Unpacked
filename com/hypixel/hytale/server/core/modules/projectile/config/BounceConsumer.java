@@ -8,11 +8,5 @@ import javax.annotation.Nonnull;
 
 @FunctionalInterface
 public interface BounceConsumer {
-  void onBounce(@Nonnull Ref<EntityStore> paramRef, @Nonnull Vector3d paramVector3d, @Nonnull CommandBuffer<EntityStore> paramCommandBuffer);
+   void onBounce(@Nonnull Ref<EntityStore> var1, @Nonnull Vector3d var2, @Nonnull CommandBuffer<EntityStore> var3);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\projectile\config\BounceConsumer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

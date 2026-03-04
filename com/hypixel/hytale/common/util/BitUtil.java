@@ -1,51 +1,38 @@
-/*    */ package com.hypixel.hytale.common.util;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class BitUtil
-/*    */ {
-/*    */   public static void setNibble(@Nonnull byte[] data, int idx, byte b) {
-/*  8 */     int fieldIdx = idx >> 1;
-/*  9 */     byte val = data[fieldIdx];
-/* 10 */     b = (byte)(b & 0xF);
-/* 11 */     int i = idx & 0x1;
-/* 12 */     b = (byte)(b << (i ^ 0x1) << 2);
-/* 13 */     val = (byte)(val & 15 << i << 2);
-/* 14 */     val = (byte)(val | b);
-/* 15 */     data[fieldIdx] = val;
-/*    */   }
-/*    */   
-/*    */   public static byte getNibble(@Nonnull byte[] data, int idx) {
-/* 19 */     int fieldIdx = idx >> 1;
-/* 20 */     byte val = data[fieldIdx];
-/* 21 */     int i = idx & 0x1;
-/* 22 */     val = (byte)(val >> (i ^ 0x1) << 2);
-/* 23 */     val = (byte)(val & 0xF);
-/* 24 */     return val;
-/*    */   }
-/*    */   
-/*    */   public static byte getAndSetNibble(@Nonnull byte[] data, int idx, byte b) {
-/* 28 */     int fieldIdx = idx >> 1;
-/* 29 */     byte val = data[fieldIdx];
-/* 30 */     int i = idx & 0x1;
-/*    */     
-/* 32 */     byte oldVal = val;
-/* 33 */     oldVal = (byte)(oldVal >> (i ^ 0x1) << 2);
-/* 34 */     oldVal = (byte)(oldVal & 0xF);
-/*    */     
-/* 36 */     b = (byte)(b & 0xF);
-/* 37 */     b = (byte)(b << (i ^ 0x1) << 2);
-/*    */     
-/* 39 */     val = (byte)(val & 15 << i << 2);
-/* 40 */     val = (byte)(val | b);
-/* 41 */     data[fieldIdx] = val;
-/*    */     
-/* 43 */     return oldVal;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.common.util;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\commo\\util\BitUtil.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BitUtil {
+   public static void setNibble(@Nonnull byte[] data, int idx, byte b) {
+      int fieldIdx = idx >> 1;
+      byte val = data[fieldIdx];
+      b = (byte)(b & 15);
+      int i = idx & 1;
+      b = (byte)(b << ((i ^ 1) << 2));
+      val = (byte)(val & 15 << (i << 2));
+      val = (byte)(val | b);
+      data[fieldIdx] = val;
+   }
+
+   public static byte getNibble(@Nonnull byte[] data, int idx) {
+      int fieldIdx = idx >> 1;
+      byte val = data[fieldIdx];
+      int i = idx & 1;
+      val = (byte)(val >> ((i ^ 1) << 2));
+      return (byte)(val & 15);
+   }
+
+   public static byte getAndSetNibble(@Nonnull byte[] data, int idx, byte b) {
+      int fieldIdx = idx >> 1;
+      byte val = data[fieldIdx];
+      int i = idx & 1;
+      byte oldVal = (byte)(val >> ((i ^ 1) << 2));
+      oldVal = (byte)(oldVal & 15);
+      b = (byte)(b & 15);
+      b = (byte)(b << ((i ^ 1) << 2));
+      val = (byte)(val & 15 << (i << 2));
+      val = (byte)(val | b);
+      data[fieldIdx] = val;
+      return oldVal;
+   }
+}

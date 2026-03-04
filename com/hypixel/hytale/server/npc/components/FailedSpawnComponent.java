@@ -1,33 +1,19 @@
-/*    */ package com.hypixel.hytale.server.npc.components;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.Component;
-/*    */ import com.hypixel.hytale.component.ComponentType;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import com.hypixel.hytale.server.npc.NPCPlugin;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class FailedSpawnComponent
-/*    */   implements Component<EntityStore>
-/*    */ {
-/*    */   public static ComponentType<EntityStore, FailedSpawnComponent> getComponentType() {
-/* 15 */     return NPCPlugin.get().getFailedSpawnComponentType();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Component<EntityStore> clone() {
-/* 25 */     return new FailedSpawnComponent();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.components;
 
+import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.NPCPlugin;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\components\FailedSpawnComponent.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class FailedSpawnComponent implements Component<EntityStore> {
+   public static ComponentType<EntityStore, FailedSpawnComponent> getComponentType() {
+      return NPCPlugin.get().getFailedSpawnComponentType();
+   }
+
+   @Nonnull
+   @Override
+   public Component<EntityStore> clone() {
+      return new FailedSpawnComponent();
+   }
+}

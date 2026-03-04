@@ -1,246 +1,228 @@
-/*     */ package com.hypixel.hytale.server.core.modules.entitystats;
-/*     */ 
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.KeyedCodec;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.codec.codecs.map.MapCodec;
-/*     */ import com.hypixel.hytale.math.util.MathUtil;
-/*     */ import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
-/*     */ import com.hypixel.hytale.server.core.modules.entitystats.modifier.Modifier;
-/*     */ import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
-/*     */ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-/*     */ import java.util.Arrays;
-/*     */ import java.util.Map;
-/*     */ import java.util.function.Supplier;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ public class EntityStatValue
-/*     */ {
-/*  21 */   public static final EntityStatValue[] EMPTY_ARRAY = new EntityStatValue[0];
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public static final BuilderCodec<EntityStatValue> CODEC;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private String id;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   static {
-/*  38 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(EntityStatValue.class, EntityStatValue::new).addField(new KeyedCodec("Id", (Codec)Codec.STRING), (regenerating, value) -> regenerating.id = value, regenerating -> regenerating.id)).addField(new KeyedCodec("Value", (Codec)Codec.FLOAT), (regenerating, value) -> regenerating.value = value.floatValue(), regenerating -> Float.valueOf(regenerating.value))).addField(new KeyedCodec("Modifiers", (Codec)new MapCodec((Codec)Modifier.CODEC, java.util.HashMap::new, false)), (regenerating, value) -> regenerating.modifiers = value, regenerating -> (regenerating.modifiers == null || regenerating.modifiers.isEmpty()) ? null : regenerating.modifiers)).build();
-/*     */   }
-/*     */   
-/*  41 */   private int index = Integer.MIN_VALUE;
-/*     */   
-/*     */   private float value;
-/*     */   
-/*     */   private float min;
-/*     */   
-/*     */   private float max;
-/*     */   
-/*     */   private boolean ignoreInvulnerability;
-/*     */   
-/*     */   @Nullable
-/*     */   private RegeneratingValue[] regeneratingValues;
-/*     */   @Nullable
-/*     */   private Map<String, Modifier> modifiers;
-/*     */   
-/*     */   public EntityStatValue(int index, @Nonnull EntityStatType asset) {
-/*  57 */     this.id = asset.getId();
-/*  58 */     this.index = index;
-/*  59 */     this.value = asset.getInitialValue();
-/*     */     
-/*  61 */     synchronizeAsset(index, asset);
-/*     */   }
-/*     */   
-/*     */   public String getId() {
-/*  65 */     return this.id;
-/*     */   }
-/*     */   
-/*     */   public int getIndex() {
-/*  69 */     return this.index;
-/*     */   }
-/*     */   
-/*     */   public float get() {
-/*  73 */     return this.value;
-/*     */   }
-/*     */   
-/*     */   public float asPercentage() {
-/*  77 */     if (this.min == this.max) return 0.0F; 
-/*  78 */     return (this.value - this.min) / (this.max - this.min);
-/*     */   }
-/*     */   
-/*     */   public float getMin() {
-/*  82 */     return this.min;
-/*     */   }
-/*     */   
-/*     */   public float getMax() {
-/*  86 */     return this.max;
-/*     */   }
-/*     */   
-/*     */   protected float set(float newValue) {
-/*  90 */     return this.value = MathUtil.clamp(newValue, this.min, this.max);
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public RegeneratingValue[] getRegeneratingValues() {
-/*  95 */     return this.regeneratingValues;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public Modifier getModifier(String key) {
-/* 100 */     if (this.modifiers == null) return null; 
-/* 101 */     return this.modifiers.get(key);
-/*     */   }
-/*     */   
-/*     */   public boolean getIgnoreInvulnerability() {
-/* 105 */     return this.ignoreInvulnerability;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public Map<String, Modifier> getModifiers() {
-/* 110 */     return this.modifiers;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   protected Modifier putModifier(String key, Modifier modifier) {
-/* 115 */     if (this.modifiers == null) this.modifiers = (Map<String, Modifier>)new Object2ObjectOpenHashMap();
-/*     */     
-/* 117 */     Modifier oldModifier = this.modifiers.put(key, modifier);
-/*     */     
-/* 119 */     computeModifiers((EntityStatType)EntityStatType.getAssetMap().getAsset(this.index));
-/* 120 */     return oldModifier;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   protected Modifier removeModifier(String key) {
-/* 125 */     if (this.modifiers == null) return null;
-/*     */     
-/* 127 */     Modifier modifier = this.modifiers.remove(key);
-/*     */     
-/* 129 */     if (modifier != null) computeModifiers((EntityStatType)EntityStatType.getAssetMap().getAsset(this.index)); 
-/* 130 */     return modifier;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public boolean synchronizeAsset(int index, @Nonnull EntityStatType asset) {
-/* 140 */     this.id = asset.getId();
-/* 141 */     this.index = index;
-/*     */     
-/* 143 */     initializeRegenerating(asset);
-/*     */     
-/* 145 */     boolean minMaxChanged = (this.min != asset.getMin() || this.max != asset.getMax());
-/*     */     
-/* 147 */     this.ignoreInvulnerability = asset.getIgnoreInvulnerability();
-/*     */     
-/* 149 */     float oldValue = this.value;
-/* 150 */     computeModifiers(asset);
-/*     */     
-/* 152 */     return (minMaxChanged || this.value != oldValue);
-/*     */   }
-/*     */   
-/*     */   private void initializeRegenerating(@Nonnull EntityStatType entityStatType) {
-/* 156 */     EntityStatType.Regenerating[] regeneratingTypes = entityStatType.getRegenerating();
-/* 157 */     if (regeneratingTypes == null)
-/*     */       return; 
-/* 159 */     this.regeneratingValues = new RegeneratingValue[regeneratingTypes.length];
-/* 160 */     for (int i = 0; i < regeneratingTypes.length; i++) {
-/* 161 */       this.regeneratingValues[i] = new RegeneratingValue(regeneratingTypes[i]);
-/*     */     }
-/*     */   }
-/*     */   
-/*     */   protected void computeModifiers(@Nonnull EntityStatType asset) {
-/* 166 */     this.min = asset.getMin();
-/* 167 */     this.max = asset.getMax();
-/*     */     
-/* 169 */     if (this.modifiers != null) {
-/*     */ 
-/*     */ 
-/*     */       
-/* 173 */       for (Modifier.ModifierTarget target : Modifier.ModifierTarget.VALUES) {
-/*     */         
-/* 175 */         boolean hasAdditive = false;
-/* 176 */         float additive = 0.0F;
-/* 177 */         boolean hasMultiplicative = false;
-/* 178 */         float multiplicative = 0.0F;
-/* 179 */         for (Modifier modifier : this.modifiers.values()) {
-/* 180 */           if (modifier instanceof StaticModifier) { StaticModifier staticModifier = (StaticModifier)modifier;
-/* 181 */             if (staticModifier.getTarget() != target)
-/*     */               continue; 
-/* 183 */             switch (staticModifier.getCalculationType()) {
-/*     */               case MIN:
-/* 185 */                 hasAdditive = true;
-/* 186 */                 additive += staticModifier.getAmount();
-/*     */               
-/*     */               case MAX:
-/* 189 */                 hasMultiplicative = true;
-/* 190 */                 multiplicative += staticModifier.getAmount();
-/*     */             } 
-/*     */             
-/*     */              }
-/*     */         
-/*     */         } 
-/* 196 */         switch (target) {
-/*     */           case MIN:
-/* 198 */             if (hasAdditive) this.min = StaticModifier.CalculationType.ADDITIVE.compute(this.min, additive); 
-/* 199 */             if (hasMultiplicative) this.min = StaticModifier.CalculationType.MULTIPLICATIVE.compute(this.min, multiplicative); 
-/*     */             break;
-/*     */           case MAX:
-/* 202 */             if (hasAdditive) this.max = StaticModifier.CalculationType.ADDITIVE.compute(this.max, additive); 
-/* 203 */             if (hasMultiplicative) this.max = StaticModifier.CalculationType.MULTIPLICATIVE.compute(this.max, multiplicative);
-/*     */             
-/*     */             break;
-/*     */         } 
-/*     */       
-/*     */       } 
-/* 209 */       for (Modifier modifier : this.modifiers.values()) {
-/* 210 */         if (!(modifier instanceof StaticModifier)) {
-/* 211 */           applyModifier(modifier);
-/*     */         }
-/*     */       } 
-/*     */     } 
-/*     */ 
-/*     */     
-/* 217 */     this.value = MathUtil.clamp(this.value, this.min, this.max);
-/*     */   }
-/*     */   
-/*     */   private void applyModifier(@Nonnull Modifier modifier) {
-/* 221 */     switch (modifier.getTarget()) { case MIN:
-/* 222 */         this.min = modifier.apply(this.min); break;
-/* 223 */       case MAX: this.max = modifier.apply(this.max);
-/*     */         break; }
-/*     */   
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   public String toString() {
-/* 230 */     return "EntityStatValue{id='" + this.id + "', index=" + this.index + ", value=" + this.value + ", min=" + this.min + ", max=" + this.max + ", regeneratingValues=" + 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */       
-/* 236 */       Arrays.toString((Object[])this.regeneratingValues) + ", modifiers=" + String.valueOf(this.modifiers) + "}";
-/*     */   }
-/*     */   
-/*     */   protected EntityStatValue() {}
-/*     */ }
+package com.hypixel.hytale.server.core.modules.entitystats;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.map.MapCodec;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
+import com.hypixel.hytale.server.core.modules.entitystats.modifier.Modifier;
+import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\entitystats\EntityStatValue.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class EntityStatValue {
+   public static final EntityStatValue[] EMPTY_ARRAY = new EntityStatValue[0];
+   public static final BuilderCodec<EntityStatValue> CODEC = BuilderCodec.builder(EntityStatValue.class, EntityStatValue::new)
+      .addField(new KeyedCodec<>("Id", Codec.STRING), (regenerating, value) -> regenerating.id = value, regenerating -> regenerating.id)
+      .addField(new KeyedCodec<>("Value", Codec.FLOAT), (regenerating, value) -> regenerating.value = value, regenerating -> regenerating.value)
+      .addField(
+         new KeyedCodec<>("Modifiers", new MapCodec<>(Modifier.CODEC, HashMap::new, false)),
+         (regenerating, value) -> regenerating.modifiers = value,
+         regenerating -> regenerating.modifiers != null && !regenerating.modifiers.isEmpty() ? regenerating.modifiers : null
+      )
+      .build();
+   private String id;
+   private int index = Integer.MIN_VALUE;
+   private float value;
+   private float min;
+   private float max;
+   private boolean ignoreInvulnerability;
+   @Nullable
+   private RegeneratingValue[] regeneratingValues;
+   @Nullable
+   private Map<String, Modifier> modifiers;
+
+   protected EntityStatValue() {
+   }
+
+   public EntityStatValue(int index, @Nonnull EntityStatType asset) {
+      this.id = asset.getId();
+      this.index = index;
+      this.value = asset.getInitialValue();
+      this.synchronizeAsset(index, asset);
+   }
+
+   public String getId() {
+      return this.id;
+   }
+
+   public int getIndex() {
+      return this.index;
+   }
+
+   public float get() {
+      return this.value;
+   }
+
+   public float asPercentage() {
+      return this.min == this.max ? 0.0F : (this.value - this.min) / (this.max - this.min);
+   }
+
+   public float getMin() {
+      return this.min;
+   }
+
+   public float getMax() {
+      return this.max;
+   }
+
+   protected float set(float newValue) {
+      return this.value = MathUtil.clamp(newValue, this.min, this.max);
+   }
+
+   @Nullable
+   public RegeneratingValue[] getRegeneratingValues() {
+      return this.regeneratingValues;
+   }
+
+   @Nullable
+   public Modifier getModifier(String key) {
+      return this.modifiers == null ? null : this.modifiers.get(key);
+   }
+
+   public boolean getIgnoreInvulnerability() {
+      return this.ignoreInvulnerability;
+   }
+
+   @Nullable
+   public Map<String, Modifier> getModifiers() {
+      return this.modifiers;
+   }
+
+   @Nullable
+   protected Modifier putModifier(String key, Modifier modifier) {
+      if (this.modifiers == null) {
+         this.modifiers = new Object2ObjectOpenHashMap();
+      }
+
+      Modifier oldModifier = this.modifiers.put(key, modifier);
+      this.computeModifiers(EntityStatType.getAssetMap().getAsset(this.index));
+      return oldModifier;
+   }
+
+   @Nullable
+   protected Modifier removeModifier(String key) {
+      if (this.modifiers == null) {
+         return null;
+      } else {
+         Modifier modifier = this.modifiers.remove(key);
+         if (modifier != null) {
+            this.computeModifiers(EntityStatType.getAssetMap().getAsset(this.index));
+         }
+
+         return modifier;
+      }
+   }
+
+   public boolean synchronizeAsset(int index, @Nonnull EntityStatType asset) {
+      this.id = asset.getId();
+      this.index = index;
+      this.initializeRegenerating(asset);
+      boolean minMaxChanged = this.min != asset.getMin() || this.max != asset.getMax();
+      this.ignoreInvulnerability = asset.getIgnoreInvulnerability();
+      float oldValue = this.value;
+      this.computeModifiers(asset);
+      return minMaxChanged || this.value != oldValue;
+   }
+
+   private void initializeRegenerating(@Nonnull EntityStatType entityStatType) {
+      EntityStatType.Regenerating[] regeneratingTypes = entityStatType.getRegenerating();
+      if (regeneratingTypes != null) {
+         this.regeneratingValues = new RegeneratingValue[regeneratingTypes.length];
+
+         for (int i = 0; i < regeneratingTypes.length; i++) {
+            this.regeneratingValues[i] = new RegeneratingValue(regeneratingTypes[i]);
+         }
+      }
+   }
+
+   protected void computeModifiers(@Nonnull EntityStatType asset) {
+      this.min = asset.getMin();
+      this.max = asset.getMax();
+      if (this.modifiers != null) {
+         for (Modifier.ModifierTarget target : Modifier.ModifierTarget.VALUES) {
+            boolean hasAdditive = false;
+            float additive = 0.0F;
+            boolean hasMultiplicative = false;
+            float multiplicative = 0.0F;
+
+            for (Modifier modifier : this.modifiers.values()) {
+               if (modifier instanceof StaticModifier staticModifier && staticModifier.getTarget() == target) {
+                  switch (staticModifier.getCalculationType()) {
+                     case ADDITIVE:
+                        hasAdditive = true;
+                        additive += staticModifier.getAmount();
+                        break;
+                     case MULTIPLICATIVE:
+                        hasMultiplicative = true;
+                        multiplicative += staticModifier.getAmount();
+                  }
+               }
+            }
+
+            switch (target) {
+               case MIN:
+                  if (hasAdditive) {
+                     this.min = StaticModifier.CalculationType.ADDITIVE.compute(this.min, additive);
+                  }
+
+                  if (hasMultiplicative) {
+                     this.min = StaticModifier.CalculationType.MULTIPLICATIVE.compute(this.min, multiplicative);
+                  }
+                  break;
+               case MAX:
+                  if (hasAdditive) {
+                     this.max = StaticModifier.CalculationType.ADDITIVE.compute(this.max, additive);
+                  }
+
+                  if (hasMultiplicative) {
+                     this.max = StaticModifier.CalculationType.MULTIPLICATIVE.compute(this.max, multiplicative);
+                  }
+            }
+         }
+
+         for (Modifier modifierx : this.modifiers.values()) {
+            if (!(modifierx instanceof StaticModifier)) {
+               this.applyModifier(modifierx);
+            }
+         }
+      }
+
+      this.value = MathUtil.clamp(this.value, this.min, this.max);
+   }
+
+   private void applyModifier(@Nonnull Modifier modifier) {
+      switch (modifier.getTarget()) {
+         case MIN:
+            this.min = modifier.apply(this.min);
+            break;
+         case MAX:
+            this.max = modifier.apply(this.max);
+      }
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "EntityStatValue{id='"
+         + this.id
+         + "', index="
+         + this.index
+         + ", value="
+         + this.value
+         + ", min="
+         + this.min
+         + ", max="
+         + this.max
+         + ", regeneratingValues="
+         + Arrays.toString((Object[])this.regeneratingValues)
+         + ", modifiers="
+         + this.modifiers
+         + "}";
+   }
+}

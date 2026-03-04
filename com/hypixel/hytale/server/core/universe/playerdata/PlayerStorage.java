@@ -9,21 +9,15 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 public interface PlayerStorage {
-  @Nonnull
-  CompletableFuture<Holder<EntityStore>> load(@Nonnull UUID paramUUID);
-  
-  @Nonnull
-  CompletableFuture<Void> save(@Nonnull UUID paramUUID, @Nonnull Holder<EntityStore> paramHolder);
-  
-  @Nonnull
-  CompletableFuture<Void> remove(@Nonnull UUID paramUUID);
-  
-  @Nonnull
-  Set<UUID> getPlayers() throws IOException;
+   @Nonnull
+   CompletableFuture<Holder<EntityStore>> load(@Nonnull UUID var1);
+
+   @Nonnull
+   CompletableFuture<Void> save(@Nonnull UUID var1, @Nonnull Holder<EntityStore> var2);
+
+   @Nonnull
+   CompletableFuture<Void> remove(@Nonnull UUID var1);
+
+   @Nonnull
+   Set<UUID> getPlayers() throws IOException;
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\playerdata\PlayerStorage.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

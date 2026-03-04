@@ -1,9 +1,0 @@
-package org.bouncycastle.crypto.signers;
-
-public class ECGOST3410_2012Signer extends ECGOST3410Signer {}
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\org\bouncycastle\crypto\signers\ECGOST3410_2012Signer.class
- * Java compiler version: 8 (52.0)
- * JD-Core Version:       1.1.3
- */

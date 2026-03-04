@@ -1,483 +1,581 @@
-/*     */ package com.hypixel.hytale.server.core.asset;
-/*     */ import com.hypixel.hytale.assetstore.AssetLoadResult;
-/*     */ import com.hypixel.hytale.assetstore.AssetMap;
-/*     */ import com.hypixel.hytale.assetstore.AssetPack;
-/*     */ import com.hypixel.hytale.assetstore.AssetRegistry;
-/*     */ import com.hypixel.hytale.assetstore.AssetStore;
-/*     */ import com.hypixel.hytale.assetstore.event.RegisterAssetStoreEvent;
-/*     */ import com.hypixel.hytale.assetstore.event.RemoveAssetStoreEvent;
-/*     */ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.ExtraInfo;
-/*     */ import com.hypixel.hytale.codec.util.RawJsonReader;
-/*     */ import com.hypixel.hytale.common.plugin.PluginIdentifier;
-/*     */ import com.hypixel.hytale.common.plugin.PluginManifest;
-/*     */ import com.hypixel.hytale.common.util.FormatUtil;
-/*     */ import com.hypixel.hytale.event.IBaseEvent;
-/*     */ import com.hypixel.hytale.logger.HytaleLogger;
-/*     */ import com.hypixel.hytale.server.core.HytaleServer;
-/*     */ import com.hypixel.hytale.server.core.HytaleServerConfig;
-/*     */ import com.hypixel.hytale.server.core.Options;
-/*     */ import com.hypixel.hytale.server.core.asset.monitor.AssetMonitor;
-/*     */ import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.HomeOrSpawnPoint;
-/*     */ import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.RespawnController;
-/*     */ import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.WorldSpawnPoint;
-/*     */ import com.hypixel.hytale.server.core.event.events.BootEvent;
-/*     */ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-/*     */ import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
-/*     */ import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenLoadException;
-/*     */ import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;
-/*     */ import com.hypixel.hytale.server.core.universe.world.worldmap.IWorldMap;
-/*     */ import com.hypixel.hytale.server.core.universe.world.worldmap.provider.IWorldMapProvider;
-/*     */ import com.hypixel.hytale.sneakythrow.SneakyThrow;
-/*     */ import java.io.BufferedReader;
-/*     */ import java.io.FileReader;
-/*     */ import java.io.IOException;
-/*     */ import java.nio.charset.StandardCharsets;
-/*     */ import java.nio.file.DirectoryStream;
-/*     */ import java.nio.file.FileSystem;
-/*     */ import java.nio.file.FileSystems;
-/*     */ import java.nio.file.Files;
-/*     */ import java.nio.file.Path;
-/*     */ import java.util.Arrays;
-/*     */ import java.util.Comparator;
-/*     */ import java.util.List;
-/*     */ import java.util.concurrent.CopyOnWriteArrayList;
-/*     */ import java.util.logging.Level;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ public class AssetModule extends JavaPlugin {
-/*  51 */   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(AssetModule.class)
-/*  52 */     .build(); private static AssetModule instance;
-/*     */   @Nullable
-/*     */   private AssetMonitor assetMonitor;
-/*     */   
-/*     */   public static AssetModule get() {
-/*  57 */     return instance;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  62 */   private final List<AssetPack> assetPacks = new CopyOnWriteArrayList<>();
-/*     */   
-/*     */   private boolean hasLoaded = false;
-/*  65 */   private final List<AssetStore<?, ?, ?>> pendingAssetStores = new CopyOnWriteArrayList<>();
-/*     */   
-/*     */   public AssetModule(@Nonnull JavaPluginInit init) {
-/*  68 */     super(init);
-/*  69 */     instance = this;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void setup() {
-/*  74 */     if (Options.getOptionSet().has(Options.DISABLE_FILE_WATCHER)) {
-/*  75 */       getLogger().at(Level.WARNING).log("Not running asset watcher because --disable-file-watcher was set");
-/*     */     } else {
-/*     */       try {
-/*  78 */         this.assetMonitor = new AssetMonitor();
-/*  79 */         getLogger().at(Level.INFO).log("Asset monitor enabled!");
-/*  80 */       } catch (IOException e) {
-/*  81 */         ((HytaleLogger.Api)getLogger().at(Level.SEVERE).withCause(e)).log("Failed to create asset monitor!");
-/*     */       } 
-/*     */     } 
-/*     */     
-/*  85 */     List<Path> paths = Options.getOptionSet().valuesOf(Options.ASSET_DIRECTORY);
-/*  86 */     for (Path path : paths) {
-/*  87 */       loadAndRegisterPack(path);
-/*     */     }
-/*     */ 
-/*     */     
-/*  91 */     loadPacksFromDirectory(PluginManager.MODS_PATH);
-/*     */ 
-/*     */     
-/*  94 */     for (Path modsPath : Options.getOptionSet().valuesOf(Options.MODS_DIRECTORIES)) {
-/*  95 */       loadPacksFromDirectory(modsPath);
-/*     */     }
-/*     */     
-/*  98 */     if (this.assetPacks.isEmpty()) {
-/*  99 */       HytaleServer.get().shutdownServer(ShutdownReason.MISSING_ASSETS.withMessage("Failed to load any asset packs"));
-/*     */       
-/*     */       return;
-/*     */     } 
-/* 103 */     getEventRegistry().register((short)-16, LoadAssetEvent.class, event -> {
-/*     */           if (this.hasLoaded) {
-/*     */             throw new IllegalStateException("LoadAssetEvent has already been dispatched");
-/*     */           }
-/*     */           
-/*     */           AssetRegistry.ASSET_LOCK.writeLock().lock();
-/*     */           
-/*     */           try {
-/*     */             this.hasLoaded = true;
-/*     */             AssetRegistryLoader.preLoadAssets(event);
-/*     */             for (AssetPack pack : this.assetPacks) {
-/*     */               AssetRegistryLoader.loadAssets(event, pack);
-/*     */             }
-/*     */           } finally {
-/*     */             AssetRegistry.ASSET_LOCK.writeLock().unlock();
-/*     */           } 
-/*     */         });
-/* 120 */     getEventRegistry().register((short)-16, AssetPackRegisterEvent.class, event -> AssetRegistryLoader.loadAssets(null, event.getAssetPack()));
-/*     */ 
-/*     */     
-/* 123 */     getEventRegistry().register(AssetPackUnregisterEvent.class, event -> {
-/*     */           for (AssetStore<?, ?, ?> assetStore : (Iterable<AssetStore<?, ?, ?>>)AssetRegistry.getStoreMap().values()) {
-/*     */             assetStore.removeAssetPack(event.getAssetPack().getName());
-/*     */           }
-/*     */         });
-/*     */     
-/* 129 */     getEventRegistry().register(LoadAssetEvent.class, AssetModule::validateWorldGen);
-/* 130 */     getEventRegistry().register(EventPriority.FIRST, LoadAssetEvent.class, SneakyThrow.sneakyConsumer(AssetRegistryLoader::writeSchemas));
-/* 131 */     getEventRegistry().register(RegisterAssetStoreEvent.class, this::onNewStore);
-/* 132 */     getEventRegistry().register(RemoveAssetStoreEvent.class, this::onRemoveStore);
-/*     */     
-/* 134 */     getEventRegistry().registerGlobal(BootEvent.class, event -> {
-/*     */           StringBuilder sb = new StringBuilder("Total Loaded Assets: ");
-/*     */           
-/*     */           AssetStore[] assetStores = (AssetStore[])AssetRegistry.getStoreMap().values().toArray(());
-/*     */           Arrays.sort(assetStores, Comparator.comparingInt(()));
-/*     */           for (int i = assetStores.length - 1; i >= 0; i--) {
-/*     */             AssetStore assetStore = assetStores[i];
-/*     */             String simpleName = assetStore.getAssetClass().getSimpleName();
-/*     */             int assetCount = assetStore.getAssetMap().getAssetCount();
-/*     */             sb.append(simpleName).append(": ").append(assetCount).append(", ");
-/*     */           } 
-/*     */           sb.setLength(sb.length() - 2);
-/*     */           getLogger().at(Level.INFO).log(sb.toString());
-/*     */         });
-/* 148 */     RespawnController.CODEC.register("HomeOrSpawnPoint", HomeOrSpawnPoint.class, (Codec)HomeOrSpawnPoint.CODEC);
-/* 149 */     RespawnController.CODEC.register("WorldSpawnPoint", WorldSpawnPoint.class, (Codec)WorldSpawnPoint.CODEC);
-/*     */     
-/* 151 */     getCommandRegistry().registerCommand((AbstractCommand)new DroplistCommand());
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void shutdown() {
-/* 156 */     if (this.assetMonitor != null) {
-/* 157 */       this.assetMonitor.shutdown();
-/* 158 */       this.assetMonitor = null;
-/*     */     } 
-/*     */     
-/* 161 */     for (AssetPack pack : this.assetPacks) {
-/* 162 */       if (pack.getFileSystem() != null) {
-/*     */         try {
-/* 164 */           pack.getFileSystem().close();
-/* 165 */         } catch (IOException e) {
-/*     */           
-/* 167 */           ((HytaleLogger.Api)getLogger().at(Level.WARNING).withCause(e)).log("Failed to close asset pack filesystem: %s", pack.getName());
-/*     */         } 
-/*     */       }
-/*     */     } 
-/* 171 */     this.assetPacks.clear();
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   public AssetPack getBaseAssetPack() {
-/* 176 */     return this.assetPacks.getFirst();
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   public List<AssetPack> getAssetPacks() {
-/* 181 */     return this.assetPacks;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public AssetMonitor getAssetMonitor() {
-/* 186 */     return this.assetMonitor;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public AssetPack findAssetPackForPath(Path path) {
-/* 191 */     path = path.toAbsolutePath().normalize();
-/* 192 */     for (AssetPack pack : this.assetPacks) {
-/*     */       
-/* 194 */       if (path.getFileSystem() == pack.getRoot().getFileSystem() && 
-/* 195 */         path.startsWith(pack.getRoot())) return pack; 
-/*     */     } 
-/* 197 */     return null;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public boolean isAssetPathImmutable(@Nonnull Path path) {
-/* 205 */     AssetPack pack = findAssetPackForPath(path);
-/* 206 */     return (pack != null && pack.isImmutable());
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nullable
-/*     */   private PluginManifest loadPackManifest(Path packPath) throws IOException {
-/* 218 */     if (packPath.getFileName().toString().toLowerCase().endsWith(".zip"))
-/* 219 */     { FileSystem fs = FileSystems.newFileSystem(packPath, (ClassLoader)null); 
-/* 220 */       try { Path manifestPath = fs.getPath("manifest.json", new String[0]);
-/* 221 */         if (Files.exists(manifestPath, new java.nio.file.LinkOption[0]))
-/* 222 */         { BufferedReader reader = Files.newBufferedReader(manifestPath, StandardCharsets.UTF_8); 
-/* 223 */           try { char[] buffer = RawJsonReader.READ_BUFFER.get();
-/* 224 */             RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
-/* 225 */             ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
-/* 226 */             PluginManifest manifest = (PluginManifest)PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
-/* 227 */             extraInfo.getValidationResults().logOrThrowValidatorExceptions(getLogger());
-/* 228 */             PluginManifest pluginManifest1 = manifest;
-/* 229 */             if (reader != null) reader.close();
-/*     */             
-/* 231 */             if (fs != null) fs.close();  return pluginManifest1; } catch (Throwable throwable) { if (reader != null) try { reader.close(); } catch (Throwable throwable1) { throwable.addSuppressed(throwable1); }   throw throwable; }  }  if (fs != null) fs.close();  } catch (Throwable throwable) { if (fs != null)
-/* 232 */           try { fs.close(); } catch (Throwable throwable1) { throwable.addSuppressed(throwable1); }   throw throwable; }  } else if (Files.isDirectory(packPath, new java.nio.file.LinkOption[0]))
-/*     */     
-/* 234 */     { Path manifestPath = packPath.resolve("manifest.json");
-/* 235 */       if (Files.exists(manifestPath, new java.nio.file.LinkOption[0])) {
-/* 236 */         FileReader reader = new FileReader(manifestPath.toFile(), StandardCharsets.UTF_8); 
-/* 237 */         try { char[] buffer = RawJsonReader.READ_BUFFER.get();
-/* 238 */           RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
-/* 239 */           ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
-/* 240 */           PluginManifest manifest = (PluginManifest)PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
-/* 241 */           extraInfo.getValidationResults().logOrThrowValidatorExceptions(getLogger());
-/* 242 */           PluginManifest pluginManifest1 = manifest;
-/* 243 */           reader.close(); return pluginManifest1; } catch (Throwable throwable) { try { reader.close(); } catch (Throwable throwable1) { throwable.addSuppressed(throwable1); }
-/*     */            throw throwable; }
-/*     */       
-/*     */       }  }
-/* 247 */      return null;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private void loadPacksFromDirectory(Path modsPath) {
-/* 256 */     if (!Files.isDirectory(modsPath, new java.nio.file.LinkOption[0]))
-/*     */       return; 
-/* 258 */     getLogger().at(Level.INFO).log("Loading packs from directory: %s", modsPath); 
-/* 259 */     try { DirectoryStream<Path> stream = Files.newDirectoryStream(modsPath); 
-/* 260 */       try { for (Path packPath : stream) {
-/* 261 */           if (packPath.getFileName() == null || packPath.getFileName().toString().toLowerCase().endsWith(".jar"))
-/* 262 */             continue;  loadAndRegisterPack(packPath);
-/*     */         } 
-/* 264 */         if (stream != null) stream.close();  } catch (Throwable throwable) { if (stream != null) try { stream.close(); } catch (Throwable throwable1) { throwable.addSuppressed(throwable1); }   throw throwable; }  } catch (IOException e)
-/* 265 */     { ((HytaleLogger.Api)getLogger().at(Level.SEVERE).withCause(e)).log("Failed to load mods from: %s", modsPath); }
-/*     */   
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private void loadAndRegisterPack(Path packPath) {
-/*     */     PluginManifest manifest;
-/*     */     try {
-/* 279 */       manifest = loadPackManifest(packPath);
-/* 280 */       if (manifest == null) {
-/* 281 */         getLogger().at(Level.WARNING).log("Skipping pack at %s: missing or invalid manifest.json", packPath.getFileName());
-/*     */         return;
-/*     */       } 
-/* 284 */     } catch (Exception e) {
-/* 285 */       ((HytaleLogger.Api)getLogger().at(Level.WARNING).withCause(e)).log("Failed to load manifest for pack at %s", packPath);
-/*     */       
-/*     */       return;
-/*     */     } 
-/*     */     
-/* 290 */     PluginIdentifier packIdentifier = new PluginIdentifier(manifest);
-/*     */ 
-/*     */     
-/* 293 */     HytaleServerConfig.ModConfig modConfig = (HytaleServerConfig.ModConfig)HytaleServer.get().getConfig().getModConfig().get(packIdentifier);
-/* 294 */     boolean enabled = (modConfig == null || modConfig.getEnabled() == null || modConfig.getEnabled().booleanValue());
-/*     */     
-/* 296 */     String packId = packIdentifier.toString();
-/* 297 */     if (enabled) {
-/* 298 */       registerPack(packId, packPath, manifest);
-/* 299 */       getLogger().at(Level.INFO).log("Loaded pack: %s from %s", packId, packPath.getFileName());
-/*     */     } else {
-/* 301 */       getLogger().at(Level.INFO).log("Skipped disabled pack: %s", packId);
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public void registerPack(@Nonnull String name, @Nonnull Path path, @Nonnull PluginManifest manifest) {
-/* 306 */     Path absolutePath = path.toAbsolutePath().normalize();
-/* 307 */     Path packLocation = absolutePath;
-/* 308 */     FileSystem fileSystem = null;
-/* 309 */     boolean isImmutable = false;
-/*     */ 
-/*     */     
-/* 312 */     String lowerFileName = absolutePath.getFileName().toString().toLowerCase();
-/* 313 */     if (lowerFileName.endsWith(".zip") || lowerFileName.endsWith(".jar")) {
-/*     */       try {
-/* 315 */         fileSystem = FileSystems.newFileSystem(absolutePath, (ClassLoader)null);
-/* 316 */         absolutePath = fileSystem.getPath("", new String[0]).toAbsolutePath().normalize();
-/* 317 */         isImmutable = true;
-/* 318 */       } catch (IOException e) {
-/* 319 */         throw SneakyThrow.sneakyThrow(e);
-/*     */       } 
-/*     */     } else {
-/*     */       
-/* 323 */       isImmutable = Files.isRegularFile(absolutePath.resolve("CommonAssetsIndex.hashes"), new java.nio.file.LinkOption[0]);
-/*     */     } 
-/*     */     
-/* 326 */     AssetPack pack = new AssetPack(packLocation, name, absolutePath, fileSystem, isImmutable, manifest);
-/* 327 */     this.assetPacks.add(pack);
-/*     */     
-/* 329 */     AssetRegistry.ASSET_LOCK.writeLock().lock();
-/*     */     try {
-/* 331 */       if (!this.hasLoaded)
-/*     */         return; 
-/* 333 */       HytaleServer.get().getEventBus()
-/* 334 */         .dispatchFor(AssetPackRegisterEvent.class)
-/* 335 */         .dispatch((IBaseEvent)new AssetPackRegisterEvent(pack));
-/*     */     } finally {
-/* 337 */       AssetRegistry.ASSET_LOCK.writeLock().unlock();
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public void unregisterPack(@Nonnull String name) {
-/* 342 */     AssetPack pack = getAssetPack(name);
-/* 343 */     if (pack == null) {
-/* 344 */       getLogger().at(Level.WARNING).log("Tried to unregister non-existent asset pack: %s", name);
-/*     */       
-/*     */       return;
-/*     */     } 
-/* 348 */     this.assetPacks.remove(pack);
-/*     */     
-/* 350 */     if (pack.getFileSystem() != null) {
-/*     */       try {
-/* 352 */         pack.getFileSystem().close();
-/* 353 */       } catch (IOException e) {
-/* 354 */         throw SneakyThrow.sneakyThrow(e);
-/*     */       } 
-/*     */     }
-/*     */     
-/* 358 */     AssetRegistry.ASSET_LOCK.writeLock().lock();
-/*     */     try {
-/* 360 */       HytaleServer.get().getEventBus()
-/* 361 */         .dispatchFor(AssetPackUnregisterEvent.class)
-/* 362 */         .dispatch((IBaseEvent)new AssetPackUnregisterEvent(pack));
-/*     */     } finally {
-/* 364 */       AssetRegistry.ASSET_LOCK.writeLock().unlock();
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public AssetPack getAssetPack(@Nonnull String name) {
-/* 369 */     for (AssetPack pack : this.assetPacks) {
-/* 370 */       if (name.equals(pack.getName())) return pack; 
-/*     */     } 
-/* 372 */     return null;
-/*     */   }
-/*     */   
-/*     */   private void onRemoveStore(@Nonnull RemoveAssetStoreEvent event) {
-/* 376 */     AssetStore<?, ? extends JsonAssetWithMap<?, ? extends AssetMap<?, ?>>, ? extends AssetMap<?, ? extends JsonAssetWithMap<?, ?>>> assetStore = event.getAssetStore();
-/* 377 */     String path = assetStore.getPath();
-/* 378 */     if (path == null)
-/*     */       return; 
-/* 380 */     for (AssetPack pack : this.assetPacks) {
-/* 381 */       if (pack.isImmutable())
-/*     */         continue; 
-/* 383 */       Path assetsPath = pack.getRoot().resolve("Server").resolve(path);
-/* 384 */       if (Files.isDirectory(assetsPath, new java.nio.file.LinkOption[0])) {
-/* 385 */         assetStore.removeFileMonitor(assetsPath);
-/*     */       }
-/*     */     } 
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   private void onNewStore(@Nonnull RegisterAssetStoreEvent event) {
-/* 392 */     if (!AssetRegistry.HAS_INIT)
-/* 393 */       return;  this.pendingAssetStores.add(event.getAssetStore());
-/*     */   }
-/*     */   
-/*     */   public void initPendingStores() {
-/* 397 */     for (int i = 0; i < this.pendingAssetStores.size(); i++) {
-/* 398 */       initStore(this.pendingAssetStores.get(i));
-/*     */     }
-/* 400 */     this.pendingAssetStores.clear();
-/*     */   }
-/*     */   
-/*     */   private void initStore(@Nonnull AssetStore<?, ?, ?> assetStore) {
-/* 404 */     AssetRegistry.ASSET_LOCK.writeLock().lock();
-/*     */     try {
-/* 406 */       List<?> preAddedAssets = assetStore.getPreAddedAssets();
-/* 407 */       if (preAddedAssets != null && !preAddedAssets.isEmpty()) {
-/*     */         
-/* 409 */         AssetLoadResult loadResult = assetStore.loadAssets("Hytale:Hytale", preAddedAssets);
-/* 410 */         if (loadResult.hasFailed()) throw new RuntimeException("Failed to load asset store: " + String.valueOf(assetStore.getAssetClass()));
-/*     */       
-/*     */       } 
-/* 413 */       for (AssetPack pack : this.assetPacks) {
-/* 414 */         Path serverAssetDirectory = pack.getRoot().resolve("Server");
-/* 415 */         String path = assetStore.getPath();
-/* 416 */         if (path != null) {
-/* 417 */           Path assetsPath = serverAssetDirectory.resolve(path);
-/* 418 */           if (Files.isDirectory(assetsPath, new java.nio.file.LinkOption[0])) {
-/* 419 */             AssetLoadResult<?, ? extends JsonAssetWithMap<?, ? extends AssetMap<?, ?>>> loadResult = assetStore.loadAssetsFromDirectory(pack.getName(), assetsPath);
-/* 420 */             if (loadResult.hasFailed()) throw new RuntimeException("Failed to load asset store: " + String.valueOf(assetStore.getAssetClass())); 
-/*     */           } else {
-/* 422 */             getLogger().at(Level.SEVERE).log("Path for %s isn't a directory or doesn't exist: %s", assetStore.getAssetClass().getSimpleName(), assetsPath);
-/*     */           } 
-/*     */         } 
-/*     */         
-/* 426 */         assetStore.validateCodecDefaults();
-/* 427 */         if (path != null) {
-/* 428 */           Path assetsPath = serverAssetDirectory.resolve(path);
-/* 429 */           if (Files.isDirectory(assetsPath, new java.nio.file.LinkOption[0])) {
-/* 430 */             assetStore.addFileMonitor(pack.getName(), assetsPath);
-/*     */           }
-/*     */         } 
-/*     */       } 
-/* 434 */     } catch (IOException e) {
-/* 435 */       throw SneakyThrow.sneakyThrow(e);
-/*     */     } finally {
-/* 437 */       AssetRegistry.ASSET_LOCK.writeLock().unlock();
-/*     */     } 
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   private static void validateWorldGen(@Nonnull LoadAssetEvent event) {
-/* 443 */     if (!Options.getOptionSet().has(Options.VALIDATE_WORLD_GEN))
-/* 444 */       return;  long start = System.nanoTime();
-/*     */     
-/*     */     try {
-/* 447 */       IWorldGenProvider provider = (IWorldGenProvider)IWorldGenProvider.CODEC.getDefault();
-/*     */ 
-/*     */       
-/* 450 */       IWorldGen generator = provider.getGenerator();
-/*     */ 
-/*     */       
-/* 453 */       generator.getDefaultSpawnProvider(0);
-/*     */       
-/* 455 */       if (generator instanceof ValidatableWorldGen) {
-/* 456 */         boolean valid = ((ValidatableWorldGen)generator).validate();
-/* 457 */         if (!valid) event.failed(true, "failed to validate world gen");
-/*     */       
-/*     */       } 
-/* 460 */       if (generator instanceof IWorldMapProvider) { IWorldMapProvider worldMapProvider = (IWorldMapProvider)generator;
-/* 461 */         IWorldMap worldMap = worldMapProvider.getGenerator(null);
-/*     */ 
-/*     */         
-/* 464 */         worldMap.getWorldMapSettings(); }
-/*     */     
-/* 466 */     } catch (WorldGenLoadException e) {
-/* 467 */       ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause((Throwable)e)).log("Failed to load default world gen!");
-/* 468 */       HytaleLogger.getLogger().at(Level.SEVERE).log("\n" + e.getTraceMessage("\n"));
-/* 469 */       event.failed(true, "failed to validate world gen: " + e.getTraceMessage(" -> "));
-/* 470 */     } catch (Throwable e) {
-/* 471 */       ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(e)).log("Failed to load default world gen!");
-/* 472 */       event.failed(true, "failed to validate world gen");
-/*     */     } 
-/*     */     
-/* 475 */     HytaleLogger.getLogger().at(Level.INFO).log("Validate world gen phase completed! Boot time %s, Took %s", FormatUtil.nanosToString(System.nanoTime() - event.getBootStart()), FormatUtil.nanosToString(System.nanoTime() - start));
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.asset;
 
+import com.hypixel.hytale.assetstore.AssetLoadResult;
+import com.hypixel.hytale.assetstore.AssetMap;
+import com.hypixel.hytale.assetstore.AssetPack;
+import com.hypixel.hytale.assetstore.AssetRegistry;
+import com.hypixel.hytale.assetstore.AssetStore;
+import com.hypixel.hytale.assetstore.event.RegisterAssetStoreEvent;
+import com.hypixel.hytale.assetstore.event.RemoveAssetStoreEvent;
+import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.codec.ExtraInfo;
+import com.hypixel.hytale.codec.util.RawJsonReader;
+import com.hypixel.hytale.common.plugin.PluginIdentifier;
+import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.common.util.FormatUtil;
+import com.hypixel.hytale.common.util.PathUtil;
+import com.hypixel.hytale.common.util.java.ManifestUtil;
+import com.hypixel.hytale.event.EventPriority;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.Constants;
+import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.HytaleServerConfig;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.Options;
+import com.hypixel.hytale.server.core.ShutdownReason;
+import com.hypixel.hytale.server.core.asset.monitor.AssetMonitor;
+import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.HomeOrSpawnPoint;
+import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.RespawnController;
+import com.hypixel.hytale.server.core.asset.type.gameplay.respawn.WorldSpawnPoint;
+import com.hypixel.hytale.server.core.asset.type.item.DroplistCommand;
+import com.hypixel.hytale.server.core.config.ModConfig;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.BootEvent;
+import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.plugin.PluginManager;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
+import com.hypixel.hytale.server.core.universe.world.worldgen.ValidatableWorldGen;
+import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenLoadException;
+import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;
+import com.hypixel.hytale.server.core.universe.world.worldmap.IWorldMap;
+import com.hypixel.hytale.server.core.universe.world.worldmap.provider.IWorldMapProvider;
+import com.hypixel.hytale.sneakythrow.SneakyThrow;
+import it.unimi.dsi.fastutil.objects.ObjectBooleanPair;
+import java.awt.Color;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Level;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\AssetModule.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AssetModule extends JavaPlugin {
+   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(AssetModule.class).build();
+   private static AssetModule instance;
+   @Nullable
+   private AssetMonitor assetMonitor;
+   @Nonnull
+   private final List<AssetPack> assetPacks = new CopyOnWriteArrayList<>();
+   private final List<ObjectBooleanPair<AssetPack>> pendingAssetPacks = new ArrayList<>();
+   private boolean hasSetup = false;
+   private boolean hasLoaded = false;
+   private final List<AssetStore<?, ?, ?>> pendingAssetStores = new CopyOnWriteArrayList<>();
+
+   public static AssetModule get() {
+      return instance;
+   }
+
+   public AssetModule(@Nonnull JavaPluginInit init) {
+      super(init);
+      instance = this;
+   }
+
+   @Override
+   protected void setup() {
+      if (Options.getOptionSet().has(Options.DISABLE_FILE_WATCHER)) {
+         this.getLogger().at(Level.WARNING).log("Not running asset watcher because --disable-file-watcher was set");
+      } else {
+         try {
+            this.assetMonitor = new AssetMonitor();
+            this.getLogger().at(Level.INFO).log("Asset monitor enabled!");
+         } catch (IOException var8) {
+            ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var8)).log("Failed to create asset monitor!");
+         }
+      }
+
+      for (Path path : Options.getOptionSet().valuesOf(Options.ASSET_DIRECTORY)) {
+         this.loadAndRegisterPack(path, false);
+      }
+
+      this.hasSetup = true;
+
+      for (ObjectBooleanPair<AssetPack> p : this.pendingAssetPacks) {
+         if (this.getAssetPack(((AssetPack)p.left()).getName()) != null) {
+            if (!p.rightBoolean()) {
+               throw new IllegalStateException("Asset pack with name '" + ((AssetPack)p.left()).getName() + "' already exists");
+            }
+
+            this.getLogger()
+               .at(Level.WARNING)
+               .log(
+                  "Asset pack with name '%s' already exists, skipping registration from path: %s",
+                  ((AssetPack)p.left()).getName(),
+                  ((AssetPack)p.left()).getRoot()
+               );
+         } else {
+            this.assetPacks.add((AssetPack)p.left());
+         }
+      }
+
+      this.pendingAssetPacks.clear();
+      this.loadPacksFromDirectory(PluginManager.MODS_PATH);
+
+      for (Path modsPath : Options.getOptionSet().valuesOf(Options.MODS_DIRECTORIES)) {
+         this.loadPacksFromDirectory(modsPath);
+      }
+
+      if (this.assetPacks.isEmpty()) {
+         HytaleServer.get().shutdownServer(ShutdownReason.MISSING_ASSETS.withMessage("Failed to load any asset packs"));
+      } else {
+         boolean hasOutdatedPacks = false;
+         String serverVersion = ManifestUtil.getVersion();
+
+         for (AssetPack pack : this.assetPacks) {
+            if (!pack.getName().equals("Hytale:Hytale")) {
+               PluginManifest manifest = pack.getManifest();
+               String targetServerVersion = manifest.getServerVersion();
+               if (targetServerVersion == null || !targetServerVersion.equals(serverVersion)) {
+                  hasOutdatedPacks = true;
+                  if (targetServerVersion != null && !"*".equals(targetServerVersion)) {
+                     this.getLogger()
+                        .at(Level.WARNING)
+                        .log(
+                           "Plugin '%s' targets a different server version %s. You may encounter issues, please check for plugin updates.",
+                           pack.getName(),
+                           serverVersion
+                        );
+                  } else {
+                     this.getLogger()
+                        .at(Level.WARNING)
+                        .log(
+                           "Plugin '%s' does not specify a target server version. You may encounter issues, please check for plugin updates. This will be a hard error in the future",
+                           pack.getName()
+                        );
+                  }
+               }
+            }
+         }
+
+         if (hasOutdatedPacks && System.getProperty("hytale.allow_outdated_mods") == null) {
+            this.getLogger()
+               .at(Level.SEVERE)
+               .log("One or more asset packs are targeting an older server version. It is recommended to update these plugins to ensure compatibility.");
+
+            try {
+               if (!Constants.SINGLEPLAYER) {
+                  Thread.sleep(Duration.ofSeconds(2L));
+               }
+            } catch (InterruptedException var9) {
+               throw new RuntimeException(var9);
+            }
+
+            HytaleServer.get().getEventBus().registerGlobal(AddPlayerToWorldEvent.class, event -> {
+               PlayerRef playerRef = event.getHolder().getComponent(PlayerRef.getComponentType());
+               Player player = event.getHolder().getComponent(Player.getComponentType());
+               if (playerRef != null && player != null) {
+                  if (player.hasPermission("hytale.mods.outdated.notify")) {
+                     playerRef.sendMessage(Message.translation("server.assetModule.outOfDatePacks").color(Color.RED));
+                  }
+               }
+            });
+         }
+
+         this.getEventRegistry().register((short)-16, LoadAssetEvent.class, event -> {
+            if (this.hasLoaded) {
+               throw new IllegalStateException("LoadAssetEvent has already been dispatched");
+            } else {
+               AssetRegistry.ASSET_LOCK.writeLock().lock();
+
+               try {
+                  this.hasLoaded = true;
+                  AssetRegistryLoader.preLoadAssets(event);
+
+                  for (AssetPack packx : this.assetPacks) {
+                     AssetRegistryLoader.loadAssets(event, packx);
+                  }
+               } finally {
+                  AssetRegistry.ASSET_LOCK.writeLock().unlock();
+               }
+            }
+         });
+         this.getEventRegistry().register((short)-16, AssetPackRegisterEvent.class, event -> AssetRegistryLoader.loadAssets(null, event.getAssetPack()));
+         this.getEventRegistry().register(AssetPackUnregisterEvent.class, event -> {
+            for (AssetStore<?, ?, ?> assetStore : AssetRegistry.getStoreMap().values()) {
+               assetStore.removeAssetPack(event.getAssetPack().getName());
+            }
+         });
+         this.getEventRegistry().register(LoadAssetEvent.class, AssetModule::validateWorldGen);
+         this.getEventRegistry().register(EventPriority.FIRST, LoadAssetEvent.class, SneakyThrow.sneakyConsumer(AssetRegistryLoader::writeSchemas));
+         this.getEventRegistry().register(RegisterAssetStoreEvent.class, this::onNewStore);
+         this.getEventRegistry().register(RemoveAssetStoreEvent.class, this::onRemoveStore);
+         this.getEventRegistry().registerGlobal(BootEvent.class, event -> {
+            StringBuilder sb = new StringBuilder("Total Loaded Assets: ");
+            AssetStore[] assetStores = AssetRegistry.getStoreMap().values().toArray(AssetStore[]::new);
+            Arrays.sort(assetStores, Comparator.comparingInt(o -> o.getAssetMap().getAssetCount()));
+
+            for (int i = assetStores.length - 1; i >= 0; i--) {
+               AssetStore assetStore = assetStores[i];
+               String simpleName = assetStore.getAssetClass().getSimpleName();
+               int assetCount = assetStore.getAssetMap().getAssetCount();
+               sb.append(simpleName).append(": ").append(assetCount).append(", ");
+            }
+
+            sb.setLength(sb.length() - 2);
+            this.getLogger().at(Level.INFO).log(sb.toString());
+         });
+         RespawnController.CODEC.register("HomeOrSpawnPoint", HomeOrSpawnPoint.class, HomeOrSpawnPoint.CODEC);
+         RespawnController.CODEC.register("WorldSpawnPoint", WorldSpawnPoint.class, WorldSpawnPoint.CODEC);
+         this.getCommandRegistry().registerCommand(new DroplistCommand());
+      }
+   }
+
+   @Override
+   protected void shutdown() {
+      if (this.assetMonitor != null) {
+         this.assetMonitor.shutdown();
+         this.assetMonitor = null;
+      }
+
+      for (AssetPack pack : this.assetPacks) {
+         if (pack.getFileSystem() != null) {
+            try {
+               pack.getFileSystem().close();
+            } catch (IOException var4) {
+               ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var4)).log("Failed to close asset pack filesystem: %s", pack.getName());
+            }
+         }
+      }
+
+      this.assetPacks.clear();
+   }
+
+   @Nonnull
+   public AssetPack getBaseAssetPack() {
+      return this.assetPacks.getFirst();
+   }
+
+   @Nonnull
+   public List<AssetPack> getAssetPacks() {
+      return this.assetPacks;
+   }
+
+   @Nullable
+   public AssetMonitor getAssetMonitor() {
+      return this.assetMonitor;
+   }
+
+   @Nullable
+   public AssetPack findAssetPackForPath(Path path) {
+      path = path.toAbsolutePath().normalize();
+
+      for (AssetPack pack : this.assetPacks) {
+         if (path.getFileSystem() == pack.getRoot().getFileSystem() && path.startsWith(pack.getRoot())) {
+            return pack;
+         }
+      }
+
+      return null;
+   }
+
+   public boolean isWithinPackSubDir(@Nonnull Path path, @Nonnull String subDir) {
+      for (AssetPack pack : this.assetPacks) {
+         Path packSubDir = pack.getRoot().resolve(subDir);
+         if (PathUtil.isChildOf(packSubDir, path)) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   public boolean isAssetPathImmutable(@Nonnull Path path) {
+      AssetPack pack = this.findAssetPackForPath(path);
+      return pack != null && pack.isImmutable();
+   }
+
+   @Nullable
+   private PluginManifest loadPackManifest(Path packPath) throws IOException {
+      if (packPath.getFileName().toString().toLowerCase().endsWith(".zip")) {
+         try (FileSystem fs = FileSystems.newFileSystem(packPath, (ClassLoader)null)) {
+            Path manifestPath = fs.getPath("manifest.json");
+            if (Files.exists(manifestPath)) {
+               try (BufferedReader reader = Files.newBufferedReader(manifestPath, StandardCharsets.UTF_8)) {
+                  char[] buffer = RawJsonReader.READ_BUFFER.get();
+                  RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
+                  ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
+                  PluginManifest manifest = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
+                  extraInfo.getValidationResults().logOrThrowValidatorExceptions(this.getLogger());
+                  return manifest;
+               }
+            }
+
+            return null;
+         }
+      } else if (Files.isDirectory(packPath)) {
+         Path manifestPath = packPath.resolve("manifest.json");
+         if (Files.exists(manifestPath)) {
+            PluginManifest manifest;
+            try (FileReader reader = new FileReader(manifestPath.toFile(), StandardCharsets.UTF_8)) {
+               char[] buffer = RawJsonReader.READ_BUFFER.get();
+               RawJsonReader rawJsonReader = new RawJsonReader(reader, buffer);
+               ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
+               PluginManifest manifestx = PluginManifest.CODEC.decodeJson(rawJsonReader, extraInfo);
+               extraInfo.getValidationResults().logOrThrowValidatorExceptions(this.getLogger());
+               manifest = manifestx;
+            }
+
+            return manifest;
+         }
+      }
+
+      return null;
+   }
+
+   private void loadPacksFromDirectory(Path modsPath) {
+      if (Files.isDirectory(modsPath)) {
+         this.getLogger().at(Level.INFO).log("Loading packs from directory: %s", modsPath);
+
+         try (DirectoryStream<Path> stream = Files.newDirectoryStream(modsPath)) {
+            for (Path packPath : stream) {
+               if (packPath.getFileName() != null && !packPath.getFileName().toString().toLowerCase().endsWith(".jar")) {
+                  this.loadAndRegisterPack(packPath, true);
+               }
+            }
+         } catch (IOException var7) {
+            ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var7)).log("Failed to load mods from: %s", modsPath);
+         }
+      }
+   }
+
+   private void loadAndRegisterPack(Path packPath, boolean isExternal) {
+      PluginManifest manifest;
+      try {
+         manifest = this.loadPackManifest(packPath);
+         if (manifest == null) {
+            this.getLogger().at(Level.WARNING).log("Skipping pack at %s: missing or invalid manifest.json", packPath.getFileName());
+            return;
+         }
+      } catch (Exception var9) {
+         ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var9)).log("Failed to load manifest for pack at %s", packPath);
+         return;
+      }
+
+      PluginIdentifier packIdentifier = new PluginIdentifier(manifest);
+      HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
+      ModConfig modConfig = serverConfig.getModConfig().get(packIdentifier);
+      boolean enabled;
+      if (modConfig != null && modConfig.getEnabled() != null) {
+         enabled = modConfig.getEnabled();
+      } else {
+         enabled = !manifest.isDisabledByDefault() && (!isExternal || serverConfig.getDefaultModsEnabled());
+      }
+
+      String packId = packIdentifier.toString();
+      if (enabled) {
+         this.registerPack(packId, packPath, manifest, false);
+         this.getLogger().at(Level.INFO).log("Loaded pack: %s from %s", packId, packPath.getFileName());
+      } else {
+         this.getLogger().at(Level.INFO).log("Skipped disabled pack: %s", packId);
+      }
+   }
+
+   public void registerPack(@Nonnull String name, @Nonnull Path path, @Nonnull PluginManifest manifest, boolean ignoreIfExists) {
+      Path absolutePath = path.toAbsolutePath().normalize();
+      Path packLocation = absolutePath;
+      FileSystem fileSystem = null;
+      boolean isImmutable = false;
+      String lowerFileName = absolutePath.getFileName().toString().toLowerCase();
+      if (!lowerFileName.endsWith(".zip") && !lowerFileName.endsWith(".jar")) {
+         isImmutable = Files.isRegularFile(absolutePath.resolve("CommonAssetsIndex.hashes"));
+      } else {
+         try {
+            fileSystem = FileSystems.newFileSystem(absolutePath, (ClassLoader)null);
+            absolutePath = fileSystem.getPath("").toAbsolutePath().normalize();
+            isImmutable = true;
+         } catch (IOException var14) {
+            throw SneakyThrow.sneakyThrow(var14);
+         }
+      }
+
+      AssetPack pack = new AssetPack(packLocation, name, absolutePath, fileSystem, isImmutable, manifest);
+      if (!this.hasSetup) {
+         this.pendingAssetPacks.add(ObjectBooleanPair.of(pack, ignoreIfExists));
+      } else if (this.getAssetPack(name) != null) {
+         if (ignoreIfExists) {
+            this.getLogger().at(Level.WARNING).log("Asset pack with name '%s' already exists, skipping registration from path: %s", name, path);
+         } else {
+            throw new IllegalStateException("Asset pack with name '" + name + "' already exists");
+         }
+      } else {
+         this.assetPacks.add(pack);
+         AssetRegistry.ASSET_LOCK.writeLock().lock();
+
+         try {
+            if (this.hasLoaded) {
+               HytaleServer.get()
+                  .getEventBus()
+                  .<Void, AssetPackRegisterEvent>dispatchFor(AssetPackRegisterEvent.class)
+                  .dispatch(new AssetPackRegisterEvent(pack));
+               return;
+            }
+         } finally {
+            AssetRegistry.ASSET_LOCK.writeLock().unlock();
+         }
+      }
+   }
+
+   public void unregisterPack(@Nonnull String name) {
+      AssetPack pack = this.getAssetPack(name);
+      if (pack == null) {
+         this.getLogger().at(Level.WARNING).log("Tried to unregister non-existent asset pack: %s", name);
+      } else {
+         this.assetPacks.remove(pack);
+         if (pack.getFileSystem() != null) {
+            try {
+               pack.getFileSystem().close();
+            } catch (IOException var8) {
+               throw SneakyThrow.sneakyThrow(var8);
+            }
+         }
+
+         AssetRegistry.ASSET_LOCK.writeLock().lock();
+
+         try {
+            HytaleServer.get()
+               .getEventBus()
+               .<Void, AssetPackUnregisterEvent>dispatchFor(AssetPackUnregisterEvent.class)
+               .dispatch(new AssetPackUnregisterEvent(pack));
+         } finally {
+            AssetRegistry.ASSET_LOCK.writeLock().unlock();
+         }
+      }
+   }
+
+   public AssetPack getAssetPack(@Nonnull String name) {
+      for (AssetPack pack : this.assetPacks) {
+         if (name.equals(pack.getName())) {
+            return pack;
+         }
+      }
+
+      return null;
+   }
+
+   private void onRemoveStore(@Nonnull RemoveAssetStoreEvent event) {
+      AssetStore<?, ? extends JsonAssetWithMap<?, ? extends AssetMap<?, ?>>, ? extends AssetMap<?, ? extends JsonAssetWithMap<?, ?>>> assetStore = (AssetStore<?, ? extends JsonAssetWithMap<?, ? extends AssetMap<?, ?>>, ? extends AssetMap<?, ? extends JsonAssetWithMap<?, ?>>>)event.getAssetStore();
+      String path = assetStore.getPath();
+      if (path != null) {
+         for (AssetPack pack : this.assetPacks) {
+            if (!pack.isImmutable()) {
+               Path assetsPath = pack.getRoot().resolve("Server").resolve(path);
+               if (Files.isDirectory(assetsPath)) {
+                  assetStore.removeFileMonitor(assetsPath);
+               }
+            }
+         }
+      }
+   }
+
+   private void onNewStore(@Nonnull RegisterAssetStoreEvent event) {
+      if (AssetRegistry.HAS_INIT) {
+         this.pendingAssetStores.add(event.getAssetStore());
+      }
+   }
+
+   public void initPendingStores() {
+      for (int i = 0; i < this.pendingAssetStores.size(); i++) {
+         this.initStore(this.pendingAssetStores.get(i));
+      }
+
+      this.pendingAssetStores.clear();
+   }
+
+   private void initStore(@Nonnull AssetStore<?, ?, ?> assetStore) {
+      AssetRegistry.ASSET_LOCK.writeLock().lock();
+
+      try {
+         List<?> preAddedAssets = assetStore.getPreAddedAssets();
+         if (preAddedAssets != null && !preAddedAssets.isEmpty()) {
+            AssetLoadResult loadResult = assetStore.loadAssets("Hytale:Hytale", preAddedAssets);
+            if (loadResult.hasFailed()) {
+               throw new RuntimeException("Failed to load asset store: " + assetStore.getAssetClass());
+            }
+         }
+
+         for (AssetPack pack : this.assetPacks) {
+            Path serverAssetDirectory = pack.getRoot().resolve("Server");
+            String path = assetStore.getPath();
+            if (path != null) {
+               Path assetsPath = serverAssetDirectory.resolve(path);
+               if (Files.isDirectory(assetsPath)) {
+                  AssetLoadResult<?, ? extends JsonAssetWithMap<?, ? extends AssetMap<?, ?>>> loadResult = (AssetLoadResult<?, ? extends JsonAssetWithMap<?, ? extends AssetMap<?, ?>>>)assetStore.loadAssetsFromDirectory(
+                     pack.getName(), assetsPath
+                  );
+                  if (loadResult.hasFailed()) {
+                     throw new RuntimeException("Failed to load asset store: " + assetStore.getAssetClass());
+                  }
+               } else {
+                  this.getLogger()
+                     .at(Level.SEVERE)
+                     .log("Path for %s isn't a directory or doesn't exist: %s", assetStore.getAssetClass().getSimpleName(), assetsPath);
+               }
+            }
+
+            assetStore.validateCodecDefaults();
+            if (path != null) {
+               Path assetsPath = serverAssetDirectory.resolve(path);
+               if (Files.isDirectory(assetsPath)) {
+                  assetStore.addFileMonitor(pack.getName(), assetsPath);
+               }
+            }
+         }
+      } catch (IOException var12) {
+         throw SneakyThrow.sneakyThrow(var12);
+      } finally {
+         AssetRegistry.ASSET_LOCK.writeLock().unlock();
+      }
+   }
+
+   private static void validateWorldGen(@Nonnull LoadAssetEvent event) {
+      if (Options.getOptionSet().has(Options.VALIDATE_WORLD_GEN)) {
+         long start = System.nanoTime();
+
+         try {
+            IWorldGenProvider provider = IWorldGenProvider.CODEC.getDefault();
+            IWorldGen generator = provider.getGenerator();
+            generator.getDefaultSpawnProvider(0);
+            if (generator instanceof ValidatableWorldGen) {
+               boolean valid = ((ValidatableWorldGen)generator).validate();
+               if (!valid) {
+                  event.failed(true, "failed to validate world gen");
+               }
+            }
+
+            if (generator instanceof IWorldMapProvider worldMapProvider) {
+               IWorldMap worldMap = worldMapProvider.getGenerator(null);
+               worldMap.getWorldMapSettings();
+            }
+         } catch (WorldGenLoadException var7) {
+            ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var7)).log("Failed to load default world gen!");
+            HytaleLogger.getLogger().at(Level.SEVERE).log("\n" + var7.getTraceMessage("\n"));
+            event.failed(true, "failed to validate world gen: " + var7.getTraceMessage(" -> "));
+         } catch (Throwable var8) {
+            ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var8)).log("Failed to load default world gen!");
+            event.failed(true, "failed to validate world gen");
+         }
+
+         HytaleLogger.getLogger()
+            .at(Level.INFO)
+            .log(
+               "Validate world gen phase completed! Boot time %s, Took %s",
+               FormatUtil.nanosToString(System.nanoTime() - event.getBootStart()),
+               FormatUtil.nanosToString(System.nanoTime() - start)
+            );
+      }
+   }
+}

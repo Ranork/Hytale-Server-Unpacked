@@ -1,36 +1,29 @@
-/*    */ package com.hypixel.hytale.component.data.change;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.Resource;
-/*    */ import com.hypixel.hytale.component.ResourceType;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class ResourceChange<ECS_TYPE, T extends Resource<ECS_TYPE>>
-/*    */   implements DataChange {
-/*    */   private final ChangeType type;
-/*    */   private final ResourceType<ECS_TYPE, T> resourceType;
-/*    */   
-/*    */   public ResourceChange(ChangeType type, ResourceType<ECS_TYPE, T> resourceType) {
-/* 13 */     this.type = type;
-/* 14 */     this.resourceType = resourceType;
-/*    */   }
-/*    */   
-/*    */   public ChangeType getType() {
-/* 18 */     return this.type;
-/*    */   }
-/*    */   
-/*    */   public ResourceType<ECS_TYPE, T> getResourceType() {
-/* 22 */     return this.resourceType;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 28 */     return "ResourceChange{type=" + String.valueOf(this.type) + ", resourceChange=" + String.valueOf(this.resourceType) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.component.data.change;
 
+import com.hypixel.hytale.component.Resource;
+import com.hypixel.hytale.component.ResourceType;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\component\data\change\ResourceChange.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ResourceChange<ECS_TYPE, T extends Resource<ECS_TYPE>> implements DataChange {
+   private final ChangeType type;
+   private final ResourceType<ECS_TYPE, T> resourceType;
+
+   public ResourceChange(ChangeType type, ResourceType<ECS_TYPE, T> resourceType) {
+      this.type = type;
+      this.resourceType = resourceType;
+   }
+
+   public ChangeType getType() {
+      return this.type;
+   }
+
+   public ResourceType<ECS_TYPE, T> getResourceType() {
+      return this.resourceType;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ResourceChange{type=" + this.type + ", resourceChange=" + this.resourceType + "}";
+   }
+}

@@ -1,61 +1,61 @@
-/*    */ package com.hypixel.hytale.procedurallib.property;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class OffsetNoiseProperty
-/*    */   implements NoiseProperty
-/*    */ {
-/*    */   protected final NoiseProperty noiseProperty;
-/*    */   protected final double offsetX;
-/*    */   protected final double offsetY;
-/*    */   protected final double offsetZ;
-/*    */   
-/*    */   public OffsetNoiseProperty(NoiseProperty noiseProperty, double offset) {
-/* 14 */     this(noiseProperty, offset, offset, offset);
-/*    */   }
-/*    */   
-/*    */   public OffsetNoiseProperty(NoiseProperty noiseProperty, double offsetX, double offsetY, double offsetZ) {
-/* 18 */     this.noiseProperty = noiseProperty;
-/* 19 */     this.offsetX = offsetX;
-/* 20 */     this.offsetY = offsetY;
-/* 21 */     this.offsetZ = offsetZ;
-/*    */   }
-/*    */   
-/*    */   public NoiseProperty getNoiseProperty() {
-/* 25 */     return this.noiseProperty;
-/*    */   }
-/*    */   
-/*    */   public double getOffsetX() {
-/* 29 */     return this.offsetX;
-/*    */   }
-/*    */   
-/*    */   public double getOffsetY() {
-/* 33 */     return this.offsetY;
-/*    */   }
-/*    */   
-/*    */   public double getOffsetZ() {
-/* 37 */     return this.offsetZ;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double get(int seed, double x, double y) {
-/* 42 */     return this.noiseProperty.get(seed, x + this.offsetX, y + this.offsetY);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double get(int seed, double x, double y, double z) {
-/* 47 */     return this.noiseProperty.get(seed, x + this.offsetX, y + this.offsetY, z + this.offsetZ);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 53 */     return "OffsetNoiseProperty{noiseProperty=" + String.valueOf(this.noiseProperty) + ", offsetX=" + this.offsetX + ", offsetY=" + this.offsetY + ", offsetZ=" + this.offsetZ + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.property;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\property\OffsetNoiseProperty.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class OffsetNoiseProperty implements NoiseProperty {
+   protected final NoiseProperty noiseProperty;
+   protected final double offsetX;
+   protected final double offsetY;
+   protected final double offsetZ;
+
+   public OffsetNoiseProperty(NoiseProperty noiseProperty, double offset) {
+      this(noiseProperty, offset, offset, offset);
+   }
+
+   public OffsetNoiseProperty(NoiseProperty noiseProperty, double offsetX, double offsetY, double offsetZ) {
+      this.noiseProperty = noiseProperty;
+      this.offsetX = offsetX;
+      this.offsetY = offsetY;
+      this.offsetZ = offsetZ;
+   }
+
+   public NoiseProperty getNoiseProperty() {
+      return this.noiseProperty;
+   }
+
+   public double getOffsetX() {
+      return this.offsetX;
+   }
+
+   public double getOffsetY() {
+      return this.offsetY;
+   }
+
+   public double getOffsetZ() {
+      return this.offsetZ;
+   }
+
+   @Override
+   public double get(int seed, double x, double y) {
+      return this.noiseProperty.get(seed, x + this.offsetX, y + this.offsetY);
+   }
+
+   @Override
+   public double get(int seed, double x, double y, double z) {
+      return this.noiseProperty.get(seed, x + this.offsetX, y + this.offsetY, z + this.offsetZ);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "OffsetNoiseProperty{noiseProperty="
+         + this.noiseProperty
+         + ", offsetX="
+         + this.offsetX
+         + ", offsetY="
+         + this.offsetY
+         + ", offsetZ="
+         + this.offsetZ
+         + "}";
+   }
+}

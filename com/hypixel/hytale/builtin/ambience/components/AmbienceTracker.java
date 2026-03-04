@@ -1,46 +1,40 @@
-/*    */ package com.hypixel.hytale.builtin.ambience.components;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.ambience.AmbiencePlugin;
-/*    */ import com.hypixel.hytale.component.Component;
-/*    */ import com.hypixel.hytale.component.ComponentType;
-/*    */ import com.hypixel.hytale.protocol.packets.world.UpdateEnvironmentMusic;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class AmbienceTracker
-/*    */   implements Component<EntityStore>
-/*    */ {
-/*    */   public static ComponentType<EntityStore, AmbienceTracker> getComponentType() {
-/* 14 */     return AmbiencePlugin.get().getAmbienceTrackerComponentType();
-/*    */   }
-/*    */   
-/* 17 */   private final UpdateEnvironmentMusic musicPacket = new UpdateEnvironmentMusic(0);
-/*    */   
-/*    */   private int forcedMusicIndex;
-/*    */   
-/*    */   public void setForcedMusicIndex(int forcedMusicIndex) {
-/* 22 */     this.forcedMusicIndex = forcedMusicIndex;
-/*    */   }
-/*    */   
-/*    */   public int getForcedMusicIndex() {
-/* 26 */     return this.forcedMusicIndex;
-/*    */   }
-/*    */   
-/*    */   public UpdateEnvironmentMusic getMusicPacket() {
-/* 30 */     return this.musicPacket;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public Component<EntityStore> clone() {
-/* 36 */     AmbienceTracker clone = new AmbienceTracker();
-/* 37 */     clone.forcedMusicIndex = this.forcedMusicIndex;
-/* 38 */     return clone;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.ambience.components;
 
+import com.hypixel.hytale.builtin.ambience.AmbiencePlugin;
+import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.protocol.packets.world.UpdateEnvironmentMusic;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\ambience\components\AmbienceTracker.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AmbienceTracker implements Component<EntityStore> {
+   @Nonnull
+   private final UpdateEnvironmentMusic musicPacket = new UpdateEnvironmentMusic(0);
+   private int forcedMusicIndex;
+
+   public static ComponentType<EntityStore, AmbienceTracker> getComponentType() {
+      return AmbiencePlugin.get().getAmbienceTrackerComponentType();
+   }
+
+   public void setForcedMusicIndex(int forcedMusicIndex) {
+      this.forcedMusicIndex = forcedMusicIndex;
+   }
+
+   public int getForcedMusicIndex() {
+      return this.forcedMusicIndex;
+   }
+
+   @Nonnull
+   public UpdateEnvironmentMusic getMusicPacket() {
+      return this.musicPacket;
+   }
+
+   @Nullable
+   @Override
+   public Component<EntityStore> clone() {
+      AmbienceTracker clone = new AmbienceTracker();
+      clone.forcedMusicIndex = this.forcedMusicIndex;
+      return clone;
+   }
+}

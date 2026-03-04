@@ -1,186 +1,167 @@
-/*     */ package com.hypixel.hytale.server.core.command.commands.world.worldgen;
-/*     */ 
-/*     */ import com.hypixel.hytale.common.util.FormatUtil;
-/*     */ import com.hypixel.hytale.logger.HytaleLogger;
-/*     */ import com.hypixel.hytale.math.util.ChunkUtil;
-/*     */ import com.hypixel.hytale.math.vector.Vector2i;
-/*     */ import com.hypixel.hytale.server.core.Message;
-/*     */ import com.hypixel.hytale.server.core.command.system.CommandContext;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
-/*     */ import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
-/*     */ import com.hypixel.hytale.server.core.universe.world.World;
-/*     */ import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
-/*     */ import com.hypixel.hytale.server.core.universe.world.worldgen.IBenchmarkableWorldGen;
-/*     */ import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
-/*     */ import it.unimi.dsi.fastutil.longs.LongArrayList;
-/*     */ import java.io.File;
-/*     */ import java.io.FileWriter;
-/*     */ import java.util.HashSet;
-/*     */ import java.util.Set;
-/*     */ import java.util.concurrent.CompletableFuture;
-/*     */ import java.util.concurrent.RejectedExecutionException;
-/*     */ import java.util.concurrent.atomic.AtomicBoolean;
-/*     */ import java.util.logging.Level;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ 
-/*     */ public class WorldGenBenchmarkCommand
-/*     */   extends CommandBase
-/*     */ {
-/*  33 */   private static final AtomicBoolean IS_RUNNING = new AtomicBoolean(false);
-/*     */   
-/*  35 */   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVING = Message.translation("server.commands.worldgenbenchmark.saving");
-/*  36 */   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_FAILED = Message.translation("server.commands.worldgenbenchmark.saveFailed");
-/*  37 */   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ABORT = Message.translation("server.commands.worldgenbenchmark.abort");
-/*  38 */   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_BENCHMARK_NOT_SUPPORTED = Message.translation("server.commands.worldgenbenchmark.benchmarkNotSupported");
-/*  39 */   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ALREADY_IN_PROGRESS = Message.translation("server.commands.worldgenbenchmark.alreadyInProgress");
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  45 */   private final OptionalArg<World> worldArg = withOptionalArg("world", "server.commands.worldthread.arg.desc", (ArgumentType)ArgTypes.WORLD);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  51 */   private final OptionalArg<Integer> seedArg = withOptionalArg("seed", "server.commands.worldgenbenchmark.seed.desc", (ArgumentType)ArgTypes.INTEGER);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  57 */   private final RequiredArg<Vector2i> pos1Arg = withRequiredArg("pos1", "server.commands.worldgenbenchmark.pos1.desc", ArgTypes.VECTOR2I);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  63 */   private final RequiredArg<Vector2i> pos2Arg = withRequiredArg("pos2", "server.commands.worldgenbenchmark.pos2.desc", ArgTypes.VECTOR2I);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public WorldGenBenchmarkCommand() {
-/*  69 */     super("benchmark", "server.commands.worldgenbenchmark.desc");
-/*     */   }
-/*     */   protected void executeSync(@Nonnull CommandContext context) {
-/*     */     IBenchmarkableWorldGen benchmarkableWorldGen;
-/*     */     int minX, maxX, minZ, maxZ;
-/*  74 */     if (IS_RUNNING.get()) {
-/*  75 */       context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ALREADY_IN_PROGRESS);
-/*     */       
-/*     */       return;
-/*     */     } 
-/*  79 */     World world = (World)this.worldArg.getProcessed(context);
-/*  80 */     String worldName = world.getName();
-/*  81 */     int seed = this.seedArg.provided(context) ? ((Integer)this.seedArg.get(context)).intValue() : (int)world.getWorldConfig().getSeed();
-/*     */     
-/*  83 */     IWorldGen worldGen = world.getChunkStore().getGenerator();
-/*  84 */     if (worldGen instanceof IBenchmarkableWorldGen) { benchmarkableWorldGen = (IBenchmarkableWorldGen)worldGen; }
-/*  85 */     else { context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_BENCHMARK_NOT_SUPPORTED);
-/*     */       
-/*     */       return; }
-/*     */     
-/*  89 */     Vector2i corner1 = (Vector2i)this.pos1Arg.get(context);
-/*  90 */     Vector2i corner2 = (Vector2i)this.pos2Arg.get(context);
-/*     */ 
-/*     */     
-/*  93 */     if (corner1.x < corner2.x) {
-/*  94 */       minX = ChunkUtil.chunkCoordinate(corner1.x);
-/*  95 */       maxX = ChunkUtil.chunkCoordinate(corner2.x);
-/*     */     } else {
-/*  97 */       minX = ChunkUtil.chunkCoordinate(corner2.x);
-/*  98 */       maxX = ChunkUtil.chunkCoordinate(corner1.x);
-/*     */     } 
-/* 100 */     if (corner1.y < corner2.y) {
-/* 101 */       minZ = ChunkUtil.chunkCoordinate(corner1.y);
-/* 102 */       maxZ = ChunkUtil.chunkCoordinate(corner2.y);
-/*     */     } else {
-/* 104 */       minZ = ChunkUtil.chunkCoordinate(corner2.y);
-/* 105 */       maxZ = ChunkUtil.chunkCoordinate(corner1.y);
-/*     */     } 
-/*     */     
-/* 108 */     LongArrayList generatingChunks = new LongArrayList();
-/* 109 */     for (int x = minX; x <= maxX; x++) {
-/* 110 */       for (int z = minZ; z <= maxZ; z++) {
-/* 111 */         generatingChunks.add(ChunkUtil.indexChunk(x, z));
-/*     */       }
-/*     */     } 
-/*     */     
-/* 115 */     if (IS_RUNNING.getAndSet(true)) {
-/* 116 */       context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ABORT);
-/*     */       
-/*     */       return;
-/*     */     } 
-/* 120 */     context.sendMessage(Message.translation("server.commands.worldgenbenchmark.started")
-/* 121 */         .param("seed", seed)
-/* 122 */         .param("worldName", worldName)
-/* 123 */         .param("size", generatingChunks.size()));
-/* 124 */     benchmarkableWorldGen.getBenchmark().start();
-/*     */     
-/* 126 */     int chunkCount = generatingChunks.size();
-/* 127 */     long startTime = System.nanoTime();
-/* 128 */     (new Thread(() -> {
-/*     */           try {
-/*     */             Set<CompletableFuture<GeneratedChunk>> currentChunks = new HashSet<>();
-/*     */             
-/*     */             long nextBroadcast = System.nanoTime();
-/*     */             
-/*     */             do {
-/*     */               long thisTime = System.nanoTime();
-/*     */               
-/*     */               if (thisTime >= nextBroadcast) {
-/*     */                 world.execute(());
-/*     */                 
-/*     */                 nextBroadcast = thisTime + 5000000000L;
-/*     */               } 
-/*     */               currentChunks.removeIf(CompletableFuture::isDone);
-/*     */               int i = currentChunks.size();
-/*     */               while (i < 20 && !generatingChunks.isEmpty()) {
-/*     */                 long index = generatingChunks.removeLong(generatingChunks.size() - 1);
-/*     */                 CompletableFuture<GeneratedChunk> future = worldGen.generate(seed, index, ChunkUtil.xOfChunkIndex(index), ChunkUtil.zOfChunkIndex(index), ());
-/*     */                 currentChunks.add(future);
-/*     */                 i++;
-/*     */               } 
-/*     */             } while (!currentChunks.isEmpty());
-/*     */             String duration = FormatUtil.nanosToString(System.nanoTime() - startTime);
-/*     */             world.execute(());
-/*     */             world.execute(());
-/*     */             String fileName = "quant." + System.currentTimeMillis() + "." + maxX - minX + "x" + maxZ - minZ + "." + worldName + ".txt";
-/*     */             File folder = new File("quantification");
-/*     */             File file = new File("quantification" + File.separator + fileName);
-/*     */             folder.mkdirs();
-/*     */             try {
-/*     */               FileWriter fw = new FileWriter(file);
-/*     */               
-/*     */               try { fw.write(benchmarkableWorldGen.getBenchmark().buildReport().join());
-/*     */                 world.execute(());
-/*     */                 fw.close(); }
-/* 164 */               catch (Throwable t$) { try { fw.close(); } catch (Throwable x2)
-/*     */                 { t$.addSuppressed(x2); }
-/*     */                  throw t$; }
-/*     */             
-/* 168 */             } catch (Exception e) {
-/*     */               ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(e)).log("Failed to save worldgen benchmark report!");
-/*     */               world.execute(());
-/*     */             } 
-/*     */             benchmarkableWorldGen.getBenchmark().stop();
-/* 173 */           } catch (RejectedExecutionException e) {
-/*     */             HytaleLogger.getLogger().at(Level.SEVERE).log("Cancelled worldgen benchmark due to generator shutdown");
-/*     */           } finally {
-/*     */             IS_RUNNING.set(false);
-/*     */           } 
-/* 178 */         }"WorldGenBenchmarkCommand")).start();
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.command.commands.world.worldgen;
 
+import com.hypixel.hytale.common.util.FormatUtil;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Vector2i;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
+import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
+import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
+import com.hypixel.hytale.server.core.universe.world.worldgen.IBenchmarkableWorldGen;
+import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import java.io.File;
+import java.io.FileWriter;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\command\commands\world\worldgen\WorldGenBenchmarkCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class WorldGenBenchmarkCommand extends CommandBase {
+   private static final AtomicBoolean IS_RUNNING = new AtomicBoolean(false);
+   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVING = Message.translation("server.commands.worldgenbenchmark.saving");
+   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_FAILED = Message.translation("server.commands.worldgenbenchmark.saveFailed");
+   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ABORT = Message.translation("server.commands.worldgenbenchmark.abort");
+   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_BENCHMARK_NOT_SUPPORTED = Message.translation(
+      "server.commands.worldgenbenchmark.benchmarkNotSupported"
+   );
+   public static final Message MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ALREADY_IN_PROGRESS = Message.translation(
+      "server.commands.worldgenbenchmark.alreadyInProgress"
+   );
+   @Nonnull
+   private final OptionalArg<World> worldArg = this.withOptionalArg("world", "server.commands.worldthread.arg.desc", ArgTypes.WORLD);
+   @Nonnull
+   private final OptionalArg<Integer> seedArg = this.withOptionalArg("seed", "server.commands.worldgenbenchmark.seed.desc", ArgTypes.INTEGER);
+   @Nonnull
+   private final RequiredArg<Vector2i> pos1Arg = this.withRequiredArg("pos1", "server.commands.worldgenbenchmark.pos1.desc", ArgTypes.VECTOR2I);
+   @Nonnull
+   private final RequiredArg<Vector2i> pos2Arg = this.withRequiredArg("pos2", "server.commands.worldgenbenchmark.pos2.desc", ArgTypes.VECTOR2I);
+
+   public WorldGenBenchmarkCommand() {
+      super("benchmark", "server.commands.worldgenbenchmark.desc");
+   }
+
+   @Override
+   protected void executeSync(@Nonnull CommandContext context) {
+      if (IS_RUNNING.get()) {
+         context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ALREADY_IN_PROGRESS);
+      } else {
+         World world = this.worldArg.getProcessed(context);
+         String worldName = world.getName();
+         int seed = this.seedArg.provided(context) ? this.seedArg.get(context) : (int)world.getWorldConfig().getSeed();
+         IWorldGen worldGen = world.getChunkStore().getGenerator();
+         if (!(worldGen instanceof IBenchmarkableWorldGen benchmarkableWorldGen)) {
+            context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_BENCHMARK_NOT_SUPPORTED);
+         } else {
+            Vector2i corner1 = this.pos1Arg.get(context);
+            Vector2i corner2 = this.pos2Arg.get(context);
+            int minX;
+            int maxX;
+            if (corner1.x < corner2.x) {
+               minX = ChunkUtil.chunkCoordinate(corner1.x);
+               maxX = ChunkUtil.chunkCoordinate(corner2.x);
+            } else {
+               minX = ChunkUtil.chunkCoordinate(corner2.x);
+               maxX = ChunkUtil.chunkCoordinate(corner1.x);
+            }
+
+            int minZ;
+            int maxZ;
+            if (corner1.y < corner2.y) {
+               minZ = ChunkUtil.chunkCoordinate(corner1.y);
+               maxZ = ChunkUtil.chunkCoordinate(corner2.y);
+            } else {
+               minZ = ChunkUtil.chunkCoordinate(corner2.y);
+               maxZ = ChunkUtil.chunkCoordinate(corner1.y);
+            }
+
+            LongArrayList generatingChunks = new LongArrayList();
+
+            for (int x = minX; x <= maxX; x++) {
+               for (int z = minZ; z <= maxZ; z++) {
+                  generatingChunks.add(ChunkUtil.indexChunk(x, z));
+               }
+            }
+
+            if (IS_RUNNING.getAndSet(true)) {
+               context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_ABORT);
+            } else {
+               context.sendMessage(
+                  Message.translation("server.commands.worldgenbenchmark.started")
+                     .param("seed", seed)
+                     .param("worldName", worldName)
+                     .param("size", generatingChunks.size())
+               );
+               benchmarkableWorldGen.getBenchmark().start();
+               int chunkCount = generatingChunks.size();
+               long startTime = System.nanoTime();
+               new Thread(
+                     () -> {
+                        try {
+                           Set<CompletableFuture<GeneratedChunk>> currentChunks = new HashSet<>();
+                           long nextBroadcast = System.nanoTime();
+
+                           do {
+                              long thisTime = System.nanoTime();
+                              if (thisTime >= nextBroadcast) {
+                                 world.execute(
+                                    () -> world.sendMessage(
+                                       Message.translation("server.commands.worldgenbenchmark.progress")
+                                          .param("percent", Math.round((1.0 - (double)generatingChunks.size() / chunkCount) * 1000.0) / 10.0)
+                                    )
+                                 );
+                                 nextBroadcast = thisTime + 5000000000L;
+                              }
+
+                              currentChunks.removeIf(CompletableFuture::isDone);
+
+                              for (int i = currentChunks.size(); i < 20 && !generatingChunks.isEmpty(); i++) {
+                                 long index = generatingChunks.removeLong(generatingChunks.size() - 1);
+                                 CompletableFuture<GeneratedChunk> future = worldGen.generate(
+                                    seed, index, ChunkUtil.xOfChunkIndex(index), ChunkUtil.zOfChunkIndex(index), idx -> true
+                                 );
+                                 currentChunks.add(future);
+                              }
+                           } while (!currentChunks.isEmpty());
+
+                           String duration = FormatUtil.nanosToString(System.nanoTime() - startTime);
+                           world.execute(() -> world.sendMessage(Message.translation("server.commands.worldgenbenchmark.done").param("duration", duration)));
+                           world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVING));
+                           String fileName = "quant." + System.currentTimeMillis() + "." + (maxX - minX) + "x" + (maxZ - minZ) + "." + worldName + ".txt";
+                           File folder = new File("quantification");
+                           File file = new File("quantification" + File.separator + fileName);
+                           folder.mkdirs();
+
+                           try (FileWriter fw = new FileWriter(file)) {
+                              fw.write(benchmarkableWorldGen.getBenchmark().buildReport().join());
+                              world.execute(
+                                 () -> world.sendMessage(Message.translation("server.commands.worldgenbenchmark.saveDone").param("fileName", fileName))
+                              );
+                           } catch (Exception var31) {
+                              ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var31)).log("Failed to save worldgen benchmark report!");
+                              world.execute(() -> world.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_BENCHMARK_SAVE_FAILED));
+                           }
+
+                           benchmarkableWorldGen.getBenchmark().stop();
+                        } catch (RejectedExecutionException var32) {
+                           HytaleLogger.getLogger().at(Level.SEVERE).log("Cancelled worldgen benchmark due to generator shutdown");
+                        } finally {
+                           IS_RUNNING.set(false);
+                        }
+                     },
+                     "WorldGenBenchmarkCommand"
+                  )
+                  .start();
+            }
+         }
+      }
+   }
+}

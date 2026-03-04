@@ -1,83 +1,92 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.material;
-/*    */ 
-/*    */ import com.hypixel.hytale.assetstore.AssetExtraInfo;
-/*    */ import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
-/*    */ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-/*    */ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.material.FluidMaterial;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.material.SolidMaterial;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class MaterialAsset
-/*    */   implements JsonAssetWithMap<String, DefaultAssetMap<String, MaterialAsset>>, Cleanable
-/*    */ {
-/*    */   public static final AssetBuilderCodec<String, MaterialAsset> CODEC;
-/*    */   private String id;
-/*    */   private AssetExtraInfo.Data data;
-/*    */   
-/*    */   static {
-/* 37 */     CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(MaterialAsset.class, MaterialAsset::new, (Codec)Codec.STRING, (asset, id) -> asset.id = id, config -> config.id, (config, data) -> config.data = data, config -> config.data).append(new KeyedCodec("Solid", (Codec)Codec.STRING, true), (t, value) -> t.solidName = value, t -> t.solidName).add()).append(new KeyedCodec("Fluid", (Codec)Codec.STRING, true), (t, value) -> t.fluidName = value, t -> t.fluidName).add()).build();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/* 42 */   private String solidName = "";
-/*    */   
-/*    */   @Nonnull
-/* 45 */   private String fluidName = "";
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public MaterialAsset(@Nonnull String solidName, @Nonnull String fluidName) {
-/* 51 */     this.solidName = solidName;
-/* 52 */     this.fluidName = fluidName;
-/*    */   }
-/*    */   
-/*    */   public Material build(@Nonnull MaterialCache materialCache) {
-/* 56 */     SolidMaterial solid = materialCache.EMPTY_AIR;
-/* 57 */     if (!this.solidName.isEmpty()) {
-/* 58 */       solid = materialCache.getSolidMaterial(this.solidName);
-/*    */     }
-/*    */     
-/* 61 */     FluidMaterial fluid = materialCache.EMPTY_FLUID;
-/* 62 */     if (!this.fluidName.isEmpty()) {
-/* 63 */       fluid = materialCache.getFluidMaterial(this.fluidName);
-/*    */     }
-/*    */     
-/* 66 */     return new Material(solid, fluid);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public String getId() {
-/* 71 */     return this.id;
-/*    */   }
-/*    */   
-/*    */   public void cleanUp() {}
-/*    */   
-/*    */   public MaterialAsset() {}
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.material;
 
+import com.hypixel.hytale.assetstore.AssetExtraInfo;
+import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
+import com.hypixel.hytale.builtin.hytalegenerator.material.FluidMaterial;
+import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
+import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
+import com.hypixel.hytale.builtin.hytalegenerator.material.SolidMaterial;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\material\MaterialAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class MaterialAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, MaterialAsset>>, Cleanable {
+   @Nonnull
+   public static final AssetBuilderCodec<String, MaterialAsset> CODEC = AssetBuilderCodec.builder(
+         MaterialAsset.class,
+         MaterialAsset::new,
+         Codec.STRING,
+         (asset, id) -> asset.id = id,
+         config -> config.id,
+         (config, data) -> config.data = data,
+         config -> config.data
+      )
+      .append(new KeyedCodec<>("Solid", Codec.STRING, true), (t, value) -> t.solidName = value, t -> t.solidName)
+      .add()
+      .append(new KeyedCodec<>("Fluid", Codec.STRING, true), (t, value) -> t.fluidName = value, t -> t.fluidName)
+      .add()
+      .append(new KeyedCodec<>("SolidBottomUp", Codec.BOOLEAN, false), (t, value) -> t.isSolidBottomUp = value, t -> t.isSolidBottomUp)
+      .add()
+      .append(new KeyedCodec<>("SolidRotation", OrthogonalRotationAsset.CODEC, false), (t, value) -> t.solidRotationAsset = value, t -> t.solidRotationAsset)
+      .add()
+      .build();
+   private String id;
+   private AssetExtraInfo.Data data;
+   @Nonnull
+   private String solidName = "";
+   @Nonnull
+   private String fluidName = "";
+   private boolean isSolidBottomUp = false;
+   private OrthogonalRotationAsset solidRotationAsset = new OrthogonalRotationAsset();
+
+   public MaterialAsset() {
+   }
+
+   public MaterialAsset(@Nonnull String solidName, @Nonnull String fluidName, boolean isSolidBottomUp) {
+      this.solidName = solidName;
+      this.fluidName = fluidName;
+      this.isSolidBottomUp = isSolidBottomUp;
+   }
+
+   public MaterialAsset(@Nonnull String solidName, @Nonnull String fluidName, @Nonnull OrthogonalRotationAsset solidRotationAsset) {
+      this.solidName = solidName;
+      this.fluidName = fluidName;
+      this.isSolidBottomUp = false;
+      this.solidRotationAsset = solidRotationAsset;
+   }
+
+   @Nonnull
+   public Material build(@Nonnull MaterialCache materialCache) {
+      RotationTuple rotation;
+      if (this.solidRotationAsset.isNone() && this.isSolidBottomUp) {
+         rotation = RotationTuple.of(Rotation.None, Rotation.OneEighty, Rotation.None);
+      } else {
+         rotation = this.solidRotationAsset.build();
+      }
+
+      SolidMaterial solid = materialCache.EMPTY_AIR;
+      if (!this.solidName.isEmpty()) {
+         solid = materialCache.getSolidMaterial(this.solidName, rotation);
+      }
+
+      FluidMaterial fluid = materialCache.EMPTY_FLUID;
+      if (!this.fluidName.isEmpty()) {
+         fluid = materialCache.getFluidMaterial(this.fluidName);
+      }
+
+      return new Material(solid, fluid);
+   }
+
+   public String getId() {
+      return this.id;
+   }
+
+   @Override
+   public void cleanUp() {
+   }
+}

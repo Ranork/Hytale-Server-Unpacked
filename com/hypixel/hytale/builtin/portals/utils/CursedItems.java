@@ -1,46 +1,42 @@
-/*    */ package com.hypixel.hytale.builtin.portals.utils;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.server.core.asset.type.item.config.metadata.AdventureMetadata;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*    */ import com.hypixel.hytale.server.core.inventory.ItemStack;
-/*    */ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-/*    */ import java.util.concurrent.atomic.AtomicBoolean;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public final class CursedItems
-/*    */ {
-/*    */   public static boolean uncurseAll(ItemContainer itemContainer) {
-/* 15 */     AtomicBoolean uncursedAny = new AtomicBoolean(false);
-/* 16 */     itemContainer.replaceAll((slot, existing) -> {
-/*    */           AdventureMetadata adventureMeta = (AdventureMetadata)existing.getFromMetadataOrNull("Adventure", (Codec)AdventureMetadata.CODEC);
-/*    */           if (adventureMeta == null)
-/*    */             return existing; 
-/*    */           if (!adventureMeta.isCursed())
-/*    */             return existing; 
-/*    */           adventureMeta.setCursed(false);
-/*    */           uncursedAny.setPlain(true);
-/*    */           return existing.withMetadata("Adventure", (Codec)AdventureMetadata.CODEC, adventureMeta);
-/*    */         });
-/* 26 */     return uncursedAny.get();
-/*    */   }
-/*    */   
-/*    */   public static void deleteAll(Player player) {
-/* 30 */     deleteAll((ItemContainer)player.getInventory().getCombinedEverything());
-/*    */   }
-/*    */   
-/*    */   public static void deleteAll(ItemContainer itemContainer) {
-/* 34 */     itemContainer.replaceAll((slot, existing) -> {
-/*    */           AdventureMetadata adventureMeta = (AdventureMetadata)existing.getFromMetadataOrNull(AdventureMetadata.KEYED_CODEC);
-/* 36 */           boolean cursed = (adventureMeta != null && adventureMeta.isCursed());
-/*    */           return cursed ? ItemStack.EMPTY : existing;
-/*    */         });
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.portals.utils;
 
+import com.hypixel.hytale.server.core.asset.type.item.config.metadata.AdventureMetadata;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\portal\\utils\CursedItems.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public final class CursedItems {
+   private CursedItems() {
+   }
+
+   public static boolean uncurseAll(@Nonnull ItemContainer itemContainer) {
+      AtomicBoolean uncursedAny = new AtomicBoolean(false);
+      itemContainer.replaceAll((slot, existing) -> {
+         AdventureMetadata adventureMeta = existing.getFromMetadataOrNull("Adventure", AdventureMetadata.CODEC);
+         if (adventureMeta == null) {
+            return existing;
+         } else if (!adventureMeta.isCursed()) {
+            return existing;
+         } else {
+            adventureMeta.setCursed(false);
+            uncursedAny.setPlain(true);
+            return existing.withMetadata("Adventure", AdventureMetadata.CODEC, adventureMeta);
+         }
+      });
+      return uncursedAny.get();
+   }
+
+   public static void deleteAll(@Nonnull Player player) {
+      deleteAll(player.getInventory().getCombinedEverything());
+   }
+
+   public static void deleteAll(@Nonnull ItemContainer itemContainer) {
+      itemContainer.replaceAll((slot, existing) -> {
+         AdventureMetadata adventureMeta = existing.getFromMetadataOrNull(AdventureMetadata.KEYED_CODEC);
+         boolean cursed = adventureMeta != null && adventureMeta.isCursed();
+         return cursed ? ItemStack.EMPTY : existing;
+      });
+   }
+}

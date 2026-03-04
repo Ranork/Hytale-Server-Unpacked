@@ -1,261 +1,294 @@
-/*     */ package com.hypixel.hytale.server.core.cosmetics;
-/*     */ 
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ import org.bson.BsonDocument;
-/*     */ import org.bson.BsonValue;
-/*     */ 
-/*     */ 
-/*     */ public class PlayerSkin
-/*     */ {
-/*     */   private final PlayerSkinPartId bodyCharacteristic;
-/*     */   private final PlayerSkinPartId underwear;
-/*     */   private final String face;
-/*     */   private final String ears;
-/*     */   private final String mouth;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId eyes;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId facialHair;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId haircut;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId eyebrows;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId pants;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId overpants;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId undertop;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId overtop;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId shoes;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId headAccessory;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId faceAccessory;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId earAccessory;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId skinFeature;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId gloves;
-/*     */   @Nullable
-/*     */   private final PlayerSkinPartId cape;
-/*     */   
-/*     */   public PlayerSkin(@Nonnull BsonDocument doc) {
-/*  48 */     this.bodyCharacteristic = getId(doc, "bodyCharacteristic");
-/*  49 */     this.underwear = getId(doc, "underwear");
-/*  50 */     this.face = doc.getString("face").getValue();
-/*  51 */     this.ears = doc.getString("ears").getValue();
-/*  52 */     this.mouth = doc.getString("mouth").getValue();
-/*  53 */     this.eyes = PlayerSkinPartId.fromString(doc.getString("eyes").getValue());
-/*     */     
-/*  55 */     this.facialHair = getId(doc, "facialHair");
-/*  56 */     this.haircut = getId(doc, "haircut");
-/*  57 */     this.eyebrows = getId(doc, "eyebrows");
-/*  58 */     this.pants = getId(doc, "pants");
-/*  59 */     this.overpants = getId(doc, "overpants");
-/*  60 */     this.undertop = getId(doc, "undertop");
-/*  61 */     this.overtop = getId(doc, "overtop");
-/*  62 */     this.shoes = getId(doc, "shoes");
-/*  63 */     this.headAccessory = getId(doc, "headAccessory");
-/*  64 */     this.faceAccessory = getId(doc, "faceAccessory");
-/*  65 */     this.earAccessory = getId(doc, "earAccessory");
-/*  66 */     this.skinFeature = getId(doc, "skinFeature");
-/*  67 */     this.gloves = getId(doc, "gloves");
-/*  68 */     this.cape = getId(doc, "cape");
-/*     */   }
-/*     */   
-/*     */   public PlayerSkin(PlayerSkinPartId bodyCharacteristic, PlayerSkinPartId underwear, String face, String ears, String mouth, PlayerSkinPartId eyes, PlayerSkinPartId facialHair, PlayerSkinPartId haircut, PlayerSkinPartId eyebrows, PlayerSkinPartId pants, PlayerSkinPartId overpants, PlayerSkinPartId undertop, PlayerSkinPartId overtop, PlayerSkinPartId shoes, PlayerSkinPartId headAccessory, PlayerSkinPartId faceAccessory, PlayerSkinPartId earAccessory, PlayerSkinPartId skinFeature, PlayerSkinPartId gloves, PlayerSkinPartId cape) {
-/*  72 */     this.bodyCharacteristic = bodyCharacteristic;
-/*  73 */     this.underwear = underwear;
-/*  74 */     this.face = face;
-/*  75 */     this.ears = ears;
-/*  76 */     this.mouth = mouth;
-/*  77 */     this.eyes = eyes;
-/*  78 */     this.facialHair = facialHair;
-/*  79 */     this.haircut = haircut;
-/*  80 */     this.eyebrows = eyebrows;
-/*  81 */     this.pants = pants;
-/*  82 */     this.overpants = overpants;
-/*  83 */     this.undertop = undertop;
-/*  84 */     this.overtop = overtop;
-/*  85 */     this.shoes = shoes;
-/*  86 */     this.headAccessory = headAccessory;
-/*  87 */     this.faceAccessory = faceAccessory;
-/*  88 */     this.earAccessory = earAccessory;
-/*  89 */     this.skinFeature = skinFeature;
-/*  90 */     this.gloves = gloves;
-/*  91 */     this.cape = cape;
-/*     */   }
-/*     */   
-/*     */   public PlayerSkin(String bodyCharacteristic, String underwear, String face, String ears, String mouth, @Nullable String eyes, @Nullable String facialHair, @Nullable String haircut, @Nullable String eyebrows, @Nullable String pants, @Nullable String overpants, @Nullable String undertop, @Nullable String overtop, @Nullable String shoes, @Nullable String headAccessory, @Nullable String faceAccessory, @Nullable String earAccessory, @Nullable String skinFeature, @Nullable String gloves, @Nullable String cape) {
-/*  95 */     this.bodyCharacteristic = (bodyCharacteristic != null) ? PlayerSkinPartId.fromString(bodyCharacteristic) : null;
-/*  96 */     this.underwear = (underwear != null) ? PlayerSkinPartId.fromString(underwear) : null;
-/*  97 */     this.face = face;
-/*  98 */     this.ears = ears;
-/*  99 */     this.mouth = mouth;
-/* 100 */     this.eyes = (eyes != null) ? PlayerSkinPartId.fromString(eyes) : null;
-/* 101 */     this.facialHair = (facialHair != null) ? PlayerSkinPartId.fromString(facialHair) : null;
-/* 102 */     this.haircut = (haircut != null) ? PlayerSkinPartId.fromString(haircut) : null;
-/* 103 */     this.eyebrows = (eyebrows != null) ? PlayerSkinPartId.fromString(eyebrows) : null;
-/* 104 */     this.pants = (pants != null) ? PlayerSkinPartId.fromString(pants) : null;
-/* 105 */     this.overpants = (overpants != null) ? PlayerSkinPartId.fromString(overpants) : null;
-/* 106 */     this.undertop = (undertop != null) ? PlayerSkinPartId.fromString(undertop) : null;
-/* 107 */     this.overtop = (overtop != null) ? PlayerSkinPartId.fromString(overtop) : null;
-/* 108 */     this.shoes = (shoes != null) ? PlayerSkinPartId.fromString(shoes) : null;
-/* 109 */     this.headAccessory = (headAccessory != null) ? PlayerSkinPartId.fromString(headAccessory) : null;
-/* 110 */     this.faceAccessory = (faceAccessory != null) ? PlayerSkinPartId.fromString(faceAccessory) : null;
-/* 111 */     this.earAccessory = (earAccessory != null) ? PlayerSkinPartId.fromString(earAccessory) : null;
-/* 112 */     this.skinFeature = (skinFeature != null) ? PlayerSkinPartId.fromString(skinFeature) : null;
-/* 113 */     this.gloves = (gloves != null) ? PlayerSkinPartId.fromString(gloves) : null;
-/* 114 */     this.cape = (cape != null) ? PlayerSkinPartId.fromString(cape) : null;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   private static PlayerSkinPartId getId(@Nonnull BsonDocument doc, String key) {
-/* 119 */     BsonValue bsonValue = doc.get(key);
-/* 120 */     if (bsonValue == null || bsonValue.isNull()) return null;
-/*     */     
-/* 122 */     return PlayerSkinPartId.fromString(bsonValue.asString().getValue());
-/*     */   }
-/*     */   
-/*     */   public PlayerSkinPartId getBodyCharacteristic() {
-/* 126 */     return this.bodyCharacteristic;
-/*     */   }
-/*     */   
-/*     */   public PlayerSkinPartId getUnderwear() {
-/* 130 */     return this.underwear;
-/*     */   }
-/*     */   
-/*     */   public String getFace() {
-/* 134 */     return this.face;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getEyes() {
-/* 139 */     return this.eyes;
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   public String getEars() {
-/* 144 */     return this.ears;
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   public String getMouth() {
-/* 149 */     return this.mouth;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getFacialHair() {
-/* 154 */     return this.facialHair;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getHaircut() {
-/* 159 */     return this.haircut;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getEyebrows() {
-/* 164 */     return this.eyebrows;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getPants() {
-/* 169 */     return this.pants;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getOverpants() {
-/* 174 */     return this.overpants;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getUndertop() {
-/* 179 */     return this.undertop;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getOvertop() {
-/* 184 */     return this.overtop;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getShoes() {
-/* 189 */     return this.shoes;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getHeadAccessory() {
-/* 194 */     return this.headAccessory;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getFaceAccessory() {
-/* 199 */     return this.faceAccessory;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getEarAccessory() {
-/* 204 */     return this.earAccessory;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getSkinFeature() {
-/* 209 */     return this.skinFeature;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getGloves() {
-/* 214 */     return this.gloves;
-/*     */   }
-/*     */   @Nullable
-/*     */   public PlayerSkinPartId getCape() {
-/* 218 */     return this.cape;
-/*     */   }
-/*     */   
-/*     */   public static class PlayerSkinPartId { public final String assetId;
-/*     */     public final String textureId;
-/*     */     public final String variantId;
-/*     */     
-/*     */     public PlayerSkinPartId(String assetId, String textureId, String variantId) {
-/* 226 */       this.assetId = assetId;
-/* 227 */       this.textureId = textureId;
-/* 228 */       this.variantId = variantId;
-/*     */     }
-/*     */     
-/*     */     @Nonnull
-/*     */     public static PlayerSkinPartId fromString(@Nonnull String stringId) {
-/* 233 */       String[] idParts = stringId.split("\\.");
-/* 234 */       return new PlayerSkinPartId(idParts[0], (idParts.length > 1) ? idParts[1] : null, (idParts.length > 2) ? idParts[2] : null);
-/*     */     }
-/*     */     
-/*     */     public String getAssetId() {
-/* 238 */       return this.assetId;
-/*     */     }
-/*     */     
-/*     */     public String getTextureId() {
-/* 242 */       return this.textureId;
-/*     */     }
-/*     */     
-/*     */     public String getVariantId() {
-/* 246 */       return this.variantId;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public String toString() {
-/* 252 */       return "CharacterPartId{assetId='" + this.assetId + "', textureId='" + this.textureId + "', variantId='" + this.variantId + "'}";
-/*     */     } }
-/*     */ 
-/*     */ }
+package com.hypixel.hytale.server.core.cosmetics;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import org.bson.BsonDocument;
+import org.bson.BsonValue;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\cosmetics\PlayerSkin.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PlayerSkin {
+   private final PlayerSkin.PlayerSkinPartId bodyCharacteristic;
+   private final PlayerSkin.PlayerSkinPartId underwear;
+   private final String face;
+   private final String ears;
+   private final String mouth;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId eyes;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId facialHair;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId haircut;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId eyebrows;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId pants;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId overpants;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId undertop;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId overtop;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId shoes;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId headAccessory;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId faceAccessory;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId earAccessory;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId skinFeature;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId gloves;
+   @Nullable
+   private final PlayerSkin.PlayerSkinPartId cape;
+
+   public PlayerSkin(@Nonnull BsonDocument doc) {
+      this.bodyCharacteristic = getId(doc, "bodyCharacteristic");
+      this.underwear = getId(doc, "underwear");
+      this.face = doc.getString("face").getValue();
+      this.ears = doc.getString("ears").getValue();
+      this.mouth = doc.getString("mouth").getValue();
+      this.eyes = PlayerSkin.PlayerSkinPartId.fromString(doc.getString("eyes").getValue());
+      this.facialHair = getId(doc, "facialHair");
+      this.haircut = getId(doc, "haircut");
+      this.eyebrows = getId(doc, "eyebrows");
+      this.pants = getId(doc, "pants");
+      this.overpants = getId(doc, "overpants");
+      this.undertop = getId(doc, "undertop");
+      this.overtop = getId(doc, "overtop");
+      this.shoes = getId(doc, "shoes");
+      this.headAccessory = getId(doc, "headAccessory");
+      this.faceAccessory = getId(doc, "faceAccessory");
+      this.earAccessory = getId(doc, "earAccessory");
+      this.skinFeature = getId(doc, "skinFeature");
+      this.gloves = getId(doc, "gloves");
+      this.cape = getId(doc, "cape");
+   }
+
+   public PlayerSkin(
+      PlayerSkin.PlayerSkinPartId bodyCharacteristic,
+      PlayerSkin.PlayerSkinPartId underwear,
+      String face,
+      String ears,
+      String mouth,
+      PlayerSkin.PlayerSkinPartId eyes,
+      PlayerSkin.PlayerSkinPartId facialHair,
+      PlayerSkin.PlayerSkinPartId haircut,
+      PlayerSkin.PlayerSkinPartId eyebrows,
+      PlayerSkin.PlayerSkinPartId pants,
+      PlayerSkin.PlayerSkinPartId overpants,
+      PlayerSkin.PlayerSkinPartId undertop,
+      PlayerSkin.PlayerSkinPartId overtop,
+      PlayerSkin.PlayerSkinPartId shoes,
+      PlayerSkin.PlayerSkinPartId headAccessory,
+      PlayerSkin.PlayerSkinPartId faceAccessory,
+      PlayerSkin.PlayerSkinPartId earAccessory,
+      PlayerSkin.PlayerSkinPartId skinFeature,
+      PlayerSkin.PlayerSkinPartId gloves,
+      PlayerSkin.PlayerSkinPartId cape
+   ) {
+      this.bodyCharacteristic = bodyCharacteristic;
+      this.underwear = underwear;
+      this.face = face;
+      this.ears = ears;
+      this.mouth = mouth;
+      this.eyes = eyes;
+      this.facialHair = facialHair;
+      this.haircut = haircut;
+      this.eyebrows = eyebrows;
+      this.pants = pants;
+      this.overpants = overpants;
+      this.undertop = undertop;
+      this.overtop = overtop;
+      this.shoes = shoes;
+      this.headAccessory = headAccessory;
+      this.faceAccessory = faceAccessory;
+      this.earAccessory = earAccessory;
+      this.skinFeature = skinFeature;
+      this.gloves = gloves;
+      this.cape = cape;
+   }
+
+   public PlayerSkin(
+      String bodyCharacteristic,
+      String underwear,
+      String face,
+      String ears,
+      String mouth,
+      @Nullable String eyes,
+      @Nullable String facialHair,
+      @Nullable String haircut,
+      @Nullable String eyebrows,
+      @Nullable String pants,
+      @Nullable String overpants,
+      @Nullable String undertop,
+      @Nullable String overtop,
+      @Nullable String shoes,
+      @Nullable String headAccessory,
+      @Nullable String faceAccessory,
+      @Nullable String earAccessory,
+      @Nullable String skinFeature,
+      @Nullable String gloves,
+      @Nullable String cape
+   ) {
+      this.bodyCharacteristic = bodyCharacteristic != null ? PlayerSkin.PlayerSkinPartId.fromString(bodyCharacteristic) : null;
+      this.underwear = underwear != null ? PlayerSkin.PlayerSkinPartId.fromString(underwear) : null;
+      this.face = face;
+      this.ears = ears;
+      this.mouth = mouth;
+      this.eyes = eyes != null ? PlayerSkin.PlayerSkinPartId.fromString(eyes) : null;
+      this.facialHair = facialHair != null ? PlayerSkin.PlayerSkinPartId.fromString(facialHair) : null;
+      this.haircut = haircut != null ? PlayerSkin.PlayerSkinPartId.fromString(haircut) : null;
+      this.eyebrows = eyebrows != null ? PlayerSkin.PlayerSkinPartId.fromString(eyebrows) : null;
+      this.pants = pants != null ? PlayerSkin.PlayerSkinPartId.fromString(pants) : null;
+      this.overpants = overpants != null ? PlayerSkin.PlayerSkinPartId.fromString(overpants) : null;
+      this.undertop = undertop != null ? PlayerSkin.PlayerSkinPartId.fromString(undertop) : null;
+      this.overtop = overtop != null ? PlayerSkin.PlayerSkinPartId.fromString(overtop) : null;
+      this.shoes = shoes != null ? PlayerSkin.PlayerSkinPartId.fromString(shoes) : null;
+      this.headAccessory = headAccessory != null ? PlayerSkin.PlayerSkinPartId.fromString(headAccessory) : null;
+      this.faceAccessory = faceAccessory != null ? PlayerSkin.PlayerSkinPartId.fromString(faceAccessory) : null;
+      this.earAccessory = earAccessory != null ? PlayerSkin.PlayerSkinPartId.fromString(earAccessory) : null;
+      this.skinFeature = skinFeature != null ? PlayerSkin.PlayerSkinPartId.fromString(skinFeature) : null;
+      this.gloves = gloves != null ? PlayerSkin.PlayerSkinPartId.fromString(gloves) : null;
+      this.cape = cape != null ? PlayerSkin.PlayerSkinPartId.fromString(cape) : null;
+   }
+
+   @Nullable
+   private static PlayerSkin.PlayerSkinPartId getId(@Nonnull BsonDocument doc, String key) {
+      BsonValue bsonValue = doc.get(key);
+      return bsonValue != null && !bsonValue.isNull() ? PlayerSkin.PlayerSkinPartId.fromString(bsonValue.asString().getValue()) : null;
+   }
+
+   public PlayerSkin.PlayerSkinPartId getBodyCharacteristic() {
+      return this.bodyCharacteristic;
+   }
+
+   public PlayerSkin.PlayerSkinPartId getUnderwear() {
+      return this.underwear;
+   }
+
+   public String getFace() {
+      return this.face;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getEyes() {
+      return this.eyes;
+   }
+
+   @Nonnull
+   public String getEars() {
+      return this.ears;
+   }
+
+   @Nonnull
+   public String getMouth() {
+      return this.mouth;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getFacialHair() {
+      return this.facialHair;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getHaircut() {
+      return this.haircut;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getEyebrows() {
+      return this.eyebrows;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getPants() {
+      return this.pants;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getOverpants() {
+      return this.overpants;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getUndertop() {
+      return this.undertop;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getOvertop() {
+      return this.overtop;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getShoes() {
+      return this.shoes;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getHeadAccessory() {
+      return this.headAccessory;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getFaceAccessory() {
+      return this.faceAccessory;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getEarAccessory() {
+      return this.earAccessory;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getSkinFeature() {
+      return this.skinFeature;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getGloves() {
+      return this.gloves;
+   }
+
+   @Nullable
+   public PlayerSkin.PlayerSkinPartId getCape() {
+      return this.cape;
+   }
+
+   public static class PlayerSkinPartId {
+      public final String assetId;
+      public final String textureId;
+      public final String variantId;
+
+      public PlayerSkinPartId(String assetId, String textureId, String variantId) {
+         this.assetId = assetId;
+         this.textureId = textureId;
+         this.variantId = variantId;
+      }
+
+      @Nonnull
+      public static PlayerSkin.PlayerSkinPartId fromString(@Nonnull String stringId) {
+         String[] idParts = stringId.split("\\.");
+         return new PlayerSkin.PlayerSkinPartId(idParts[0], idParts.length > 1 ? idParts[1] : null, idParts.length > 2 ? idParts[2] : null);
+      }
+
+      public String getAssetId() {
+         return this.assetId;
+      }
+
+      public String getTextureId() {
+         return this.textureId;
+      }
+
+      public String getVariantId() {
+         return this.variantId;
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "CharacterPartId{assetId='" + this.assetId + "', textureId='" + this.textureId + "', variantId='" + this.variantId + "'}";
+      }
+   }
+}

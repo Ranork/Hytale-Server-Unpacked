@@ -8,12 +8,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface IWorldMap {
-    WorldMapSettings getWorldMapSettings();
+   WorldMapSettings getWorldMapSettings();
 
-    CompletableFuture<WorldMap> generate(World var1, int var2, int var3, LongSet var4);
+   CompletableFuture<WorldMap> generate(World var1, int var2, int var3, LongSet var4);
 
-    CompletableFuture<Map<String, MapMarker>> generatePointsOfInterest(World var1);
+   CompletableFuture<Map<String, MapMarker>> generatePointsOfInterest(World var1);
 
-    default void shutdown() {
-    }
+   default void shutdown() {
+   }
 }

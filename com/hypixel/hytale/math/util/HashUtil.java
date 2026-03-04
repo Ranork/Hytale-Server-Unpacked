@@ -1,93 +1,80 @@
-/*    */ package com.hypixel.hytale.math.util;
-/*    */ 
-/*    */ import java.util.UUID;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class HashUtil
-/*    */ {
-/*    */   public static long hash(long v) {
-/* 14 */     v = (v >>> 30L ^ v) * -4658895280553007687L;
-/* 15 */     v = (v >>> 27L ^ v) * -7723592293110705685L;
-/* 16 */     v = v >>> 31L ^ v;
-/* 17 */     return v;
-/*    */   }
-/*    */   
-/*    */   public static long hash(long l1, long l2) {
-/* 21 */     l1 = (hash(l1) >>> 30L ^ l1) * -4658895280553007687L;
-/* 22 */     l1 = hash(l2) >>> 31L ^ l1;
-/* 23 */     return l1;
-/*    */   }
-/*    */   
-/*    */   public static long hash(long l1, long l2, long l3) {
-/* 27 */     l1 = (hash(l1) >>> 30L ^ l1) * -4658895280553007687L;
-/* 28 */     l1 = (hash(l2) >>> 27L ^ l1) * -7723592293110705685L;
-/* 29 */     l1 = hash(l3) >>> 31L ^ l1;
-/* 30 */     return l1;
-/*    */   }
-/*    */   
-/*    */   public static long hash(long l1, long l2, long l3, long l4) {
-/* 34 */     l1 = (hash(l1) >>> 30L ^ l1) * -4658895280553007687L;
-/* 35 */     l1 = (hash(l2) >>> 27L ^ l1) * -7723592293110705685L;
-/* 36 */     l1 = (hash(l3) >>> 30L ^ l1) * -6389720478792763523L;
-/* 37 */     l1 = hash(l4) >>> 31L ^ l1;
-/* 38 */     return l1;
-/*    */   }
-/*    */   
-/*    */   public static long rehash(long l1) {
-/* 42 */     return hash(hash(l1));
-/*    */   }
-/*    */   
-/*    */   public static long rehash(long l1, long l2) {
-/* 46 */     return hash(hash(l1, l2));
-/*    */   }
-/*    */   
-/*    */   public static long rehash(long l1, long l2, long l3) {
-/* 50 */     return hash(hash(l1, l2, l3));
-/*    */   }
-/*    */   
-/*    */   public static long rehash(long l1, long l2, long l3, long l4) {
-/* 54 */     return hash(hash(l1, l2, l3, l4));
-/*    */   }
-/*    */   
-/*    */   public static double random(long l1) {
-/* 58 */     return hashToRandomDouble(rehash(l1));
-/*    */   }
-/*    */   
-/*    */   public static double random(long l1, long l2) {
-/* 62 */     return hashToRandomDouble(rehash(l1, l2));
-/*    */   }
-/*    */   
-/*    */   public static double random(long l1, long l2, long l3) {
-/* 66 */     return hashToRandomDouble(rehash(l1, l2, l3));
-/*    */   }
-/*    */   
-/*    */   public static double random(long l1, long l2, long l3, long l4) {
-/* 70 */     return hashToRandomDouble(rehash(l1, l2, l3, l4));
-/*    */   }
-/*    */   
-/*    */   public static int randomInt(long l1, long l2, long l3, int bound) {
-/* 74 */     long hash = rehash(l1, l2, l3);
-/* 75 */     hash &= Long.MAX_VALUE;
-/* 76 */     return (int)(hash % bound);
-/*    */   }
-/*    */   
-/*    */   private static double hashToRandomDouble(long hash) {
-/* 80 */     hash &= 0xFFFFFFFFL;
-/* 81 */     return hash / 4.294967295E9D;
-/*    */   }
-/*    */   
-/*    */   public static long hashUuid(@Nonnull UUID uuid) {
-/* 85 */     return hash(uuid.getLeastSignificantBits(), uuid.getMostSignificantBits());
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.math.util;
 
+import java.util.UUID;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\mat\\util\HashUtil.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class HashUtil {
+   public static long hash(long v) {
+      v = (v >>> 30 ^ v) * -4658895280553007687L;
+      v = (v >>> 27 ^ v) * -7723592293110705685L;
+      return v >>> 31 ^ v;
+   }
+
+   public static long hash(long l1, long l2) {
+      l1 = (hash(l1) >>> 30 ^ l1) * -4658895280553007687L;
+      return hash(l2) >>> 31 ^ l1;
+   }
+
+   public static long hash(long l1, long l2, long l3) {
+      l1 = (hash(l1) >>> 30 ^ l1) * -4658895280553007687L;
+      l1 = (hash(l2) >>> 27 ^ l1) * -7723592293110705685L;
+      return hash(l3) >>> 31 ^ l1;
+   }
+
+   public static long hash(long l1, long l2, long l3, long l4) {
+      l1 = (hash(l1) >>> 30 ^ l1) * -4658895280553007687L;
+      l1 = (hash(l2) >>> 27 ^ l1) * -7723592293110705685L;
+      l1 = (hash(l3) >>> 30 ^ l1) * -6389720478792763523L;
+      return hash(l4) >>> 31 ^ l1;
+   }
+
+   public static long rehash(long l1) {
+      return hash(hash(l1));
+   }
+
+   public static long rehash(long l1, long l2) {
+      return hash(hash(l1, l2));
+   }
+
+   public static long rehash(long l1, long l2, long l3) {
+      return hash(hash(l1, l2, l3));
+   }
+
+   public static long rehash(long l1, long l2, long l3, long l4) {
+      return hash(hash(l1, l2, l3, l4));
+   }
+
+   public static double random(long l1) {
+      return hashToRandomDouble(rehash(l1));
+   }
+
+   public static double random(long l1, long l2) {
+      return hashToRandomDouble(rehash(l1, l2));
+   }
+
+   public static double random(long l1, long l2, long l3) {
+      return hashToRandomDouble(rehash(l1, l2, l3));
+   }
+
+   public static double random(long l1, long l2, long l3, long l4) {
+      return hashToRandomDouble(rehash(l1, l2, l3, l4));
+   }
+
+   public static int randomInt(long l1, long l2, long l3, int bound) {
+      long hash = rehash(l1, l2, l3);
+      hash &= Long.MAX_VALUE;
+      return (int)(hash % bound);
+   }
+
+   private static double hashToRandomDouble(long hash) {
+      hash &= 4294967295L;
+      return hash / 4.294967295E9;
+   }
+
+   public static long hashUuid(@Nonnull UUID uuid) {
+      return hash(uuid.getLeastSignificantBits(), uuid.getMostSignificantBits());
+   }
+
+   private HashUtil() {
+   }
+}

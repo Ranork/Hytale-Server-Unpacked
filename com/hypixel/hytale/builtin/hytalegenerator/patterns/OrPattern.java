@@ -1,51 +1,46 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.patterns;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
-/*    */ import java.util.List;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class OrPattern
-/*    */   extends Pattern {
-/*    */   @Nonnull
-/*    */   private final Pattern[] patterns;
-/*    */   private final SpaceSize readSpaceSize;
-/*    */   
-/*    */   public OrPattern(@Nonnull List<Pattern> patterns) {
-/* 14 */     if (patterns.isEmpty()) {
-/* 15 */       this.patterns = new Pattern[0];
-/* 16 */       this.readSpaceSize = SpaceSize.empty();
-/*    */       
-/*    */       return;
-/*    */     } 
-/* 20 */     this.patterns = new Pattern[patterns.size()];
-/* 21 */     SpaceSize spaceAcc = ((Pattern)patterns.getFirst()).readSpace();
-/*    */     
-/* 23 */     for (int i = 0; i < patterns.size(); i++) {
-/* 24 */       Pattern pattern = patterns.get(i);
-/* 25 */       this.patterns[i] = pattern;
-/* 26 */       spaceAcc = SpaceSize.merge(spaceAcc, pattern.readSpace());
-/*    */     } 
-/* 28 */     this.readSpaceSize = spaceAcc;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean matches(@Nonnull Pattern.Context context) {
-/* 33 */     for (Pattern pattern : this.patterns) {
-/* 34 */       if (pattern.matches(context))
-/* 35 */         return true; 
-/*    */     } 
-/* 37 */     return false;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public SpaceSize readSpace() {
-/* 43 */     return this.readSpaceSize.clone();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
+import java.util.List;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\patterns\OrPattern.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class OrPattern extends Pattern {
+   @Nonnull
+   private final Pattern[] patterns;
+   private final SpaceSize readSpaceSize;
+
+   public OrPattern(@Nonnull List<Pattern> patterns) {
+      if (patterns.isEmpty()) {
+         this.patterns = new Pattern[0];
+         this.readSpaceSize = SpaceSize.empty();
+      } else {
+         this.patterns = new Pattern[patterns.size()];
+         SpaceSize spaceAcc = patterns.getFirst().readSpace();
+
+         for (int i = 0; i < patterns.size(); i++) {
+            Pattern pattern = patterns.get(i);
+            this.patterns[i] = pattern;
+            spaceAcc = SpaceSize.merge(spaceAcc, pattern.readSpace());
+         }
+
+         this.readSpaceSize = spaceAcc;
+      }
+   }
+
+   @Override
+   public boolean matches(@Nonnull Pattern.Context context) {
+      for (Pattern pattern : this.patterns) {
+         if (pattern.matches(context)) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   @Nonnull
+   @Override
+   public SpaceSize readSpace() {
+      return this.readSpaceSize.clone();
+   }
+}

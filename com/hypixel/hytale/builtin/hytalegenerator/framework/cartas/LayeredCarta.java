@@ -1,97 +1,60 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.framework.cartas;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.TriCarta;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
-/*    */ import java.util.ArrayList;
-/*    */ import java.util.Collections;
-/*    */ import java.util.List;
-/*    */ import java.util.Objects;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class LayeredCarta<R>
-/*    */   extends TriCarta<R>
-/*    */ {
-/*    */   @Nonnull
-/*    */   private final List<TriCarta<R>> layers;
-/*    */   @Nonnull
-/*    */   private final List<R> allValues;
-/*    */   @Nonnull
-/*    */   private final R defaultValue;
-/*    */   
-/*    */   public LayeredCarta(@Nonnull R defaultValue) {
-/* 31 */     Objects.requireNonNull(defaultValue);
-/* 32 */     this.layers = new ArrayList<>(1);
-/* 33 */     this.allValues = new ArrayList<>(1);
-/*    */     
-/* 35 */     this.defaultValue = defaultValue;
-/* 36 */     this.allValues.add(defaultValue);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public R apply(int x, int y, int z, @Nonnull WorkerIndexer.Id id) {
-/* 50 */     R result = this.defaultValue;
-/* 51 */     for (TriCarta<R> layer : this.layers) {
-/* 52 */       R value = (R)layer.apply(x, y, z, id);
-/* 53 */       if (value == null)
-/* 54 */         continue;  result = value;
-/*    */     } 
-/* 56 */     return result;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public List<R> allPossibleValues() {
-/* 66 */     return Collections.unmodifiableList(this.allValues);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public LayeredCarta<R> addLayer(@Nonnull TriCarta<R> layer) {
-/* 80 */     Objects.requireNonNull(layer);
-/* 81 */     this.layers.add(layer);
-/* 82 */     this.allValues.addAll(layer.allPossibleValues());
-/* 83 */     return this;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 89 */     return "LayeredCarta{layers=" + String.valueOf(this.layers) + ", allValues=" + String.valueOf(this.allValues) + ", defaultValue=" + String.valueOf(this.defaultValue) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.framework.cartas;
 
+import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.TriCarta;
+import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\framework\cartas\LayeredCarta.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class LayeredCarta<R> extends TriCarta<R> {
+   @Nonnull
+   private final List<TriCarta<R>> layers;
+   @Nonnull
+   private final List<R> allValues;
+   @Nonnull
+   private final R defaultValue;
+
+   public LayeredCarta(@Nonnull R defaultValue) {
+      Objects.requireNonNull(defaultValue);
+      this.layers = new ArrayList<>(1);
+      this.allValues = new ArrayList<>(1);
+      this.defaultValue = defaultValue;
+      this.allValues.add(defaultValue);
+   }
+
+   @Override
+   public R apply(int x, int y, int z, @Nonnull WorkerIndexer.Id id) {
+      R result = this.defaultValue;
+
+      for (TriCarta<R> layer : this.layers) {
+         R value = layer.apply(x, y, z, id);
+         if (value != null) {
+            result = value;
+         }
+      }
+
+      return result;
+   }
+
+   @Nonnull
+   @Override
+   public List<R> allPossibleValues() {
+      return Collections.unmodifiableList(this.allValues);
+   }
+
+   @Nonnull
+   public LayeredCarta<R> addLayer(@Nonnull TriCarta<R> layer) {
+      Objects.requireNonNull(layer);
+      this.layers.add(layer);
+      this.allValues.addAll(layer.allPossibleValues());
+      return this;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "LayeredCarta{layers=" + this.layers + ", allValues=" + this.allValues + ", defaultValue=" + this.defaultValue + "}";
+   }
+}

@@ -7,23 +7,17 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface Ban extends AccessProvider {
-  UUID getTarget();
-  
-  UUID getBy();
-  
-  Instant getTimestamp();
-  
-  boolean isInEffect();
-  
-  Optional<String> getReason();
-  
-  String getType();
-  
-  JsonObject toJsonObject();
+   UUID getTarget();
+
+   UUID getBy();
+
+   Instant getTimestamp();
+
+   boolean isInEffect();
+
+   Optional<String> getReason();
+
+   String getType();
+
+   JsonObject toJsonObject();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\accesscontrol\ban\Ban.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

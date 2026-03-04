@@ -1,63 +1,48 @@
-/*    */ package com.hypixel.hytale.server.worldgen.loader.util;
-/*    */ 
-/*    */ import com.google.gson.JsonArray;
-/*    */ import com.google.gson.JsonElement;
-/*    */ import com.google.gson.JsonObject;
-/*    */ import com.hypixel.hytale.math.vector.Vector2d;
-/*    */ import com.hypixel.hytale.procedurallib.json.JsonLoader;
-/*    */ import com.hypixel.hytale.procedurallib.json.SeedString;
-/*    */ import com.hypixel.hytale.server.worldgen.SeedStringResource;
-/*    */ import java.nio.file.Path;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class Vector2dJsonLoader
-/*    */   extends JsonLoader<SeedStringResource, Vector2d>
-/*    */ {
-/*    */   public Vector2dJsonLoader(SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json) {
-/* 24 */     super(seed, dataFolder, json);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Vector2d load() {
-/* 30 */     if (this.json == null || this.json.isJsonNull())
-/* 31 */       return new Vector2d(); 
-/* 32 */     if (this.json.isJsonArray()) {
-/* 33 */       JsonArray array = this.json.getAsJsonArray();
-/* 34 */       if (array.isEmpty())
-/* 35 */         return new Vector2d(); 
-/* 36 */       if (array.size() == 1) {
-/* 37 */         double value = array.get(0).getAsDouble();
-/* 38 */         return new Vector2d(value, value);
-/*    */       } 
-/* 40 */       double x = array.get(0).getAsDouble();
-/* 41 */       double y = array.get(1).getAsDouble();
-/* 42 */       return new Vector2d(x, y);
-/*    */     } 
-/* 44 */     if (this.json.isJsonObject()) {
-/* 45 */       JsonObject object = this.json.getAsJsonObject();
-/* 46 */       double x = object.get("X").getAsDouble();
-/* 47 */       double y = object.get("Y").getAsDouble();
-/* 48 */       return new Vector2d(x, y);
-/*    */     } 
-/* 50 */     return new Vector2d();
-/*    */   }
-/*    */   
-/*    */   public static interface Constants {
-/*    */     public static final String KEY_X = "X";
-/*    */     public static final String KEY_Y = "Y";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.worldgen.loader.util;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.hypixel.hytale.math.vector.Vector2d;
+import com.hypixel.hytale.procedurallib.json.JsonLoader;
+import com.hypixel.hytale.procedurallib.json.SeedString;
+import com.hypixel.hytale.server.worldgen.SeedStringResource;
+import java.nio.file.Path;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldgen\loade\\util\Vector2dJsonLoader.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Vector2dJsonLoader extends JsonLoader<SeedStringResource, Vector2d> {
+   public Vector2dJsonLoader(SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json) {
+      super(seed, dataFolder, json);
+   }
+
+   @Nonnull
+   public Vector2d load() {
+      if (this.json == null || this.json.isJsonNull()) {
+         return new Vector2d();
+      } else if (this.json.isJsonArray()) {
+         JsonArray array = this.json.getAsJsonArray();
+         if (array.isEmpty()) {
+            return new Vector2d();
+         } else if (array.size() == 1) {
+            double value = array.get(0).getAsDouble();
+            return new Vector2d(value, value);
+         } else {
+            double x = array.get(0).getAsDouble();
+            double y = array.get(1).getAsDouble();
+            return new Vector2d(x, y);
+         }
+      } else if (this.json.isJsonObject()) {
+         JsonObject object = this.json.getAsJsonObject();
+         double x = object.get("X").getAsDouble();
+         double y = object.get("Y").getAsDouble();
+         return new Vector2d(x, y);
+      } else {
+         return new Vector2d();
+      }
+   }
+
+   public interface Constants {
+      String KEY_X = "X";
+      String KEY_Y = "Y";
+   }
+}

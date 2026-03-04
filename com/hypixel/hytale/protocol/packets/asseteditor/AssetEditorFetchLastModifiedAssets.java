@@ -1,84 +1,64 @@
-/*    */ package com.hypixel.hytale.protocol.packets.asseteditor;
-/*    */ 
-/*    */ import com.hypixel.hytale.protocol.Packet;
-/*    */ import com.hypixel.hytale.protocol.io.ValidationResult;
-/*    */ import io.netty.buffer.ByteBuf;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class AssetEditorFetchLastModifiedAssets
-/*    */   implements Packet
-/*    */ {
-/*    */   public static final int PACKET_ID = 338;
-/*    */   public static final boolean IS_COMPRESSED = false;
-/*    */   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-/*    */   public static final int FIXED_BLOCK_SIZE = 0;
-/*    */   public static final int VARIABLE_FIELD_COUNT = 0;
-/*    */   public static final int VARIABLE_BLOCK_START = 0;
-/*    */   public static final int MAX_SIZE = 0;
-/*    */   
-/*    */   public int getId() {
-/* 25 */     return 338;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public static AssetEditorFetchLastModifiedAssets deserialize(@Nonnull ByteBuf buf, int offset) {
-/* 32 */     AssetEditorFetchLastModifiedAssets obj = new AssetEditorFetchLastModifiedAssets();
-/*    */ 
-/*    */ 
-/*    */     
-/* 36 */     return obj;
-/*    */   }
-/*    */   
-/*    */   public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-/* 40 */     return 0;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void serialize(@Nonnull ByteBuf buf) {}
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public int computeSize() {
-/* 51 */     return 0;
-/*    */   }
-/*    */   
-/*    */   public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-/* 55 */     if (buffer.readableBytes() - offset < 0) {
-/* 56 */       return ValidationResult.error("Buffer too small: expected at least 0 bytes");
-/*    */     }
-/*    */ 
-/*    */     
-/* 60 */     return ValidationResult.OK;
-/*    */   }
-/*    */   
-/*    */   public AssetEditorFetchLastModifiedAssets clone() {
-/* 64 */     return new AssetEditorFetchLastModifiedAssets();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean equals(Object obj) {
-/* 69 */     if (this == obj) return true; 
-/* 70 */     if (obj instanceof AssetEditorFetchLastModifiedAssets) { AssetEditorFetchLastModifiedAssets other = (AssetEditorFetchLastModifiedAssets)obj; } else { return false; }
-/* 71 */      return true;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int hashCode() {
-/* 76 */     return 0;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.protocol.packets.asseteditor;
 
+import com.hypixel.hytale.protocol.NetworkChannel;
+import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ValidationResult;
+import io.netty.buffer.ByteBuf;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\protocol\packets\asseteditor\AssetEditorFetchLastModifiedAssets.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AssetEditorFetchLastModifiedAssets implements Packet, ToServerPacket {
+   public static final int PACKET_ID = 338;
+   public static final boolean IS_COMPRESSED = false;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
+   public static final int FIXED_BLOCK_SIZE = 0;
+   public static final int VARIABLE_FIELD_COUNT = 0;
+   public static final int VARIABLE_BLOCK_START = 0;
+   public static final int MAX_SIZE = 0;
+
+   @Override
+   public int getId() {
+      return 338;
+   }
+
+   @Override
+   public NetworkChannel getChannel() {
+      return NetworkChannel.Default;
+   }
+
+   @Nonnull
+   public static AssetEditorFetchLastModifiedAssets deserialize(@Nonnull ByteBuf buf, int offset) {
+      return new AssetEditorFetchLastModifiedAssets();
+   }
+
+   public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
+      return 0;
+   }
+
+   @Override
+   public void serialize(@Nonnull ByteBuf buf) {
+   }
+
+   @Override
+   public int computeSize() {
+      return 0;
+   }
+
+   public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
+      return buffer.readableBytes() - offset < 0 ? ValidationResult.error("Buffer too small: expected at least 0 bytes") : ValidationResult.OK;
+   }
+
+   public AssetEditorFetchLastModifiedAssets clone() {
+      return new AssetEditorFetchLastModifiedAssets();
+   }
+
+   @Override
+   public boolean equals(Object obj) {
+      return this == obj ? true : obj instanceof AssetEditorFetchLastModifiedAssets other;
+   }
+
+   @Override
+   public int hashCode() {
+      return 0;
+   }
+}

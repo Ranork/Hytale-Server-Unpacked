@@ -1,759 +1,742 @@
-/*     */ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.server;
-/*     */ 
-/*     */ import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.KeyedCodec;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*     */ import com.hypixel.hytale.codec.codecs.map.MapCodec;
-/*     */ import com.hypixel.hytale.codec.validation.LateValidator;
-/*     */ import com.hypixel.hytale.codec.validation.Validators;
-/*     */ import com.hypixel.hytale.component.CommandBuffer;
-/*     */ import com.hypixel.hytale.component.Component;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.system.EcsEvent;
-/*     */ import com.hypixel.hytale.math.util.MathUtil;
-/*     */ import com.hypixel.hytale.math.util.TrigMathUtil;
-/*     */ import com.hypixel.hytale.math.vector.Vector3d;
-/*     */ import com.hypixel.hytale.math.vector.Vector3f;
-/*     */ import com.hypixel.hytale.math.vector.Vector4d;
-/*     */ import com.hypixel.hytale.protocol.DamageEffects;
-/*     */ import com.hypixel.hytale.protocol.Interaction;
-/*     */ import com.hypixel.hytale.protocol.InteractionState;
-/*     */ import com.hypixel.hytale.protocol.InteractionType;
-/*     */ import com.hypixel.hytale.protocol.WaitForDataFrom;
-/*     */ import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
-/*     */ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-/*     */ import com.hypixel.hytale.server.core.entity.Entity;
-/*     */ import com.hypixel.hytale.server.core.entity.EntitySnapshot;
-/*     */ import com.hypixel.hytale.server.core.entity.EntityUtils;
-/*     */ import com.hypixel.hytale.server.core.entity.InteractionContext;
-/*     */ import com.hypixel.hytale.server.core.entity.LivingEntity;
-/*     */ import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*     */ import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
-/*     */ import com.hypixel.hytale.server.core.inventory.Inventory;
-/*     */ import com.hypixel.hytale.server.core.inventory.ItemStack;
-/*     */ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-/*     */ import com.hypixel.hytale.server.core.io.NetworkSerializable;
-/*     */ import com.hypixel.hytale.server.core.meta.DynamicMetaStore;
-/*     */ import com.hypixel.hytale.server.core.meta.MetaKey;
-/*     */ import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.damage.DamageCalculatorSystems;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
-/*     */ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
-/*     */ import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
-/*     */ import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.Collector;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.SelectInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageCalculator;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageClass;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageEffects;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.Knockback;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.TargetEntityEffect;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.Label;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.Operation;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.OperationsBuilder;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import it.unimi.dsi.fastutil.objects.Object2FloatMap;
-/*     */ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-/*     */ import it.unimi.dsi.fastutil.objects.ObjectIterator;
-/*     */ import java.util.Arrays;
-/*     */ import java.util.Collections;
-/*     */ import java.util.Map;
-/*     */ import java.util.function.Supplier;
-/*     */ import java.util.stream.IntStream;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class DamageEntityInteraction
-/*     */   extends Interaction
-/*     */ {
-/*     */   @Nonnull
-/*     */   public static final BuilderCodec<DamageEntityInteraction> CODEC;
-/*     */   private static final int FAILED_LABEL_INDEX = 0;
-/*     */   private static final int SUCCESS_LABEL_INDEX = 1;
-/*     */   private static final int BLOCKED_LABEL_INDEX = 2;
-/*     */   private static final int ANGLED_LABEL_OFFSET = 3;
-/*     */   public static final int ARMOR_RESISTANCE_FLAT_MODIFIER = 0;
-/*     */   public static final int ARMOR_RESISTANCE_MULTIPLIER_MODIFIER = 1;
-/*     */   
-/*     */   static {
-/* 139 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DamageEntityInteraction.class, DamageEntityInteraction::new, Interaction.ABSTRACT_CODEC).documentation("Damages the target entity.")).appendInherited(new KeyedCodec("DamageCalculator", (Codec)DamageCalculator.CODEC), (i, a) -> i.damageCalculator = a, i -> i.damageCalculator, (i, parent) -> i.damageCalculator = parent.damageCalculator).add()).appendInherited(new KeyedCodec("DamageEffects", (Codec)DamageEffects.CODEC), (i, o) -> i.damageEffects = o, i -> i.damageEffects, (i, parent) -> i.damageEffects = parent.damageEffects).add()).appendInherited(new KeyedCodec("AngledDamage", (Codec)new ArrayCodec((Codec)AngledDamage.CODEC, x$0 -> new AngledDamage[x$0])), (i, o) -> i.angledDamage = o, i -> i.angledDamage, (i, parent) -> i.angledDamage = parent.angledDamage).add()).appendInherited(new KeyedCodec("TargetedDamage", (Codec)new MapCodec((Codec)TargetedDamage.CODEC, java.util.HashMap::new)), (i, o) -> i.targetedDamage = o, i -> i.targetedDamage, (i, parent) -> i.targetedDamage = parent.targetedDamage).addValidator(Validators.nonNull()).add()).appendInherited(new KeyedCodec("EntityStatsOnHit", (Codec)new ArrayCodec((Codec)EntityStatOnHit.CODEC, x$0 -> new EntityStatOnHit[x$0])), (damageEntityInteraction, entityStatOnHit) -> damageEntityInteraction.entityStatsOnHit = entityStatOnHit, damageEntityInteraction -> damageEntityInteraction.entityStatsOnHit, (damageEntityInteraction, parent) -> damageEntityInteraction.entityStatsOnHit = parent.entityStatsOnHit).documentation("EntityStats to apply based on the hits resulting from this interaction.").add()).appendInherited(new KeyedCodec("Next", Interaction.CHILD_ASSET_CODEC), (interaction, s) -> interaction.next = s, interaction -> interaction.next, (interaction, parent) -> interaction.next = parent.next).documentation("The interactions to run when this interaction succeeds.").addValidatorLate(() -> VALIDATOR_CACHE.getValidator().late()).add()).appendInherited(new KeyedCodec("Failed", Interaction.CHILD_ASSET_CODEC), (interaction, s) -> interaction.failed = s, interaction -> interaction.failed, (interaction, parent) -> interaction.failed = parent.failed).documentation("The interactions to run when this interaction fails.").addValidatorLate(() -> VALIDATOR_CACHE.getValidator().late()).add()).appendInherited(new KeyedCodec("Blocked", Interaction.CHILD_ASSET_CODEC), (interaction, s) -> interaction.blocked = s, interaction -> interaction.blocked, (interaction, parent) -> interaction.blocked = parent.blocked).documentation("The interactions to run when this interaction fails.").addValidatorLate(() -> VALIDATOR_CACHE.getValidator().late()).add()).afterDecode(o -> { String[] keys = o.sortedTargetDamageKeys = (String[])o.targetedDamage.keySet().toArray(()); Arrays.sort((Object[])keys); for (int i = 0; i < keys.length; i++) { String k = keys[i]; ((TargetedDamage)o.targetedDamage.get(k)).index = i; }  })).build();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/* 164 */   private static final MetaKey<DamageCalculatorSystems.Sequence> SEQUENTIAL_HITS = META_REGISTRY.registerMetaObject(i -> new DamageCalculatorSystems.Sequence());
-/* 165 */   private static final MetaKey<Integer> NEXT_INDEX = META_REGISTRY.registerMetaObject();
-/* 166 */   private static final MetaKey<Damage[]> QUEUED_DAMAGE = META_REGISTRY.registerMetaObject();
-/*     */   
-/*     */   protected DamageCalculator damageCalculator;
-/*     */   @Nullable
-/*     */   protected DamageEffects damageEffects;
-/*     */   protected AngledDamage[] angledDamage;
-/*     */   protected EntityStatOnHit[] entityStatsOnHit;
-/* 173 */   protected Map<String, TargetedDamage> targetedDamage = Collections.emptyMap();
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   protected String[] sortedTargetDamageKeys;
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nullable
-/*     */   protected String next;
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nullable
-/*     */   protected String blocked;
-/*     */ 
-/*     */   
-/*     */   @Nullable
-/*     */   protected String failed;
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-/* 196 */     Ref<EntityStore> targetRef = context.getTargetEntity();
-/* 197 */     if (targetRef == null || !targetRef.isValid() || !context.getEntity().isValid()) {
-/* 198 */       context.jump(context.getLabel(0));
-/* 199 */       (context.getState()).nextLabel = 0;
-/* 200 */       (context.getState()).state = InteractionState.Failed;
-/*     */       
-/*     */       return;
-/*     */     } 
-/* 204 */     CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
-/* 205 */     assert commandBuffer != null;
-/*     */     
-/* 207 */     if (processDamage(context, (Damage[])context.getInstanceStore().getIfPresentMetaObject(QUEUED_DAMAGE)))
-/*     */       return; 
-/* 209 */     Ref<EntityStore> ref = context.getOwningEntity();
-/* 210 */     Vector4d hit = (Vector4d)context.getMetaStore().getMetaObject(Interaction.HIT_LOCATION);
-/*     */     
-/* 212 */     Damage.EntitySource source = new Damage.EntitySource(ref);
-/* 213 */     attemptEntityDamage0((Damage.Source)source, context, context.getEntity(), targetRef, hit);
-/*     */ 
-/*     */     
-/* 216 */     if (SelectInteraction.SHOW_VISUAL_DEBUG && hit != null) {
-/* 217 */       DebugUtils.addSphere(((EntityStore)commandBuffer.getExternalData()).getWorld(), new Vector3d(hit.x, hit.y, hit.z), new Vector3f(1.0F, 0.0F, 0.0F), 0.20000000298023224D, 5.0F);
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-/* 223 */     tick0(firstRun, time, type, context, cooldownHandler);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private boolean processDamage(@Nonnull InteractionContext context, @Nullable Damage[] queuedDamage) {
-/* 236 */     if (queuedDamage == null) return false;
-/*     */     
-/* 238 */     boolean failed = true;
-/* 239 */     boolean blocked = false;
-/* 240 */     for (Damage queue : queuedDamage) {
-/* 241 */       if (!queue.isCancelled()) {
-/* 242 */         failed = false;
-/*     */       }
-/* 244 */       if (((Boolean)queue.getMetaObject(Damage.BLOCKED)).booleanValue()) {
-/* 245 */         blocked = true;
-/*     */       }
-/*     */     } 
-/*     */     
-/* 249 */     if (failed) {
-/* 250 */       context.jump(context.getLabel(0));
-/* 251 */       (context.getState()).nextLabel = 0;
-/* 252 */       (context.getState()).state = InteractionState.Failed;
-/* 253 */     } else if (blocked) {
-/* 254 */       context.jump(context.getLabel(2));
-/* 255 */       (context.getState()).nextLabel = 2;
-/* 256 */       (context.getState()).state = InteractionState.Finished;
-/*     */     } else {
-/* 258 */       int index = ((Integer)context.getInstanceStore().getMetaObject(NEXT_INDEX)).intValue();
-/* 259 */       (context.getState()).nextLabel = index;
-/* 260 */       context.jump(context.getLabel(index));
-/* 261 */       (context.getState()).state = InteractionState.Finished;
-/*     */     } 
-/*     */     
-/* 264 */     return true;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void compile(@Nonnull OperationsBuilder builder) {
-/* 269 */     Label[] labels = new Label[3 + ((this.angledDamage != null) ? this.angledDamage.length : 0) + this.targetedDamage.size()];
-/* 270 */     builder.addOperation((Operation)this, labels);
-/* 271 */     Label endLabel = builder.createUnresolvedLabel();
-/*     */     
-/* 273 */     labels[0] = builder.createLabel();
-/* 274 */     if (this.failed != null) Interaction.getInteractionOrUnknown(this.failed).compile(builder); 
-/* 275 */     builder.jump(endLabel);
-/*     */     
-/* 277 */     labels[1] = builder.createLabel();
-/* 278 */     if (this.next != null) Interaction.getInteractionOrUnknown(this.next).compile(builder); 
-/* 279 */     builder.jump(endLabel);
-/*     */     
-/* 281 */     labels[2] = builder.createLabel();
-/* 282 */     if (this.blocked != null) Interaction.getInteractionOrUnknown(this.blocked).compile(builder); 
-/* 283 */     builder.jump(endLabel);
-/*     */     
-/* 285 */     int offset = 3;
-/* 286 */     if (this.angledDamage != null) {
-/* 287 */       for (AngledDamage damage : this.angledDamage) {
-/* 288 */         labels[offset++] = builder.createLabel();
-/* 289 */         String next = damage.next;
-/* 290 */         if (next == null) next = this.next; 
-/* 291 */         if (next != null) Interaction.getInteractionOrUnknown(next).compile(builder); 
-/* 292 */         builder.jump(endLabel);
-/*     */       } 
-/*     */     }
-/*     */     
-/* 296 */     if (!this.targetedDamage.isEmpty()) {
-/* 297 */       for (String k : this.sortedTargetDamageKeys) {
-/* 298 */         TargetedDamage entry = this.targetedDamage.get(k);
-/*     */         
-/* 300 */         labels[offset++] = builder.createLabel();
-/* 301 */         String next = entry.next;
-/* 302 */         if (next == null) next = this.next; 
-/* 303 */         if (next != null) Interaction.getInteractionOrUnknown(next).compile(builder); 
-/* 304 */         builder.jump(endLabel);
-/*     */       } 
-/*     */     }
-/*     */     
-/* 308 */     builder.resolveLabel(endLabel);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean walk(@Nonnull Collector collector, @Nonnull InteractionContext context) {
-/* 313 */     return false;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   protected Interaction generatePacket() {
-/* 319 */     return (Interaction)new com.hypixel.hytale.protocol.DamageEntityInteraction();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void configurePacket(Interaction packet) {
-/* 324 */     super.configurePacket(packet);
-/* 325 */     com.hypixel.hytale.protocol.DamageEntityInteraction p = (com.hypixel.hytale.protocol.DamageEntityInteraction)packet;
-/* 326 */     p.damageEffects = (this.damageEffects != null) ? this.damageEffects.toPacket() : null;
-/* 327 */     p.next = Interaction.getInteractionIdOrUnknown(this.next);
-/* 328 */     p.failed = Interaction.getInteractionIdOrUnknown(this.failed);
-/* 329 */     p.blocked = Interaction.getInteractionIdOrUnknown(this.blocked);
-/*     */     
-/* 331 */     if (this.angledDamage != null) {
-/* 332 */       p.angledDamage = new com.hypixel.hytale.protocol.AngledDamage[this.angledDamage.length];
-/* 333 */       for (int i = 0; i < this.angledDamage.length; i++) {
-/* 334 */         p.angledDamage[i] = this.angledDamage[i].toAngledDamagePacket();
-/*     */       }
-/*     */     } 
-/*     */     
-/* 338 */     if (this.entityStatsOnHit != null) {
-/* 339 */       p.entityStatsOnHit = new com.hypixel.hytale.protocol.EntityStatOnHit[this.entityStatsOnHit.length];
-/* 340 */       for (int i = 0; i < this.entityStatsOnHit.length; i++) {
-/* 341 */         p.entityStatsOnHit[i] = this.entityStatsOnHit[i].toPacket();
-/*     */       }
-/*     */     } 
-/*     */     
-/* 345 */     p.targetedDamage = (Map)new Object2ObjectOpenHashMap();
-/* 346 */     for (Map.Entry<String, TargetedDamage> e : this.targetedDamage.entrySet()) {
-/* 347 */       p.targetedDamage.put(e.getKey(), ((TargetedDamage)e.getValue()).toTargetedDamagePacket());
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean needsRemoteSync() {
-/* 353 */     return true;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public WaitForDataFrom getWaitForDataFrom() {
-/* 359 */     return WaitForDataFrom.None;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private void attemptEntityDamage0(@Nonnull Damage.Source source, @Nonnull InteractionContext context, @Nonnull Ref<EntityStore> attackerRef, @Nonnull Ref<EntityStore> targetRef, @Nullable Vector4d hit) {
-/*     */     Vector3f attackerDirection;
-/* 377 */     CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
-/* 378 */     assert commandBuffer != null;
-/*     */     
-/* 380 */     DamageCalculator damageCalculator = this.damageCalculator;
-/* 381 */     DamageEffects damageEffects = this.damageEffects;
-/*     */     
-/* 383 */     EntitySnapshot targetSnapshot = context.getSnapshot(targetRef, (ComponentAccessor)commandBuffer);
-/* 384 */     EntitySnapshot attackerSnapshot = context.getSnapshot(attackerRef, (ComponentAccessor)commandBuffer);
-/* 385 */     Vector3d targetPos = targetSnapshot.getPosition();
-/* 386 */     Vector3d attackerPos = attackerSnapshot.getPosition();
-/* 387 */     float angleBetween = TrigMathUtil.atan2(attackerPos.x - targetPos.x, attackerPos.z - targetPos.z);
-/*     */     
-/* 389 */     int nextLabel = 1;
-/*     */     
-/* 391 */     if (this.angledDamage != null) {
-/* 392 */       float angleBetweenRotation = MathUtil.wrapAngle(angleBetween + 3.1415927F - targetSnapshot.getBodyRotation().getYaw());
-/*     */       
-/* 394 */       for (int i = 0; i < this.angledDamage.length; i++) {
-/* 395 */         AngledDamage angledDamage = this.angledDamage[i];
-/* 396 */         if (Math.abs(MathUtil.compareAngle(angleBetweenRotation, angledDamage.angleRad)) < angledDamage.angleDistanceRad) {
-/* 397 */           damageCalculator = (angledDamage.damageCalculator == null) ? damageCalculator : angledDamage.damageCalculator;
-/* 398 */           damageEffects = (angledDamage.damageEffects == null) ? damageEffects : angledDamage.damageEffects;
-/* 399 */           nextLabel = 3 + i;
-/*     */           
-/*     */           break;
-/*     */         } 
-/*     */       } 
-/*     */     } 
-/* 405 */     String hitDetail = (String)context.getMetaStore().getIfPresentMetaObject(HIT_DETAIL);
-/* 406 */     if (hitDetail != null) {
-/*     */       
-/* 408 */       TargetedDamage entry = this.targetedDamage.get(hitDetail);
-/* 409 */       if (entry != null) {
-/* 410 */         damageCalculator = (entry.damageCalculator == null) ? damageCalculator : entry.damageCalculator;
-/* 411 */         damageEffects = (entry.damageEffects == null) ? damageEffects : entry.damageEffects;
-/* 412 */         nextLabel = entry.index;
-/*     */       } 
-/*     */     } 
-/*     */     
-/* 416 */     context.getInstanceStore().putMetaObject(NEXT_INDEX, Integer.valueOf(nextLabel));
-/* 417 */     if (damageCalculator == null)
-/*     */       return; 
-/* 419 */     DynamicMetaStore<Interaction> metaStore = (DynamicMetaStore<Interaction>)context.getMetaStore().getMetaObject(SelectInteraction.SELECT_META_STORE);
-/* 420 */     DamageCalculatorSystems.Sequence sequentialHits = (metaStore == null) ? new DamageCalculatorSystems.Sequence() : (DamageCalculatorSystems.Sequence)metaStore.getMetaObject(SEQUENTIAL_HITS);
-/* 421 */     Object2FloatMap<DamageCause> damage = damageCalculator.calculateDamage(getRunTime());
-/*     */ 
-/*     */     
-/* 424 */     HeadRotation attackerHeadRotationComponent = (HeadRotation)commandBuffer.getComponent(attackerRef, HeadRotation.getComponentType());
-/* 425 */     if (attackerHeadRotationComponent != null) {
-/* 426 */       attackerDirection = attackerHeadRotationComponent.getRotation();
-/*     */     } else {
-/* 428 */       attackerDirection = Vector3f.ZERO;
-/*     */     } 
-/*     */     
-/* 431 */     if (damage != null && !damage.isEmpty()) {
-/*     */ 
-/*     */ 
-/*     */       
-/* 435 */       double[] knockbackMultiplier = { 1.0D };
-/* 436 */       float[] armorDamageModifiers = { 0.0F, 1.0F };
-/*     */       
-/* 438 */       calculateKnockbackAndArmorModifiers(damageCalculator.getDamageClass(), damage, targetRef, attackerRef, armorDamageModifiers, knockbackMultiplier, (ComponentAccessor<EntityStore>)commandBuffer);
-/*     */       
-/* 440 */       KnockbackComponent knockbackComponent = null;
-/* 441 */       if (damageEffects != null && damageEffects.getKnockback() != null) {
-/* 442 */         knockbackComponent = (KnockbackComponent)commandBuffer.getComponent(targetRef, KnockbackComponent.getComponentType());
-/* 443 */         if (knockbackComponent == null) {
-/* 444 */           knockbackComponent = new KnockbackComponent();
-/* 445 */           commandBuffer.putComponent(targetRef, KnockbackComponent.getComponentType(), (Component)knockbackComponent);
-/*     */         } 
-/* 447 */         Knockback knockback = damageEffects.getKnockback();
-/* 448 */         knockbackComponent.setVelocity(knockback.calculateVector(attackerPos, attackerDirection.getYaw(), targetPos).scale(knockbackMultiplier[0]));
-/* 449 */         knockbackComponent.setVelocityType(knockback.getVelocityType());
-/* 450 */         knockbackComponent.setVelocityConfig(knockback.getVelocityConfig());
-/* 451 */         knockbackComponent.setDuration(knockback.getDuration());
-/*     */       } 
-/*     */       
-/* 454 */       Player attackerPlayerComponent = (Player)commandBuffer.getComponent(attackerRef, Player.getComponentType());
-/* 455 */       ItemStack itemInHand = (attackerPlayerComponent == null || attackerPlayerComponent.canApplyItemStackPenalties(attackerRef, (ComponentAccessor)commandBuffer)) ? context.getHeldItem() : null;
-/* 456 */       Damage[] hits = DamageCalculatorSystems.queueDamageCalculator(((EntityStore)commandBuffer.getExternalData()).getWorld(), damage, targetRef, context.getCommandBuffer(), source, itemInHand);
-/*     */       
-/* 458 */       if (hits.length > 0) {
-/* 459 */         Damage firstDamage = hits[0];
-/* 460 */         DamageCalculatorSystems.DamageSequence seq = new DamageCalculatorSystems.DamageSequence(sequentialHits, damageCalculator);
-/* 461 */         seq.setEntityStatOnHit(this.entityStatsOnHit);
-/* 462 */         firstDamage.putMetaObject(DamageCalculatorSystems.DAMAGE_SEQUENCE, seq);
-/* 463 */         if (damageEffects != null) {
-/* 464 */           damageEffects.addToDamage(firstDamage);
-/*     */         }
-/*     */         
-/* 467 */         for (Damage damageEvent : hits) {
-/* 468 */           if (knockbackComponent != null) damageEvent.putMetaObject(Damage.KNOCKBACK_COMPONENT, knockbackComponent); 
-/* 469 */           float damageValue = damageEvent.getAmount();
-/* 470 */           damageValue += armorDamageModifiers[0];
-/* 471 */           damageEvent.setAmount(damageValue * Math.max(0.0F, armorDamageModifiers[1]));
-/* 472 */           if (hit != null) {
-/* 473 */             damageEvent.putMetaObject(Damage.HIT_LOCATION, hit);
-/*     */             
-/* 475 */             float hitAngleRad = TrigMathUtil.atan2(attackerPos.x - hit.x, attackerPos.z - hit.z);
-/* 476 */             hitAngleRad = MathUtil.wrapAngle(hitAngleRad - attackerDirection.getYaw());
-/*     */             
-/* 478 */             float hitAngleDeg = hitAngleRad * 57.295776F;
-/* 479 */             damageEvent.putMetaObject(Damage.HIT_ANGLE, Float.valueOf(hitAngleDeg));
-/*     */           } 
-/*     */           
-/* 482 */           commandBuffer.invoke(targetRef, (EcsEvent)damageEvent);
-/*     */         } 
-/*     */         
-/* 485 */         processDamage(context, hits);
-/*     */       } 
-/*     */ 
-/*     */       
-/* 489 */       context.getInstanceStore().putMetaObject(QUEUED_DAMAGE, hits);
-/*     */     } 
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static void calculateKnockbackAndArmorModifiers(@Nonnull DamageClass damageClass, @Nonnull Object2FloatMap<DamageCause> damage, @Nonnull Ref<EntityStore> targetRef, @Nonnull Ref<EntityStore> attackerRef, float[] armorDamageModifiers, double[] knockbackMultiplier, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-/*     */     LivingEntity livingEntity;
-/* 512 */     EffectControllerComponent effectControllerComponent = (EffectControllerComponent)componentAccessor.getComponent(targetRef, EffectControllerComponent.getComponentType());
-/*     */ 
-/*     */     
-/* 515 */     if (effectControllerComponent != null) {
-/* 516 */       knockbackMultiplier[0] = IntStream.of(effectControllerComponent
-/* 517 */           .getActiveEffectIndexes())
-/* 518 */         .mapToObj(i -> (EntityEffect)((IndexedLookupTableAssetMap)EntityEffect.getAssetStore().getAssetMap()).getAsset(i))
-/* 519 */         .filter(effect -> (effect != null && effect.getApplicationEffects() != null))
-/* 520 */         .mapToDouble(effect -> effect.getApplicationEffects().getKnockbackMultiplier())
-/* 521 */         .reduce(1.0D, (a, b) -> a * b);
-/*     */     }
-/*     */     
-/* 524 */     Entity entity = EntityUtils.getEntity(attackerRef, componentAccessor); if (entity instanceof LivingEntity) { livingEntity = (LivingEntity)entity; } else { return; }
-/* 525 */      Inventory inventory = livingEntity.getInventory();
-/* 526 */     if (inventory == null) {
-/*     */       return;
-/*     */     }
-/* 529 */     ItemContainer armorContainer = inventory.getArmor();
-/* 530 */     if (armorContainer == null)
-/* 531 */       return;  float knockbackEnhancementModifier = 1.0F; short i;
-/* 532 */     for (i = 0; i < armorContainer.getCapacity(); i = (short)(i + 1)) {
-/* 533 */       ItemStack itemStack = armorContainer.getItemStack(i);
-/* 534 */       if (itemStack != null && !itemStack.isEmpty()) {
-/*     */         
-/* 536 */         Item item = itemStack.getItem();
-/* 537 */         if (item.getArmor() != null) {
-/*     */           
-/* 539 */           Map<DamageCause, StaticModifier[]> armorDamageEnhancementMap = item.getArmor().getDamageEnhancementValues();
-/*     */           
-/* 541 */           for (ObjectIterator<DamageCause> objectIterator = damage.keySet().iterator(); objectIterator.hasNext(); ) { DamageCause damageCause = objectIterator.next();
-/* 542 */             if (armorDamageEnhancementMap != null) {
-/* 543 */               StaticModifier[] armorDamageEnhancementValue = armorDamageEnhancementMap.get(damageCause);
-/* 544 */               if (armorDamageEnhancementValue != null) {
-/* 545 */                 for (StaticModifier staticModifier : armorDamageEnhancementValue) {
-/* 546 */                   if (staticModifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
-/* 547 */                     armorDamageModifiers[0] = armorDamageModifiers[0] + staticModifier.getAmount();
-/*     */                   } else {
-/*     */                     
-/* 550 */                     armorDamageModifiers[1] = armorDamageModifiers[1] + staticModifier.getAmount();
-/*     */                   } 
-/*     */                 } 
-/*     */               }
-/*     */             } 
-/* 555 */             Map<DamageCause, Float> knockbackEnhancements = item.getArmor().getKnockbackEnhancements();
-/* 556 */             if (knockbackEnhancements == null)
-/* 557 */               continue;  knockbackEnhancementModifier += ((Float)knockbackEnhancements.get(damageCause)).floatValue(); }
-/*     */ 
-/*     */           
-/* 560 */           StaticModifier[] damageClassModifier = (StaticModifier[])item.getArmor().getDamageClassEnhancement().get(damageClass);
-/* 561 */           if (damageClassModifier != null)
-/* 562 */             for (StaticModifier modifier : damageClassModifier) {
-/* 563 */               if (modifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
-/* 564 */                 armorDamageModifiers[0] = armorDamageModifiers[0] + modifier.getAmount();
-/*     */               } else {
-/*     */                 
-/* 567 */                 armorDamageModifiers[1] = armorDamageModifiers[1] + modifier.getAmount();
-/*     */               } 
-/*     */             }  
-/*     */         } 
-/*     */       } 
-/* 572 */     }  knockbackMultiplier[0] = knockbackMultiplier[0] * knockbackEnhancementModifier;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public static class TargetedDamage
-/*     */   {
-/*     */     public static final BuilderCodec<TargetedDamage> CODEC;
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     protected int index;
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     protected DamageCalculator damageCalculator;
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     protected Map<String, TargetEntityEffect> targetEntityEffects;
-/*     */ 
-/*     */     
-/*     */     protected DamageEffects damageEffects;
-/*     */ 
-/*     */     
-/*     */     @Nullable
-/*     */     protected String next;
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     static {
-/* 604 */       CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TargetedDamage.class, TargetedDamage::new).appendInherited(new KeyedCodec("DamageCalculator", (Codec)DamageCalculator.CODEC), (i, a) -> i.damageCalculator = a, i -> i.damageCalculator, (i, parent) -> i.damageCalculator = parent.damageCalculator).add()).appendInherited(new KeyedCodec("TargetEntityEffects", (Codec)new MapCodec((Codec)TargetEntityEffect.CODEC, java.util.HashMap::new)), (i, map) -> i.targetEntityEffects = map, i -> i.targetEntityEffects, (i, parent) -> i.targetEntityEffects = parent.targetEntityEffects).add()).appendInherited(new KeyedCodec("DamageEffects", (Codec)DamageEffects.CODEC), (i, o) -> i.damageEffects = o, i -> i.damageEffects, (i, parent) -> i.damageEffects = parent.damageEffects).add()).appendInherited(new KeyedCodec("Next", Interaction.CHILD_ASSET_CODEC), (interaction, s) -> interaction.next = s, interaction -> interaction.next, (interaction, parent) -> interaction.next = parent.next).documentation("The interactions to run when this interaction succeeds.").addValidatorLate(() -> Interaction.VALIDATOR_CACHE.getValidator().late()).add()).build();
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public com.hypixel.hytale.protocol.TargetedDamage toTargetedDamagePacket() {
-/* 615 */       return new com.hypixel.hytale.protocol.TargetedDamage(this.index, this.damageEffects.toPacket(), Interaction.getInteractionIdOrUnknown(this.next));
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public String toString() {
-/* 621 */       return "TargetedDamage{damageCalculator=" + String.valueOf(this.damageCalculator) + ", targetEntityEffects=" + String.valueOf(this.targetEntityEffects) + ", damageEffects=" + String.valueOf(this.damageEffects) + ", next='" + this.next + "'}";
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public static class AngledDamage
-/*     */     extends TargetedDamage
-/*     */   {
-/*     */     public static final BuilderCodec<AngledDamage> CODEC;
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     protected float angleRad;
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     protected float angleDistanceRad;
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     static {
-/* 644 */       CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(AngledDamage.class, AngledDamage::new, DamageEntityInteraction.TargetedDamage.CODEC).appendInherited(new KeyedCodec("Angle", (Codec)Codec.FLOAT), (o, i) -> o.angleRad = i.floatValue() * 0.017453292F, o -> Float.valueOf(o.angleRad * 57.295776F), (o, p) -> o.angleRad = p.angleRad).add()).appendInherited(new KeyedCodec("AngleDistance", (Codec)Codec.FLOAT), (o, i) -> o.angleDistanceRad = i.floatValue() * 0.017453292F, o -> Float.valueOf(o.angleDistanceRad * 57.295776F), (o, p) -> o.angleDistanceRad = p.angleDistanceRad).add()).build();
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public com.hypixel.hytale.protocol.AngledDamage toAngledDamagePacket() {
-/* 651 */       DamageEffects damageEffectsPacket = (this.damageEffects == null) ? null : this.damageEffects.toPacket();
-/* 652 */       return new com.hypixel.hytale.protocol.AngledDamage(this.angleRad, this.angleDistanceRad, damageEffectsPacket, Interaction.getInteractionIdOrUnknown(this.next));
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public String toString() {
-/* 658 */       return "AngledDamage{angleRad=" + this.angleRad + ", angleDistanceRad=" + this.angleDistanceRad + "} " + super
-/*     */ 
-/*     */         
-/* 661 */         .toString();
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public static class EntityStatOnHit
-/*     */     implements NetworkSerializable<com.hypixel.hytale.protocol.EntityStatOnHit>
-/*     */   {
-/*     */     public static final BuilderCodec<EntityStatOnHit> CODEC;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public EntityStatOnHit() {
-/* 716 */       this.multipliersPerEntitiesHit = DEFAULT_MULTIPLIERS_PER_ENTITIES_HIT;
-/* 717 */       this.multiplierPerExtraEntityHit = 0.05F;
-/*     */     } static { CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(EntityStatOnHit.class, EntityStatOnHit::new).appendInherited(new KeyedCodec("EntityStatId", (Codec)Codec.STRING), (entityStatOnHitInteraction, s) -> entityStatOnHitInteraction.entityStatId = s, entityStatOnHitInteraction -> entityStatOnHitInteraction.entityStatId, (entityStatOnHitInteraction, parent) -> entityStatOnHitInteraction.entityStatId = parent.entityStatId).documentation("The id of the EntityStat that will be affected by the interaction.").addValidator(Validators.nonNull()).addValidator(EntityStatType.VALIDATOR_CACHE.getValidator()).add()).appendInherited(new KeyedCodec("Amount", (Codec)Codec.FLOAT), (entityStatOnHitInteraction, integer) -> entityStatOnHitInteraction.amount = integer.floatValue(), entityStatOnHitInteraction -> Float.valueOf(entityStatOnHitInteraction.amount), (entityStatOnHitInteraction, parent) -> entityStatOnHitInteraction.amount = parent.amount).documentation("The base amount for a single entity hit.").add()).appendInherited(new KeyedCodec("MultipliersPerEntitiesHit", (Codec)Codec.FLOAT_ARRAY), (entityStatOnHitInteraction, doubles) -> entityStatOnHitInteraction.multipliersPerEntitiesHit = doubles, entityStatOnHitInteraction -> entityStatOnHitInteraction.multipliersPerEntitiesHit, (entityStatOnHitInteraction, parent) -> entityStatOnHitInteraction.multipliersPerEntitiesHit = parent.multipliersPerEntitiesHit).documentation("An array of multipliers corresponding to how much the amount should be multiplied by for each entity hit.").addValidator(Validators.nonEmptyFloatArray()).add()).appendInherited(new KeyedCodec("MultiplierPerExtraEntityHit", (Codec)Codec.FLOAT), (entityStatOnHitInteraction, aDouble) -> entityStatOnHitInteraction.multiplierPerExtraEntityHit = aDouble.floatValue(), entityStatOnHitInteraction -> Float.valueOf(entityStatOnHitInteraction.multiplierPerExtraEntityHit), (entityStatOnHitInteraction, parent) -> entityStatOnHitInteraction.multiplierPerExtraEntityHit = parent.multiplierPerExtraEntityHit).documentation("When the number of entity hit is higher than the number of multipliers defined, the amount will be multiplied by this multiplier for each extra entity hit.").add()).afterDecode(entityStatOnHitInteraction -> {
-/*     */             if (entityStatOnHitInteraction.entityStatId == null)
-/*     */               return;  entityStatOnHitInteraction.entityStatIndex = EntityStatType.getAssetMap().getIndex(entityStatOnHitInteraction.entityStatId);
-/*     */           })).build(); } public static final float[] DEFAULT_MULTIPLIERS_PER_ENTITIES_HIT = new float[] { 1.0F, 0.6F, 0.4F, 0.2F, 0.1F }; public static final float DEFAULT_MULTIPLIER_PER_EXTRA_ENTITY_HIT = 0.05F; protected String entityStatId; public void processEntityStatsOnHit(int hits, @Nonnull EntityStatMap statMap) { float multiplier;
-/* 722 */       if (hits == 0) {
-/*     */         return;
-/*     */       }
-/*     */       
-/* 726 */       if (hits <= this.multipliersPerEntitiesHit.length) {
-/* 727 */         multiplier = this.multipliersPerEntitiesHit[hits - 1];
-/*     */       } else {
-/* 729 */         multiplier = this.multiplierPerExtraEntityHit;
-/*     */       } 
-/*     */       
-/* 732 */       statMap.addStatValue(EntityStatMap.Predictable.SELF, this.entityStatIndex, multiplier * this.amount); }
-/*     */     
-/*     */     protected float amount; protected float[] multipliersPerEntitiesHit; protected float multiplierPerExtraEntityHit; private int entityStatIndex;
-/*     */     
-/*     */     @Nonnull
-/*     */     public String toString() {
-/* 738 */       return "EntityStatOnHit{entityStatId='" + this.entityStatId + "', amount=" + this.amount + ", multipliersPerEntitiesHit=" + 
-/*     */ 
-/*     */         
-/* 741 */         Arrays.toString(this.multipliersPerEntitiesHit) + ", multiplierPerExtraEntityHit=" + this.multiplierPerExtraEntityHit + ", entityStatIndex=" + this.entityStatIndex + "}";
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public com.hypixel.hytale.protocol.EntityStatOnHit toPacket() {
-/* 750 */       return new com.hypixel.hytale.protocol.EntityStatOnHit(this.entityStatIndex, this.amount, this.multipliersPerEntitiesHit, this.multiplierPerExtraEntityHit);
-/*     */     }
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.modules.interaction.interaction.config.server;
 
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.codecs.map.MapCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.util.TrigMathUtil;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.protocol.InteractionState;
+import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.protocol.WaitForDataFrom;
+import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.entity.EntitySnapshot;
+import com.hypixel.hytale.server.core.entity.EntityUtils;
+import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
+import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.io.NetworkSerializable;
+import com.hypixel.hytale.server.core.meta.DynamicMetaStore;
+import com.hypixel.hytale.server.core.meta.MetaKey;
+import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageCalculatorSystems;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
+import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.Collector;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.SelectInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageCalculator;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageClass;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageEffects;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.Knockback;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.TargetEntityEffect;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.Label;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.OperationsBuilder;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.objects.Object2FloatMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.stream.IntStream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\interaction\interaction\config\server\DamageEntityInteraction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class DamageEntityInteraction extends Interaction {
+   @Nonnull
+   public static final BuilderCodec<DamageEntityInteraction> CODEC = BuilderCodec.builder(
+         DamageEntityInteraction.class, DamageEntityInteraction::new, Interaction.ABSTRACT_CODEC
+      )
+      .documentation("Damages the target entity.")
+      .appendInherited(
+         new KeyedCodec<>("DamageCalculator", DamageCalculator.CODEC),
+         (i, a) -> i.damageCalculator = a,
+         i -> i.damageCalculator,
+         (i, parent) -> i.damageCalculator = parent.damageCalculator
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("DamageEffects", DamageEffects.CODEC),
+         (i, o) -> i.damageEffects = o,
+         i -> i.damageEffects,
+         (i, parent) -> i.damageEffects = parent.damageEffects
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("AngledDamage", new ArrayCodec<>(DamageEntityInteraction.AngledDamage.CODEC, DamageEntityInteraction.AngledDamage[]::new)),
+         (i, o) -> i.angledDamage = o,
+         i -> i.angledDamage,
+         (i, parent) -> i.angledDamage = parent.angledDamage
+      )
+      .add()
+      .<Map>appendInherited(
+         new KeyedCodec<>("TargetedDamage", new MapCodec<>(DamageEntityInteraction.TargetedDamage.CODEC, HashMap::new)),
+         (i, o) -> i.targetedDamage = o,
+         i -> i.targetedDamage,
+         (i, parent) -> i.targetedDamage = parent.targetedDamage
+      )
+      .addValidator(Validators.nonNull())
+      .add()
+      .<DamageEntityInteraction.EntityStatOnHit[]>appendInherited(
+         new KeyedCodec<>("EntityStatsOnHit", new ArrayCodec<>(DamageEntityInteraction.EntityStatOnHit.CODEC, DamageEntityInteraction.EntityStatOnHit[]::new)),
+         (damageEntityInteraction, entityStatOnHit) -> damageEntityInteraction.entityStatsOnHit = entityStatOnHit,
+         damageEntityInteraction -> damageEntityInteraction.entityStatsOnHit,
+         (damageEntityInteraction, parent) -> damageEntityInteraction.entityStatsOnHit = parent.entityStatsOnHit
+      )
+      .documentation("EntityStats to apply based on the hits resulting from this interaction.")
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("Next", Interaction.CHILD_ASSET_CODEC),
+         (interaction, s) -> interaction.next = s,
+         interaction -> interaction.next,
+         (interaction, parent) -> interaction.next = parent.next
+      )
+      .documentation("The interactions to run when this interaction succeeds.")
+      .addValidatorLate(() -> VALIDATOR_CACHE.getValidator().late())
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("Failed", Interaction.CHILD_ASSET_CODEC),
+         (interaction, s) -> interaction.failed = s,
+         interaction -> interaction.failed,
+         (interaction, parent) -> interaction.failed = parent.failed
+      )
+      .documentation("The interactions to run when this interaction fails.")
+      .addValidatorLate(() -> VALIDATOR_CACHE.getValidator().late())
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("Blocked", Interaction.CHILD_ASSET_CODEC),
+         (interaction, s) -> interaction.blocked = s,
+         interaction -> interaction.blocked,
+         (interaction, parent) -> interaction.blocked = parent.blocked
+      )
+      .documentation("The interactions to run when this interaction fails.")
+      .addValidatorLate(() -> VALIDATOR_CACHE.getValidator().late())
+      .add()
+      .afterDecode(o -> {
+         String[] keys = o.sortedTargetDamageKeys = o.targetedDamage.keySet().toArray(String[]::new);
+         Arrays.sort((Object[])keys);
+         int i = 0;
+
+         while (i < keys.length) {
+            String k = keys[i];
+            o.targetedDamage.get(k).index = i++;
+         }
+      })
+      .build();
+   private static final int FAILED_LABEL_INDEX = 0;
+   private static final int SUCCESS_LABEL_INDEX = 1;
+   private static final int BLOCKED_LABEL_INDEX = 2;
+   private static final int ANGLED_LABEL_OFFSET = 3;
+   public static final int ARMOR_RESISTANCE_FLAT_MODIFIER = 0;
+   public static final int ARMOR_RESISTANCE_MULTIPLIER_MODIFIER = 1;
+   private static final MetaKey<DamageCalculatorSystems.Sequence> SEQUENTIAL_HITS = META_REGISTRY.registerMetaObject(
+      i -> new DamageCalculatorSystems.Sequence()
+   );
+   private static final MetaKey<Integer> NEXT_INDEX = META_REGISTRY.registerMetaObject();
+   private static final MetaKey<Damage[]> QUEUED_DAMAGE = META_REGISTRY.registerMetaObject();
+   protected DamageCalculator damageCalculator;
+   @Nullable
+   protected DamageEffects damageEffects;
+   protected DamageEntityInteraction.AngledDamage[] angledDamage;
+   protected DamageEntityInteraction.EntityStatOnHit[] entityStatsOnHit;
+   protected Map<String, DamageEntityInteraction.TargetedDamage> targetedDamage = Collections.emptyMap();
+   protected String[] sortedTargetDamageKeys;
+   @Nullable
+   protected String next;
+   @Nullable
+   protected String blocked;
+   @Nullable
+   protected String failed;
+
+   @Override
+   protected void tick0(
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
+   ) {
+      Ref<EntityStore> targetRef = context.getTargetEntity();
+      if (targetRef != null && targetRef.isValid() && context.getEntity().isValid()) {
+         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+
+         assert commandBuffer != null;
+
+         if (!this.processDamage(context, context.getInstanceStore().getIfPresentMetaObject(QUEUED_DAMAGE))) {
+            Ref<EntityStore> ref = context.getOwningEntity();
+            Vector4d hit = context.getMetaStore().getMetaObject(Interaction.HIT_LOCATION);
+            Damage.EntitySource source = new Damage.EntitySource(ref);
+            this.attemptEntityDamage0(source, context, context.getEntity(), targetRef, hit);
+            if (SelectInteraction.SHOW_VISUAL_DEBUG && hit != null) {
+               DebugUtils.addSphere(commandBuffer.getExternalData().getWorld(), new Vector3d(hit.x, hit.y, hit.z), new Vector3f(1.0F, 0.0F, 0.0F), 0.2F, 5.0F);
+            }
+         }
+      } else {
+         context.jump(context.getLabel(0));
+         context.getState().nextLabel = 0;
+         context.getState().state = InteractionState.Failed;
+      }
+   }
+
+   @Override
+   protected void simulateTick0(
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
+   ) {
+      this.tick0(firstRun, time, type, context, cooldownHandler);
+   }
+
+   private boolean processDamage(@Nonnull InteractionContext context, @Nullable Damage[] queuedDamage) {
+      if (queuedDamage == null) {
+         return false;
+      } else {
+         boolean failed = true;
+         boolean blocked = false;
+
+         for (Damage queue : queuedDamage) {
+            if (!queue.isCancelled()) {
+               failed = false;
+            }
+
+            if (queue.getMetaObject(Damage.BLOCKED)) {
+               blocked = true;
+            }
+         }
+
+         if (failed) {
+            context.jump(context.getLabel(0));
+            context.getState().nextLabel = 0;
+            context.getState().state = InteractionState.Failed;
+         } else if (blocked) {
+            context.jump(context.getLabel(2));
+            context.getState().nextLabel = 2;
+            context.getState().state = InteractionState.Finished;
+         } else {
+            int index = context.getInstanceStore().getMetaObject(NEXT_INDEX);
+            context.getState().nextLabel = index;
+            context.jump(context.getLabel(index));
+            context.getState().state = InteractionState.Finished;
+         }
+
+         return true;
+      }
+   }
+
+   @Override
+   public void compile(@Nonnull OperationsBuilder builder) {
+      Label[] labels = new Label[3 + (this.angledDamage != null ? this.angledDamage.length : 0) + this.targetedDamage.size()];
+      builder.addOperation(this, labels);
+      Label endLabel = builder.createUnresolvedLabel();
+      labels[0] = builder.createLabel();
+      if (this.failed != null) {
+         Interaction.getInteractionOrUnknown(this.failed).compile(builder);
+      }
+
+      builder.jump(endLabel);
+      labels[1] = builder.createLabel();
+      if (this.next != null) {
+         Interaction.getInteractionOrUnknown(this.next).compile(builder);
+      }
+
+      builder.jump(endLabel);
+      labels[2] = builder.createLabel();
+      if (this.blocked != null) {
+         Interaction.getInteractionOrUnknown(this.blocked).compile(builder);
+      }
+
+      builder.jump(endLabel);
+      int offset = 3;
+      if (this.angledDamage != null) {
+         for (DamageEntityInteraction.AngledDamage damage : this.angledDamage) {
+            labels[offset++] = builder.createLabel();
+            String next = damage.next;
+            if (next == null) {
+               next = this.next;
+            }
+
+            if (next != null) {
+               Interaction.getInteractionOrUnknown(next).compile(builder);
+            }
+
+            builder.jump(endLabel);
+         }
+      }
+
+      if (!this.targetedDamage.isEmpty()) {
+         for (String k : this.sortedTargetDamageKeys) {
+            DamageEntityInteraction.TargetedDamage entry = this.targetedDamage.get(k);
+            labels[offset++] = builder.createLabel();
+            String nextx = entry.next;
+            if (nextx == null) {
+               nextx = this.next;
+            }
+
+            if (nextx != null) {
+               Interaction.getInteractionOrUnknown(nextx).compile(builder);
+            }
+
+            builder.jump(endLabel);
+         }
+      }
+
+      builder.resolveLabel(endLabel);
+   }
+
+   @Override
+   public boolean walk(@Nonnull Collector collector, @Nonnull InteractionContext context) {
+      return false;
+   }
+
+   @Nonnull
+   @Override
+   protected com.hypixel.hytale.protocol.Interaction generatePacket() {
+      return new com.hypixel.hytale.protocol.DamageEntityInteraction();
+   }
+
+   @Override
+   protected void configurePacket(com.hypixel.hytale.protocol.Interaction packet) {
+      super.configurePacket(packet);
+      com.hypixel.hytale.protocol.DamageEntityInteraction p = (com.hypixel.hytale.protocol.DamageEntityInteraction)packet;
+      p.damageEffects = this.damageEffects != null ? this.damageEffects.toPacket() : null;
+      p.next = Interaction.getInteractionIdOrUnknown(this.next);
+      p.failed = Interaction.getInteractionIdOrUnknown(this.failed);
+      p.blocked = Interaction.getInteractionIdOrUnknown(this.blocked);
+      if (this.angledDamage != null) {
+         p.angledDamage = new com.hypixel.hytale.protocol.AngledDamage[this.angledDamage.length];
+
+         for (int i = 0; i < this.angledDamage.length; i++) {
+            p.angledDamage[i] = this.angledDamage[i].toAngledDamagePacket();
+         }
+      }
+
+      if (this.entityStatsOnHit != null) {
+         p.entityStatsOnHit = new com.hypixel.hytale.protocol.EntityStatOnHit[this.entityStatsOnHit.length];
+
+         for (int i = 0; i < this.entityStatsOnHit.length; i++) {
+            p.entityStatsOnHit[i] = this.entityStatsOnHit[i].toPacket();
+         }
+      }
+
+      p.targetedDamage = new Object2ObjectOpenHashMap();
+
+      for (Entry<String, DamageEntityInteraction.TargetedDamage> e : this.targetedDamage.entrySet()) {
+         p.targetedDamage.put(e.getKey(), e.getValue().toTargetedDamagePacket());
+      }
+   }
+
+   @Override
+   public boolean needsRemoteSync() {
+      return true;
+   }
+
+   @Nonnull
+   @Override
+   public WaitForDataFrom getWaitForDataFrom() {
+      return WaitForDataFrom.None;
+   }
+
+   private void attemptEntityDamage0(
+      @Nonnull Damage.Source source,
+      @Nonnull InteractionContext context,
+      @Nonnull Ref<EntityStore> attackerRef,
+      @Nonnull Ref<EntityStore> targetRef,
+      @Nullable Vector4d hit
+   ) {
+      CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+
+      assert commandBuffer != null;
+
+      DamageCalculator damageCalculator = this.damageCalculator;
+      DamageEffects damageEffects = this.damageEffects;
+      EntitySnapshot targetSnapshot = context.getSnapshot(targetRef, commandBuffer);
+      EntitySnapshot attackerSnapshot = context.getSnapshot(attackerRef, commandBuffer);
+      Vector3d targetPos = targetSnapshot.getPosition();
+      Vector3d attackerPos = attackerSnapshot.getPosition();
+      float angleBetween = TrigMathUtil.atan2(attackerPos.x - targetPos.x, attackerPos.z - targetPos.z);
+      int nextLabel = 1;
+      if (this.angledDamage != null) {
+         float angleBetweenRotation = MathUtil.wrapAngle(angleBetween + (float) Math.PI - targetSnapshot.getBodyRotation().getYaw());
+
+         for (int i = 0; i < this.angledDamage.length; i++) {
+            DamageEntityInteraction.AngledDamage angledDamage = this.angledDamage[i];
+            if (Math.abs(MathUtil.compareAngle(angleBetweenRotation, angledDamage.angleRad)) < angledDamage.angleDistanceRad) {
+               damageCalculator = angledDamage.damageCalculator == null ? damageCalculator : angledDamage.damageCalculator;
+               damageEffects = angledDamage.damageEffects == null ? damageEffects : angledDamage.damageEffects;
+               nextLabel = 3 + i;
+               break;
+            }
+         }
+      }
+
+      String hitDetail = context.getMetaStore().getIfPresentMetaObject(HIT_DETAIL);
+      if (hitDetail != null) {
+         DamageEntityInteraction.TargetedDamage entry = this.targetedDamage.get(hitDetail);
+         if (entry != null) {
+            damageCalculator = entry.damageCalculator == null ? damageCalculator : entry.damageCalculator;
+            damageEffects = entry.damageEffects == null ? damageEffects : entry.damageEffects;
+            nextLabel = entry.index;
+         }
+      }
+
+      context.getInstanceStore().putMetaObject(NEXT_INDEX, nextLabel);
+      if (damageCalculator != null) {
+         DynamicMetaStore<Interaction> metaStore = context.getMetaStore().getMetaObject(SelectInteraction.SELECT_META_STORE);
+         DamageCalculatorSystems.Sequence sequentialHits = metaStore == null
+            ? new DamageCalculatorSystems.Sequence()
+            : metaStore.getMetaObject(SEQUENTIAL_HITS);
+         Object2FloatMap<DamageCause> damage = damageCalculator.calculateDamage(this.getRunTime());
+         HeadRotation attackerHeadRotationComponent = commandBuffer.getComponent(attackerRef, HeadRotation.getComponentType());
+         Vector3f attackerDirection;
+         if (attackerHeadRotationComponent != null) {
+            attackerDirection = attackerHeadRotationComponent.getRotation();
+         } else {
+            attackerDirection = Vector3f.ZERO;
+         }
+
+         if (damage != null && !damage.isEmpty()) {
+            double[] knockbackMultiplier = new double[]{1.0};
+            float[] armorDamageModifiers = new float[]{0.0F, 1.0F};
+            calculateKnockbackAndArmorModifiers(
+               damageCalculator.getDamageClass(), damage, targetRef, attackerRef, armorDamageModifiers, knockbackMultiplier, commandBuffer
+            );
+            KnockbackComponent knockbackComponent = null;
+            if (damageEffects != null && damageEffects.getKnockback() != null) {
+               knockbackComponent = commandBuffer.getComponent(targetRef, KnockbackComponent.getComponentType());
+               if (knockbackComponent == null) {
+                  knockbackComponent = new KnockbackComponent();
+                  commandBuffer.putComponent(targetRef, KnockbackComponent.getComponentType(), knockbackComponent);
+               }
+
+               Knockback knockback = damageEffects.getKnockback();
+               knockbackComponent.setVelocity(knockback.calculateVector(attackerPos, attackerDirection.getYaw(), targetPos).scale(knockbackMultiplier[0]));
+               knockbackComponent.setVelocityType(knockback.getVelocityType());
+               knockbackComponent.setVelocityConfig(knockback.getVelocityConfig());
+               knockbackComponent.setDuration(knockback.getDuration());
+            }
+
+            Player attackerPlayerComponent = commandBuffer.getComponent(attackerRef, Player.getComponentType());
+            ItemStack itemInHand = attackerPlayerComponent != null && !attackerPlayerComponent.canApplyItemStackPenalties(attackerRef, commandBuffer)
+               ? null
+               : context.getHeldItem();
+            Damage[] hits = DamageCalculatorSystems.queueDamageCalculator(
+               commandBuffer.getExternalData().getWorld(), damage, targetRef, context.getCommandBuffer(), source, itemInHand
+            );
+            if (hits.length > 0) {
+               Damage firstDamage = hits[0];
+               DamageCalculatorSystems.DamageSequence seq = new DamageCalculatorSystems.DamageSequence(sequentialHits, damageCalculator);
+               seq.setEntityStatOnHit(this.entityStatsOnHit);
+               firstDamage.putMetaObject(DamageCalculatorSystems.DAMAGE_SEQUENCE, seq);
+               if (damageEffects != null) {
+                  damageEffects.addToDamage(firstDamage);
+               }
+
+               for (Damage damageEvent : hits) {
+                  if (knockbackComponent != null) {
+                     damageEvent.putMetaObject(Damage.KNOCKBACK_COMPONENT, knockbackComponent);
+                  }
+
+                  float damageValue = damageEvent.getAmount();
+                  damageValue += armorDamageModifiers[0];
+                  damageEvent.setAmount(damageValue * Math.max(0.0F, armorDamageModifiers[1]));
+                  if (hit != null) {
+                     damageEvent.putMetaObject(Damage.HIT_LOCATION, hit);
+                     float hitAngleRad = TrigMathUtil.atan2(attackerPos.x - hit.x, attackerPos.z - hit.z);
+                     hitAngleRad = MathUtil.wrapAngle(hitAngleRad - attackerDirection.getYaw());
+                     float hitAngleDeg = hitAngleRad * (180.0F / (float)Math.PI);
+                     damageEvent.putMetaObject(Damage.HIT_ANGLE, hitAngleDeg);
+                  }
+
+                  commandBuffer.invoke(targetRef, damageEvent);
+               }
+
+               this.processDamage(context, hits);
+            }
+
+            context.getInstanceStore().putMetaObject(QUEUED_DAMAGE, hits);
+         }
+      }
+   }
+
+   private static void calculateKnockbackAndArmorModifiers(
+      @Nonnull DamageClass damageClass,
+      @Nonnull Object2FloatMap<DamageCause> damage,
+      @Nonnull Ref<EntityStore> targetRef,
+      @Nonnull Ref<EntityStore> attackerRef,
+      float[] armorDamageModifiers,
+      double[] knockbackMultiplier,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      EffectControllerComponent effectControllerComponent = componentAccessor.getComponent(targetRef, EffectControllerComponent.getComponentType());
+      if (effectControllerComponent != null) {
+         knockbackMultiplier[0] = IntStream.of(effectControllerComponent.getActiveEffectIndexes())
+            .mapToObj(ix -> (EntityEffect)((IndexedLookupTableAssetMap)EntityEffect.getAssetStore().getAssetMap()).getAsset(ix))
+            .filter(effect -> effect != null && effect.getApplicationEffects() != null)
+            .mapToDouble(effect -> effect.getApplicationEffects().getKnockbackMultiplier())
+            .reduce(1.0, (a, b) -> a * b);
+      }
+
+      if (EntityUtils.getEntity(attackerRef, componentAccessor) instanceof LivingEntity livingEntity) {
+         Inventory inventory = livingEntity.getInventory();
+         if (inventory != null) {
+            ItemContainer armorContainer = inventory.getArmor();
+            if (armorContainer != null) {
+               float knockbackEnhancementModifier = 1.0F;
+
+               for (short i = 0; i < armorContainer.getCapacity(); i++) {
+                  ItemStack itemStack = armorContainer.getItemStack(i);
+                  if (itemStack != null && !itemStack.isEmpty()) {
+                     Item item = itemStack.getItem();
+                     if (item.getArmor() != null) {
+                        Map<DamageCause, StaticModifier[]> armorDamageEnhancementMap = item.getArmor().getDamageEnhancementValues();
+                        ObjectIterator damageClassModifier = damage.keySet().iterator();
+
+                        while (damageClassModifier.hasNext()) {
+                           DamageCause damageCause = (DamageCause)damageClassModifier.next();
+                           if (armorDamageEnhancementMap != null) {
+                              StaticModifier[] armorDamageEnhancementValue = armorDamageEnhancementMap.get(damageCause);
+                              if (armorDamageEnhancementValue != null) {
+                                 for (StaticModifier staticModifier : armorDamageEnhancementValue) {
+                                    if (staticModifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
+                                       armorDamageModifiers[0] += staticModifier.getAmount();
+                                    } else {
+                                       armorDamageModifiers[1] += staticModifier.getAmount();
+                                    }
+                                 }
+                              }
+                           }
+
+                           Map<DamageCause, Float> knockbackEnhancements = item.getArmor().getKnockbackEnhancements();
+                           if (knockbackEnhancements != null) {
+                              knockbackEnhancementModifier += knockbackEnhancements.get(damageCause);
+                           }
+                        }
+
+                        StaticModifier[] damageClassModifierx = item.getArmor().getDamageClassEnhancement().get(damageClass);
+                        if (damageClassModifierx != null) {
+                           for (StaticModifier modifier : damageClassModifierx) {
+                              if (modifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
+                                 armorDamageModifiers[0] += modifier.getAmount();
+                              } else {
+                                 armorDamageModifiers[1] += modifier.getAmount();
+                              }
+                           }
+                        }
+                     }
+                  }
+               }
+
+               knockbackMultiplier[0] *= knockbackEnhancementModifier;
+            }
+         }
+      }
+   }
+
+   public static class AngledDamage extends DamageEntityInteraction.TargetedDamage {
+      public static final BuilderCodec<DamageEntityInteraction.AngledDamage> CODEC = BuilderCodec.builder(
+            DamageEntityInteraction.AngledDamage.class, DamageEntityInteraction.AngledDamage::new, DamageEntityInteraction.TargetedDamage.CODEC
+         )
+         .appendInherited(
+            new KeyedCodec<>("Angle", Codec.FLOAT),
+            (o, i) -> o.angleRad = i * (float) (Math.PI / 180.0),
+            o -> o.angleRad * (180.0F / (float)Math.PI),
+            (o, p) -> o.angleRad = p.angleRad
+         )
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("AngleDistance", Codec.FLOAT),
+            (o, i) -> o.angleDistanceRad = i * (float) (Math.PI / 180.0),
+            o -> o.angleDistanceRad * (180.0F / (float)Math.PI),
+            (o, p) -> o.angleDistanceRad = p.angleDistanceRad
+         )
+         .add()
+         .build();
+      protected float angleRad;
+      protected float angleDistanceRad;
+
+      @Nonnull
+      public com.hypixel.hytale.protocol.AngledDamage toAngledDamagePacket() {
+         com.hypixel.hytale.protocol.DamageEffects damageEffectsPacket = this.damageEffects == null ? null : this.damageEffects.toPacket();
+         return new com.hypixel.hytale.protocol.AngledDamage(
+            this.angleRad, this.angleDistanceRad, damageEffectsPacket, Interaction.getInteractionIdOrUnknown(this.next)
+         );
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "AngledDamage{angleRad=" + this.angleRad + ", angleDistanceRad=" + this.angleDistanceRad + "} " + super.toString();
+      }
+   }
+
+   public static class EntityStatOnHit implements NetworkSerializable<com.hypixel.hytale.protocol.EntityStatOnHit> {
+      public static final BuilderCodec<DamageEntityInteraction.EntityStatOnHit> CODEC = BuilderCodec.builder(
+            DamageEntityInteraction.EntityStatOnHit.class, DamageEntityInteraction.EntityStatOnHit::new
+         )
+         .appendInherited(
+            new KeyedCodec<>("EntityStatId", Codec.STRING),
+            (entityStatOnHitInteraction, s) -> entityStatOnHitInteraction.entityStatId = s,
+            entityStatOnHitInteraction -> entityStatOnHitInteraction.entityStatId,
+            (entityStatOnHitInteraction, parent) -> entityStatOnHitInteraction.entityStatId = parent.entityStatId
+         )
+         .documentation("The id of the EntityStat that will be affected by the interaction.")
+         .addValidator(Validators.nonNull())
+         .addValidator(EntityStatType.VALIDATOR_CACHE.getValidator())
+         .add()
+         .<Float>appendInherited(
+            new KeyedCodec<>("Amount", Codec.FLOAT),
+            (entityStatOnHitInteraction, integer) -> entityStatOnHitInteraction.amount = integer,
+            entityStatOnHitInteraction -> entityStatOnHitInteraction.amount,
+            (entityStatOnHitInteraction, parent) -> entityStatOnHitInteraction.amount = parent.amount
+         )
+         .documentation("The base amount for a single entity hit.")
+         .add()
+         .<float[]>appendInherited(
+            new KeyedCodec<>("MultipliersPerEntitiesHit", Codec.FLOAT_ARRAY),
+            (entityStatOnHitInteraction, doubles) -> entityStatOnHitInteraction.multipliersPerEntitiesHit = doubles,
+            entityStatOnHitInteraction -> entityStatOnHitInteraction.multipliersPerEntitiesHit,
+            (entityStatOnHitInteraction, parent) -> entityStatOnHitInteraction.multipliersPerEntitiesHit = parent.multipliersPerEntitiesHit
+         )
+         .documentation("An array of multipliers corresponding to how much the amount should be multiplied by for each entity hit.")
+         .addValidator(Validators.nonEmptyFloatArray())
+         .add()
+         .<Float>appendInherited(
+            new KeyedCodec<>("MultiplierPerExtraEntityHit", Codec.FLOAT),
+            (entityStatOnHitInteraction, aDouble) -> entityStatOnHitInteraction.multiplierPerExtraEntityHit = aDouble,
+            entityStatOnHitInteraction -> entityStatOnHitInteraction.multiplierPerExtraEntityHit,
+            (entityStatOnHitInteraction, parent) -> entityStatOnHitInteraction.multiplierPerExtraEntityHit = parent.multiplierPerExtraEntityHit
+         )
+         .documentation(
+            "When the number of entity hit is higher than the number of multipliers defined, the amount will be multiplied by this multiplier for each extra entity hit."
+         )
+         .add()
+         .afterDecode(entityStatOnHitInteraction -> {
+            if (entityStatOnHitInteraction.entityStatId != null) {
+               entityStatOnHitInteraction.entityStatIndex = EntityStatType.getAssetMap().getIndex(entityStatOnHitInteraction.entityStatId);
+            }
+         })
+         .build();
+      public static final float[] DEFAULT_MULTIPLIERS_PER_ENTITIES_HIT = new float[]{1.0F, 0.6F, 0.4F, 0.2F, 0.1F};
+      public static final float DEFAULT_MULTIPLIER_PER_EXTRA_ENTITY_HIT = 0.05F;
+      protected String entityStatId;
+      protected float amount;
+      protected float[] multipliersPerEntitiesHit = DEFAULT_MULTIPLIERS_PER_ENTITIES_HIT;
+      protected float multiplierPerExtraEntityHit = 0.05F;
+      private int entityStatIndex;
+
+      public void processEntityStatsOnHit(int hits, @Nonnull EntityStatMap statMap) {
+         if (hits != 0) {
+            float multiplier;
+            if (hits <= this.multipliersPerEntitiesHit.length) {
+               multiplier = this.multipliersPerEntitiesHit[hits - 1];
+            } else {
+               multiplier = this.multiplierPerExtraEntityHit;
+            }
+
+            statMap.addStatValue(EntityStatMap.Predictable.SELF, this.entityStatIndex, multiplier * this.amount);
+         }
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "EntityStatOnHit{entityStatId='"
+            + this.entityStatId
+            + "', amount="
+            + this.amount
+            + ", multipliersPerEntitiesHit="
+            + Arrays.toString(this.multipliersPerEntitiesHit)
+            + ", multiplierPerExtraEntityHit="
+            + this.multiplierPerExtraEntityHit
+            + ", entityStatIndex="
+            + this.entityStatIndex
+            + "}";
+      }
+
+      @Nonnull
+      public com.hypixel.hytale.protocol.EntityStatOnHit toPacket() {
+         return new com.hypixel.hytale.protocol.EntityStatOnHit(
+            this.entityStatIndex, this.amount, this.multipliersPerEntitiesHit, this.multiplierPerExtraEntityHit
+         );
+      }
+   }
+
+   public static class TargetedDamage {
+      public static final BuilderCodec<DamageEntityInteraction.TargetedDamage> CODEC = BuilderCodec.builder(
+            DamageEntityInteraction.TargetedDamage.class, DamageEntityInteraction.TargetedDamage::new
+         )
+         .appendInherited(
+            new KeyedCodec<>("DamageCalculator", DamageCalculator.CODEC),
+            (i, a) -> i.damageCalculator = a,
+            i -> i.damageCalculator,
+            (i, parent) -> i.damageCalculator = parent.damageCalculator
+         )
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("TargetEntityEffects", new MapCodec<>(TargetEntityEffect.CODEC, HashMap::new)),
+            (i, map) -> i.targetEntityEffects = map,
+            i -> i.targetEntityEffects,
+            (i, parent) -> i.targetEntityEffects = parent.targetEntityEffects
+         )
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("DamageEffects", DamageEffects.CODEC),
+            (i, o) -> i.damageEffects = o,
+            i -> i.damageEffects,
+            (i, parent) -> i.damageEffects = parent.damageEffects
+         )
+         .add()
+         .<String>appendInherited(
+            new KeyedCodec<>("Next", Interaction.CHILD_ASSET_CODEC),
+            (interaction, s) -> interaction.next = s,
+            interaction -> interaction.next,
+            (interaction, parent) -> interaction.next = parent.next
+         )
+         .documentation("The interactions to run when this interaction succeeds.")
+         .addValidatorLate(() -> Interaction.VALIDATOR_CACHE.getValidator().late())
+         .add()
+         .build();
+      protected int index;
+      protected DamageCalculator damageCalculator;
+      protected Map<String, TargetEntityEffect> targetEntityEffects;
+      protected DamageEffects damageEffects;
+      @Nullable
+      protected String next;
+
+      @Nonnull
+      public com.hypixel.hytale.protocol.TargetedDamage toTargetedDamagePacket() {
+         return new com.hypixel.hytale.protocol.TargetedDamage(this.index, this.damageEffects.toPacket(), Interaction.getInteractionIdOrUnknown(this.next));
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "TargetedDamage{damageCalculator="
+            + this.damageCalculator
+            + ", targetEntityEffects="
+            + this.targetEntityEffects
+            + ", damageEffects="
+            + this.damageEffects
+            + ", next='"
+            + this.next
+            + "'}";
+      }
+   }
+}

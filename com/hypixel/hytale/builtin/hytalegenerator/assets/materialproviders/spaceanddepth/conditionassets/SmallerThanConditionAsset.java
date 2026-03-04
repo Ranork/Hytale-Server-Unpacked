@@ -1,42 +1,29 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.spaceanddepth.conditionassets;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.SpaceAndDepthMaterialProvider;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.conditions.ConditionParameter;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.conditions.SmallerThanCondition;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class SmallerThanConditionAsset
-/*    */   extends ConditionAsset
-/*    */ {
-/*    */   public static final BuilderCodec<SmallerThanConditionAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 26 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SmallerThanConditionAsset.class, SmallerThanConditionAsset::new, ConditionAsset.ABSTRACT_CODEC).append(new KeyedCodec("ContextToCheck", ConditionParameter.CODEC, true), (t, k) -> t.parameter = k, k -> k.parameter).add()).append(new KeyedCodec("Threshold", (Codec)Codec.INTEGER, true), (t, k) -> t.threshold = k.intValue(), k -> Integer.valueOf(k.threshold)).add()).build();
-/*    */   }
-/* 28 */   private ConditionParameter parameter = ConditionParameter.SPACE_ABOVE_FLOOR;
-/* 29 */   private int threshold = 0;
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public SpaceAndDepthMaterialProvider.Condition build() {
-/* 34 */     return (SpaceAndDepthMaterialProvider.Condition)new SmallerThanCondition(this.threshold, this.parameter);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.spaceanddepth.conditionassets;
 
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.SpaceAndDepthMaterialProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.conditions.ConditionParameter;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.conditions.SmallerThanCondition;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\materialproviders\spaceanddepth\conditionassets\SmallerThanConditionAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SmallerThanConditionAsset extends ConditionAsset {
+   @Nonnull
+   public static final BuilderCodec<SmallerThanConditionAsset> CODEC = BuilderCodec.builder(
+         SmallerThanConditionAsset.class, SmallerThanConditionAsset::new, ConditionAsset.ABSTRACT_CODEC
+      )
+      .append(new KeyedCodec<>("ContextToCheck", ConditionParameter.CODEC, true), (t, k) -> t.parameter = k, k -> k.parameter)
+      .add()
+      .append(new KeyedCodec<>("Threshold", Codec.INTEGER, true), (t, k) -> t.threshold = k, k -> k.threshold)
+      .add()
+      .build();
+   private ConditionParameter parameter = ConditionParameter.SPACE_ABOVE_FLOOR;
+   private int threshold;
+
+   @Nonnull
+   @Override
+   public SpaceAndDepthMaterialProvider.Condition build() {
+      return new SmallerThanCondition(this.threshold, this.parameter);
+   }
+}

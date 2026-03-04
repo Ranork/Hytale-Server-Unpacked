@@ -8,15 +8,9 @@ import java.util.UUID;
 import javax.annotation.Nonnull;
 
 public interface IPrefabPathWaypoint extends IPathWaypoint {
-  void onReplaced();
-  
-  void initialise(@Nonnull UUID paramUUID, @Nonnull String paramString, int paramInt1, double paramDouble, float paramFloat, int paramInt2, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
-  
-  IPath<IPrefabPathWaypoint> getParentPath();
+   void onReplaced();
+
+   void initialise(@Nonnull UUID var1, @Nonnull String var2, int var3, double var4, float var6, int var7, @Nonnull ComponentAccessor<EntityStore> var8);
+
+   IPath<IPrefabPathWaypoint> getParentPath();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\path\waypoint\IPrefabPathWaypoint.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

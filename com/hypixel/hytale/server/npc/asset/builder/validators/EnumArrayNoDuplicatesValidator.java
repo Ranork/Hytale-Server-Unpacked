@@ -1,43 +1,35 @@
-/*    */ package com.hypixel.hytale.server.npc.asset.builder.validators;
-/*    */ 
-/*    */ import java.util.Arrays;
-/*    */ import java.util.EnumSet;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class EnumArrayNoDuplicatesValidator
-/*    */   extends EnumArrayValidator
-/*    */ {
-/* 12 */   private static final EnumArrayNoDuplicatesValidator INSTANCE = new EnumArrayNoDuplicatesValidator();
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public <T extends Enum<T>> boolean test(@Nonnull T[] array, Class<T> clazz) {
-/* 19 */     EnumSet<T> set = EnumSet.noneOf(clazz);
-/* 20 */     for (T item : array) {
-/* 21 */       if (!set.add(item)) {
-/* 22 */         return false;
-/*    */       }
-/*    */     } 
-/* 25 */     return true;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public <T extends Enum<T>> String errorMessage(String name, T[] array) {
-/* 31 */     return String.format("%s must not contain duplicates: %s", new Object[] { name, Arrays.toString((Object[])array) });
-/*    */   }
-/*    */   
-/*    */   public static EnumArrayNoDuplicatesValidator get() {
-/* 35 */     return INSTANCE;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.asset.builder.validators;
 
+import java.util.Arrays;
+import java.util.EnumSet;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\asset\builder\validators\EnumArrayNoDuplicatesValidator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class EnumArrayNoDuplicatesValidator extends EnumArrayValidator {
+   private static final EnumArrayNoDuplicatesValidator INSTANCE = new EnumArrayNoDuplicatesValidator();
+
+   private EnumArrayNoDuplicatesValidator() {
+   }
+
+   @Override
+   public <T extends Enum<T>> boolean test(@Nonnull T[] array, Class<T> clazz) {
+      EnumSet<T> set = EnumSet.noneOf(clazz);
+
+      for (T item : array) {
+         if (!set.add(item)) {
+            return false;
+         }
+      }
+
+      return true;
+   }
+
+   @Nonnull
+   @Override
+   public <T extends Enum<T>> String errorMessage(String name, T[] array) {
+      return String.format("%s must not contain duplicates: %s", name, Arrays.toString((Object[])array));
+   }
+
+   public static EnumArrayNoDuplicatesValidator get() {
+      return INSTANCE;
+   }
+}

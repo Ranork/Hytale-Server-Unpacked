@@ -1,31 +1,16 @@
-/*    */ package com.hypixel.hytale.server.core.modules.debug.commands;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class DebugShapeSubCommand
-/*    */   extends AbstractCommandCollection
-/*    */ {
-/*    */   public DebugShapeSubCommand() {
-/* 14 */     super("shape", "server.commands.debug.shape.desc");
-/*    */     
-/* 16 */     addSubCommand((AbstractCommand)new DebugShapeSphereCommand());
-/* 17 */     addSubCommand((AbstractCommand)new DebugShapeCubeCommand());
-/* 18 */     addSubCommand((AbstractCommand)new DebugShapeCylinderCommand());
-/* 19 */     addSubCommand((AbstractCommand)new DebugShapeConeCommand());
-/* 20 */     addSubCommand((AbstractCommand)new DebugShapeArrowCommand());
-/* 21 */     addSubCommand((AbstractCommand)new DebugShapeShowForceCommand());
-/*    */     
-/* 23 */     addSubCommand((AbstractCommand)new DebugShapeClearCommand());
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.debug.commands;
 
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\debug\commands\DebugShapeSubCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class DebugShapeSubCommand extends AbstractCommandCollection {
+   public DebugShapeSubCommand() {
+      super("shape", "server.commands.debug.shape.desc");
+      this.addSubCommand(new DebugShapeSphereCommand());
+      this.addSubCommand(new DebugShapeCubeCommand());
+      this.addSubCommand(new DebugShapeCylinderCommand());
+      this.addSubCommand(new DebugShapeConeCommand());
+      this.addSubCommand(new DebugShapeArrowCommand());
+      this.addSubCommand(new DebugShapeShowForceCommand());
+      this.addSubCommand(new DebugShapeClearCommand());
+   }
+}

@@ -1,48 +1,45 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.patterns;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.patterns.AndPattern;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*    */ import java.util.ArrayList;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ public class AndPatternAsset
-/*    */   extends PatternAsset
-/*    */ {
-/*    */   public static final BuilderCodec<AndPatternAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 20 */     CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(AndPatternAsset.class, AndPatternAsset::new, PatternAsset.ABSTRACT_CODEC).append(new KeyedCodec("Patterns", (Codec)new ArrayCodec((Codec)PatternAsset.CODEC, x$0 -> new PatternAsset[x$0]), true), (t, k) -> t.patternAssets = k, k -> k.patternAssets).add()).build();
-/*    */   }
-/* 22 */   private PatternAsset[] patternAssets = new PatternAsset[0];
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Pattern build(@Nonnull PatternAsset.Argument argument) {
-/* 27 */     if (isSkipped()) return Pattern.noPattern();
-/*    */     
-/* 29 */     ArrayList<Pattern> patterns = new ArrayList<>(this.patternAssets.length);
-/* 30 */     for (PatternAsset asset : this.patternAssets) {
-/* 31 */       if (!asset.isSkipped())
-/* 32 */         patterns.add(asset.build(argument)); 
-/*    */     } 
-/* 34 */     return (Pattern)new AndPattern(patterns);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 39 */     for (PatternAsset patternAsset : this.patternAssets)
-/* 40 */       patternAsset.cleanUp(); 
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.patterns;
 
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.AndPattern;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import java.util.ArrayList;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\patterns\AndPatternAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AndPatternAsset extends PatternAsset {
+   @Nonnull
+   public static final BuilderCodec<AndPatternAsset> CODEC = BuilderCodec.builder(AndPatternAsset.class, AndPatternAsset::new, PatternAsset.ABSTRACT_CODEC)
+      .append(
+         new KeyedCodec<>("Patterns", new ArrayCodec<>(PatternAsset.CODEC, PatternAsset[]::new), true), (t, k) -> t.patternAssets = k, k -> k.patternAssets
+      )
+      .add()
+      .build();
+   private PatternAsset[] patternAssets = new PatternAsset[0];
+
+   @Nonnull
+   @Override
+   public Pattern build(@Nonnull PatternAsset.Argument argument) {
+      if (super.isSkipped()) {
+         return Pattern.noPattern();
+      } else {
+         ArrayList<Pattern> patterns = new ArrayList<>(this.patternAssets.length);
+
+         for (PatternAsset asset : this.patternAssets) {
+            if (!asset.isSkipped()) {
+               patterns.add(asset.build(argument));
+            }
+         }
+
+         return new AndPattern(patterns);
+      }
+   }
+
+   @Override
+   public void cleanUp() {
+      for (PatternAsset patternAsset : this.patternAssets) {
+         patternAsset.cleanUp();
+      }
+   }
+}

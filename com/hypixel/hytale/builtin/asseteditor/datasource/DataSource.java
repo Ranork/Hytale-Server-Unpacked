@@ -9,51 +9,46 @@ import java.time.Instant;
 import java.util.Collection;
 
 public interface DataSource {
-  void start();
-  
-  void shutdown();
-  
-  AssetTree getAssetTree();
-  
-  AssetTree loadAssetTree(Collection<AssetTypeHandler> paramCollection);
-  
-  boolean doesDirectoryExist(Path paramPath);
-  
-  boolean createDirectory(Path paramPath, EditorClient paramEditorClient);
-  
-  boolean deleteDirectory(Path paramPath);
-  
-  boolean moveDirectory(Path paramPath1, Path paramPath2);
-  
-  boolean doesAssetExist(Path paramPath);
-  
-  byte[] getAssetBytes(Path paramPath);
-  
-  boolean updateAsset(Path paramPath, byte[] paramArrayOfbyte, EditorClient paramEditorClient);
-  
-  boolean createAsset(Path paramPath, byte[] paramArrayOfbyte, EditorClient paramEditorClient);
-  
-  boolean deleteAsset(Path paramPath, EditorClient paramEditorClient);
-  
-  boolean moveAsset(Path paramPath1, Path paramPath2, EditorClient paramEditorClient);
-  
-  boolean shouldReloadAssetFromDisk(Path paramPath);
-  
-  Instant getLastModificationTimestamp(Path paramPath);
-  
-  default void updateRuntimeAssets() {}
-  
-  Path getFullPathToAssetData(Path paramPath);
-  
-  boolean isImmutable();
-  
-  Path getRootPath();
-  
-  PluginManifest getManifest();
+   void start();
+
+   void shutdown();
+
+   AssetTree getAssetTree();
+
+   AssetTree loadAssetTree(Collection<AssetTypeHandler> var1);
+
+   boolean doesDirectoryExist(Path var1);
+
+   boolean createDirectory(Path var1, EditorClient var2);
+
+   boolean deleteDirectory(Path var1);
+
+   boolean moveDirectory(Path var1, Path var2);
+
+   boolean doesAssetExist(Path var1);
+
+   byte[] getAssetBytes(Path var1);
+
+   boolean updateAsset(Path var1, byte[] var2, EditorClient var3);
+
+   boolean createAsset(Path var1, byte[] var2, EditorClient var3);
+
+   boolean deleteAsset(Path var1, EditorClient var2);
+
+   boolean moveAsset(Path var1, Path var2, EditorClient var3);
+
+   boolean shouldReloadAssetFromDisk(Path var1);
+
+   Instant getLastModificationTimestamp(Path var1);
+
+   default void updateRuntimeAssets() {
+   }
+
+   Path getFullPathToAssetData(Path var1);
+
+   boolean isImmutable();
+
+   Path getRootPath();
+
+   PluginManifest getManifest();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\asseteditor\datasource\DataSource.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

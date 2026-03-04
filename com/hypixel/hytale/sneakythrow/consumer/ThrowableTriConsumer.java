@@ -1,25 +1,18 @@
-/*    */ package com.hypixel.hytale.sneakythrow.consumer;
-/*    */ 
-/*    */ import com.hypixel.hytale.function.consumer.TriConsumer;
-/*    */ import com.hypixel.hytale.sneakythrow.SneakyThrow;
-/*    */ 
-/*    */ @FunctionalInterface
-/*    */ public interface ThrowableTriConsumer<T, U, V, E extends Throwable>
-/*    */   extends TriConsumer<T, U, V>
-/*    */ {
-/*    */   default void accept(T t, U u, V v) {
-/*    */     try {
-/* 12 */       acceptNow(t, u, v);
-/* 13 */     } catch (Throwable e) {
-/* 14 */       throw SneakyThrow.sneakyThrow(e);
-/*    */     } 
-/*    */   }
-/*    */   
-/*    */   void acceptNow(T paramT, U paramU, V paramV) throws E;
-/*    */ }
+package com.hypixel.hytale.sneakythrow.consumer;
 
+import com.hypixel.hytale.function.consumer.TriConsumer;
+import com.hypixel.hytale.sneakythrow.SneakyThrow;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\sneakythrow\consumer\ThrowableTriConsumer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+@FunctionalInterface
+public interface ThrowableTriConsumer<T, U, V, E extends Throwable> extends TriConsumer<T, U, V> {
+   @Override
+   default void accept(T t, U u, V v) {
+      try {
+         this.acceptNow(t, u, v);
+      } catch (Throwable var5) {
+         throw SneakyThrow.sneakyThrow(var5);
+      }
+   }
+
+   void acceptNow(T var1, U var2, V var3) throws E;
+}

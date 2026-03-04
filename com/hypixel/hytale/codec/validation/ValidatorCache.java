@@ -1,67 +1,78 @@
-/*    */ package com.hypixel.hytale.codec.validation;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.validation.validator.ArrayValidator;
-/*    */ import com.hypixel.hytale.codec.validation.validator.MapKeyValidator;
-/*    */ import com.hypixel.hytale.codec.validation.validator.MapValueValidator;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class ValidatorCache<T>
-/*    */ {
-/*    */   private final Validator<T> validator;
-/*    */   private ArrayValidator<T> arrayValidator;
-/*    */   private ArrayValidator<T[]> arrayofArrayValidator;
-/*    */   private MapKeyValidator<T> mapKeyValidator;
-/*    */   private MapKeyValidator<T[]> mapArrayKeyValidator;
-/*    */   private MapValueValidator<T> mapValueValidator;
-/*    */   private MapValueValidator<T[]> mapArrayValueValidator;
-/*    */   
-/*    */   public ValidatorCache(Validator<T> validator) {
-/* 19 */     this.validator = validator;
-/*    */   }
-/*    */   
-/*    */   public Validator<T> getValidator() {
-/* 23 */     return this.validator;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public ArrayValidator<T> getArrayValidator() {
-/* 28 */     if (this.arrayValidator == null) this.arrayValidator = new ArrayValidator(getValidator()); 
-/* 29 */     return this.arrayValidator;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public ArrayValidator<T[]> getArrayOfArrayValidator() {
-/* 34 */     if (this.arrayofArrayValidator == null) this.arrayofArrayValidator = new ArrayValidator((Validator)getArrayValidator()); 
-/* 35 */     return this.arrayofArrayValidator;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public MapKeyValidator<T> getMapKeyValidator() {
-/* 40 */     if (this.mapKeyValidator == null) this.mapKeyValidator = new MapKeyValidator(getValidator()); 
-/* 41 */     return this.mapKeyValidator;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public MapKeyValidator<T[]> getMapArrayKeyValidator() {
-/* 46 */     if (this.mapArrayKeyValidator == null) this.mapArrayKeyValidator = new MapKeyValidator((Validator)getArrayValidator()); 
-/* 47 */     return this.mapArrayKeyValidator;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public MapValueValidator<T> getMapValueValidator() {
-/* 52 */     if (this.mapValueValidator == null) this.mapValueValidator = new MapValueValidator(getValidator()); 
-/* 53 */     return this.mapValueValidator;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public MapValueValidator<T[]> getMapArrayValueValidator() {
-/* 58 */     if (this.mapArrayValueValidator == null) this.mapArrayValueValidator = new MapValueValidator((Validator)getArrayValidator()); 
-/* 59 */     return this.mapArrayValueValidator;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.codec.validation;
 
+import com.hypixel.hytale.codec.validation.validator.ArrayValidator;
+import com.hypixel.hytale.codec.validation.validator.MapKeyValidator;
+import com.hypixel.hytale.codec.validation.validator.MapValueValidator;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\codec\validation\ValidatorCache.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ValidatorCache<T> {
+   private final Validator<T> validator;
+   private ArrayValidator<T> arrayValidator;
+   private ArrayValidator<T[]> arrayofArrayValidator;
+   private MapKeyValidator<T> mapKeyValidator;
+   private MapKeyValidator<T[]> mapArrayKeyValidator;
+   private MapValueValidator<T> mapValueValidator;
+   private MapValueValidator<T[]> mapArrayValueValidator;
+
+   public ValidatorCache(Validator<T> validator) {
+      this.validator = validator;
+   }
+
+   public Validator<T> getValidator() {
+      return this.validator;
+   }
+
+   @Nonnull
+   public ArrayValidator<T> getArrayValidator() {
+      if (this.arrayValidator == null) {
+         this.arrayValidator = new ArrayValidator<>(this.getValidator());
+      }
+
+      return this.arrayValidator;
+   }
+
+   @Nonnull
+   public ArrayValidator<T[]> getArrayOfArrayValidator() {
+      if (this.arrayofArrayValidator == null) {
+         this.arrayofArrayValidator = new ArrayValidator(this.getArrayValidator());
+      }
+
+      return this.arrayofArrayValidator;
+   }
+
+   @Nonnull
+   public MapKeyValidator<T> getMapKeyValidator() {
+      if (this.mapKeyValidator == null) {
+         this.mapKeyValidator = new MapKeyValidator<>(this.getValidator());
+      }
+
+      return this.mapKeyValidator;
+   }
+
+   @Nonnull
+   public MapKeyValidator<T[]> getMapArrayKeyValidator() {
+      if (this.mapArrayKeyValidator == null) {
+         this.mapArrayKeyValidator = new MapKeyValidator(this.getArrayValidator());
+      }
+
+      return this.mapArrayKeyValidator;
+   }
+
+   @Nonnull
+   public MapValueValidator<T> getMapValueValidator() {
+      if (this.mapValueValidator == null) {
+         this.mapValueValidator = new MapValueValidator<>(this.getValidator());
+      }
+
+      return this.mapValueValidator;
+   }
+
+   @Nonnull
+   public MapValueValidator<T[]> getMapArrayValueValidator() {
+      if (this.mapArrayValueValidator == null) {
+         this.mapArrayValueValidator = new MapValueValidator(this.getArrayValidator());
+      }
+
+      return this.mapArrayValueValidator;
+   }
+}

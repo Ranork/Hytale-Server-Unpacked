@@ -1,27 +1,17 @@
-/*    */ package com.hypixel.hytale.server.npc.corecomponents.timer;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.timer.builders.BuilderBodyMotionTimer;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.timer.builders.BuilderMotionTimer;
-/*    */ import com.hypixel.hytale.server.npc.instructions.BodyMotion;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class BodyMotionTimer
-/*    */   extends MotionTimer<BodyMotion>
-/*    */   implements BodyMotion
-/*    */ {
-/*    */   public BodyMotionTimer(@Nonnull BuilderBodyMotionTimer builder, @Nonnull BuilderSupport builderSupport, BodyMotion motion) {
-/* 14 */     super((BuilderMotionTimer<BodyMotion>)builder, builderSupport, motion);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public BodyMotion getSteeringMotion() {
-/* 19 */     return this.motion.getSteeringMotion();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.corecomponents.timer;
 
+import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.corecomponents.timer.builders.BuilderBodyMotionTimer;
+import com.hypixel.hytale.server.npc.instructions.BodyMotion;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\corecomponents\timer\BodyMotionTimer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BodyMotionTimer extends MotionTimer<BodyMotion> implements BodyMotion {
+   public BodyMotionTimer(@Nonnull BuilderBodyMotionTimer builder, @Nonnull BuilderSupport builderSupport, BodyMotion motion) {
+      super(builder, builderSupport, motion);
+   }
+
+   @Override
+   public BodyMotion getSteeringMotion() {
+      return this.motion.getSteeringMotion();
+   }
+}

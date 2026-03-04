@@ -1,80 +1,33 @@
-/*    */ package com.hypixel.hytale.server.core.meta;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import java.util.function.Function;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public interface IMetaRegistry<K>
-/*    */ {
-/*    */   <T> T newMetaObject(MetaKey<T> paramMetaKey, K paramK);
-/*    */   
-/*    */   void forEachMetaEntry(IMetaStore<K> paramIMetaStore, MetaEntryConsumer paramMetaEntryConsumer);
-/*    */   
-/*    */   @Nullable
-/*    */   PersistentMetaKey<?> getMetaKeyForCodecKey(String paramString);
-/*    */   
-/*    */   <T> MetaKey<T> registerMetaObject(Function<K, T> paramFunction, boolean paramBoolean, String paramString, Codec<T> paramCodec);
-/*    */   
-/*    */   default <T> MetaKey<T> registerMetaObject(Function<K, T> supplier, String keyName, Codec<T> codec) {
-/* 46 */     return registerMetaObject(supplier, true, keyName, codec);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   default <T> MetaKey<T> registerMetaObject(Function<K, T> supplier) {
-/* 57 */     return registerMetaObject(supplier, false, null, null);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   default <T> MetaKey<T> registerMetaObject() {
-/* 67 */     return registerMetaObject(parent -> null);
-/*    */   }
-/*    */   
-/*    */   @FunctionalInterface
-/*    */   public static interface MetaEntryConsumer {
-/*    */     <T> void accept(MetaKey<T> param1MetaKey, T param1T);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.meta;
 
+import com.hypixel.hytale.codec.Codec;
+import java.util.function.Function;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\meta\IMetaRegistry.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface IMetaRegistry<K> {
+   <T> T newMetaObject(MetaKey<T> var1, K var2);
+
+   void forEachMetaEntry(IMetaStore<K> var1, IMetaRegistry.MetaEntryConsumer var2);
+
+   @Nullable
+   PersistentMetaKey<?> getMetaKeyForCodecKey(String var1);
+
+   <T> MetaKey<T> registerMetaObject(Function<K, T> var1, boolean var2, String var3, Codec<T> var4);
+
+   default <T> MetaKey<T> registerMetaObject(Function<K, T> supplier, String keyName, Codec<T> codec) {
+      return this.registerMetaObject(supplier, true, keyName, codec);
+   }
+
+   default <T> MetaKey<T> registerMetaObject(Function<K, T> supplier) {
+      return this.registerMetaObject(supplier, false, null, null);
+   }
+
+   default <T> MetaKey<T> registerMetaObject() {
+      return this.registerMetaObject(parent -> null);
+   }
+
+   @FunctionalInterface
+   public interface MetaEntryConsumer {
+      <T> void accept(MetaKey<T> var1, T var2);
+   }
+}

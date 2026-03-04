@@ -1,45 +1,33 @@
-/*    */ package com.hypixel.hytale.server.core.io.netty;
-/*    */ 
-/*    */ import com.hypixel.hytale.protocol.Packet;
-/*    */ import com.hypixel.hytale.server.core.io.PacketHandler;
-/*    */ import com.hypixel.hytale.server.core.io.adapter.PacketAdapters;
-/*    */ import io.netty.channel.ChannelHandlerContext;
-/*    */ import io.netty.channel.ChannelInboundHandlerAdapter;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class PlayerChannelHandler
-/*    */   extends ChannelInboundHandlerAdapter
-/*    */ {
-/*    */   private final PacketHandler handler;
-/*    */   
-/*    */   public PlayerChannelHandler(PacketHandler handler) {
-/* 17 */     this.handler = handler;
-/*    */   }
-/*    */   
-/*    */   public PacketHandler getHandler() {
-/* 21 */     return this.handler;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void channelInactive(ChannelHandlerContext ctx) {
-/* 26 */     this.handler.logCloseMessage();
-/* 27 */     this.handler.closed(ctx);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void channelRead(ChannelHandlerContext ctx, Object msg) {
-/* 32 */     if (!ctx.channel().isActive()) {
-/*    */       return;
-/*    */     }
-/* 35 */     Packet packet = (Packet)msg;
-/* 36 */     if (!PacketAdapters.__handleInbound(this.handler, packet))
-/* 37 */       this.handler.handle(packet); 
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.io.netty;
 
+import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.server.core.io.PacketHandler;
+import com.hypixel.hytale.server.core.io.adapter.PacketAdapters;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\io\netty\PlayerChannelHandler.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PlayerChannelHandler extends ChannelInboundHandlerAdapter {
+   private final PacketHandler handler;
+
+   public PlayerChannelHandler(PacketHandler handler) {
+      this.handler = handler;
+   }
+
+   public PacketHandler getHandler() {
+      return this.handler;
+   }
+
+   public void channelInactive(ChannelHandlerContext ctx) {
+      this.handler.logCloseMessage();
+      this.handler.closed(ctx);
+   }
+
+   public void channelRead(ChannelHandlerContext ctx, Object msg) {
+      if (ctx.channel().isActive()) {
+         ToServerPacket packet = (ToServerPacket)msg;
+         if (!PacketAdapters.__handleInbound(this.handler, packet)) {
+            this.handler.handle(packet);
+         }
+      }
+   }
+}

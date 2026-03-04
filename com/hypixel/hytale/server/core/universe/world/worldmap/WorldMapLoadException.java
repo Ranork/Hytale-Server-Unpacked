@@ -5,21 +5,21 @@ import java.util.Objects;
 import javax.annotation.Nonnull;
 
 public class WorldMapLoadException extends Exception {
-    public WorldMapLoadException(@Nonnull String message) {
-        super((String)Objects.requireNonNull(message));
-    }
+   public WorldMapLoadException(@Nonnull String message) {
+      super(Objects.requireNonNull(message));
+   }
 
-    public WorldMapLoadException(@Nonnull String message, Throwable cause) {
-        super((String)Objects.requireNonNull(message), cause);
-    }
+   public WorldMapLoadException(@Nonnull String message, Throwable cause) {
+      super(Objects.requireNonNull(message), cause);
+   }
 
-    @Nonnull
-    public String getTraceMessage() {
-        return this.getTraceMessage(", ");
-    }
+   @Nonnull
+   public String getTraceMessage() {
+      return this.getTraceMessage(", ");
+   }
 
-    @Nonnull
-    public String getTraceMessage(@Nonnull String joiner) {
-        return ExceptionUtil.combineMessages(this, joiner);
-    }
+   @Nonnull
+   public String getTraceMessage(@Nonnull String joiner) {
+      return ExceptionUtil.combineMessages(this, joiner);
+   }
 }

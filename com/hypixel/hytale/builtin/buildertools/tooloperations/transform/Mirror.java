@@ -1,71 +1,54 @@
-/*    */ package com.hypixel.hytale.builtin.buildertools.tooloperations.transform;
-/*    */ 
-/*    */ import com.hypixel.hytale.math.Axis;
-/*    */ import com.hypixel.hytale.math.vector.Vector3i;
-/*    */ import com.hypixel.hytale.protocol.packets.buildertools.BrushAxis;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class Mirror
-/*    */   implements Transform {
-/* 10 */   public static final Transform X = new Mirror(Axis.X);
-/* 11 */   public static final Transform Y = new Mirror(Axis.Y);
-/* 12 */   public static final Transform Z = new Mirror(Axis.Z);
-/*    */   private final Axis axis;
-/*    */   
-/*    */   private Mirror(Axis axis) {
-/* 16 */     this.axis = axis;
-/*    */   }
-/*    */   
-/*    */   public void apply(@Nonnull Vector3i vector3i) {
-/* 20 */     this.axis.flip(vector3i);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 26 */     return "Mirror{axis=" + String.valueOf(this.axis) + "}";
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static Transform forAxis(BrushAxis axis) {
-/* 32 */     if (axis == BrushAxis.X)
-/* 33 */       return X; 
-/* 34 */     if (axis == BrushAxis.Y)
-/* 35 */       return Y; 
-/* 36 */     if (axis == BrushAxis.Z) {
-/* 37 */       return Z;
-/*    */     }
-/* 39 */     return NONE;
-/*    */   }
-/*    */   
-/*    */   public static Transform forDirection(@Nonnull Vector3i direction) {
-/* 43 */     return forDirection(direction, true);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static Transform forDirection(@Nonnull Vector3i direction, boolean negativeY) {
-/* 54 */     if (direction.getX() != 0)
-/* 55 */       return X; 
-/* 56 */     if (direction.getZ() != 0)
-/* 57 */       return Z; 
-/* 58 */     if (direction.getY() > 0)
-/* 59 */       return Y; 
-/* 60 */     if (direction.getY() < 0 && negativeY) {
-/* 61 */       return Y;
-/*    */     }
-/* 63 */     return NONE;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.buildertools.tooloperations.transform;
 
+import com.hypixel.hytale.math.Axis;
+import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.protocol.packets.buildertools.BrushAxis;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\buildertools\tooloperations\transform\Mirror.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Mirror implements Transform {
+   public static final Transform X = new Mirror(Axis.X);
+   public static final Transform Y = new Mirror(Axis.Y);
+   public static final Transform Z = new Mirror(Axis.Z);
+   private final Axis axis;
+
+   private Mirror(Axis axis) {
+      this.axis = axis;
+   }
+
+   @Override
+   public void apply(@Nonnull Vector3i vector3i) {
+      this.axis.flip(vector3i);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "Mirror{axis=" + this.axis + "}";
+   }
+
+   public static Transform forAxis(BrushAxis axis) {
+      if (axis == BrushAxis.X) {
+         return X;
+      } else if (axis == BrushAxis.Y) {
+         return Y;
+      } else {
+         return axis == BrushAxis.Z ? Z : NONE;
+      }
+   }
+
+   public static Transform forDirection(@Nonnull Vector3i direction) {
+      return forDirection(direction, true);
+   }
+
+   public static Transform forDirection(@Nonnull Vector3i direction, boolean negativeY) {
+      if (direction.getX() != 0) {
+         return X;
+      } else if (direction.getZ() != 0) {
+         return Z;
+      } else if (direction.getY() > 0) {
+         return Y;
+      } else {
+         return direction.getY() < 0 && negativeY ? Y : NONE;
+      }
+   }
+}

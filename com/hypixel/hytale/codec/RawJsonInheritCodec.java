@@ -5,14 +5,8 @@ import java.io.IOException;
 import javax.annotation.Nullable;
 
 public interface RawJsonInheritCodec<T> extends RawJsonCodec<T> {
-  @Nullable
-  T decodeAndInheritJson(RawJsonReader paramRawJsonReader, T paramT, ExtraInfo paramExtraInfo) throws IOException;
-  
-  void decodeAndInheritJson(RawJsonReader paramRawJsonReader, T paramT1, T paramT2, ExtraInfo paramExtraInfo) throws IOException;
+   @Nullable
+   T decodeAndInheritJson(RawJsonReader var1, T var2, ExtraInfo var3) throws IOException;
+
+   void decodeAndInheritJson(RawJsonReader var1, T var2, T var3, ExtraInfo var4) throws IOException;
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\codec\RawJsonInheritCodec.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

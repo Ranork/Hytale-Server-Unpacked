@@ -8,33 +8,27 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public interface IPrefabPath extends IPath<IPrefabPathWaypoint> {
-  short registerNewWaypoint(@Nonnull IPrefabPathWaypoint paramIPrefabPathWaypoint, int paramInt);
-  
-  void registerNewWaypointAt(int paramInt1, @Nonnull IPrefabPathWaypoint paramIPrefabPathWaypoint, int paramInt2);
-  
-  void addLoadedWaypoint(@Nonnull IPrefabPathWaypoint paramIPrefabPathWaypoint, int paramInt1, int paramInt2, int paramInt3);
-  
-  void removeWaypoint(int paramInt1, int paramInt2);
-  
-  void unloadWaypoint(int paramInt);
-  
-  boolean hasLoadedWaypoints();
-  
-  boolean isFullyLoaded();
-  
-  int loadedWaypointCount();
-  
-  int getWorldGenId();
-  
-  Vector3d getNearestWaypointPosition(@Nonnull Vector3d paramVector3d, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
-  
-  void mergeInto(@Nonnull IPrefabPath paramIPrefabPath, int paramInt, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
-  
-  void compact(int paramInt);
+   short registerNewWaypoint(@Nonnull IPrefabPathWaypoint var1, int var2);
+
+   void registerNewWaypointAt(int var1, @Nonnull IPrefabPathWaypoint var2, int var3);
+
+   void addLoadedWaypoint(@Nonnull IPrefabPathWaypoint var1, int var2, int var3, int var4);
+
+   void removeWaypoint(int var1, int var2);
+
+   void unloadWaypoint(int var1);
+
+   boolean hasLoadedWaypoints();
+
+   boolean isFullyLoaded();
+
+   int loadedWaypointCount();
+
+   int getWorldGenId();
+
+   Vector3d getNearestWaypointPosition(@Nonnull Vector3d var1, @Nonnull ComponentAccessor<EntityStore> var2);
+
+   void mergeInto(@Nonnull IPrefabPath var1, int var2, @Nonnull ComponentAccessor<EntityStore> var3);
+
+   void compact(int var1);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\path\path\IPrefabPath.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

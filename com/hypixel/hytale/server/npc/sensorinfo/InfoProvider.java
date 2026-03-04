@@ -4,25 +4,19 @@ import com.hypixel.hytale.server.npc.sensorinfo.parameterproviders.ParameterProv
 import javax.annotation.Nullable;
 
 public interface InfoProvider {
-  @Nullable
-  IPositionProvider getPositionProvider();
-  
-  @Nullable
-  ParameterProvider getParameterProvider(int paramInt);
-  
-  @Nullable
-  <E extends ExtraInfoProvider> E getExtraInfo(Class<E> paramClass);
-  
-  <E extends ExtraInfoProvider> void passExtraInfo(E paramE);
-  
-  @Nullable
-  <E extends ExtraInfoProvider> E getPassedExtraInfo(Class<E> paramClass);
-  
-  boolean hasPosition();
+   @Nullable
+   IPositionProvider getPositionProvider();
+
+   @Nullable
+   ParameterProvider getParameterProvider(int var1);
+
+   @Nullable
+   <E extends ExtraInfoProvider> E getExtraInfo(Class<E> var1);
+
+   <E extends ExtraInfoProvider> void passExtraInfo(E var1);
+
+   @Nullable
+   <E extends ExtraInfoProvider> E getPassedExtraInfo(Class<E> var1);
+
+   boolean hasPosition();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\sensorinfo\InfoProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

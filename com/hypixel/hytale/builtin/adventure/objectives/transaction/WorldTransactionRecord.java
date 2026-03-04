@@ -1,36 +1,28 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.objectives.transaction;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class WorldTransactionRecord
-/*    */   extends TransactionRecord
-/*    */ {
-/*    */   public void revert() {}
-/*    */   
-/*    */   public void complete() {}
-/*    */   
-/*    */   public void unload() {}
-/*    */   
-/*    */   public boolean shouldBeSerialized() {
-/* 21 */     return false;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 27 */     return "WorldTransactionRecord{} " + super
-/* 28 */       .toString();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.objectives.transaction;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\objectives\transaction\WorldTransactionRecord.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class WorldTransactionRecord extends TransactionRecord {
+   @Override
+   public void revert() {
+   }
+
+   @Override
+   public void complete() {
+   }
+
+   @Override
+   public void unload() {
+   }
+
+   @Override
+   public boolean shouldBeSerialized() {
+      return false;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "WorldTransactionRecord{} " + super.toString();
+   }
+}

@@ -1,52 +1,51 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.math.vector.Vector3d;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class AnchorDensity
-/*    */   extends Density
-/*    */ {
-/*    */   @Nullable
-/*    */   private Density input;
-/*    */   private final boolean isReversed;
-/*    */   
-/*    */   public AnchorDensity(Density input, boolean isReversed) {
-/* 16 */     this.input = input;
-/* 17 */     this.isReversed = isReversed;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double process(@Nonnull Density.Context context) {
-/* 22 */     Vector3d anchor = context.densityAnchor;
-/*    */     
-/* 24 */     if (anchor == null) {
-/* 25 */       return this.input.process(context);
-/*    */     }
-/* 27 */     if (this.isReversed) {
-/* 28 */       Vector3d vector3d = new Vector3d(context.position.x + anchor.x, context.position.y + anchor.y, context.position.z + anchor.z);
-/* 29 */       Density.Context context1 = new Density.Context(context);
-/* 30 */       context1.position = vector3d;
-/* 31 */       return this.input.process(context1);
-/*    */     } 
-/*    */     
-/* 34 */     Vector3d childPosition = new Vector3d(context.position.x - anchor.x, context.position.y - anchor.y, context.position.z - anchor.z);
-/* 35 */     Density.Context childContext = new Density.Context(context);
-/* 36 */     childContext.position = childPosition;
-/* 37 */     return this.input.process(childContext);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void setInputs(@Nonnull Density[] inputs) {
-/* 43 */     if (inputs.length == 0) this.input = null; 
-/* 44 */     this.input = inputs[0];
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.math.vector.Vector3d;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\density\nodes\AnchorDensity.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AnchorDensity extends Density {
+   @Nullable
+   private Density input;
+   private final boolean isReversed;
+   @Nonnull
+   private final Vector3d rChildPosition;
+   @Nonnull
+   private final Density.Context rChildContext;
+
+   public AnchorDensity(Density input, boolean isReversed) {
+      this.input = input;
+      this.isReversed = isReversed;
+      this.rChildPosition = new Vector3d();
+      this.rChildContext = new Density.Context();
+   }
+
+   @Override
+   public double process(@Nonnull Density.Context context) {
+      if (context.densityAnchor == null) {
+         return this.input.process(context);
+      } else {
+         if (this.isReversed) {
+            this.rChildPosition
+               .assign(context.position.x + context.densityAnchor.x, context.position.y + context.densityAnchor.y, context.position.z + context.densityAnchor.z);
+         } else {
+            this.rChildPosition
+               .assign(context.position.x - context.densityAnchor.x, context.position.y - context.densityAnchor.y, context.position.z - context.densityAnchor.z);
+         }
+
+         this.rChildContext.assign(context);
+         this.rChildContext.position = this.rChildPosition;
+         return this.input.process(this.rChildContext);
+      }
+   }
+
+   @Override
+   public void setInputs(@Nonnull Density[] inputs) {
+      if (inputs.length == 0) {
+         this.input = null;
+      }
+
+      this.input = inputs[0];
+   }
+}

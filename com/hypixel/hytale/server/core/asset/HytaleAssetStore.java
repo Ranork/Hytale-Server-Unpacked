@@ -10,8 +10,9 @@ import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.event.EventBus;
 import com.hypixel.hytale.event.IEventDispatcher;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.ItemWithAllMetadata;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.interface_.NotificationStyle;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
@@ -24,15 +25,16 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
 import com.hypixel.hytale.server.core.util.io.FileUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.io.IOException;
 import java.lang.ref.SoftReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Queue;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
@@ -41,11 +43,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends AssetMap<K, T>> extends AssetStore<K, T, M> {
-   public static final ObjectList<Consumer<Packet>> SETUP_PACKET_CONSUMERS = new ObjectArrayList<>();
+   public static final Queue<Consumer<ToClientPacket>> SETUP_PACKET_CONSUMERS = new ConcurrentLinkedQueue<>();
    protected final AssetPacketGenerator<K, T, M> packetGenerator;
    protected final Function<K, ItemWithAllMetadata> notificationItemFunction;
    @Nullable
-   protected SoftReference<Packet[]> cachedInitPackets;
+   protected SoftReference<ToClientPacket[]> cachedInitPackets;
 
    public HytaleAssetStore(@Nonnull HytaleAssetStore.Builder<K, T, M> builder) {
       super(builder);
@@ -89,21 +91,19 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
          Universe universe = Universe.get();
          if (universe.getPlayerCount() != 0 || !SETUP_PACKET_CONSUMERS.isEmpty()) {
             if (toBeRemoved != null && !toBeRemoved.isEmpty()) {
-               Packet packet = this.packetGenerator.generateRemovePacket(this.assetMap, toBeRemoved, query);
+               ToClientPacket packet = this.packetGenerator.generateRemovePacket(this.assetMap, toBeRemoved, query);
                universe.broadcastPacketNoCache(packet);
 
-               for (int i = 0; i < SETUP_PACKET_CONSUMERS.size(); i++) {
-                  Consumer<Packet> c = SETUP_PACKET_CONSUMERS.get(i);
+               for (Consumer<ToClientPacket> c : SETUP_PACKET_CONSUMERS) {
                   c.accept(packet);
                }
             }
 
             if (toBeUpdated != null && !toBeUpdated.isEmpty()) {
-               Packet packet = this.packetGenerator.generateUpdatePacket(this.assetMap, toBeUpdated, query);
+               ToClientPacket packet = this.packetGenerator.generateUpdatePacket(this.assetMap, toBeUpdated, query);
                universe.broadcastPacketNoCache(packet);
 
-               for (int i = 0; i < SETUP_PACKET_CONSUMERS.size(); i++) {
-                  Consumer<Packet> c = SETUP_PACKET_CONSUMERS.get(i);
+               for (Consumer<ToClientPacket> c : SETUP_PACKET_CONSUMERS) {
                   c.accept(packet);
                }
             }
@@ -111,15 +111,15 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
       }
    }
 
-   public void sendAssets(@Nonnull Consumer<Packet[]> packetConsumer) {
+   public void sendAssets(@Nonnull Consumer<ToClientPacket[]> packetConsumer) {
       if (this.packetGenerator != null) {
-         Packet[] packets = this.cachedInitPackets == null ? null : this.cachedInitPackets.get();
+         ToClientPacket[] packets = this.cachedInitPackets == null ? null : this.cachedInitPackets.get();
          if (packets != null) {
             packetConsumer.accept(packets);
          } else {
             Map<K, T> map = this.assetMap.getAssetMap();
-            Packet packet = this.packetGenerator.generateInitPacket(this.assetMap, map);
-            this.cachedInitPackets = new SoftReference<>(packets = new Packet[]{packet});
+            ToClientPacket packet = this.packetGenerator.generateInitPacket(this.assetMap, map);
+            this.cachedInitPackets = new SoftReference<>(packets = new ToClientPacket[]{packet});
             packetConsumer.accept(packets);
          }
       }
@@ -206,10 +206,10 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
       }
 
       public void accept(Map<Path, EventKind> map) {
-         ObjectArrayList<Path> createdOrModifiedFilesToLoad = new ObjectArrayList<>();
-         ObjectArrayList<Path> removedFilesToUnload = new ObjectArrayList<>();
-         ObjectArrayList<Path> createdOrModifiedDirectories = new ObjectArrayList<>();
-         ObjectArrayList<Path> removedFilesAndDirectories = new ObjectArrayList<>();
+         ObjectArrayList<Path> createdOrModifiedFilesToLoad = new ObjectArrayList();
+         ObjectArrayList<Path> removedFilesToUnload = new ObjectArrayList();
+         ObjectArrayList<Path> createdOrModifiedDirectories = new ObjectArrayList();
+         ObjectArrayList<Path> removedFilesAndDirectories = new ObjectArrayList();
 
          for (Entry<Path, EventKind> entry : map.entrySet()) {
             Path path = entry.getKey();
@@ -229,7 +229,8 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
                            }
                         });
                      } catch (IOException var14) {
-                        HytaleAssetStore.this.logger.at(Level.SEVERE).withCause(var14).log("Failed to reload assets in directory: %s", path);
+                        ((HytaleLogger.Api)HytaleAssetStore.this.logger.at(Level.SEVERE).withCause(var14))
+                           .log("Failed to reload assets in directory: %s", path);
                      }
                   } else {
                      HytaleAssetStore.this.logger.at(Level.FINEST).log("File Created: %s", path);

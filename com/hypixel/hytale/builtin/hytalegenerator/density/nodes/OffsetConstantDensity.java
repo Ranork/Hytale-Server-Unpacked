@@ -1,36 +1,30 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class OffsetConstantDensity
-/*    */   extends Density {
-/*    */   private final double offset;
-/*    */   @Nullable
-/*    */   private Density input;
-/*    */   
-/*    */   public OffsetConstantDensity(double offset, Density input) {
-/* 14 */     this.offset = offset;
-/* 15 */     this.input = input;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double process(@Nonnull Density.Context context) {
-/* 20 */     if (this.input == null) return 0.0D;
-/*    */     
-/* 22 */     return this.input.process(context) + this.offset;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void setInputs(@Nonnull Density[] inputs) {
-/* 27 */     if (inputs.length == 0) this.input = null; 
-/* 28 */     this.input = inputs[0];
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\density\nodes\OffsetConstantDensity.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class OffsetConstantDensity extends Density {
+   private final double offset;
+   @Nullable
+   private Density input;
+
+   public OffsetConstantDensity(double offset, Density input) {
+      this.offset = offset;
+      this.input = input;
+   }
+
+   @Override
+   public double process(@Nonnull Density.Context context) {
+      return this.input == null ? 0.0 : this.input.process(context) + this.offset;
+   }
+
+   @Override
+   public void setInputs(@Nonnull Density[] inputs) {
+      if (inputs.length == 0) {
+         this.input = null;
+      }
+
+      this.input = inputs[0];
+   }
+}

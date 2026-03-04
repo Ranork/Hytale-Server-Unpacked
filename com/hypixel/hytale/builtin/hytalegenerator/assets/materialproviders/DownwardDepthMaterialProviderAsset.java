@@ -1,48 +1,36 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.DownwardDepthMaterialProvider;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class DownwardDepthMaterialProviderAsset
-/*    */   extends MaterialProviderAsset
-/*    */ {
-/*    */   public static final BuilderCodec<DownwardDepthMaterialProviderAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 25 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(DownwardDepthMaterialProviderAsset.class, DownwardDepthMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("Depth", (Codec)Codec.INTEGER, true), (t, k) -> t.depth = k.intValue(), k -> Integer.valueOf(k.depth)).add()).append(new KeyedCodec("Material", (Codec)MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset).add()).build();
-/*    */   }
-/* 27 */   private int depth = 0;
-/* 28 */   private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public MaterialProvider<Material> build(@Nonnull MaterialProviderAsset.Argument argument) {
-/* 33 */     if (skip()) return MaterialProvider.noMaterialProvider();
-/*    */     
-/* 35 */     return (MaterialProvider<Material>)new DownwardDepthMaterialProvider(this.materialProviderAsset.build(argument), this.depth);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 40 */     this.materialProviderAsset.cleanUp();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders;
 
+import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.DownwardDepthMaterialProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\materialproviders\DownwardDepthMaterialProviderAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class DownwardDepthMaterialProviderAsset extends MaterialProviderAsset {
+   @Nonnull
+   public static final BuilderCodec<DownwardDepthMaterialProviderAsset> CODEC = BuilderCodec.builder(
+         DownwardDepthMaterialProviderAsset.class, DownwardDepthMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
+      )
+      .append(new KeyedCodec<>("Depth", Codec.INTEGER, true), (t, k) -> t.depth = k, k -> k.depth)
+      .add()
+      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .add()
+      .build();
+   private int depth;
+   private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
+
+   @Nonnull
+   @Override
+   public MaterialProvider<Material> build(@Nonnull MaterialProviderAsset.Argument argument) {
+      return (MaterialProvider<Material>)(super.skip()
+         ? MaterialProvider.noMaterialProvider()
+         : new DownwardDepthMaterialProvider<>(this.materialProviderAsset.build(argument), this.depth));
+   }
+
+   @Override
+   public void cleanUp() {
+      this.materialProviderAsset.cleanUp();
+   }
+}

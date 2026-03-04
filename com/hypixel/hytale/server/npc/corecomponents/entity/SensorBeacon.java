@@ -1,104 +1,102 @@
-/*    */ package com.hypixel.hytale.server.npc.corecomponents.entity;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.ComponentType;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.logger.HytaleLogger;
-/*    */ import com.hypixel.hytale.math.vector.Vector3d;
-/*    */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import com.hypixel.hytale.server.npc.NPCPlugin;
-/*    */ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
-/*    */ import com.hypixel.hytale.server.npc.components.messaging.BeaconSupport;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderSensorBase;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderSensorBeacon;
-/*    */ import com.hypixel.hytale.server.npc.role.Role;
-/*    */ import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
-/*    */ import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
-/*    */ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class SensorBeacon extends SensorBase {
-/* 24 */   protected static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
-/*    */   
-/*    */   protected final int messageIndex;
-/*    */   
-/*    */   protected final double range;
-/*    */   protected final int targetSlot;
-/*    */   protected final boolean consume;
-/* 31 */   private final EntityPositionProvider positionProvider = new EntityPositionProvider();
-/*    */   
-/*    */   public SensorBeacon(@Nonnull BuilderSensorBeacon builderSensorBeacon, @Nonnull BuilderSupport builderSupport) {
-/* 34 */     super((BuilderSensorBase)builderSensorBeacon);
-/* 35 */     this.messageIndex = builderSensorBeacon.getMessageSlot(builderSupport);
-/* 36 */     this.range = builderSensorBeacon.getRange(builderSupport);
-/* 37 */     this.targetSlot = builderSensorBeacon.getTargetSlot(builderSupport);
-/* 38 */     this.consume = builderSensorBeacon.isConsume();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-/* 43 */     if (!super.matches(ref, role, dt, store)) return false;
-/*    */     
-/* 45 */     BeaconSupport beaconSupportComponent = (BeaconSupport)store.getComponent(ref, BeaconSupport.getComponentType());
-/* 46 */     if (beaconSupportComponent == null) {
-/* 47 */       this.positionProvider.clear();
-/* 48 */       return false;
-/*    */     } 
-/*    */     
-/* 51 */     if (!beaconSupportComponent.isMessageQueued(this.messageIndex)) {
-/* 52 */       this.positionProvider.clear();
-/* 53 */       return false;
-/*    */     } 
-/*    */     
-/* 56 */     Ref<EntityStore> target = this.consume ? beaconSupportComponent.pollMessage(this.messageIndex) : beaconSupportComponent.peekMessage(this.messageIndex);
-/* 57 */     if (target == null) {
-/* 58 */       this.positionProvider.clear();
-/* 59 */       return false;
-/*    */     } 
-/*    */     
-/* 62 */     Ref<EntityStore> targetRef = this.positionProvider.setTarget(target, (ComponentAccessor)store);
-/* 63 */     if (targetRef == null || !targetRef.isValid()) {
-/* 64 */       this.positionProvider.clear();
-/* 65 */       return false;
-/*    */     } 
-/*    */     
-/* 68 */     TransformComponent targetTransformComponent = (TransformComponent)store.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
-/* 69 */     assert targetTransformComponent != null;
-/* 70 */     Vector3d targetPosition = targetTransformComponent.getPosition();
-/*    */     
-/* 72 */     TransformComponent transformComponent = (TransformComponent)store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
-/* 73 */     assert transformComponent != null;
-/* 74 */     Vector3d position = transformComponent.getPosition();
-/*    */     
-/* 76 */     if (targetPosition.distanceSquaredTo(position) > this.range * this.range) {
-/* 77 */       this.positionProvider.clear();
-/* 78 */       return false;
-/*    */     } 
-/*    */ 
-/*    */     
-/* 82 */     if (this.targetSlot >= 0) {
-/* 83 */       role.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, targetRef);
-/*    */     }
-/*    */     
-/* 86 */     if (role.getDebugSupport().isDebugFlagSet(RoleDebugFlags.BeaconMessages)) {
-/* 87 */       ((HytaleLogger.Api)NPCPlugin.get().getLogger().atInfo()).log("ID %d received message '%s' with target ID %d", Integer.valueOf(ref.getIndex()), beaconSupportComponent
-/* 88 */           .getMessageTextForIndex(this.messageIndex), Integer.valueOf(target.getIndex()));
-/*    */     }
-/*    */     
-/* 91 */     return true;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public InfoProvider getSensorInfo() {
-/* 96 */     return (InfoProvider)this.positionProvider;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.corecomponents.entity;
 
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.NPCPlugin;
+import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.components.messaging.BeaconSupport;
+import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
+import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderSensorBeacon;
+import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
+import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
+import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\corecomponents\entity\SensorBeacon.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SensorBeacon extends SensorBase {
+   protected static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
+   protected final int messageIndex;
+   protected final double range;
+   protected final int targetSlot;
+   protected final boolean consume;
+   private final EntityPositionProvider positionProvider = new EntityPositionProvider();
+
+   public SensorBeacon(@Nonnull BuilderSensorBeacon builderSensorBeacon, @Nonnull BuilderSupport builderSupport) {
+      super(builderSensorBeacon);
+      this.messageIndex = builderSensorBeacon.getMessageSlot(builderSupport);
+      this.range = builderSensorBeacon.getRange(builderSupport);
+      this.targetSlot = builderSensorBeacon.getTargetSlot(builderSupport);
+      this.consume = builderSensorBeacon.isConsume();
+   }
+
+   @Override
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+      if (!super.matches(ref, role, dt, store)) {
+         return false;
+      } else {
+         BeaconSupport beaconSupportComponent = store.getComponent(ref, BeaconSupport.getComponentType());
+         if (beaconSupportComponent == null) {
+            this.positionProvider.clear();
+            return false;
+         } else if (!beaconSupportComponent.isMessageQueued(this.messageIndex)) {
+            this.positionProvider.clear();
+            return false;
+         } else {
+            Ref<EntityStore> target = this.consume
+               ? beaconSupportComponent.pollMessage(this.messageIndex)
+               : beaconSupportComponent.peekMessage(this.messageIndex);
+            if (target == null) {
+               this.positionProvider.clear();
+               return false;
+            } else {
+               Ref<EntityStore> targetRef = this.positionProvider.setTarget(target, store);
+               if (targetRef != null && targetRef.isValid()) {
+                  TransformComponent targetTransformComponent = store.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
+
+                  assert targetTransformComponent != null;
+
+                  Vector3d targetPosition = targetTransformComponent.getPosition();
+                  TransformComponent transformComponent = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
+
+                  assert transformComponent != null;
+
+                  Vector3d position = transformComponent.getPosition();
+                  if (targetPosition.distanceSquaredTo(position) > this.range * this.range) {
+                     this.positionProvider.clear();
+                     return false;
+                  } else {
+                     if (this.targetSlot >= 0) {
+                        role.getMarkedEntitySupport().setMarkedEntity(this.targetSlot, targetRef);
+                     }
+
+                     if (role.getDebugSupport().isDebugFlagSet(RoleDebugFlags.BeaconMessages)) {
+                        ((HytaleLogger.Api)NPCPlugin.get().getLogger().atInfo())
+                           .log(
+                              "ID %d received message '%s' with target ID %d",
+                              ref.getIndex(),
+                              beaconSupportComponent.getMessageTextForIndex(this.messageIndex),
+                              target.getIndex()
+                           );
+                     }
+
+                     return true;
+                  }
+               } else {
+                  this.positionProvider.clear();
+                  return false;
+               }
+            }
+         }
+      }
+   }
+
+   @Override
+   public InfoProvider getSensorInfo() {
+      return this.positionProvider;
+   }
+}

@@ -2,11 +2,5 @@ package com.hypixel.hytale.function.consumer;
 
 @FunctionalInterface
 public interface QuadConsumer<T, U, R, V> {
-  void accept(T paramT, U paramU, R paramR, V paramV);
+   void accept(T var1, U var2, R var3, V var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\function\consumer\QuadConsumer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

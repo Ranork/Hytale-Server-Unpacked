@@ -1,93 +1,94 @@
-/*    */ package com.hypixel.hytale.server.npc.corecomponents.entity.filters;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.IEntityFilter;
-/*    */ import com.hypixel.hytale.server.npc.entities.NPCEntity;
-/*    */ import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-/*    */ import com.hypixel.hytale.server.npc.role.Role;
-/*    */ import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
-/*    */ import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class EntityFilterNot
-/*    */   extends EntityFilterBase implements IAnnotatedComponentCollection {
-/*    */   protected final IEntityFilter filter;
-/*    */   
-/*    */   public EntityFilterNot(IEntityFilter filter) {
-/* 23 */     this.filter = filter;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
-/* 28 */     return !this.filter.matchesEntity(ref, targetRef, role, store);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int cost() {
-/* 33 */     return this.filter.cost();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void registerWithSupport(Role role) {
-/* 38 */     this.filter.registerWithSupport(role);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void motionControllerChanged(@Nullable Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, MotionController motionController, @Nullable ComponentAccessor<EntityStore> componentAccessor) {
-/* 43 */     this.filter.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void loaded(Role role) {
-/* 48 */     this.filter.loaded(role);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void spawned(Role role) {
-/* 53 */     this.filter.spawned(role);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void unloaded(Role role) {
-/* 58 */     this.filter.unloaded(role);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void removed(Role role) {
-/* 63 */     this.filter.removed(role);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void teleported(Role role, World from, World to) {
-/* 68 */     this.filter.teleported(role, from, to);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int componentCount() {
-/* 73 */     return 1;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public IAnnotatedComponent getComponent(int index) {
-/* 78 */     if (index >= componentCount()) throw new IndexOutOfBoundsException(); 
-/* 79 */     return (IAnnotatedComponent)this.filter;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void setContext(IAnnotatedComponent parent, int index) {
-/* 84 */     super.setContext(parent, index);
-/* 85 */     this.filter.setContext((IAnnotatedComponent)this, index);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.corecomponents.entity.filters;
 
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
+import com.hypixel.hytale.server.npc.corecomponents.IEntityFilter;
+import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
+import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
+import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\corecomponents\entity\filters\EntityFilterNot.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class EntityFilterNot extends EntityFilterBase implements IAnnotatedComponentCollection {
+   protected final IEntityFilter filter;
+
+   public EntityFilterNot(IEntityFilter filter) {
+      this.filter = filter;
+   }
+
+   @Override
+   public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
+      return !this.filter.matchesEntity(ref, targetRef, role, store);
+   }
+
+   @Override
+   public int cost() {
+      return this.filter.cost();
+   }
+
+   @Override
+   public void registerWithSupport(Role role) {
+      this.filter.registerWithSupport(role);
+   }
+
+   @Override
+   public void motionControllerChanged(
+      @Nullable Ref<EntityStore> ref,
+      @Nonnull NPCEntity npcComponent,
+      MotionController motionController,
+      @Nullable ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      this.filter.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
+   }
+
+   @Override
+   public void loaded(Role role) {
+      this.filter.loaded(role);
+   }
+
+   @Override
+   public void spawned(Role role) {
+      this.filter.spawned(role);
+   }
+
+   @Override
+   public void unloaded(Role role) {
+      this.filter.unloaded(role);
+   }
+
+   @Override
+   public void removed(Role role) {
+      this.filter.removed(role);
+   }
+
+   @Override
+   public void teleported(Role role, World from, World to) {
+      this.filter.teleported(role, from, to);
+   }
+
+   @Override
+   public int componentCount() {
+      return 1;
+   }
+
+   @Override
+   public IAnnotatedComponent getComponent(int index) {
+      if (index >= this.componentCount()) {
+         throw new IndexOutOfBoundsException();
+      } else {
+         return this.filter;
+      }
+   }
+
+   @Override
+   public void setContext(IAnnotatedComponent parent, int index) {
+      super.setContext(parent, index);
+      this.filter.setContext(this, index);
+   }
+}

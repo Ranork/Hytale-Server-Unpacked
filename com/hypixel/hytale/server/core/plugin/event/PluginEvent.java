@@ -1,47 +1,25 @@
-/*    */ package com.hypixel.hytale.server.core.plugin.event;
-/*    */ 
-/*    */ import com.hypixel.hytale.event.IEvent;
-/*    */ import com.hypixel.hytale.server.core.plugin.PluginBase;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public abstract class PluginEvent
-/*    */   implements IEvent<Class<? extends PluginBase>>
-/*    */ {
-/*    */   @Nonnull
-/*    */   private final PluginBase plugin;
-/*    */   
-/*    */   public PluginEvent(@Nonnull PluginBase plugin) {
-/* 25 */     this.plugin = plugin;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public PluginBase getPlugin() {
-/* 33 */     return this.plugin;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 39 */     return "PluginEvent{}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.plugin.event;
 
+import com.hypixel.hytale.event.IEvent;
+import com.hypixel.hytale.server.core.plugin.PluginBase;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\plugin\event\PluginEvent.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class PluginEvent implements IEvent<Class<? extends PluginBase>> {
+   @Nonnull
+   private final PluginBase plugin;
+
+   public PluginEvent(@Nonnull PluginBase plugin) {
+      this.plugin = plugin;
+   }
+
+   @Nonnull
+   public PluginBase getPlugin() {
+      return this.plugin;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "PluginEvent{}";
+   }
+}

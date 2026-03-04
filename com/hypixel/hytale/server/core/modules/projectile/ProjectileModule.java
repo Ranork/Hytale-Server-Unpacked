@@ -1,293 +1,203 @@
-/*     */ package com.hypixel.hytale.server.core.modules.projectile;
-/*     */ import com.hypixel.hytale.common.plugin.PluginManifest;
-/*     */ import com.hypixel.hytale.component.AddReason;
-/*     */ import com.hypixel.hytale.component.CommandBuffer;
-/*     */ import com.hypixel.hytale.component.Component;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.ComponentRegistryProxy;
-/*     */ import com.hypixel.hytale.component.ComponentType;
-/*     */ import com.hypixel.hytale.component.Holder;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.component.system.ISystem;
-/*     */ import com.hypixel.hytale.math.vector.Vector3d;
-/*     */ import com.hypixel.hytale.math.vector.Vector3f;
-/*     */ import com.hypixel.hytale.protocol.Direction;
-/*     */ import com.hypixel.hytale.protocol.InteractionType;
-/*     */ import com.hypixel.hytale.server.core.Message;
-/*     */ import com.hypixel.hytale.server.core.asset.type.model.config.Model;
-/*     */ import com.hypixel.hytale.server.core.entity.Entity;
-/*     */ import com.hypixel.hytale.server.core.entity.EntityUtils;
-/*     */ import com.hypixel.hytale.server.core.entity.InteractionChain;
-/*     */ import com.hypixel.hytale.server.core.entity.InteractionContext;
-/*     */ import com.hypixel.hytale.server.core.entity.InteractionManager;
-/*     */ import com.hypixel.hytale.server.core.entity.LivingEntity;
-/*     */ import com.hypixel.hytale.server.core.entity.UUIDComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.Interactions;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
-/*     */ import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
-/*     */ import com.hypixel.hytale.server.core.modules.projectile.component.PredictedProjectile;
-/*     */ import com.hypixel.hytale.server.core.modules.projectile.component.Projectile;
-/*     */ import com.hypixel.hytale.server.core.modules.projectile.config.ProjectileConfig;
-/*     */ import com.hypixel.hytale.server.core.modules.projectile.config.StandardPhysicsConfig;
-/*     */ import com.hypixel.hytale.server.core.modules.projectile.config.StandardPhysicsProvider;
-/*     */ import com.hypixel.hytale.server.core.modules.projectile.interaction.ProjectileInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.projectile.system.StandardPhysicsTickSystem;
-/*     */ import com.hypixel.hytale.server.core.modules.time.TimeResource;
-/*     */ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-/*     */ import com.hypixel.hytale.server.core.universe.world.SoundUtil;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import java.util.UUID;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ public class ProjectileModule extends JavaPlugin {
-/*     */   @Nonnull
-/*  55 */   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(ProjectileModule.class)
-/*  56 */     .description("This module implements the new projectile system. Disabling this module will prevent anything using the new projectile system from functioning.")
-/*     */     
-/*  58 */     .depends(new Class[] { CollisionModule.class
-/*  59 */       }).depends(new Class[] { EntityModule.class
-/*  60 */       }).build();
-/*  61 */   public static final Message MESSAGE_GENERAL_UNKNOWN = Message.translation("server.general.unknown");
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static ProjectileModule instance;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private ComponentType<EntityStore, Projectile> projectileComponentType;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private ComponentType<EntityStore, StandardPhysicsProvider> standardPhysicsProviderComponentType;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private ComponentType<EntityStore, PredictedProjectile> predictedProjectileComponentType;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public static ProjectileModule get() {
-/*  87 */     return instance;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public ProjectileModule(@Nonnull JavaPluginInit init) {
-/*  96 */     super(init);
-/*  97 */     instance = this;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void setup() {
-/* 102 */     ComponentRegistryProxy<EntityStore> entityStoreRegistry = getEntityStoreRegistry();
-/*     */     
-/* 104 */     getCodecRegistry(Interaction.CODEC).register("Projectile", ProjectileInteraction.class, ProjectileInteraction.CODEC);
-/* 105 */     this.projectileComponentType = entityStoreRegistry.registerComponent(Projectile.class, "IsProjectile", Projectile.CODEC);
-/* 106 */     this.predictedProjectileComponentType = entityStoreRegistry.registerComponent(PredictedProjectile.class, () -> {
-/*     */           throw new UnsupportedOperationException();
-/*     */         });
-/*     */     
-/* 110 */     this.standardPhysicsProviderComponentType = entityStoreRegistry.registerComponent(StandardPhysicsProvider.class, () -> {
-/*     */           throw new UnsupportedOperationException();
-/*     */         });
-/*     */     
-/* 114 */     entityStoreRegistry.registerSystem((ISystem)new StandardPhysicsTickSystem());
-/* 115 */     entityStoreRegistry.registerSystem((ISystem)new PredictedProjectileSystems.EntityTrackerUpdate());
-/*     */     
-/* 117 */     getCodecRegistry((StringCodecMapCodec)PhysicsConfig.CODEC).register("Standard", StandardPhysicsConfig.class, (Codec)StandardPhysicsConfig.CODEC);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public Ref<EntityStore> spawnProjectile(Ref<EntityStore> creatorRef, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull ProjectileConfig config, @Nonnull Vector3d position, @Nonnull Vector3d direction) {
-/* 136 */     return spawnProjectile((UUID)null, creatorRef, commandBuffer, config, position, direction);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public Ref<EntityStore> spawnProjectile(@Nullable UUID predictionId, Ref<EntityStore> creatorRef, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull ProjectileConfig config, @Nonnull Vector3d position, @Nonnull Vector3d direction) {
-/* 157 */     Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
-/*     */ 
-/*     */     
-/* 160 */     Vector3f rotation = new Vector3f();
-/* 161 */     Direction rotationOffset = config.getSpawnRotationOffset();
-/* 162 */     rotation.setYaw(PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(direction.x, direction.z)));
-/* 163 */     rotation.setPitch(PhysicsMath.pitchFromDirection(direction.x, direction.y, direction.z));
-/* 164 */     rotation.add(rotationOffset.pitch, rotationOffset.yaw, rotationOffset.roll);
-/* 165 */     PhysicsMath.vectorFromAngles(rotation.getYaw(), rotation.getPitch(), direction);
-/*     */ 
-/*     */     
-/* 168 */     Vector3d offset = config.getCalculatedOffset(rotation.getPitch(), rotation.getYaw());
-/* 169 */     position.add(offset);
-/*     */     
-/* 171 */     holder.addComponent(TransformComponent.getComponentType(), (Component)new TransformComponent(position, rotation));
-/* 172 */     holder.addComponent(HeadRotation.getComponentType(), (Component)new HeadRotation(rotation));
-/*     */ 
-/*     */     
-/* 175 */     if (predictionId != null) {
-/* 176 */       holder.addComponent(UUIDComponent.getComponentType(), (Component)new UUIDComponent(predictionId));
-/*     */     }
-/*     */     
-/* 179 */     holder.addComponent(Interactions.getComponentType(), (Component)new Interactions(config.getInteractions()));
-/*     */     
-/* 181 */     Model model = config.getModel();
-/* 182 */     holder.addComponent(ModelComponent.getComponentType(), (Component)new ModelComponent(model));
-/* 183 */     holder.addComponent(PersistentModel.getComponentType(), (Component)new PersistentModel(model.toReference()));
-/*     */     
-/* 185 */     holder.addComponent(BoundingBox.getComponentType(), (Component)new BoundingBox(model.getBoundingBox()));
-/*     */     
-/* 187 */     holder.addComponent(NetworkId.getComponentType(), (Component)new NetworkId(((EntityStore)commandBuffer.getExternalData()).takeNextNetworkId()));
-/* 188 */     holder.ensureComponent(Projectile.getComponentType());
-/*     */     
-/* 190 */     if (predictionId != null) {
-/* 191 */       holder.addComponent(PredictedProjectile.getComponentType(), (Component)new PredictedProjectile(predictionId));
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/* 199 */     holder.addComponent(Velocity.getComponentType(), (Component)new Velocity());
-/* 200 */     config.getPhysicsConfig().apply(holder, creatorRef, direction.clone().scale(config.getLaunchForce()), (ComponentAccessor)commandBuffer, (predictionId != null));
-/*     */     
-/* 202 */     holder.ensureComponent(EntityStore.REGISTRY.getNonSerializedComponentType());
-/*     */     
-/* 204 */     holder.addComponent(DespawnComponent.getComponentType(), (Component)new DespawnComponent(((TimeResource)commandBuffer.getResource(TimeResource.getResourceType())).getNow().plus(Duration.ofSeconds(300L))));
-/*     */     
-/* 206 */     int launchWorldSoundEventIndex = config.getLaunchWorldSoundEventIndex();
-/* 207 */     if (launchWorldSoundEventIndex != 0) {
-/* 208 */       SoundUtil.playSoundEvent3d(launchWorldSoundEventIndex, SoundCategory.SFX, position.x, position.y, position.z, targetRef -> !targetRef.equals(creatorRef), (ComponentAccessor)commandBuffer);
-/*     */     }
-/*     */ 
-/*     */     
-/* 212 */     int projectileSoundEventIndex = config.getProjectileSoundEventIndex();
-/* 213 */     if (projectileSoundEventIndex != 0) {
-/* 214 */       AudioComponent audioComponent = new AudioComponent();
-/* 215 */       audioComponent.addSound(projectileSoundEventIndex);
-/* 216 */       holder.addComponent(AudioComponent.getComponentType(), (Component)audioComponent);
-/*     */     } 
-/*     */     
-/* 219 */     Ref<EntityStore> projectileRef = commandBuffer.addEntity(holder, AddReason.SPAWN);
-/*     */ 
-/*     */     
-/* 222 */     if (predictionId == null && creatorRef != null)
-/*     */     {
-/*     */       
-/* 225 */       commandBuffer.run(store -> onProjectileSpawnInteraction(projectileRef, creatorRef, store));
-/*     */     }
-/*     */     
-/* 228 */     return projectileRef;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static void onProjectileSpawnInteraction(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> creatorRef, @Nonnull Store<EntityStore> store) {
-/*     */     LivingEntity livingEntity;
-/* 239 */     InteractionManager interactionManagerComponent = (InteractionManager)store.getComponent(creatorRef, InteractionModule.get().getInteractionManagerComponent());
-/* 240 */     if (interactionManagerComponent == null) {
-/*     */       return;
-/*     */     }
-/*     */     
-/* 244 */     Entity entity = EntityUtils.getEntity(creatorRef, (ComponentAccessor)store); if (entity instanceof LivingEntity) { livingEntity = (LivingEntity)entity; }
-/*     */     else
-/*     */     { return; }
-/*     */     
-/* 248 */     InteractionContext context = InteractionContext.forProxyEntity(interactionManagerComponent, livingEntity, ref);
-/*     */     
-/* 250 */     String rootInteractionId = context.getRootInteractionId(InteractionType.ProjectileSpawn);
-/* 251 */     if (rootInteractionId == null) {
-/*     */       return;
-/*     */     }
-/*     */     
-/* 255 */     RootInteraction rootInteraction = RootInteraction.getRootInteractionOrUnknown(rootInteractionId);
-/* 256 */     if (rootInteraction == null) {
-/*     */       return;
-/*     */     }
-/*     */     
-/* 260 */     InteractionChain chain = interactionManagerComponent.initChain(InteractionType.ProjectileSpawn, context, rootInteraction, true);
-/* 261 */     interactionManagerComponent.queueExecuteChain(chain);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public ComponentType<EntityStore, Projectile> getProjectileComponentType() {
-/* 269 */     return this.projectileComponentType;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public ComponentType<EntityStore, StandardPhysicsProvider> getStandardPhysicsProviderComponentType() {
-/* 277 */     return this.standardPhysicsProviderComponentType;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public ComponentType<EntityStore, PredictedProjectile> getPredictedProjectileComponentType() {
-/* 285 */     return this.predictedProjectileComponentType;
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.modules.projectile;
 
+import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.component.AddReason;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentRegistryProxy;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.Direction;
+import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.server.core.asset.type.model.config.Model;
+import com.hypixel.hytale.server.core.entity.EntityUtils;
+import com.hypixel.hytale.server.core.entity.InteractionChain;
+import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.InteractionManager;
+import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
+import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
+import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
+import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
+import com.hypixel.hytale.server.core.modules.interaction.Interactions;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
+import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
+import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
+import com.hypixel.hytale.server.core.modules.projectile.component.PredictedProjectile;
+import com.hypixel.hytale.server.core.modules.projectile.component.Projectile;
+import com.hypixel.hytale.server.core.modules.projectile.config.PhysicsConfig;
+import com.hypixel.hytale.server.core.modules.projectile.config.ProjectileConfig;
+import com.hypixel.hytale.server.core.modules.projectile.config.StandardPhysicsConfig;
+import com.hypixel.hytale.server.core.modules.projectile.config.StandardPhysicsProvider;
+import com.hypixel.hytale.server.core.modules.projectile.interaction.ProjectileInteraction;
+import com.hypixel.hytale.server.core.modules.projectile.system.PredictedProjectileSystems;
+import com.hypixel.hytale.server.core.modules.projectile.system.StandardPhysicsTickSystem;
+import com.hypixel.hytale.server.core.modules.time.TimeResource;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.time.Duration;
+import java.util.UUID;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\projectile\ProjectileModule.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ProjectileModule extends JavaPlugin {
+   @Nonnull
+   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(ProjectileModule.class)
+      .description(
+         "This module implements the new projectile system. Disabling this module will prevent anything using the new projectile system from functioning."
+      )
+      .depends(CollisionModule.class)
+      .depends(EntityModule.class)
+      .build();
+   private static ProjectileModule instance;
+   private ComponentType<EntityStore, Projectile> projectileComponentType;
+   private ComponentType<EntityStore, StandardPhysicsProvider> standardPhysicsProviderComponentType;
+   private ComponentType<EntityStore, PredictedProjectile> predictedProjectileComponentType;
+
+   public static ProjectileModule get() {
+      return instance;
+   }
+
+   public ProjectileModule(@Nonnull JavaPluginInit init) {
+      super(init);
+      instance = this;
+   }
+
+   @Override
+   protected void setup() {
+      ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
+      this.getCodecRegistry(Interaction.CODEC).register("Projectile", ProjectileInteraction.class, ProjectileInteraction.CODEC);
+      this.projectileComponentType = entityStoreRegistry.registerComponent(Projectile.class, "IsProjectile", Projectile.CODEC);
+      this.predictedProjectileComponentType = entityStoreRegistry.registerComponent(PredictedProjectile.class, () -> {
+         throw new UnsupportedOperationException();
+      });
+      this.standardPhysicsProviderComponentType = entityStoreRegistry.registerComponent(StandardPhysicsProvider.class, () -> {
+         throw new UnsupportedOperationException();
+      });
+      entityStoreRegistry.registerSystem(new StandardPhysicsTickSystem());
+      entityStoreRegistry.registerSystem(new PredictedProjectileSystems.EntityTrackerUpdate());
+      this.getCodecRegistry(PhysicsConfig.CODEC).register("Standard", StandardPhysicsConfig.class, StandardPhysicsConfig.CODEC);
+   }
+
+   @Nonnull
+   public Ref<EntityStore> spawnProjectile(
+      Ref<EntityStore> creatorRef,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull ProjectileConfig config,
+      @Nonnull Vector3d position,
+      @Nonnull Vector3d direction
+   ) {
+      return this.spawnProjectile(null, creatorRef, commandBuffer, config, position, direction);
+   }
+
+   @Nonnull
+   public Ref<EntityStore> spawnProjectile(
+      @Nullable UUID predictionId,
+      Ref<EntityStore> creatorRef,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull ProjectileConfig config,
+      @Nonnull Vector3d position,
+      @Nonnull Vector3d direction
+   ) {
+      Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
+      Vector3f rotation = new Vector3f();
+      Direction rotationOffset = config.getSpawnRotationOffset();
+      rotation.setYaw(PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(direction.x, direction.z)));
+      rotation.setPitch(PhysicsMath.pitchFromDirection(direction.x, direction.y, direction.z));
+      rotation.add(rotationOffset.pitch, rotationOffset.yaw, rotationOffset.roll);
+      PhysicsMath.vectorFromAngles(rotation.getYaw(), rotation.getPitch(), direction);
+      Vector3d offset = config.getCalculatedOffset(rotation.getPitch(), rotation.getYaw());
+      position.add(offset);
+      holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(position, rotation));
+      holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(rotation));
+      if (predictionId != null) {
+         holder.addComponent(UUIDComponent.getComponentType(), new UUIDComponent(predictionId));
+      }
+
+      holder.addComponent(Interactions.getComponentType(), new Interactions(config.getInteractions()));
+      Model model = config.getModel();
+      holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
+      holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
+      holder.addComponent(BoundingBox.getComponentType(), new BoundingBox(model.getBoundingBox()));
+      holder.addComponent(NetworkId.getComponentType(), new NetworkId(commandBuffer.getExternalData().takeNextNetworkId()));
+      holder.ensureComponent(Projectile.getComponentType());
+      if (predictionId != null) {
+         holder.addComponent(PredictedProjectile.getComponentType(), new PredictedProjectile(predictionId));
+      }
+
+      holder.addComponent(Velocity.getComponentType(), new Velocity());
+      config.getPhysicsConfig().apply(holder, creatorRef, direction.clone().scale(config.getLaunchForce()), commandBuffer, predictionId != null);
+      holder.ensureComponent(EntityStore.REGISTRY.getNonSerializedComponentType());
+      holder.addComponent(
+         DespawnComponent.getComponentType(),
+         new DespawnComponent(commandBuffer.getResource(TimeResource.getResourceType()).getNow().plus(Duration.ofSeconds(300L)))
+      );
+      int launchWorldSoundEventIndex = config.getLaunchWorldSoundEventIndex();
+      if (launchWorldSoundEventIndex != 0) {
+         SoundUtil.playSoundEvent3d(
+            launchWorldSoundEventIndex, SoundCategory.SFX, position.x, position.y, position.z, targetRef -> !targetRef.equals(creatorRef), commandBuffer
+         );
+      }
+
+      int projectileSoundEventIndex = config.getProjectileSoundEventIndex();
+      if (projectileSoundEventIndex != 0) {
+         AudioComponent audioComponent = new AudioComponent();
+         audioComponent.addSound(projectileSoundEventIndex);
+         holder.addComponent(AudioComponent.getComponentType(), audioComponent);
+      }
+
+      Ref<EntityStore> projectileRef = commandBuffer.addEntity(holder, AddReason.SPAWN);
+      if (predictionId == null && creatorRef != null) {
+         commandBuffer.run(store -> onProjectileSpawnInteraction(projectileRef, creatorRef, store));
+      }
+
+      return projectileRef;
+   }
+
+   private static void onProjectileSpawnInteraction(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> creatorRef, @Nonnull Store<EntityStore> store) {
+      InteractionManager interactionManagerComponent = store.getComponent(creatorRef, InteractionModule.get().getInteractionManagerComponent());
+      if (interactionManagerComponent != null) {
+         if (EntityUtils.getEntity(creatorRef, store) instanceof LivingEntity livingEntity) {
+            InteractionContext context = InteractionContext.forProxyEntity(interactionManagerComponent, livingEntity, ref);
+            String rootInteractionId = context.getRootInteractionId(InteractionType.ProjectileSpawn);
+            if (rootInteractionId != null) {
+               RootInteraction rootInteraction = RootInteraction.getRootInteractionOrUnknown(rootInteractionId);
+               if (rootInteraction != null) {
+                  InteractionChain chain = interactionManagerComponent.initChain(InteractionType.ProjectileSpawn, context, rootInteraction, true);
+                  interactionManagerComponent.queueExecuteChain(chain);
+               }
+            }
+         }
+      }
+   }
+
+   @Nonnull
+   public ComponentType<EntityStore, Projectile> getProjectileComponentType() {
+      return this.projectileComponentType;
+   }
+
+   @Nonnull
+   public ComponentType<EntityStore, StandardPhysicsProvider> getStandardPhysicsProviderComponentType() {
+      return this.standardPhysicsProviderComponentType;
+   }
+
+   @Nonnull
+   public ComponentType<EntityStore, PredictedProjectile> getPredictedProjectileComponentType() {
+      return this.predictedProjectileComponentType;
+   }
+}

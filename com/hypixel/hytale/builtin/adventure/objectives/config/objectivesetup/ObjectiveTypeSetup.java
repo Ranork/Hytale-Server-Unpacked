@@ -1,47 +1,32 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.objectives.config.objectivesetup;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.Objective;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.lookup.CodecMapCodec;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import java.util.Set;
-/*    */ import java.util.UUID;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public abstract class ObjectiveTypeSetup
-/*    */ {
-/*    */   @Nonnull
-/* 23 */   public static final CodecMapCodec<ObjectiveTypeSetup> CODEC = new CodecMapCodec("Type");
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public abstract String getObjectiveIdToStart();
-/*    */   
-/*    */   @Nullable
-/*    */   public abstract Objective setup(@Nonnull Set<UUID> paramSet, @Nonnull UUID paramUUID1, @Nullable UUID paramUUID2, @Nonnull Store<EntityStore> paramStore);
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 34 */     return "ObjectiveTypeSetup{}";
-/*    */   }
-/*    */   
-/*    */   static {
-/* 38 */     CODEC.register("Objective", SetupObjective.class, (Codec)SetupObjective.CODEC);
-/* 39 */     CODEC.register("ObjectiveLine", SetupObjectiveLine.class, (Codec)SetupObjectiveLine.CODEC);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.objectives.config.objectivesetup;
 
+import com.hypixel.hytale.builtin.adventure.objectives.Objective;
+import com.hypixel.hytale.codec.lookup.CodecMapCodec;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.Set;
+import java.util.UUID;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\objectives\config\objectivesetup\ObjectiveTypeSetup.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class ObjectiveTypeSetup {
+   @Nonnull
+   public static final CodecMapCodec<ObjectiveTypeSetup> CODEC = new CodecMapCodec<>("Type");
+
+   @Nullable
+   public abstract String getObjectiveIdToStart();
+
+   @Nullable
+   public abstract Objective setup(@Nonnull Set<UUID> var1, @Nonnull UUID var2, @Nullable UUID var3, @Nonnull Store<EntityStore> var4);
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ObjectiveTypeSetup{}";
+   }
+
+   static {
+      CODEC.register("Objective", SetupObjective.class, SetupObjective.CODEC);
+      CODEC.register("ObjectiveLine", SetupObjectiveLine.class, SetupObjectiveLine.CODEC);
+   }
+}

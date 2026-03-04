@@ -1,109 +1,89 @@
-/*     */ package com.hypixel.hytale.protocol;
-/*     */ 
-/*     */ import com.hypixel.hytale.protocol.io.ValidationResult;
-/*     */ import io.netty.buffer.ByteBuf;
-/*     */ import java.util.Objects;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class ColorLight
-/*     */ {
-/*     */   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-/*     */   public static final int FIXED_BLOCK_SIZE = 4;
-/*     */   public static final int VARIABLE_FIELD_COUNT = 0;
-/*     */   public static final int VARIABLE_BLOCK_START = 4;
-/*     */   public static final int MAX_SIZE = 4;
-/*     */   public byte radius;
-/*     */   public byte red;
-/*     */   public byte green;
-/*     */   public byte blue;
-/*     */   
-/*     */   public ColorLight() {}
-/*     */   
-/*     */   public ColorLight(byte radius, byte red, byte green, byte blue) {
-/*  29 */     this.radius = radius;
-/*  30 */     this.red = red;
-/*  31 */     this.green = green;
-/*  32 */     this.blue = blue;
-/*     */   }
-/*     */   
-/*     */   public ColorLight(@Nonnull ColorLight other) {
-/*  36 */     this.radius = other.radius;
-/*  37 */     this.red = other.red;
-/*  38 */     this.green = other.green;
-/*  39 */     this.blue = other.blue;
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   public static ColorLight deserialize(@Nonnull ByteBuf buf, int offset) {
-/*  44 */     ColorLight obj = new ColorLight();
-/*     */     
-/*  46 */     obj.radius = buf.getByte(offset + 0);
-/*  47 */     obj.red = buf.getByte(offset + 1);
-/*  48 */     obj.green = buf.getByte(offset + 2);
-/*  49 */     obj.blue = buf.getByte(offset + 3);
-/*     */ 
-/*     */     
-/*  52 */     return obj;
-/*     */   }
-/*     */   
-/*     */   public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-/*  56 */     return 4;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void serialize(@Nonnull ByteBuf buf) {
-/*  61 */     buf.writeByte(this.radius);
-/*  62 */     buf.writeByte(this.red);
-/*  63 */     buf.writeByte(this.green);
-/*  64 */     buf.writeByte(this.blue);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int computeSize() {
-/*  70 */     return 4;
-/*     */   }
-/*     */   
-/*     */   public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-/*  74 */     if (buffer.readableBytes() - offset < 4) {
-/*  75 */       return ValidationResult.error("Buffer too small: expected at least 4 bytes");
-/*     */     }
-/*     */ 
-/*     */     
-/*  79 */     return ValidationResult.OK;
-/*     */   }
-/*     */   
-/*     */   public ColorLight clone() {
-/*  83 */     ColorLight copy = new ColorLight();
-/*  84 */     copy.radius = this.radius;
-/*  85 */     copy.red = this.red;
-/*  86 */     copy.green = this.green;
-/*  87 */     copy.blue = this.blue;
-/*  88 */     return copy;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean equals(Object obj) {
-/*     */     ColorLight other;
-/*  94 */     if (this == obj) return true; 
-/*  95 */     if (obj instanceof ColorLight) { other = (ColorLight)obj; } else { return false; }
-/*  96 */      return (this.radius == other.radius && this.red == other.red && this.green == other.green && this.blue == other.blue);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public int hashCode() {
-/* 101 */     return Objects.hash(new Object[] { Byte.valueOf(this.radius), Byte.valueOf(this.red), Byte.valueOf(this.green), Byte.valueOf(this.blue) });
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ValidationResult;
+import io.netty.buffer.ByteBuf;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\protocol\ColorLight.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ColorLight {
+   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
+   public static final int FIXED_BLOCK_SIZE = 4;
+   public static final int VARIABLE_FIELD_COUNT = 0;
+   public static final int VARIABLE_BLOCK_START = 4;
+   public static final int MAX_SIZE = 4;
+   public byte radius;
+   public byte red;
+   public byte green;
+   public byte blue;
+
+   public ColorLight() {
+   }
+
+   public ColorLight(byte radius, byte red, byte green, byte blue) {
+      this.radius = radius;
+      this.red = red;
+      this.green = green;
+      this.blue = blue;
+   }
+
+   public ColorLight(@Nonnull ColorLight other) {
+      this.radius = other.radius;
+      this.red = other.red;
+      this.green = other.green;
+      this.blue = other.blue;
+   }
+
+   @Nonnull
+   public static ColorLight deserialize(@Nonnull ByteBuf buf, int offset) {
+      ColorLight obj = new ColorLight();
+      obj.radius = buf.getByte(offset + 0);
+      obj.red = buf.getByte(offset + 1);
+      obj.green = buf.getByte(offset + 2);
+      obj.blue = buf.getByte(offset + 3);
+      return obj;
+   }
+
+   public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
+      return 4;
+   }
+
+   public void serialize(@Nonnull ByteBuf buf) {
+      buf.writeByte(this.radius);
+      buf.writeByte(this.red);
+      buf.writeByte(this.green);
+      buf.writeByte(this.blue);
+   }
+
+   public int computeSize() {
+      return 4;
+   }
+
+   public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
+      return buffer.readableBytes() - offset < 4 ? ValidationResult.error("Buffer too small: expected at least 4 bytes") : ValidationResult.OK;
+   }
+
+   public ColorLight clone() {
+      ColorLight copy = new ColorLight();
+      copy.radius = this.radius;
+      copy.red = this.red;
+      copy.green = this.green;
+      copy.blue = this.blue;
+      return copy;
+   }
+
+   @Override
+   public boolean equals(Object obj) {
+      if (this == obj) {
+         return true;
+      } else {
+         return !(obj instanceof ColorLight other)
+            ? false
+            : this.radius == other.radius && this.red == other.red && this.green == other.green && this.blue == other.blue;
+      }
+   }
+
+   @Override
+   public int hashCode() {
+      return Objects.hash(this.radius, this.red, this.green, this.blue);
+   }
+}

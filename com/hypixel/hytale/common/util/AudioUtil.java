@@ -1,84 +1,24 @@
-/*    */ package com.hypixel.hytale.common.util;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class AudioUtil
-/*    */ {
-/*    */   public static final float MIN_DECIBEL_VOLUME = -100.0F;
-/*    */   public static final float MAX_DECIBEL_VOLUME = 10.0F;
-/*    */   public static final float MIN_SEMITONE_PITCH = -12.0F;
-/*    */   public static final float MAX_SEMITONE_PITCH = 12.0F;
-/*    */   
-/*    */   public static float decibelsToLinearGain(float decibels) {
-/* 41 */     if (decibels <= -100.0F) return 0.0F; 
-/* 42 */     return (float)Math.pow(10.0D, (decibels / 20.0F));
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static float linearGainToDecibels(float linearGain) {
-/* 53 */     if (linearGain <= 0.0F) return -100.0F; 
-/* 54 */     return (float)(Math.log(linearGain) / Math.log(10.0D) * 20.0D);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static float semitonesToLinearPitch(float semitones) {
-/* 65 */     return (float)(1.0D / Math.pow(2.0D, (-semitones / 12.0F)));
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static float linearPitchToSemitones(float linearPitch) {
-/* 76 */     return (float)(Math.log(linearPitch) / Math.log(2.0D) * 12.0D);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.common.util;
 
+public class AudioUtil {
+   public static final float MIN_DECIBEL_VOLUME = -100.0F;
+   public static final float MAX_DECIBEL_VOLUME = 10.0F;
+   public static final float MIN_SEMITONE_PITCH = -12.0F;
+   public static final float MAX_SEMITONE_PITCH = 12.0F;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\commo\\util\AudioUtil.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+   public static float decibelsToLinearGain(float decibels) {
+      return decibels <= -100.0F ? 0.0F : (float)Math.pow(10.0, decibels / 20.0F);
+   }
+
+   public static float linearGainToDecibels(float linearGain) {
+      return linearGain <= 0.0F ? -100.0F : (float)(Math.log(linearGain) / Math.log(10.0) * 20.0);
+   }
+
+   public static float semitonesToLinearPitch(float semitones) {
+      return (float)(1.0 / Math.pow(2.0, -semitones / 12.0F));
+   }
+
+   public static float linearPitchToSemitones(float linearPitch) {
+      return (float)(Math.log(linearPitch) / Math.log(2.0) * 12.0);
+   }
+}

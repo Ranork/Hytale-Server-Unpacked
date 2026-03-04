@@ -1,355 +1,210 @@
-/*     */ package com.hypixel.hytale.builtin.hytalegenerator.datastructures.voxelspace;
-/*     */ 
-/*     */ import com.hypixel.hytale.math.vector.Vector3i;
-/*     */ import java.util.function.Predicate;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class WindowVoxelSpace<T>
-/*     */   implements VoxelSpace<T>
-/*     */ {
-/*     */   @Nonnull
-/*     */   private final VoxelSpace<T> wrappedVoxelSpace;
-/*     */   @Nonnull
-/*     */   private final VoxelCoordinate min;
-/*     */   @Nonnull
-/*     */   private final VoxelCoordinate max;
-/*     */   
-/*     */   public WindowVoxelSpace(@Nonnull VoxelSpace<T> voxelSpace) {
-/*  25 */     this.wrappedVoxelSpace = voxelSpace;
-/*  26 */     this
-/*  27 */       .min = new VoxelCoordinate(voxelSpace.minX(), voxelSpace.minY(), voxelSpace.minZ());
-/*  28 */     this
-/*  29 */       .max = new VoxelCoordinate(voxelSpace.maxX(), voxelSpace.maxY(), voxelSpace.maxZ());
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public WindowVoxelSpace<T> setWindow(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-/*  44 */     if (minX < this.wrappedVoxelSpace.minX() || minY < this.wrappedVoxelSpace
-/*  45 */       .minY() || minZ < this.wrappedVoxelSpace
-/*  46 */       .minZ() || maxX < minX || maxY < minY || maxZ < minZ || maxX > this.wrappedVoxelSpace
-/*     */ 
-/*     */ 
-/*     */       
-/*  50 */       .maxX() || maxY > this.wrappedVoxelSpace
-/*  51 */       .maxY() || maxZ > this.wrappedVoxelSpace
-/*  52 */       .maxZ())
-/*  53 */       throw new IllegalArgumentException("invalid values"); 
-/*  54 */     this.min.x = minX;
-/*  55 */     this.min.y = minY;
-/*  56 */     this.min.z = minZ;
-/*  57 */     this.max.x = maxX;
-/*  58 */     this.max.y = maxY;
-/*  59 */     this.max.z = maxZ;
-/*  60 */     return this;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public VoxelSpace<T> getWrappedSchematic() {
-/*  66 */     return this.wrappedVoxelSpace;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public boolean set(T content, int x, int y, int z) {
-/*  84 */     if (!isInsideSpace(x, y, z)) {
-/*  85 */       return false;
-/*     */     }
-/*  87 */     if (!this.wrappedVoxelSpace.isInsideSpace(x, y, z))
-/*  88 */       return false; 
-/*  89 */     return this.wrappedVoxelSpace.set(content, x, y, z);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean set(T content, @Nonnull Vector3i position) {
-/*  94 */     return set(content, position.x, position.y, position.z);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void set(T content) {
-/* 103 */     for (int x = minX(); x < maxX(); x++) {
-/* 104 */       for (int y = minY(); y < maxY(); y++) {
-/* 105 */         for (int z = minZ(); z < maxZ(); z++) {
-/* 106 */           set(content, x, y, z);
-/*     */         }
-/*     */       } 
-/*     */     } 
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void setOrigin(int x, int y, int z) {
-/* 114 */     throw new UnsupportedOperationException("can't set origin of window");
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public T getContent(int x, int y, int z) {
-/* 127 */     if (!isInsideSpace(x, y, z))
-/* 128 */       throw new IllegalArgumentException("outside schematic"); 
-/* 129 */     return this.wrappedVoxelSpace.getContent(x, y, z);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nullable
-/*     */   public T getContent(@Nonnull Vector3i position) {
-/* 135 */     return getContent(position.x, position.y, position.z);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public boolean replace(T replacement, int x, int y, int z, @Nonnull Predicate<T> mask) {
-/* 151 */     if (!isInsideSpace(x, y, z))
-/* 152 */       throw new IllegalArgumentException("outside schematic"); 
-/* 153 */     return this.wrappedVoxelSpace.replace(replacement, x, y, z, mask);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void pasteFrom(@Nonnull VoxelSpace<T> source) {
-/* 163 */     for (int x = source.minX(); x < source.maxX(); x++) {
-/* 164 */       for (int y = source.minY(); y < source.maxY(); y++) {
-/* 165 */         for (int z = source.minZ(); z < source.maxZ(); z++) {
-/* 166 */           set(source.getContent(x, y, z), x, y, z);
-/*     */         }
-/*     */       } 
-/*     */     } 
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int getOriginX() {
-/* 178 */     int offset = this.min.x - this.wrappedVoxelSpace.minX();
-/* 179 */     return this.wrappedVoxelSpace.getOriginX() - offset;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int getOriginY() {
-/* 191 */     int offset = this.min.y - this.wrappedVoxelSpace.minY();
-/* 192 */     return this.wrappedVoxelSpace.getOriginY() - offset;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int getOriginZ() {
-/* 204 */     int offset = this.min.z - this.wrappedVoxelSpace.minZ();
-/* 205 */     return this.wrappedVoxelSpace.getOriginZ() - offset;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String getName() {
-/* 216 */     return "window_to_" + this.wrappedVoxelSpace.getName();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public boolean isInsideSpace(int x, int y, int z) {
-/* 229 */     return (x >= minX() && x < maxX() && y >= 
-/* 230 */       minY() && y < maxY() && z >= 
-/* 231 */       minZ() && z < maxZ());
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public boolean isInsideSpace(@Nonnull Vector3i position) {
-/* 237 */     return isInsideSpace(position.x, position.y, position.z);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void forEach(@Nonnull VoxelConsumer<? super T> action) {
-/* 248 */     for (int x = minX(); x < maxX(); x++) {
-/* 249 */       for (int y = minY(); y < maxY(); y++) {
-/* 250 */         for (int z = minZ(); z < maxZ(); z++) {
-/* 251 */           action.accept(getContent(x, y, z), x, y, z);
-/*     */         }
-/*     */       } 
-/*     */     } 
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int minX() {
-/* 261 */     return this.min.x;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int maxX() {
-/* 271 */     return this.max.x;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int minY() {
-/* 281 */     return this.min.y;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int maxY() {
-/* 291 */     return this.max.y;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int minZ() {
-/* 301 */     return this.min.z;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int maxZ() {
-/* 311 */     return this.max.z;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int sizeX() {
-/* 321 */     return this.max.x - this.min.x;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int sizeY() {
-/* 331 */     return this.max.y - this.min.y;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int sizeZ() {
-/* 341 */     return this.max.z - this.min.z;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String toString() {
-/* 347 */     return "WindowVoxelSpace{wrappedVoxelSpace=" + String.valueOf(this.wrappedVoxelSpace) + ", min=" + String.valueOf(this.min) + ", max=" + String.valueOf(this.max) + "}";
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.builtin.hytalegenerator.datastructures.voxelspace;
 
+import com.hypixel.hytale.math.vector.Vector3i;
+import java.util.function.Predicate;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\datastructures\voxelspace\WindowVoxelSpace.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class WindowVoxelSpace<T> implements VoxelSpace<T> {
+   @Nonnull
+   private final VoxelSpace<T> wrappedVoxelSpace;
+   @Nonnull
+   private final VoxelCoordinate min;
+   @Nonnull
+   private final VoxelCoordinate max;
+
+   public WindowVoxelSpace(@Nonnull VoxelSpace<T> voxelSpace) {
+      this.wrappedVoxelSpace = voxelSpace;
+      this.min = new VoxelCoordinate(voxelSpace.minX(), voxelSpace.minY(), voxelSpace.minZ());
+      this.max = new VoxelCoordinate(voxelSpace.maxX(), voxelSpace.maxY(), voxelSpace.maxZ());
+   }
+
+   @Nonnull
+   public WindowVoxelSpace<T> setWindow(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+      if (minX >= this.wrappedVoxelSpace.minX()
+         && minY >= this.wrappedVoxelSpace.minY()
+         && minZ >= this.wrappedVoxelSpace.minZ()
+         && maxX >= minX
+         && maxY >= minY
+         && maxZ >= minZ
+         && maxX <= this.wrappedVoxelSpace.maxX()
+         && maxY <= this.wrappedVoxelSpace.maxY()
+         && maxZ <= this.wrappedVoxelSpace.maxZ()) {
+         this.min.x = minX;
+         this.min.y = minY;
+         this.min.z = minZ;
+         this.max.x = maxX;
+         this.max.y = maxY;
+         this.max.z = maxZ;
+         return this;
+      } else {
+         throw new IllegalArgumentException("invalid values");
+      }
+   }
+
+   @Nonnull
+   public VoxelSpace<T> getWrappedSchematic() {
+      return this.wrappedVoxelSpace;
+   }
+
+   @Override
+   public boolean set(T content, int x, int y, int z) {
+      if (!this.isInsideSpace(x, y, z)) {
+         return false;
+      } else {
+         return !this.wrappedVoxelSpace.isInsideSpace(x, y, z) ? false : this.wrappedVoxelSpace.set(content, x, y, z);
+      }
+   }
+
+   @Override
+   public boolean set(T content, @Nonnull Vector3i position) {
+      return this.set(content, position.x, position.y, position.z);
+   }
+
+   @Override
+   public void set(T content) {
+      for (int x = this.minX(); x < this.maxX(); x++) {
+         for (int y = this.minY(); y < this.maxY(); y++) {
+            for (int z = this.minZ(); z < this.maxZ(); z++) {
+               this.set(content, x, y, z);
+            }
+         }
+      }
+   }
+
+   @Override
+   public void setOrigin(int x, int y, int z) {
+      throw new UnsupportedOperationException("can't set origin of window");
+   }
+
+   @Override
+   public T getContent(int x, int y, int z) {
+      if (!this.isInsideSpace(x, y, z)) {
+         throw new IllegalArgumentException("outside schematic");
+      } else {
+         return this.wrappedVoxelSpace.getContent(x, y, z);
+      }
+   }
+
+   @Nullable
+   @Override
+   public T getContent(@Nonnull Vector3i position) {
+      return this.getContent(position.x, position.y, position.z);
+   }
+
+   @Override
+   public boolean replace(T replacement, int x, int y, int z, @Nonnull Predicate<T> mask) {
+      if (!this.isInsideSpace(x, y, z)) {
+         throw new IllegalArgumentException("outside schematic");
+      } else {
+         return this.wrappedVoxelSpace.replace(replacement, x, y, z, mask);
+      }
+   }
+
+   @Override
+   public void pasteFrom(@Nonnull VoxelSpace<T> source) {
+      for (int x = source.minX(); x < source.maxX(); x++) {
+         for (int y = source.minY(); y < source.maxY(); y++) {
+            for (int z = source.minZ(); z < source.maxZ(); z++) {
+               this.set(source.getContent(x, y, z), x, y, z);
+            }
+         }
+      }
+   }
+
+   @Override
+   public int getOriginX() {
+      int offset = this.min.x - this.wrappedVoxelSpace.minX();
+      return this.wrappedVoxelSpace.getOriginX() - offset;
+   }
+
+   @Override
+   public int getOriginY() {
+      int offset = this.min.y - this.wrappedVoxelSpace.minY();
+      return this.wrappedVoxelSpace.getOriginY() - offset;
+   }
+
+   @Override
+   public int getOriginZ() {
+      int offset = this.min.z - this.wrappedVoxelSpace.minZ();
+      return this.wrappedVoxelSpace.getOriginZ() - offset;
+   }
+
+   @Nonnull
+   @Override
+   public String getName() {
+      return "window_to_" + this.wrappedVoxelSpace.getName();
+   }
+
+   @Override
+   public boolean isInsideSpace(int x, int y, int z) {
+      return x >= this.minX() && x < this.maxX() && y >= this.minY() && y < this.maxY() && z >= this.minZ() && z < this.maxZ();
+   }
+
+   @Override
+   public boolean isInsideSpace(@Nonnull Vector3i position) {
+      return this.isInsideSpace(position.x, position.y, position.z);
+   }
+
+   @Override
+   public void forEach(@Nonnull VoxelConsumer<? super T> action) {
+      for (int x = this.minX(); x < this.maxX(); x++) {
+         for (int y = this.minY(); y < this.maxY(); y++) {
+            for (int z = this.minZ(); z < this.maxZ(); z++) {
+               action.accept(this.getContent(x, y, z), x, y, z);
+            }
+         }
+      }
+   }
+
+   @Override
+   public int minX() {
+      return this.min.x;
+   }
+
+   @Override
+   public int maxX() {
+      return this.max.x;
+   }
+
+   @Override
+   public int minY() {
+      return this.min.y;
+   }
+
+   @Override
+   public int maxY() {
+      return this.max.y;
+   }
+
+   @Override
+   public int minZ() {
+      return this.min.z;
+   }
+
+   @Override
+   public int maxZ() {
+      return this.max.z;
+   }
+
+   @Override
+   public int sizeX() {
+      return this.max.x - this.min.x;
+   }
+
+   @Override
+   public int sizeY() {
+      return this.max.y - this.min.y;
+   }
+
+   @Override
+   public int sizeZ() {
+      return this.max.z - this.min.z;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "WindowVoxelSpace{wrappedVoxelSpace=" + this.wrappedVoxelSpace + ", min=" + this.min + ", max=" + this.max + "}";
+   }
+}

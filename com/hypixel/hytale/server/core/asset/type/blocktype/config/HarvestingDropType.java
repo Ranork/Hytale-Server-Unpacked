@@ -1,82 +1,67 @@
-/*    */ package com.hypixel.hytale.server.core.asset.type.blocktype.config;
-/*    */ 
-/*    */ import com.hypixel.hytale.assetstore.codec.AssetCodec;
-/*    */ import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.validation.LateValidator;
-/*    */ import com.hypixel.hytale.protocol.Harvesting;
-/*    */ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-/*    */ import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
-/*    */ import com.hypixel.hytale.server.core.io.NetworkSerializable;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class HarvestingDropType
-/*    */   implements NetworkSerializable<Harvesting>
-/*    */ {
-/*    */   public static final BuilderCodec<HarvestingDropType> CODEC;
-/*    */   protected String itemId;
-/*    */   protected String dropListId;
-/*    */   
-/*    */   static {
-/* 36 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(HarvestingDropType.class, HarvestingDropType::new).append(new KeyedCodec("ItemId", (Codec)Codec.STRING), (harvesting, o) -> harvesting.itemId = o, harvesting -> harvesting.itemId).addValidatorLate(() -> Item.VALIDATOR_CACHE.getValidator().late()).add()).append(new KeyedCodec("DropList", (Codec)new ContainedAssetCodec(ItemDropList.class, (AssetCodec)ItemDropList.CODEC)), (harvesting, o) -> harvesting.dropListId = o, harvesting -> harvesting.dropListId).addValidatorLate(() -> ItemDropList.VALIDATOR_CACHE.getValidator().late()).add()).build();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public HarvestingDropType(String itemId, String dropListId) {
-/* 42 */     this.itemId = itemId;
-/* 43 */     this.dropListId = dropListId;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected HarvestingDropType() {}
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Harvesting toPacket() {
-/* 52 */     Harvesting packet = new Harvesting();
-/* 53 */     if (this.itemId != null) packet.itemId = this.itemId.toString(); 
-/* 54 */     packet.dropListId = this.dropListId;
-/* 55 */     return packet;
-/*    */   }
-/*    */   
-/*    */   public String getItemId() {
-/* 59 */     return this.itemId;
-/*    */   }
-/*    */   
-/*    */   public String getDropListId() {
-/* 63 */     return this.dropListId;
-/*    */   }
-/*    */   
-/*    */   @Nullable
-/*    */   public HarvestingDropType withoutDrops() {
-/* 68 */     return null;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 74 */     return "HarvestingDropType{itemId=" + this.itemId + ", dropListId='" + this.dropListId + "'}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.asset.type.blocktype.config;
 
+import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.protocol.Harvesting;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
+import com.hypixel.hytale.server.core.io.NetworkSerializable;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\type\blocktype\config\HarvestingDropType.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class HarvestingDropType implements NetworkSerializable<Harvesting> {
+   public static final BuilderCodec<HarvestingDropType> CODEC = BuilderCodec.builder(HarvestingDropType.class, HarvestingDropType::new)
+      .append(new KeyedCodec<>("ItemId", Codec.STRING), (harvesting, o) -> harvesting.itemId = o, harvesting -> harvesting.itemId)
+      .addValidatorLate(() -> Item.VALIDATOR_CACHE.getValidator().late())
+      .add()
+      .<String>append(
+         new KeyedCodec<>("DropList", new ContainedAssetCodec<>(ItemDropList.class, ItemDropList.CODEC)),
+         (harvesting, o) -> harvesting.dropListId = o,
+         harvesting -> harvesting.dropListId
+      )
+      .addValidatorLate(() -> ItemDropList.VALIDATOR_CACHE.getValidator().late())
+      .add()
+      .build();
+   protected String itemId;
+   protected String dropListId;
+
+   public HarvestingDropType(String itemId, String dropListId) {
+      this.itemId = itemId;
+      this.dropListId = dropListId;
+   }
+
+   protected HarvestingDropType() {
+   }
+
+   @Nonnull
+   public Harvesting toPacket() {
+      Harvesting packet = new Harvesting();
+      if (this.itemId != null) {
+         packet.itemId = this.itemId.toString();
+      }
+
+      packet.dropListId = this.dropListId;
+      return packet;
+   }
+
+   public String getItemId() {
+      return this.itemId;
+   }
+
+   public String getDropListId() {
+      return this.dropListId;
+   }
+
+   @Nullable
+   public HarvestingDropType withoutDrops() {
+      return null;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "HarvestingDropType{itemId=" + this.itemId + ", dropListId='" + this.dropListId + "'}";
+   }
+}

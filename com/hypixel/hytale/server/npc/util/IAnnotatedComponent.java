@@ -1,56 +1,44 @@
-/*    */ package com.hypixel.hytale.server.npc.util;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.npc.role.Role;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public interface IAnnotatedComponent
-/*    */ {
-/*    */   void getInfo(Role paramRole, ComponentInfo paramComponentInfo);
-/*    */   
-/*    */   void setContext(IAnnotatedComponent paramIAnnotatedComponent, int paramInt);
-/*    */   
-/*    */   @Nullable
-/*    */   IAnnotatedComponent getParent();
-/*    */   
-/*    */   int getIndex();
-/*    */   
-/*    */   default String getLabel() {
-/* 30 */     int index = getIndex();
-/* 31 */     return (index >= 0) ? String.format("[%s]%s", new Object[] { Integer.valueOf(index), getClass().getSimpleName() }) : getClass().getSimpleName();
-/*    */   }
-/*    */   
-/*    */   default void getBreadCrumbs(@Nonnull StringBuilder sb) {
-/* 35 */     IAnnotatedComponent parent = getParent();
-/* 36 */     if (parent != null) parent.getBreadCrumbs(sb); 
-/* 37 */     String label = getLabel();
-/* 38 */     if (label != null && !label.isEmpty()) {
-/* 39 */       if (!sb.isEmpty()) sb.append('|'); 
-/* 40 */       sb.append(label);
-/*    */     } 
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   default String getBreadCrumbs() {
-/* 46 */     StringBuilder sb = new StringBuilder();
-/* 47 */     getBreadCrumbs(sb);
-/* 48 */     return sb.toString();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.util;
 
+import com.hypixel.hytale.server.npc.role.Role;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\np\\util\IAnnotatedComponent.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface IAnnotatedComponent {
+   void getInfo(Role var1, ComponentInfo var2);
+
+   void setContext(IAnnotatedComponent var1, int var2);
+
+   @Nullable
+   IAnnotatedComponent getParent();
+
+   int getIndex();
+
+   default String getLabel() {
+      int index = this.getIndex();
+      return index >= 0 ? String.format("[%s]%s", index, this.getClass().getSimpleName()) : this.getClass().getSimpleName();
+   }
+
+   default void getBreadCrumbs(@Nonnull StringBuilder sb) {
+      IAnnotatedComponent parent = this.getParent();
+      if (parent != null) {
+         parent.getBreadCrumbs(sb);
+      }
+
+      String label = this.getLabel();
+      if (label != null && !label.isEmpty()) {
+         if (!sb.isEmpty()) {
+            sb.append('|');
+         }
+
+         sb.append(label);
+      }
+   }
+
+   @Nonnull
+   default String getBreadCrumbs() {
+      StringBuilder sb = new StringBuilder();
+      this.getBreadCrumbs(sb);
+      return sb.toString();
+   }
+}

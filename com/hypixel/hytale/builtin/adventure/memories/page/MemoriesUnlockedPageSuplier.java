@@ -1,25 +1,26 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.memories.page;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.server.core.entity.InteractionContext;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.player.pages.CustomUIPage;
-/*    */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
-/*    */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class MemoriesUnlockedPageSuplier
-/*    */   implements OpenCustomUIInteraction.CustomPageSupplier
-/*    */ {
-/*    */   @Nullable
-/*    */   public CustomUIPage tryCreate(Ref<EntityStore> ref, ComponentAccessor<EntityStore> componentAccessor, PlayerRef playerRef, InteractionContext context) {
-/* 17 */     return (CustomUIPage)new MemoriesUnlockedPage(playerRef, context.getTargetBlock());
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.memories.page;
 
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.protocol.BlockPosition;
+import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.CustomUIPage;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\memories\page\MemoriesUnlockedPageSuplier.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class MemoriesUnlockedPageSuplier implements OpenCustomUIInteraction.CustomPageSupplier {
+   @Nullable
+   @Override
+   public CustomUIPage tryCreate(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull InteractionContext context
+   ) {
+      BlockPosition targetBlock = context.getTargetBlock();
+      return targetBlock == null ? null : new MemoriesUnlockedPage(playerRef, targetBlock);
+   }
+}

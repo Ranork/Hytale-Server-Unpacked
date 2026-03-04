@@ -1,39 +1,29 @@
-/*    */ package com.hypixel.hytale.server.spawning;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
-/*    */ import com.hypixel.hytale.server.npc.util.expression.Scope;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public interface ISpawnableWithModel
-/*    */   extends ISpawnable
-/*    */ {
-/*    */   @Nullable
-/*    */   String getSpawnModelName(ExecutionContext paramExecutionContext, Scope paramScope);
-/*    */   
-/*    */   @Nullable
-/*    */   default Scope createModifierScope(ExecutionContext executionContext) {
-/* 18 */     throw new IllegalStateException("Call to createModifierScope not valid for ISpawnableWithModel");
-/*    */   }
-/*    */   
-/*    */   Scope createExecutionScope();
-/*    */   
-/*    */   void markNeedsReload();
-/*    */   
-/*    */   boolean isMemory(ExecutionContext paramExecutionContext, @Nullable Scope paramScope);
-/*    */   
-/*    */   String getMemoriesCategory(ExecutionContext paramExecutionContext, @Nullable Scope paramScope);
-/*    */   
-/*    */   String getMemoriesNameOverride(ExecutionContext paramExecutionContext, @Nullable Scope paramScope);
-/*    */   
-/*    */   @Nonnull
-/*    */   String getNameTranslationKey(ExecutionContext paramExecutionContext, @Nullable Scope paramScope);
-/*    */ }
+package com.hypixel.hytale.server.spawning;
 
+import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
+import com.hypixel.hytale.server.npc.util.expression.Scope;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\spawning\ISpawnableWithModel.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface ISpawnableWithModel extends ISpawnable {
+   @Nullable
+   String getSpawnModelName(ExecutionContext var1, Scope var2);
+
+   @Nullable
+   default Scope createModifierScope(ExecutionContext executionContext) {
+      throw new IllegalStateException("Call to createModifierScope not valid for ISpawnableWithModel");
+   }
+
+   Scope createExecutionScope();
+
+   void markNeedsReload();
+
+   boolean isMemory(ExecutionContext var1, @Nullable Scope var2);
+
+   String getMemoriesCategory(ExecutionContext var1, @Nullable Scope var2);
+
+   String getMemoriesNameOverride(ExecutionContext var1, @Nullable Scope var2);
+
+   @Nonnull
+   String getNameTranslationKey(ExecutionContext var1, @Nullable Scope var2);
+}

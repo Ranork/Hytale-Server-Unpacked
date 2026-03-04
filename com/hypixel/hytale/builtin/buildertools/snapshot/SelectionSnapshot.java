@@ -8,12 +8,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nullable;
 
 public interface SelectionSnapshot<T extends SelectionSnapshot<?>> {
-  @Nullable
-  T restore(Ref<EntityStore> paramRef, Player paramPlayer, World paramWorld, ComponentAccessor<EntityStore> paramComponentAccessor);
+   @Nullable
+   T restore(Ref<EntityStore> var1, Player var2, World var3, ComponentAccessor<EntityStore> var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\buildertools\snapshot\SelectionSnapshot.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

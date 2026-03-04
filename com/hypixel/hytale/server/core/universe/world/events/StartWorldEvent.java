@@ -1,32 +1,16 @@
-/*    */ package com.hypixel.hytale.server.core.universe.world.events;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class StartWorldEvent
-/*    */   extends WorldEvent
-/*    */ {
-/*    */   public StartWorldEvent(@Nonnull World world) {
-/* 18 */     super(world);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 24 */     return "StartWorldEvent{} " + super.toString();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.universe.world.events;
 
+import com.hypixel.hytale.server.core.universe.world.World;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\events\StartWorldEvent.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class StartWorldEvent extends WorldEvent {
+   public StartWorldEvent(@Nonnull World world) {
+      super(world);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "StartWorldEvent{} " + super.toString();
+   }
+}

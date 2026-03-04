@@ -1,167 +1,158 @@
-/*     */ package com.hypixel.hytale.server.spawning.commands;
-/*     */ 
-/*     */ import com.hypixel.hytale.component.AddReason;
-/*     */ import com.hypixel.hytale.component.Component;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.Holder;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.math.vector.Vector3d;
-/*     */ import com.hypixel.hytale.math.vector.Vector3f;
-/*     */ import com.hypixel.hytale.server.core.Message;
-/*     */ import com.hypixel.hytale.server.core.asset.type.model.config.Model;
-/*     */ import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
-/*     */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*     */ import com.hypixel.hytale.server.core.command.system.CommandContext;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.types.AssetArgumentType;
-/*     */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
-/*     */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-/*     */ import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
-/*     */ import com.hypixel.hytale.server.core.entity.UUIDComponent;
-/*     */ import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*     */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*     */ import com.hypixel.hytale.server.core.universe.world.World;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import com.hypixel.hytale.server.spawning.SpawningPlugin;
-/*     */ import com.hypixel.hytale.server.spawning.assets.spawns.config.BeaconNPCSpawn;
-/*     */ import com.hypixel.hytale.server.spawning.beacons.LegacySpawnBeaconEntity;
-/*     */ import com.hypixel.hytale.server.spawning.beacons.SpawnBeacon;
-/*     */ import com.hypixel.hytale.server.spawning.util.FloodFillPositionSelector;
-/*     */ import com.hypixel.hytale.server.spawning.wrappers.BeaconSpawnWrapper;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ public class SpawnBeaconsCommand extends AbstractCommandCollection {
-/*  41 */   private static final AssetArgumentType<BeaconNPCSpawn, ?> BEACON_SPAWN_ASSET_TYPE = new AssetArgumentType("server.commands.spawning.beacons.arg.beacon.name", BeaconNPCSpawn.class, "server.commands.spawning.beacons.arg.beacon.usage");
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public SpawnBeaconsCommand() {
-/*  49 */     super("beacons", "server.commands.spawning.beacons.desc");
-/*  50 */     addSubCommand((AbstractCommand)new Add());
-/*  51 */     addSubCommand((AbstractCommand)new ManualTrigger());
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static class Add
-/*     */     extends AbstractPlayerCommand
-/*     */   {
-/*     */     @Nonnull
-/*  63 */     private final RequiredArg<BeaconNPCSpawn> beaconArg = withRequiredArg("beacon", "server.commands.spawning.beacons.add.arg.beacon.desc", (ArgumentType)SpawnBeaconsCommand.BEACON_SPAWN_ASSET_TYPE);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*  69 */     private final FlagArg manualArg = withFlagArg("manual", "server.commands.spawning.beacons.add.manual.desc");
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public Add() {
-/*  75 */       super("add", "server.commands.spawning.beacons.add.desc");
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
-/*  80 */       TransformComponent transformComponent = (TransformComponent)store.getComponent(ref, TransformComponent.getComponentType());
-/*  81 */       assert transformComponent != null;
-/*     */       
-/*  83 */       Vector3f rotation = transformComponent.getRotation();
-/*  84 */       Vector3d position = transformComponent.getPosition();
-/*  85 */       BeaconNPCSpawn beacon = (BeaconNPCSpawn)this.beaconArg.get(context);
-/*  86 */       BeaconSpawnWrapper wrapper = SpawningPlugin.get().getBeaconSpawnWrapper(BeaconNPCSpawn.getAssetMap().getIndex(beacon.getId()));
-/*     */       
-/*  88 */       if (((Boolean)this.manualArg.get(context)).booleanValue()) {
-/*     */         Model model;
-/*  90 */         SpawnBeacon entity = new SpawnBeacon();
-/*  91 */         entity.setSpawnWrapper(wrapper);
-/*     */         
-/*  93 */         BeaconNPCSpawn spawn = (BeaconNPCSpawn)wrapper.getSpawn();
-/*     */         
-/*  95 */         String modelName = spawn.getModel();
-/*  96 */         ModelAsset modelAsset = null;
-/*  97 */         if (modelName != null && !modelName.isEmpty()) {
-/*  98 */           modelAsset = (ModelAsset)ModelAsset.getAssetMap().getAsset(modelName);
-/*     */         }
-/*     */         
-/* 101 */         if (modelAsset == null) {
-/* 102 */           model = SpawningPlugin.get().getSpawnMarkerModel();
-/*     */         } else {
-/* 104 */           model = Model.createUnitScaleModel(modelAsset);
-/*     */         } 
-/*     */         
-/* 107 */         Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
-/* 108 */         holder.addComponent(SpawnBeacon.getComponentType(), (Component)entity);
-/* 109 */         holder.addComponent(TransformComponent.getComponentType(), (Component)new TransformComponent(position, rotation));
-/* 110 */         holder.ensureComponent(UUIDComponent.getComponentType());
-/* 111 */         holder.addComponent(ModelComponent.getComponentType(), (Component)new ModelComponent(model));
-/* 112 */         holder.addComponent(PersistentModel.getComponentType(), (Component)new PersistentModel(model.toReference()));
-/*     */         
-/* 114 */         Message displayNameMessage = Message.raw(spawn.getId());
-/* 115 */         holder.addComponent(DisplayNameComponent.getComponentType(), (Component)new DisplayNameComponent(displayNameMessage));
-/* 116 */         holder.addComponent(Nameplate.getComponentType(), (Component)new Nameplate(spawn.getId()));
-/*     */         
-/* 118 */         store.addEntity(holder, AddReason.SPAWN);
-/*     */       } else {
-/* 120 */         LegacySpawnBeaconEntity.create(wrapper, position, rotation, (ComponentAccessor)store);
-/*     */       } 
-/*     */       
-/* 123 */       context.sendMessage(Message.translation("server.commands.spawning.beacons.add.added")
-/* 124 */           .param("beaconId", beacon.getId()));
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   private static class ManualTrigger
-/*     */     extends AbstractPlayerCommand
-/*     */   {
-/* 132 */     private static final Message MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NOT_BEACON = Message.translation("server.commands.spawning.beacons.trigger.notBeacon");
-/* 133 */     private static final Message MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_SPOTS = Message.translation("server.commands.spawning.beacons.trigger.no_spots");
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public ManualTrigger() {
-/* 139 */       super("trigger", "server.commands.spawning.beacons.trigger.desc");
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
-/* 144 */       FloodFillPositionSelector positionSelectorComponent = (FloodFillPositionSelector)store.getComponent(ref, FloodFillPositionSelector.getComponentType());
-/* 145 */       if (positionSelectorComponent == null) {
-/* 146 */         throw new GeneralCommandException(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NOT_BEACON);
-/*     */       }
-/*     */       
-/* 149 */       SpawnBeacon spawnBeaconComponent = (SpawnBeacon)store.getComponent(ref, SpawnBeacon.getComponentType());
-/* 150 */       if (spawnBeaconComponent == null) {
-/* 151 */         throw new GeneralCommandException(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NOT_BEACON);
-/*     */       }
-/*     */       
-/* 154 */       if (!spawnBeaconComponent.manualTrigger(ref, positionSelectorComponent, ref, store)) {
-/* 155 */         context.sendMessage(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_SPOTS);
-/*     */       } else {
-/* 157 */         context.sendMessage(Message.translation("server.commands.spawning.beacons.trigger.success"));
-/*     */       } 
-/*     */     }
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.spawning.commands;
 
+import com.hypixel.hytale.component.AddReason;
+import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.model.config.Model;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
+import com.hypixel.hytale.server.core.command.system.arguments.types.AssetArgumentType;
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractTargetEntityCommand;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
+import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.spawning.SpawningPlugin;
+import com.hypixel.hytale.server.spawning.assets.spawns.config.BeaconNPCSpawn;
+import com.hypixel.hytale.server.spawning.beacons.LegacySpawnBeaconEntity;
+import com.hypixel.hytale.server.spawning.beacons.SpawnBeacon;
+import com.hypixel.hytale.server.spawning.util.FloodFillPositionSelector;
+import com.hypixel.hytale.server.spawning.wrappers.BeaconSpawnWrapper;
+import it.unimi.dsi.fastutil.objects.ObjectList;
+import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\spawning\commands\SpawnBeaconsCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SpawnBeaconsCommand extends AbstractCommandCollection {
+   private static final AssetArgumentType<BeaconNPCSpawn, ?> BEACON_SPAWN_ASSET_TYPE = new AssetArgumentType(
+      "server.commands.spawning.beacons.arg.beacon.name", BeaconNPCSpawn.class, "server.commands.spawning.beacons.arg.beacon.usage"
+   );
+
+   public SpawnBeaconsCommand() {
+      super("beacons", "server.commands.spawning.beacons.desc");
+      this.addSubCommand(new SpawnBeaconsCommand.Add());
+      this.addSubCommand(new SpawnBeaconsCommand.ManualTrigger());
+   }
+
+   private static class Add extends AbstractPlayerCommand {
+      @Nonnull
+      private final RequiredArg<BeaconNPCSpawn> beaconArg = this.withRequiredArg(
+         "beacon", "server.commands.spawning.beacons.add.arg.beacon.desc", SpawnBeaconsCommand.BEACON_SPAWN_ASSET_TYPE
+      );
+      @Nonnull
+      private final FlagArg manualArg = this.withFlagArg("manual", "server.commands.spawning.beacons.add.manual.desc");
+
+      public Add() {
+         super("add", "server.commands.spawning.beacons.add.desc");
+      }
+
+      @Override
+      protected void execute(
+         @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
+      ) {
+         TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+
+         assert transformComponent != null;
+
+         Vector3f rotation = transformComponent.getRotation();
+         Vector3d position = transformComponent.getPosition();
+         BeaconNPCSpawn beacon = this.beaconArg.get(context);
+         BeaconSpawnWrapper wrapper = SpawningPlugin.get().getBeaconSpawnWrapper(BeaconNPCSpawn.getAssetMap().getIndex(beacon.getId()));
+         if (this.manualArg.get(context)) {
+            SpawnBeacon entity = new SpawnBeacon();
+            entity.setSpawnWrapper(wrapper);
+            BeaconNPCSpawn spawn = wrapper.getSpawn();
+            String modelName = spawn.getModel();
+            ModelAsset modelAsset = null;
+            if (modelName != null && !modelName.isEmpty()) {
+               modelAsset = ModelAsset.getAssetMap().getAsset(modelName);
+            }
+
+            Model model;
+            if (modelAsset == null) {
+               model = SpawningPlugin.get().getSpawnMarkerModel();
+            } else {
+               model = Model.createUnitScaleModel(modelAsset);
+            }
+
+            Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
+            holder.addComponent(SpawnBeacon.getComponentType(), entity);
+            holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(position, rotation));
+            holder.ensureComponent(UUIDComponent.getComponentType());
+            holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
+            holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
+            Message displayNameMessage = Message.raw(spawn.getId());
+            holder.addComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(displayNameMessage));
+            holder.addComponent(Nameplate.getComponentType(), new Nameplate(spawn.getId()));
+            store.addEntity(holder, AddReason.SPAWN);
+         } else {
+            LegacySpawnBeaconEntity.create(wrapper, position, rotation, store);
+         }
+
+         context.sendMessage(Message.translation("server.commands.spawning.beacons.add.added").param("beaconId", beacon.getId()));
+      }
+   }
+
+   private static class ManualTrigger extends AbstractTargetEntityCommand {
+      private static final Message MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_BEACONS = Message.translation(
+         "server.commands.spawning.beacons.trigger.no_beacons"
+      );
+
+      public ManualTrigger() {
+         super("trigger", "server.commands.spawning.beacons.trigger.desc");
+      }
+
+      @Override
+      protected void execute(
+         @Nonnull CommandContext context, @Nonnull ObjectList<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store
+      ) {
+         if (entities.isEmpty()) {
+            context.sendMessage(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_BEACONS);
+         } else {
+            int count = 0;
+            ObjectListIterator var6 = entities.iterator();
+
+            while (var6.hasNext()) {
+               Ref<EntityStore> ref = (Ref<EntityStore>)var6.next();
+               if (ref != null && ref.isValid()) {
+                  UUIDComponent uuid = store.getComponent(ref, UUIDComponent.getComponentType());
+                  if (uuid != null) {
+                     FloodFillPositionSelector positionSelectorComponent = store.getComponent(ref, FloodFillPositionSelector.getComponentType());
+                     if (positionSelectorComponent != null) {
+                        SpawnBeacon spawnBeaconComponent = store.getComponent(ref, SpawnBeacon.getComponentType());
+                        if (spawnBeaconComponent != null) {
+                           if (!spawnBeaconComponent.manualTrigger(ref, positionSelectorComponent, ref, store)) {
+                              Message message = Message.translation("server.commands.spawning.beacons.trigger.no_spots");
+                              message.param("id", uuid.getUuid().toString());
+                              context.sendMessage(message);
+                           } else {
+                              Message message = Message.translation("server.commands.spawning.beacons.trigger.success");
+                              message.param("id", uuid.getUuid().toString());
+                              context.sendMessage(message);
+                              count++;
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+
+            if (count == 0) {
+               context.sendMessage(MESSAGE_COMMANDS_SPAWNING_BEACONS_TRIGGER_NO_BEACONS);
+            }
+         }
+      }
+   }
+}

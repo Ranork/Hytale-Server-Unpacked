@@ -1,28 +1,16 @@
-/*    */ package com.hypixel.hytale.server.core.universe.world.meta.state;
-/*    */ 
-/*    */ import com.hypixel.hytale.protocol.Packet;
-/*    */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*    */ import java.util.List;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ @Deprecated
-/*    */ public interface SendableBlockState
-/*    */ {
-/*    */   void sendTo(List<Packet> paramList);
-/*    */   
-/*    */   void unloadFrom(List<Packet> paramList);
-/*    */   
-/*    */   default boolean canPlayerSee(PlayerRef player) {
-/* 20 */     return true;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.universe.world.meta.state;
 
+import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import java.util.List;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\meta\state\SendableBlockState.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+@Deprecated
+public interface SendableBlockState {
+   void sendTo(List<ToClientPacket> var1);
+
+   void unloadFrom(List<ToClientPacket> var1);
+
+   default boolean canPlayerSee(PlayerRef player) {
+      return true;
+   }
+}

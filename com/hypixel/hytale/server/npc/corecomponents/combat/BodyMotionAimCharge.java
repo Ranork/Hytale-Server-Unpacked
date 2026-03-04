@@ -1,108 +1,100 @@
-/*     */ package com.hypixel.hytale.server.npc.corecomponents.combat;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.ComponentType;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.math.vector.Vector3d;
-/*     */ import com.hypixel.hytale.math.vector.Vector3f;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
-/*     */ import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
-/*     */ import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderBodyMotionBase;
-/*     */ import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderBodyMotionAimCharge;
-/*     */ import com.hypixel.hytale.server.npc.movement.Steering;
-/*     */ import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
-/*     */ import com.hypixel.hytale.server.npc.role.Role;
-/*     */ import com.hypixel.hytale.server.npc.sensorinfo.ExtraInfoProvider;
-/*     */ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
-/*     */ import com.hypixel.hytale.server.npc.util.AimingData;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ public class BodyMotionAimCharge extends BodyMotionBase {
-/*  25 */   protected static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
-/*     */   
-/*     */   protected final double relativeTurnSpeed;
-/*     */   
-/*  29 */   protected final AimingData aimingData = new AimingData();
-/*  30 */   protected final Vector3d direction = new Vector3d();
-/*  31 */   protected final ProbeMoveData probeMoveData = new ProbeMoveData();
-/*     */   
-/*     */   public BodyMotionAimCharge(@Nonnull BuilderBodyMotionAimCharge builder, @Nonnull BuilderSupport support) {
-/*  34 */     super((BuilderBodyMotionBase)builder);
-/*  35 */     this.relativeTurnSpeed = builder.getRelativeTurnSpeed(support);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void preComputeSteering(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, @Nonnull Store<EntityStore> store) {
-/*  40 */     if (sensorInfo == null)
-/*  41 */       return;  sensorInfo.passExtraInfo((ExtraInfoProvider)this.aimingData);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean computeSteering(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Steering desiredSteering, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-/*  46 */     if (sensorInfo == null || !sensorInfo.getPositionProvider().providePosition(this.direction)) {
-/*  47 */       desiredSteering.clear();
-/*  48 */       return true;
-/*     */     } 
-/*     */     
-/*  51 */     if (this.aimingData.isHaveAttacked()) {
-/*  52 */       if (role.getCombatSupport().isExecutingAttack()) {
-/*     */         
-/*  54 */         desiredSteering.clear();
-/*  55 */         return true;
-/*     */       } 
-/*  57 */       this.aimingData.setHaveAttacked(false);
-/*     */     } 
-/*     */ 
-/*     */     
-/*  61 */     Vector3d selfPosition = ((TransformComponent)componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE)).getPosition();
-/*  62 */     double distanceToTarget = role.getActiveMotionController().waypointDistance(selfPosition, this.direction);
-/*  63 */     if (distanceToTarget > this.aimingData.getChargeDistance()) {
-/*     */       
-/*  65 */       this.aimingData.clearSolution();
-/*  66 */       return true;
-/*     */     } 
-/*     */     
-/*  69 */     this.direction.subtract(selfPosition);
-/*  70 */     this.direction.setLength(this.aimingData.getChargeDistance());
-/*     */     
-/*  72 */     double x = this.direction.getX();
-/*  73 */     double y = this.direction.getY();
-/*  74 */     double z = this.direction.getZ();
-/*  75 */     float yaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
-/*  76 */     float pitch = PhysicsMath.pitchFromDirection(x, y, z);
-/*  77 */     desiredSteering.setYaw(yaw);
-/*  78 */     desiredSteering.setPitch(pitch);
-/*  79 */     desiredSteering.setRelativeTurnSpeed(this.relativeTurnSpeed);
-/*     */     
-/*  81 */     TransformComponent transformComponent = (TransformComponent)componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
-/*  82 */     Vector3f bodyRotation = transformComponent.getRotation();
-/*  83 */     this.aimingData.setOrientation(yaw, pitch);
-/*  84 */     if (!this.aimingData.isOnTarget(bodyRotation.getYaw(), bodyRotation.getPitch(), this.aimingData.getDesiredHitAngle())) {
-/*     */       
-/*  86 */       this.aimingData.clearSolution();
-/*  87 */       return true;
-/*     */     } 
-/*     */ 
-/*     */     
-/*  91 */     double distance = role.getActiveMotionController().probeMove(ref, selfPosition, this.direction, this.probeMoveData, componentAccessor);
-/*  92 */     if (distance < distanceToTarget - 1.0E-6D) {
-/*     */       
-/*  94 */       this.aimingData.clearSolution();
-/*  95 */       return true;
-/*     */     } 
-/*     */     
-/*  98 */     Ref<EntityStore> target = sensorInfo.getPositionProvider().getTarget();
-/*  99 */     this.aimingData.setTarget(target);
-/* 100 */     return true;
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.npc.corecomponents.combat;
 
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
+import com.hypixel.hytale.server.npc.corecomponents.combat.builders.BuilderBodyMotionAimCharge;
+import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
+import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
+import com.hypixel.hytale.server.npc.util.AimingData;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\corecomponents\combat\BodyMotionAimCharge.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BodyMotionAimCharge extends BodyMotionBase {
+   protected static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
+   protected final double relativeTurnSpeed;
+   protected final AimingData aimingData = new AimingData();
+   protected final Vector3d direction = new Vector3d();
+   protected final ProbeMoveData probeMoveData = new ProbeMoveData();
+
+   public BodyMotionAimCharge(@Nonnull BuilderBodyMotionAimCharge builder, @Nonnull BuilderSupport support) {
+      super(builder);
+      this.relativeTurnSpeed = builder.getRelativeTurnSpeed(support);
+   }
+
+   @Override
+   public void preComputeSteering(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, @Nonnull Store<EntityStore> store) {
+      if (sensorInfo != null) {
+         sensorInfo.passExtraInfo(this.aimingData);
+      }
+   }
+
+   @Override
+   public boolean computeSteering(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Role role,
+      @Nullable InfoProvider sensorInfo,
+      double dt,
+      @Nonnull Steering desiredSteering,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      if (sensorInfo != null && sensorInfo.getPositionProvider().providePosition(this.direction)) {
+         if (this.aimingData.isHaveAttacked()) {
+            if (role.getCombatSupport().isExecutingAttack()) {
+               desiredSteering.clear();
+               return true;
+            }
+
+            this.aimingData.setHaveAttacked(false);
+         }
+
+         Vector3d selfPosition = componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE).getPosition();
+         double distanceToTarget = role.getActiveMotionController().waypointDistance(selfPosition, this.direction);
+         if (distanceToTarget > this.aimingData.getChargeDistance()) {
+            this.aimingData.clearSolution();
+            return true;
+         } else {
+            this.direction.subtract(selfPosition);
+            this.direction.setLength(this.aimingData.getChargeDistance());
+            double x = this.direction.getX();
+            double y = this.direction.getY();
+            double z = this.direction.getZ();
+            float yaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
+            float pitch = PhysicsMath.pitchFromDirection(x, y, z);
+            desiredSteering.setYaw(yaw);
+            desiredSteering.setPitch(pitch);
+            desiredSteering.setRelativeTurnSpeed(this.relativeTurnSpeed);
+            TransformComponent transformComponent = componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
+            Vector3f bodyRotation = transformComponent.getRotation();
+            this.aimingData.setOrientation(yaw, pitch);
+            if (!this.aimingData.isOnTarget(bodyRotation.getYaw(), bodyRotation.getPitch(), this.aimingData.getDesiredHitAngle())) {
+               this.aimingData.clearSolution();
+               return true;
+            } else {
+               double distance = role.getActiveMotionController().probeMove(ref, selfPosition, this.direction, this.probeMoveData, componentAccessor);
+               if (distance < distanceToTarget - 1.0E-6) {
+                  this.aimingData.clearSolution();
+                  return true;
+               } else {
+                  Ref<EntityStore> target = sensorInfo.getPositionProvider().getTarget();
+                  this.aimingData.setTarget(target);
+                  return true;
+               }
+            }
+         }
+      } else {
+         desiredSteering.clear();
+         return true;
+      }
+   }
+}

@@ -1,48 +1,46 @@
-/*    */ package com.hypixel.hytale.builtin.portals.utils.posqueries;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.portals.utils.posqueries.predicates.generic.FilterQuery;
-/*    */ import com.hypixel.hytale.builtin.portals.utils.posqueries.predicates.generic.FlatMapQuery;
-/*    */ import com.hypixel.hytale.logger.HytaleLogger;
-/*    */ import com.hypixel.hytale.math.vector.Vector3d;
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import java.util.Objects;
-/*    */ import java.util.Optional;
-/*    */ import java.util.logging.Level;
-/*    */ import java.util.stream.Stream;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public interface SpatialQuery
-/*    */ {
-/*    */   Stream<Vector3d> createCandidates(World paramWorld, Vector3d paramVector3d, @Nullable SpatialQueryDebug paramSpatialQueryDebug);
-/*    */   
-/*    */   default SpatialQuery then(SpatialQuery expand) {
-/* 19 */     return (SpatialQuery)new FlatMapQuery(this, expand);
-/*    */   }
-/*    */   
-/*    */   default SpatialQuery filter(PositionPredicate predicate) {
-/* 23 */     return (SpatialQuery)new FilterQuery(this, predicate);
-/*    */   }
-/*    */   
-/*    */   default Optional<Vector3d> execute(World world, Vector3d origin) {
-/* 27 */     return createCandidates(world, origin, null).findFirst();
-/*    */   }
-/*    */   
-/*    */   default Optional<Vector3d> debug(World world, Vector3d origin) {
-/*    */     try {
-/* 32 */       SpatialQueryDebug debug = new SpatialQueryDebug();
-/* 33 */       Optional<Vector3d> output = createCandidates(world, origin, debug).findFirst();
-/* 34 */       Objects.requireNonNull(debug); debug.appendLine("-> OUTPUT: " + (String)output.<String>map(debug::fmt).orElse("<null>"));
-/* 35 */       HytaleLogger.getLogger().at(Level.INFO).log(debug.toString());
-/* 36 */       return output;
-/* 37 */     } catch (Throwable t) {
-/* 38 */       ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(t)).log("Error in SpatialQuery");
-/* 39 */       throw new RuntimeException("Error in SpatialQuery", t);
-/*    */     } 
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.portals.utils.posqueries;
 
+import com.hypixel.hytale.builtin.portals.utils.posqueries.predicates.generic.FilterQuery;
+import com.hypixel.hytale.builtin.portals.utils.posqueries.predicates.generic.FlatMapQuery;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.universe.world.World;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\portal\\utils\posqueries\SpatialQuery.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface SpatialQuery {
+   @Nonnull
+   Stream<Vector3d> createCandidates(@Nonnull World var1, @Nonnull Vector3d var2, @Nullable SpatialQueryDebug var3);
+
+   @Nonnull
+   default SpatialQuery then(@Nonnull SpatialQuery expand) {
+      return new FlatMapQuery(this, expand);
+   }
+
+   @Nonnull
+   default SpatialQuery filter(@Nonnull PositionPredicate predicate) {
+      return new FilterQuery(this, predicate);
+   }
+
+   @Nonnull
+   default Optional<Vector3d> execute(@Nonnull World world, @Nonnull Vector3d origin) {
+      return this.createCandidates(world, origin, null).findFirst();
+   }
+
+   @Nonnull
+   default Optional<Vector3d> debug(@Nonnull World world, @Nonnull Vector3d origin) {
+      try {
+         SpatialQueryDebug debug = new SpatialQueryDebug();
+         Optional<Vector3d> output = this.createCandidates(world, origin, debug).findFirst();
+         debug.appendLine("-> OUTPUT: " + output.map(SpatialQueryDebug::fmt).orElse("<null>"));
+         HytaleLogger.getLogger().at(Level.INFO).log(debug.toString());
+         return output;
+      } catch (Throwable var5) {
+         ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var5)).log("Error in SpatialQuery");
+         throw new RuntimeException("Error in SpatialQuery", var5);
+      }
+   }
+}

@@ -1,104 +1,93 @@
-/*    */ package com.hypixel.hytale.server.core.modules.collision;
-/*    */ 
-/*    */ import java.util.Arrays;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ public class CollisionTracker
-/*    */   extends BlockTracker
-/*    */ {
-/*    */   @Nonnull
-/* 12 */   protected BlockData[] blockData = new BlockData[4];
-/*    */   @Nonnull
-/* 14 */   protected BlockContactData[] contactData = new BlockContactData[4];
-/*    */ 
-/*    */   
-/*    */   public CollisionTracker() {
-/* 18 */     for (int i = 0; i < 4; i++) {
-/* 19 */       this.blockData[i] = new BlockData();
-/* 20 */       this.contactData[i] = new BlockContactData();
-/*    */     } 
-/*    */   }
-/*    */   
-/*    */   public BlockData getBlockData(int index) {
-/* 25 */     return this.blockData[index];
-/*    */   }
-/*    */   
-/*    */   public BlockContactData getContactData(int index) {
-/* 29 */     return this.contactData[index];
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void reset() {
-/* 34 */     super.reset();
-/* 35 */     for (int i = 0; i < this.count; i++) {
-/* 36 */       this.blockData[i].clear();
-/* 37 */       this.contactData[i].clear();
-/*    */     } 
-/*    */   }
-/*    */   
-/*    */   public boolean track(int x, int y, int z, @Nonnull BlockContactData contactData, @Nonnull BlockData blockData) {
-/* 42 */     if (isTracked(x, y, z)) return true; 
-/* 43 */     trackNew(x, y, z, contactData, blockData);
-/* 44 */     return false;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public BlockContactData trackNew(int x, int y, int z, @Nonnull BlockContactData contactData, @Nonnull BlockData blockData) {
-/* 49 */     trackNew(x, y, z);
-/* 50 */     this.blockData[this.count - 1].assign(blockData);
-/* 51 */     BlockContactData data = this.contactData[this.count - 1];
-/* 52 */     data.assign(contactData);
-/* 53 */     return data;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void untrack(int index) {
-/* 58 */     super.untrack(index);
-/* 59 */     if (this.count == 0) {
-/* 60 */       this.blockData[0].clear();
-/* 61 */       this.contactData[0].clear();
-/*    */       
-/*    */       return;
-/*    */     } 
-/* 65 */     int length = this.count - index;
-/*    */     
-/* 67 */     BlockData block = this.blockData[index];
-/* 68 */     block.clear();
-/* 69 */     System.arraycopy(this.blockData, index + 1, this.blockData, index, length);
-/* 70 */     this.blockData[this.count] = block;
-/*    */     
-/* 72 */     BlockContactData coll = this.contactData[index];
-/* 73 */     coll.clear();
-/* 74 */     System.arraycopy(this.contactData, index + 1, this.contactData, index, length);
-/* 75 */     this.contactData[this.count] = coll;
-/*    */   }
-/*    */   
-/*    */   @Nullable
-/*    */   public BlockContactData getContactData(int x, int y, int z) {
-/* 80 */     int index = getIndex(x, y, z);
-/* 81 */     if (index == -1) return null;
-/*    */     
-/* 83 */     return this.contactData[index];
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected void alloc() {
-/* 88 */     super.alloc();
-/*    */     
-/* 90 */     int newLength = this.blockData.length + 4;
-/* 91 */     this.blockData = Arrays.<BlockData>copyOf(this.blockData, newLength);
-/* 92 */     this.contactData = Arrays.<BlockContactData>copyOf(this.contactData, newLength);
-/* 93 */     for (int i = this.count; i < newLength; i++) {
-/* 94 */       this.blockData[i] = new BlockData();
-/* 95 */       this.contactData[i] = new BlockContactData();
-/*    */     } 
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.collision;
 
+import java.util.Arrays;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\collision\CollisionTracker.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class CollisionTracker extends BlockTracker {
+   @Nonnull
+   protected BlockData[] blockData = new BlockData[4];
+   @Nonnull
+   protected BlockContactData[] contactData = new BlockContactData[4];
+
+   public CollisionTracker() {
+      for (int i = 0; i < 4; i++) {
+         this.blockData[i] = new BlockData();
+         this.contactData[i] = new BlockContactData();
+      }
+   }
+
+   public BlockData getBlockData(int index) {
+      return this.blockData[index];
+   }
+
+   public BlockContactData getContactData(int index) {
+      return this.contactData[index];
+   }
+
+   @Override
+   public void reset() {
+      super.reset();
+
+      for (int i = 0; i < this.count; i++) {
+         this.blockData[i].clear();
+         this.contactData[i].clear();
+      }
+   }
+
+   public boolean track(int x, int y, int z, @Nonnull BlockContactData contactData, @Nonnull BlockData blockData) {
+      if (this.isTracked(x, y, z)) {
+         return true;
+      } else {
+         this.trackNew(x, y, z, contactData, blockData);
+         return false;
+      }
+   }
+
+   @Nonnull
+   public BlockContactData trackNew(int x, int y, int z, @Nonnull BlockContactData contactData, @Nonnull BlockData blockData) {
+      super.trackNew(x, y, z);
+      this.blockData[this.count - 1].assign(blockData);
+      BlockContactData data = this.contactData[this.count - 1];
+      data.assign(contactData);
+      return data;
+   }
+
+   @Override
+   public void untrack(int index) {
+      super.untrack(index);
+      if (this.count == 0) {
+         this.blockData[0].clear();
+         this.contactData[0].clear();
+      } else {
+         int length = this.count - index;
+         BlockData block = this.blockData[index];
+         block.clear();
+         System.arraycopy(this.blockData, index + 1, this.blockData, index, length);
+         this.blockData[this.count] = block;
+         BlockContactData coll = this.contactData[index];
+         coll.clear();
+         System.arraycopy(this.contactData, index + 1, this.contactData, index, length);
+         this.contactData[this.count] = coll;
+      }
+   }
+
+   @Nullable
+   public BlockContactData getContactData(int x, int y, int z) {
+      int index = this.getIndex(x, y, z);
+      return index == -1 ? null : this.contactData[index];
+   }
+
+   @Override
+   protected void alloc() {
+      super.alloc();
+      int newLength = this.blockData.length + 4;
+      this.blockData = Arrays.copyOf(this.blockData, newLength);
+      this.contactData = Arrays.copyOf(this.contactData, newLength);
+
+      for (int i = this.count; i < newLength; i++) {
+         this.blockData[i] = new BlockData();
+         this.contactData[i] = new BlockContactData();
+      }
+   }
+}

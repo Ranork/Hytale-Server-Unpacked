@@ -4,14 +4,8 @@ import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 
 public interface InheritCodec<T> extends Codec<T>, RawJsonInheritCodec<T> {
-  @Nullable
-  T decodeAndInherit(BsonDocument paramBsonDocument, T paramT, ExtraInfo paramExtraInfo);
-  
-  void decodeAndInherit(BsonDocument paramBsonDocument, T paramT1, T paramT2, ExtraInfo paramExtraInfo);
+   @Nullable
+   T decodeAndInherit(BsonDocument var1, T var2, ExtraInfo var3);
+
+   void decodeAndInherit(BsonDocument var1, T var2, T var3, ExtraInfo var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\codec\InheritCodec.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

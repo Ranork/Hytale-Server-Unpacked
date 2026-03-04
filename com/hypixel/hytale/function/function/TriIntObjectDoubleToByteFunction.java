@@ -2,11 +2,5 @@ package com.hypixel.hytale.function.function;
 
 @FunctionalInterface
 public interface TriIntObjectDoubleToByteFunction<T> {
-  byte apply(int paramInt1, int paramInt2, int paramInt3, T paramT, double paramDouble);
+   byte apply(int var1, int var2, int var3, T var4, double var5);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\function\function\TriIntObjectDoubleToByteFunction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

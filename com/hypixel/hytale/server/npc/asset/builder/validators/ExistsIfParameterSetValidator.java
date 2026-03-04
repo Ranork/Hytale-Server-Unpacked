@@ -1,32 +1,23 @@
-/*    */ package com.hypixel.hytale.server.npc.asset.builder.validators;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ public class ExistsIfParameterSetValidator
-/*    */   extends Validator
-/*    */ {
-/*    */   private final String parameter;
-/*    */   private final String attribute;
-/*    */   
-/*    */   private ExistsIfParameterSetValidator(String parameter, String attribute) {
-/* 13 */     this.parameter = parameter;
-/* 14 */     this.attribute = attribute;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public static String errorMessage(String parameter, String attribute) {
-/* 19 */     return String.format("If %s is set, %s must be present", new Object[] { parameter, attribute });
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public static ExistsIfParameterSetValidator withAttributes(String parameter, String attribute) {
-/* 24 */     return new ExistsIfParameterSetValidator(parameter, attribute);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.asset.builder.validators;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\asset\builder\validators\ExistsIfParameterSetValidator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ExistsIfParameterSetValidator extends Validator {
+   private final String parameter;
+   private final String attribute;
+
+   private ExistsIfParameterSetValidator(String parameter, String attribute) {
+      this.parameter = parameter;
+      this.attribute = attribute;
+   }
+
+   @Nonnull
+   public static String errorMessage(String parameter, String attribute) {
+      return String.format("If %s is set, %s must be present", parameter, attribute);
+   }
+
+   @Nonnull
+   public static ExistsIfParameterSetValidator withAttributes(String parameter, String attribute) {
+      return new ExistsIfParameterSetValidator(parameter, attribute);
+   }
+}

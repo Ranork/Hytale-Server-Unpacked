@@ -1,23 +1,16 @@
-/*    */ package com.hypixel.hytale.codec;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.util.RawJsonReader;
-/*    */ import java.io.IOException;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public interface RawJsonCodec<T>
-/*    */ {
-/*    */   @Nullable
-/*    */   @Deprecated
-/*    */   default T decodeJson(RawJsonReader reader) throws IOException {
-/* 12 */     return decodeJson(reader, EmptyExtraInfo.EMPTY);
-/*    */   }
-/*    */   
-/*    */   @Nullable
-/*    */   T decodeJson(RawJsonReader paramRawJsonReader, ExtraInfo paramExtraInfo) throws IOException;
-/*    */ }
+package com.hypixel.hytale.codec;
 
+import com.hypixel.hytale.codec.util.RawJsonReader;
+import java.io.IOException;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\codec\RawJsonCodec.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface RawJsonCodec<T> {
+   @Nullable
+   @Deprecated
+   default T decodeJson(RawJsonReader reader) throws IOException {
+      return this.decodeJson(reader, EmptyExtraInfo.EMPTY);
+   }
+
+   @Nullable
+   T decodeJson(RawJsonReader var1, ExtraInfo var2) throws IOException;
+}

@@ -1,26 +1,13 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.reputation.command;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class ReputationCommand
-/*    */   extends AbstractCommandCollection
-/*    */ {
-/*    */   public ReputationCommand() {
-/* 14 */     super("reputation", "server.commands.reputation.desc");
-/* 15 */     addSubCommand((AbstractCommand)new ReputationAddCommand());
-/* 16 */     addSubCommand((AbstractCommand)new ReputationSetCommand());
-/* 17 */     addSubCommand((AbstractCommand)new ReputationRankCommand());
-/* 18 */     addSubCommand((AbstractCommand)new ReputationValueCommand());
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.reputation.command;
 
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\reputation\command\ReputationCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ReputationCommand extends AbstractCommandCollection {
+   public ReputationCommand() {
+      super("reputation", "server.commands.reputation.desc");
+      this.addSubCommand(new ReputationAddCommand());
+      this.addSubCommand(new ReputationSetCommand());
+      this.addSubCommand(new ReputationRankCommand());
+      this.addSubCommand(new ReputationValueCommand());
+   }
+}

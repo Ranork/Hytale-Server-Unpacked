@@ -1,39 +1,50 @@
-/*    */ package com.hypixel.hytale.builtin.beds.sleep.resources;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.beds.BedsPlugin;
-/*    */ import com.hypixel.hytale.component.Resource;
-/*    */ import com.hypixel.hytale.component.ResourceType;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class WorldSomnolence
-/*    */   implements Resource<EntityStore> {
-/*    */   public static ResourceType<EntityStore, WorldSomnolence> getResourceType() {
-/* 13 */     return BedsPlugin.getInstance().getWorldSomnolenceResourceType();
-/*    */   }
-/*    */   
-/* 16 */   private WorldSleep state = WorldSleep.Awake.INSTANCE;
-/*    */   
-/*    */   public WorldSleep getState() {
-/* 19 */     return this.state;
-/*    */   }
-/*    */   
-/*    */   public void setState(@Nonnull WorldSleep state) {
-/* 23 */     this.state = state;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public Resource<EntityStore> clone() {
-/* 29 */     WorldSomnolence clone = new WorldSomnolence();
-/* 30 */     clone.state = this.state;
-/* 31 */     return clone;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.beds.sleep.resources;
 
+import com.hypixel.hytale.builtin.beds.BedsPlugin;
+import com.hypixel.hytale.component.Resource;
+import com.hypixel.hytale.component.ResourceType;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\beds\sleep\resources\WorldSomnolence.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class WorldSomnolence implements Resource<EntityStore> {
+   @Nonnull
+   private WorldSleep state = WorldSleep.Awake.INSTANCE;
+   private long lastSleepNotification;
+
+   public static ResourceType<EntityStore, WorldSomnolence> getResourceType() {
+      return BedsPlugin.getInstance().getWorldSomnolenceResourceType();
+   }
+
+   @Nonnull
+   public WorldSleep getState() {
+      return this.state;
+   }
+
+   public void setState(@Nonnull WorldSleep state) {
+      this.state = state;
+   }
+
+   public boolean useSleepNotificationCooldown(long now, long cooldownMs) {
+      long elapsedMs = now - this.lastSleepNotification;
+      boolean ready = elapsedMs >= cooldownMs;
+      if (ready) {
+         this.lastSleepNotification = now;
+         return true;
+      } else {
+         return false;
+      }
+   }
+
+   public void resetNotificationCooldown() {
+      this.lastSleepNotification = 0L;
+   }
+
+   @Nullable
+   @Override
+   public Resource<EntityStore> clone() {
+      WorldSomnolence clone = new WorldSomnolence();
+      clone.state = this.state;
+      return clone;
+   }
+}

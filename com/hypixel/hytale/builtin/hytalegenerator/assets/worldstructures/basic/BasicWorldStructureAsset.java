@@ -1,163 +1,159 @@
-/*     */ package com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.basic;
-/*     */ 
-/*     */ import com.hypixel.hytale.assetstore.codec.AssetCodec;
-/*     */ import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
-/*     */ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.assets.biomes.BiomeAsset;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.assets.density.ConstantDensityAsset;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.WorldStructureAsset;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.mapcontentfield.BaseHeightContentFieldAsset;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.mapcontentfield.ContentFieldAsset;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.biome.BiomeType;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.biomemap.BiomeMap;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.biomemap.SimpleBiomeMap;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.cartas.SimpleNoiseCarta;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.BiCarta;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.rangemaps.DoubleRange;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.BaseHeightReference;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.Reference;
-/*     */ import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.KeyedCodec;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*     */ import com.hypixel.hytale.codec.validation.LateValidator;
-/*     */ import com.hypixel.hytale.codec.validation.Validators;
-/*     */ import java.util.HashMap;
-/*     */ import java.util.function.Supplier;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class BasicWorldStructureAsset
-/*     */   extends WorldStructureAsset
-/*     */ {
-/*     */   public static final BuilderCodec<BasicWorldStructureAsset> CODEC;
-/*     */   
-/*     */   static {
-/*  61 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BasicWorldStructureAsset.class, BasicWorldStructureAsset::new, WorldStructureAsset.ABSTRACT_CODEC).append(new KeyedCodec("Biomes", (Codec)new ArrayCodec((Codec)BiomeRangeAsset.CODEC, x$0 -> new BiomeRangeAsset[x$0]), true), (t, k) -> t.biomeRangeAssets = k, t -> t.biomeRangeAssets).add()).append(new KeyedCodec("Density", (Codec)DensityAsset.CODEC, true), (t, k) -> t.densityAsset = k, t -> t.densityAsset).add()).append(new KeyedCodec("DefaultBiome", (Codec)new ContainedAssetCodec(BiomeAsset.class, (AssetCodec)BiomeAsset.CODEC), true), (t, k) -> t.defaultBiomeId = k, t -> t.defaultBiomeId).addValidatorLate(() -> BiomeAsset.VALIDATOR_CACHE.getValidator().late()).add()).append(new KeyedCodec("DefaultTransitionDistance", (Codec)Codec.INTEGER, true), (t, k) -> t.biomeTransitionDistance = k.intValue(), t -> Integer.valueOf(t.biomeTransitionDistance)).addValidator(Validators.greaterThan(Integer.valueOf(0))).add()).append(new KeyedCodec("MaxBiomeEdgeDistance", (Codec)Codec.INTEGER, true), (t, k) -> t.maxBiomeEdgeDistance = k.intValue(), t -> Integer.valueOf(t.maxBiomeEdgeDistance)).addValidator(Validators.greaterThanOrEqual(Integer.valueOf(0))).add()).append(new KeyedCodec("ContentFields", (Codec)new ArrayCodec((Codec)ContentFieldAsset.CODEC, x$0 -> new ContentFieldAsset[x$0]), false), (t, k) -> t.contentFieldAssets = k, t -> t.contentFieldAssets).add()).build();
-/*     */   }
-/*  63 */   private BiomeRangeAsset[] biomeRangeAssets = new BiomeRangeAsset[0];
-/*  64 */   private int biomeTransitionDistance = 32;
-/*  65 */   private int maxBiomeEdgeDistance = 0;
-/*  66 */   private DensityAsset densityAsset = (DensityAsset)new ConstantDensityAsset();
-/*  67 */   private String defaultBiomeId = "";
-/*  68 */   private ContentFieldAsset[] contentFieldAssets = new ContentFieldAsset[0];
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nullable
-/*     */   public BiomeMap buildBiomeMap(@Nonnull WorldStructureAsset.Argument argument) {
-/*  75 */     ReferenceBundle referenceBundle = new ReferenceBundle();
-/*     */     
-/*  77 */     for (int i = this.contentFieldAssets.length - 1; i >= 0; i--) {
-/*  78 */       ContentFieldAsset contentFieldAsset = this.contentFieldAssets[i]; if (contentFieldAsset instanceof BaseHeightContentFieldAsset) { BaseHeightContentFieldAsset bedAsset = (BaseHeightContentFieldAsset)contentFieldAsset;
-/*     */ 
-/*     */ 
-/*     */         
-/*  82 */         String name = bedAsset.getName();
-/*  83 */         double y = bedAsset.getY();
-/*  84 */         BaseHeightReference bedLayer = new BaseHeightReference((x, z) -> y);
-/*  85 */         referenceBundle.put(name, (Reference)bedLayer, bedLayer.getClass()); }
-/*     */     
-/*     */     } 
-/*  88 */     HashMap<BiomeAsset, BiomeType> biomeAssetToBiomeType = new HashMap<>();
-/*     */ 
-/*     */     
-/*  91 */     BiomeAsset defaultBiomeAsset = (BiomeAsset)((DefaultAssetMap)BiomeAsset.getAssetStore().getAssetMap()).getAsset(this.defaultBiomeId);
-/*  92 */     if (defaultBiomeAsset == null) {
-/*  93 */       LoggerUtil.getLogger().warning("Couldn't find Biome asset with id: " + this.defaultBiomeId);
-/*  94 */       return null;
-/*     */     } 
-/*     */     
-/*  97 */     BiomeType defaultBiome = defaultBiomeAsset.build(argument.materialCache, argument.parentSeed, referenceBundle, argument.workerIndexer);
-/*  98 */     biomeAssetToBiomeType.put(defaultBiomeAsset, defaultBiome);
-/*     */     
-/* 100 */     Density noise = this.densityAsset.build(DensityAsset.from(argument, referenceBundle));
-/* 101 */     SimpleNoiseCarta<BiomeType> carta = new SimpleNoiseCarta(noise, defaultBiome);
-/*     */     
-/* 103 */     for (BiomeRangeAsset asset : this.biomeRangeAssets) {
-/*     */       
-/* 105 */       DoubleRange range = asset.getRange();
-/* 106 */       BiomeAsset biomeAsset = asset.getBiomeAsset();
-/* 107 */       if (biomeAsset == null) {
-/* 108 */         LoggerUtil.getLogger().warning("Couldn't find biome asset with name " + asset.getBiomeAssetId());
-/*     */       } else {
-/*     */         BiomeType biome;
-/*     */ 
-/*     */         
-/* 113 */         if (biomeAssetToBiomeType.containsKey(biomeAsset)) {
-/* 114 */           biome = biomeAssetToBiomeType.get(biomeAsset);
-/*     */         } else {
-/* 116 */           biome = biomeAsset.build(argument.materialCache, argument.parentSeed, referenceBundle, argument.workerIndexer);
-/* 117 */           biomeAssetToBiomeType.put(biomeAsset, biome);
-/*     */         } 
-/* 119 */         carta.put(range, biome);
-/*     */       } 
-/*     */     } 
-/* 122 */     SimpleBiomeMap<Object> biomeMap = new SimpleBiomeMap((BiCarta)carta);
-/* 123 */     int defaultRadius = Math.max(1, this.biomeTransitionDistance / 2);
-/* 124 */     biomeMap.setDefaultRadius(defaultRadius);
-/*     */     
-/* 126 */     return (BiomeMap)biomeMap;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public int getBiomeTransitionDistance() {
-/* 131 */     return this.biomeTransitionDistance;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public int getMaxBiomeEdgeDistance() {
-/* 136 */     return this.maxBiomeEdgeDistance;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void cleanUp() {
-/* 141 */     this.densityAsset.cleanUp();
-/* 142 */     for (ContentFieldAsset contentFieldAsset : this.contentFieldAssets) {
-/* 143 */       contentFieldAsset.cleanUp();
-/*     */     }
-/*     */     
-/* 146 */     BiomeAsset defaultBiomeAsset = (BiomeAsset)((DefaultAssetMap)BiomeAsset.getAssetStore().getAssetMap()).getAsset(this.defaultBiomeId);
-/* 147 */     if (defaultBiomeAsset != null) {
-/* 148 */       defaultBiomeAsset.cleanUp();
-/*     */     }
-/*     */     
-/* 151 */     for (BiomeRangeAsset asset : this.biomeRangeAssets) {
-/* 152 */       BiomeAsset biomeAsset = asset.getBiomeAsset();
-/* 153 */       if (biomeAsset != null)
-/* 154 */         biomeAsset.cleanUp(); 
-/*     */     } 
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.basic;
 
+import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.Registry;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.biomes.BiomeAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.density.ConstantDensityAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.FrameworkAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.ListPositionProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.PositionProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.WorldStructureAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
+import com.hypixel.hytale.builtin.hytalegenerator.cartas.SimpleNoiseCarta;
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.rangemaps.DoubleRange;
+import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
+import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import java.util.HashMap;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\worldstructures\basic\BasicWorldStructureAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BasicWorldStructureAsset extends WorldStructureAsset {
+   @Nonnull
+   public static final BuilderCodec<BasicWorldStructureAsset> CODEC = BuilderCodec.builder(
+         BasicWorldStructureAsset.class, BasicWorldStructureAsset::new, WorldStructureAsset.ABSTRACT_CODEC
+      )
+      .append(
+         new KeyedCodec<>("Biomes", new ArrayCodec<>(BiomeRangeAsset.CODEC, BiomeRangeAsset[]::new), true),
+         (asset, value) -> asset.biomeRangeAssets = value,
+         asset -> asset.biomeRangeAssets
+      )
+      .add()
+      .append(new KeyedCodec<>("Density", DensityAsset.CODEC, true), (asset, value) -> asset.densityAsset = value, asset -> asset.densityAsset)
+      .add()
+      .<String>append(
+         new KeyedCodec<>("DefaultBiome", new ContainedAssetCodec<>(BiomeAsset.class, BiomeAsset.CODEC), true),
+         (asset, value) -> asset.defaultBiomeId = value,
+         asset -> asset.defaultBiomeId
+      )
+      .addValidatorLate(() -> BiomeAsset.VALIDATOR_CACHE.getValidator().late())
+      .add()
+      .<Integer>append(
+         new KeyedCodec<>("DefaultTransitionDistance", Codec.INTEGER, true),
+         (asset, value) -> asset.biomeTransitionDistance = value,
+         asset -> asset.biomeTransitionDistance
+      )
+      .addValidator(Validators.greaterThan(0))
+      .add()
+      .<Integer>append(
+         new KeyedCodec<>("MaxBiomeEdgeDistance", Codec.INTEGER, true),
+         (asset, value) -> asset.maxBiomeEdgeDistance = value,
+         asset -> asset.maxBiomeEdgeDistance
+      )
+      .addValidator(Validators.greaterThanOrEqual(0))
+      .add()
+      .append(
+         new KeyedCodec<>("Framework", new ArrayCodec<>(FrameworkAsset.CODEC, FrameworkAsset[]::new), false),
+         (asset, value) -> asset.frameworkAssets = value,
+         asset -> asset.frameworkAssets
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("SpawnPositions", PositionProviderAsset.CODEC, false),
+         (asset, value) -> asset.spawnPositionsAsset = value,
+         asset -> asset.spawnPositionsAsset
+      )
+      .add()
+      .build();
+   private BiomeRangeAsset[] biomeRangeAssets = new BiomeRangeAsset[0];
+   private int biomeTransitionDistance = 32;
+   private int maxBiomeEdgeDistance = 0;
+   private DensityAsset densityAsset = new ConstantDensityAsset();
+   private String defaultBiomeId = "";
+   private FrameworkAsset[] frameworkAssets = new FrameworkAsset[0];
+   private PositionProviderAsset spawnPositionsAsset = new ListPositionProviderAsset();
+
+   @Nullable
+   @Override
+   public WorldStructure build(@Nonnull WorldStructureAsset.Argument argument) {
+      ReferenceBundle referenceBundle = new ReferenceBundle();
+
+      for (FrameworkAsset frameworkAsset : this.frameworkAssets) {
+         frameworkAsset.build(argument, referenceBundle);
+      }
+
+      HashMap<BiomeAsset, Biome> biomeAssetToBiomeType = new HashMap<>();
+      BiomeAsset defaultBiomeAsset = (BiomeAsset)((DefaultAssetMap)BiomeAsset.getAssetStore().getAssetMap()).getAsset(this.defaultBiomeId);
+      if (defaultBiomeAsset == null) {
+         LoggerUtil.getLogger().warning("Couldn't find Biome asset with id: " + this.defaultBiomeId);
+         return null;
+      } else {
+         Biome defaultBiome = defaultBiomeAsset.build(argument.materialCache, argument.parentSeed, referenceBundle, argument.workerId);
+         biomeAssetToBiomeType.put(defaultBiomeAsset, defaultBiome);
+         Density noise = this.densityAsset.build(DensityAsset.from(argument, referenceBundle));
+         Registry<Biome> biomeRegistry = new Registry<>();
+         int defaultBiomeId = biomeRegistry.getIdOrRegister(defaultBiome);
+         SimpleNoiseCarta<Integer> carta = new SimpleNoiseCarta<>(noise, defaultBiomeId);
+
+         for (BiomeRangeAsset asset : this.biomeRangeAssets) {
+            DoubleRange range = asset.getRange();
+            BiomeAsset biomeAsset = asset.getBiomeAsset();
+            if (biomeAsset == null) {
+               LoggerUtil.getLogger().warning("Couldn't find biome asset with name " + asset.getBiomeAssetId());
+            } else {
+               Biome biome;
+               if (biomeAssetToBiomeType.containsKey(biomeAsset)) {
+                  biome = biomeAssetToBiomeType.get(biomeAsset);
+               } else {
+                  biome = biomeAsset.build(argument.materialCache, argument.parentSeed, referenceBundle, argument.workerId);
+                  biomeAssetToBiomeType.put(biomeAsset, biome);
+               }
+
+               carta.put(range, biomeRegistry.getIdOrRegister(biome));
+            }
+         }
+
+         int biomeTransitionDistance = Math.max(1, this.biomeTransitionDistance);
+         PositionProvider spawnPositions = this.spawnPositionsAsset
+            .build(new PositionProviderAsset.Argument(argument.parentSeed, referenceBundle, argument.workerId));
+         return new WorldStructure(carta, biomeRegistry, biomeTransitionDistance, this.maxBiomeEdgeDistance, spawnPositions);
+      }
+   }
+
+   @NonNullDecl
+   @Override
+   public PositionProviderAsset getSpawnPositionsAsset() {
+      return this.spawnPositionsAsset;
+   }
+
+   @Override
+   public void cleanUp() {
+      this.densityAsset.cleanUp();
+
+      for (FrameworkAsset frameworkAsset : this.frameworkAssets) {
+         frameworkAsset.cleanUp();
+      }
+
+      BiomeAsset defaultBiomeAsset = (BiomeAsset)((DefaultAssetMap)BiomeAsset.getAssetStore().getAssetMap()).getAsset(this.defaultBiomeId);
+      if (defaultBiomeAsset != null) {
+         defaultBiomeAsset.cleanUp();
+      }
+
+      for (BiomeRangeAsset asset : this.biomeRangeAssets) {
+         BiomeAsset biomeAsset = asset.getBiomeAsset();
+         if (biomeAsset != null) {
+            biomeAsset.cleanUp();
+         }
+      }
+   }
+}

@@ -1,33 +1,24 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.spaceanddepth.conditionassets;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.SpaceAndDepthMaterialProvider;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.conditions.NotCondition;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ public class NotConditionAsset
-/*    */   extends ConditionAsset
-/*    */ {
-/*    */   public static final BuilderCodec<NotConditionAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 18 */     CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(NotConditionAsset.class, NotConditionAsset::new, ConditionAsset.ABSTRACT_CODEC).append(new KeyedCodec("Condition", (Codec)ConditionAsset.CODEC, true), (t, k) -> t.conditionAsset = k, k -> k.conditionAsset).add()).build();
-/*    */   }
-/* 20 */   private ConditionAsset conditionAsset = new AlwaysTrueConditionAsset();
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public SpaceAndDepthMaterialProvider.Condition build() {
-/* 25 */     return (SpaceAndDepthMaterialProvider.Condition)new NotCondition(this.conditionAsset.build());
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.spaceanddepth.conditionassets;
 
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.SpaceAndDepthMaterialProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.conditions.NotCondition;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\materialproviders\spaceanddepth\conditionassets\NotConditionAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class NotConditionAsset extends ConditionAsset {
+   @Nonnull
+   public static final BuilderCodec<NotConditionAsset> CODEC = BuilderCodec.builder(
+         NotConditionAsset.class, NotConditionAsset::new, ConditionAsset.ABSTRACT_CODEC
+      )
+      .append(new KeyedCodec<>("Condition", ConditionAsset.CODEC, true), (t, k) -> t.conditionAsset = k, k -> k.conditionAsset)
+      .add()
+      .build();
+   private ConditionAsset conditionAsset = new AlwaysTrueConditionAsset();
+
+   @Nonnull
+   @Override
+   public SpaceAndDepthMaterialProvider.Condition build() {
+      return new NotCondition(this.conditionAsset.build());
+   }
+}

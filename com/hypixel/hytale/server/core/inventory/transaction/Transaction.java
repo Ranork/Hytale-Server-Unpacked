@@ -5,19 +5,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface Transaction {
-  boolean succeeded();
-  
-  boolean wasSlotModified(short paramShort);
-  
-  @Nonnull
-  Transaction toParent(ItemContainer paramItemContainer1, short paramShort, ItemContainer paramItemContainer2);
-  
-  @Nullable
-  Transaction fromParent(ItemContainer paramItemContainer1, short paramShort, ItemContainer paramItemContainer2);
+   boolean succeeded();
+
+   boolean wasSlotModified(short var1);
+
+   @Nonnull
+   Transaction toParent(ItemContainer var1, short var2, ItemContainer var3);
+
+   @Nullable
+   Transaction fromParent(ItemContainer var1, short var2, ItemContainer var3);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\inventory\transaction\Transaction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

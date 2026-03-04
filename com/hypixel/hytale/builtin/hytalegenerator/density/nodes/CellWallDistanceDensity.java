@@ -1,22 +1,11 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class CellWallDistanceDensity
-/*    */   extends Density
-/*    */ {
-/*    */   public double process(@Nonnull Density.Context context) {
-/* 14 */     return context.distanceFromCellWall;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\density\nodes\CellWallDistanceDensity.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class CellWallDistanceDensity extends Density {
+   @Override
+   public double process(@Nonnull Density.Context context) {
+      return context.distanceFromCellWall;
+   }
+}

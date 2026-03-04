@@ -1,67 +1,49 @@
-/*    */ package com.hypixel.hytale.server.npc.asset.builder.validators.asset;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
-/*    */ import com.hypixel.hytale.server.npc.config.AttitudeGroup;
-/*    */ import java.util.EnumSet;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class AttitudeGroupExistsValidator
-/*    */   extends AssetValidator
-/*    */ {
-/* 15 */   private static final AttitudeGroupExistsValidator DEFAULT_INSTANCE = new AttitudeGroupExistsValidator();
-/*    */ 
-/*    */   
-/*    */   private AttitudeGroupExistsValidator() {}
-/*    */ 
-/*    */   
-/*    */   private AttitudeGroupExistsValidator(EnumSet<AssetValidator.Config> config) {
-/* 22 */     super(config);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String getDomain() {
-/* 28 */     return "AttitudeGroup";
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean test(String attitudeGroup) {
-/* 33 */     return (AttitudeGroup.getAssetMap().getAsset(attitudeGroup) != null);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String errorMessage(String attitudeGroup, String attributeName) {
-/* 39 */     return "The attitude group with the name \"" + attitudeGroup + "\" does not exist for attribute \"" + attributeName + "\"";
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String getAssetName() {
-/* 45 */     return AttitudeGroup.class.getSimpleName();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static AttitudeGroupExistsValidator required() {
-/* 54 */     return DEFAULT_INSTANCE;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public static AttitudeGroupExistsValidator withConfig(EnumSet<AssetValidator.Config> config) {
-/* 59 */     return new AttitudeGroupExistsValidator(config);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.asset.builder.validators.asset;
 
+import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
+import com.hypixel.hytale.server.npc.config.AttitudeGroup;
+import java.util.EnumSet;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\asset\builder\validators\asset\AttitudeGroupExistsValidator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AttitudeGroupExistsValidator extends AssetValidator {
+   private static final AttitudeGroupExistsValidator DEFAULT_INSTANCE = new AttitudeGroupExistsValidator();
+
+   private AttitudeGroupExistsValidator() {
+   }
+
+   private AttitudeGroupExistsValidator(EnumSet<AssetValidator.Config> config) {
+      super(config);
+   }
+
+   @Nonnull
+   @Override
+   public String getDomain() {
+      return "AttitudeGroup";
+   }
+
+   @Override
+   public boolean test(String attitudeGroup) {
+      return AttitudeGroup.getAssetMap().getAsset(attitudeGroup) != null;
+   }
+
+   @Nonnull
+   @Override
+   public String errorMessage(String attitudeGroup, String attributeName) {
+      return "The attitude group with the name \"" + attitudeGroup + "\" does not exist for attribute \"" + attributeName + "\"";
+   }
+
+   @Nonnull
+   @Override
+   public String getAssetName() {
+      return AttitudeGroup.class.getSimpleName();
+   }
+
+   public static AttitudeGroupExistsValidator required() {
+      return DEFAULT_INSTANCE;
+   }
+
+   @Nonnull
+   public static AttitudeGroupExistsValidator withConfig(EnumSet<AssetValidator.Config> config) {
+      return new AttitudeGroupExistsValidator(config);
+   }
+}

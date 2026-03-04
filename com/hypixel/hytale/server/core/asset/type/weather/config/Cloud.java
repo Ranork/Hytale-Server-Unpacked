@@ -1,89 +1,72 @@
-/*    */ package com.hypixel.hytale.server.core.asset.type.weather.config;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*    */ import com.hypixel.hytale.codec.schema.metadata.Metadata;
-/*    */ import com.hypixel.hytale.codec.schema.metadata.ui.UIEditor;
-/*    */ import com.hypixel.hytale.codec.validation.Validator;
-/*    */ import com.hypixel.hytale.protocol.Cloud;
-/*    */ import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
-/*    */ import com.hypixel.hytale.server.core.io.NetworkSerializable;
-/*    */ import java.util.Arrays;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class Cloud
-/*    */   implements NetworkSerializable<Cloud>
-/*    */ {
-/*    */   public static final BuilderCodec<Cloud> CODEC;
-/*    */   protected String texture;
-/*    */   protected TimeColorAlpha[] colors;
-/*    */   protected TimeFloat[] speeds;
-/*    */   
-/*    */   static {
-/* 37 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(Cloud.class, Cloud::new).append(new KeyedCodec("Texture", (Codec)Codec.STRING), (cloud, s) -> cloud.texture = s, Cloud::getTexture).addValidator((Validator)CommonAssetValidator.TEXTURE_SKY).add()).append(new KeyedCodec("Colors", (Codec)new ArrayCodec((Codec)TimeColorAlpha.CODEC, x$0 -> new TimeColorAlpha[x$0])), (cloud, s) -> cloud.colors = s, Cloud::getColors).metadata((Metadata)new UIEditor((UIEditor.EditorComponent)UIEditor.TIMELINE)).add()).append(new KeyedCodec("Speeds", (Codec)new ArrayCodec((Codec)TimeFloat.CODEC, x$0 -> new TimeFloat[x$0])), (cloud, s) -> cloud.speeds = s, Cloud::getSpeeds).metadata((Metadata)new UIEditor((UIEditor.EditorComponent)UIEditor.TIMELINE)).add()).build();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public Cloud(String texture, TimeColorAlpha[] colors, TimeFloat[] speeds) {
-/* 44 */     this.texture = texture;
-/* 45 */     this.colors = colors;
-/* 46 */     this.speeds = speeds;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   protected Cloud() {}
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Cloud toPacket() {
-/* 56 */     Cloud packet = new Cloud();
-/* 57 */     packet.texture = this.texture;
-/* 58 */     packet.colors = Weather.toColorAlphaMap(this.colors);
-/* 59 */     packet.speeds = Weather.toFloatMap(this.speeds);
-/* 60 */     return packet;
-/*    */   }
-/*    */   
-/*    */   public String getTexture() {
-/* 64 */     return this.texture;
-/*    */   }
-/*    */   
-/*    */   public TimeColorAlpha[] getColors() {
-/* 68 */     return this.colors;
-/*    */   }
-/*    */   
-/*    */   public TimeFloat[] getSpeeds() {
-/* 72 */     return this.speeds;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 78 */     return "Cloud{texture='" + this.texture + "', colors=" + 
-/*    */       
-/* 80 */       Arrays.toString((Object[])this.colors) + ", speeds=" + 
-/* 81 */       Arrays.toString((Object[])this.speeds) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.asset.type.weather.config;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.schema.metadata.ui.UIEditor;
+import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
+import com.hypixel.hytale.server.core.io.NetworkSerializable;
+import java.util.Arrays;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\type\weather\config\Cloud.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Cloud implements NetworkSerializable<com.hypixel.hytale.protocol.Cloud> {
+   public static final BuilderCodec<Cloud> CODEC = BuilderCodec.builder(Cloud.class, Cloud::new)
+      .append(new KeyedCodec<>("Texture", Codec.STRING), (cloud, s) -> cloud.texture = s, Cloud::getTexture)
+      .addValidator(CommonAssetValidator.TEXTURE_SKY)
+      .add()
+      .<TimeColorAlpha[]>append(
+         new KeyedCodec<>("Colors", new ArrayCodec<>(TimeColorAlpha.CODEC, TimeColorAlpha[]::new)), (cloud, s) -> cloud.colors = s, Cloud::getColors
+      )
+      .metadata(new UIEditor(UIEditor.TIMELINE))
+      .add()
+      .<TimeFloat[]>append(new KeyedCodec<>("Speeds", new ArrayCodec<>(TimeFloat.CODEC, TimeFloat[]::new)), (cloud, s) -> cloud.speeds = s, Cloud::getSpeeds)
+      .metadata(new UIEditor(UIEditor.TIMELINE))
+      .add()
+      .build();
+   protected String texture;
+   protected TimeColorAlpha[] colors;
+   protected TimeFloat[] speeds;
+
+   public Cloud(String texture, TimeColorAlpha[] colors, TimeFloat[] speeds) {
+      this.texture = texture;
+      this.colors = colors;
+      this.speeds = speeds;
+   }
+
+   protected Cloud() {
+   }
+
+   @Nonnull
+   public com.hypixel.hytale.protocol.Cloud toPacket() {
+      com.hypixel.hytale.protocol.Cloud packet = new com.hypixel.hytale.protocol.Cloud();
+      packet.texture = this.texture;
+      packet.colors = Weather.toColorAlphaMap(this.colors);
+      packet.speeds = Weather.toFloatMap(this.speeds);
+      return packet;
+   }
+
+   public String getTexture() {
+      return this.texture;
+   }
+
+   public TimeColorAlpha[] getColors() {
+      return this.colors;
+   }
+
+   public TimeFloat[] getSpeeds() {
+      return this.speeds;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "Cloud{texture='"
+         + this.texture
+         + "', colors="
+         + Arrays.toString((Object[])this.colors)
+         + ", speeds="
+         + Arrays.toString((Object[])this.speeds)
+         + "}";
+   }
+}

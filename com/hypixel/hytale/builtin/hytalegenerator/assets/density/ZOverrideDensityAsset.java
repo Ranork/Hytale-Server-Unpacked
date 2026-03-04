@@ -1,45 +1,36 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ZOverrideDensity;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class ZOverrideDensityAsset
-/*    */   extends DensityAsset
-/*    */ {
-/*    */   public static final BuilderCodec<ZOverrideDensityAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 20 */     CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ZOverrideDensityAsset.class, ZOverrideDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Value", (Codec)Codec.DOUBLE, true), (t, k) -> t.value = k.doubleValue(), t -> Double.valueOf(t.value)).add()).build();
-/*    */   }
-/* 22 */   private double value = 0.0D;
-/*    */   
-/*    */   @Nonnull
-/*    */   public Density build(@Nonnull DensityAsset.Argument argument) {
-/* 26 */     if (isSkipped()) return (Density)new ConstantValueDensity(0.0D);
-/*    */     
-/* 28 */     Density input = buildFirstInput(argument);
-/* 29 */     if (input == null) {
-/* 30 */       return (Density)new ConstantValueDensity(0.0D);
-/*    */     }
-/* 32 */     return (Density)new ZOverrideDensity(input, this.value);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 37 */     cleanUpInputs();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ZOverrideDensity;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\density\ZOverrideDensityAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ZOverrideDensityAsset extends DensityAsset {
+   @Nonnull
+   public static final BuilderCodec<ZOverrideDensityAsset> CODEC = BuilderCodec.builder(
+         ZOverrideDensityAsset.class, ZOverrideDensityAsset::new, DensityAsset.ABSTRACT_CODEC
+      )
+      .append(new KeyedCodec<>("Value", Codec.DOUBLE, true), (t, k) -> t.value = k, t -> t.value)
+      .add()
+      .build();
+   private double value;
+
+   @Nonnull
+   @Override
+   public Density build(@Nonnull DensityAsset.Argument argument) {
+      if (this.isSkipped()) {
+         return new ConstantValueDensity(0.0);
+      } else {
+         Density input = this.buildFirstInput(argument);
+         return (Density)(input == null ? new ConstantValueDensity(0.0) : new ZOverrideDensity(input, this.value));
+      }
+   }
+
+   @Override
+   public void cleanUp() {
+      this.cleanUpInputs();
+   }
+}

@@ -1,11 +1,5 @@
 package com.hypixel.hytale.server.core.modules.physics.util;
 
 public class PhysicsConstants {
-  public static final double GRAVITY_ACCELERATION = 32.0D;
+   public static final double GRAVITY_ACCELERATION = 32.0;
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\physic\\util\PhysicsConstants.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

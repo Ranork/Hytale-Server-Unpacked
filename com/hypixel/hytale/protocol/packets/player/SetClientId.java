@@ -1,100 +1,86 @@
-/*    */ package com.hypixel.hytale.protocol.packets.player;
-/*    */ 
-/*    */ import com.hypixel.hytale.protocol.Packet;
-/*    */ import com.hypixel.hytale.protocol.io.ValidationResult;
-/*    */ import io.netty.buffer.ByteBuf;
-/*    */ import java.util.Objects;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class SetClientId
-/*    */   implements Packet
-/*    */ {
-/*    */   public static final int PACKET_ID = 100;
-/*    */   public static final boolean IS_COMPRESSED = false;
-/*    */   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-/*    */   public static final int FIXED_BLOCK_SIZE = 4;
-/*    */   public static final int VARIABLE_FIELD_COUNT = 0;
-/*    */   public static final int VARIABLE_BLOCK_START = 4;
-/*    */   public static final int MAX_SIZE = 4;
-/*    */   public int clientId;
-/*    */   
-/*    */   public int getId() {
-/* 25 */     return 100;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public SetClientId() {}
-/*    */ 
-/*    */   
-/*    */   public SetClientId(int clientId) {
-/* 34 */     this.clientId = clientId;
-/*    */   }
-/*    */   
-/*    */   public SetClientId(@Nonnull SetClientId other) {
-/* 38 */     this.clientId = other.clientId;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public static SetClientId deserialize(@Nonnull ByteBuf buf, int offset) {
-/* 43 */     SetClientId obj = new SetClientId();
-/*    */     
-/* 45 */     obj.clientId = buf.getIntLE(offset + 0);
-/*    */ 
-/*    */     
-/* 48 */     return obj;
-/*    */   }
-/*    */   
-/*    */   public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-/* 52 */     return 4;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void serialize(@Nonnull ByteBuf buf) {
-/* 58 */     buf.writeIntLE(this.clientId);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public int computeSize() {
-/* 64 */     return 4;
-/*    */   }
-/*    */   
-/*    */   public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-/* 68 */     if (buffer.readableBytes() - offset < 4) {
-/* 69 */       return ValidationResult.error("Buffer too small: expected at least 4 bytes");
-/*    */     }
-/*    */ 
-/*    */     
-/* 73 */     return ValidationResult.OK;
-/*    */   }
-/*    */   
-/*    */   public SetClientId clone() {
-/* 77 */     SetClientId copy = new SetClientId();
-/* 78 */     copy.clientId = this.clientId;
-/* 79 */     return copy;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean equals(Object obj) {
-/*    */     SetClientId other;
-/* 85 */     if (this == obj) return true; 
-/* 86 */     if (obj instanceof SetClientId) { other = (SetClientId)obj; } else { return false; }
-/* 87 */      return (this.clientId == other.clientId);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int hashCode() {
-/* 92 */     return Objects.hash(new Object[] { Integer.valueOf(this.clientId) });
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.protocol.packets.player;
 
+import com.hypixel.hytale.protocol.NetworkChannel;
+import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ValidationResult;
+import io.netty.buffer.ByteBuf;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\protocol\packets\player\SetClientId.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SetClientId implements Packet, ToClientPacket {
+   public static final int PACKET_ID = 100;
+   public static final boolean IS_COMPRESSED = false;
+   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
+   public static final int FIXED_BLOCK_SIZE = 4;
+   public static final int VARIABLE_FIELD_COUNT = 0;
+   public static final int VARIABLE_BLOCK_START = 4;
+   public static final int MAX_SIZE = 4;
+   public int clientId;
+
+   @Override
+   public int getId() {
+      return 100;
+   }
+
+   @Override
+   public NetworkChannel getChannel() {
+      return NetworkChannel.Default;
+   }
+
+   public SetClientId() {
+   }
+
+   public SetClientId(int clientId) {
+      this.clientId = clientId;
+   }
+
+   public SetClientId(@Nonnull SetClientId other) {
+      this.clientId = other.clientId;
+   }
+
+   @Nonnull
+   public static SetClientId deserialize(@Nonnull ByteBuf buf, int offset) {
+      SetClientId obj = new SetClientId();
+      obj.clientId = buf.getIntLE(offset + 0);
+      return obj;
+   }
+
+   public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
+      return 4;
+   }
+
+   @Override
+   public void serialize(@Nonnull ByteBuf buf) {
+      buf.writeIntLE(this.clientId);
+   }
+
+   @Override
+   public int computeSize() {
+      return 4;
+   }
+
+   public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
+      return buffer.readableBytes() - offset < 4 ? ValidationResult.error("Buffer too small: expected at least 4 bytes") : ValidationResult.OK;
+   }
+
+   public SetClientId clone() {
+      SetClientId copy = new SetClientId();
+      copy.clientId = this.clientId;
+      return copy;
+   }
+
+   @Override
+   public boolean equals(Object obj) {
+      if (this == obj) {
+         return true;
+      } else {
+         return obj instanceof SetClientId other ? this.clientId == other.clientId : false;
+      }
+   }
+
+   @Override
+   public int hashCode() {
+      return Objects.hash(this.clientId);
+   }
+}

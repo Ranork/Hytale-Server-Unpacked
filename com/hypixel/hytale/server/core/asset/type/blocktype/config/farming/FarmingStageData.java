@@ -1,107 +1,110 @@
-/*    */ package com.hypixel.hytale.server.core.asset.type.blocktype.config.farming;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.lookup.CodecMapCodec;
-/*    */ import com.hypixel.hytale.codec.validation.Validator;
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.math.util.ChunkUtil;
-/*    */ import com.hypixel.hytale.protocol.Rangef;
-/*    */ import com.hypixel.hytale.protocol.SoundCategory;
-/*    */ import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
-/*    */ import com.hypixel.hytale.server.core.asset.type.soundevent.validator.SoundEventValidators;
-/*    */ import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
-/*    */ import com.hypixel.hytale.server.core.universe.world.SoundUtil;
-/*    */ import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public abstract class FarmingStageData {
-/*    */   @Nonnull
-/* 24 */   public static CodecMapCodec<FarmingStageData> CODEC = new CodecMapCodec("Type");
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public static BuilderCodec<FarmingStageData> BASE_CODEC;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   protected Rangef duration;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   static {
-/* 47 */     BASE_CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.abstractBuilder(FarmingStageData.class).append(new KeyedCodec("Duration", (Codec)ProtocolCodecs.RANGEF), (farmingStage, duration) -> farmingStage.duration = duration, farmingStage -> farmingStage.duration).add()).append(new KeyedCodec("SoundEventId", (Codec)Codec.STRING), (farmingStage, sound) -> farmingStage.soundEventId = sound, farmingStage -> farmingStage.soundEventId).addValidator(SoundEvent.VALIDATOR_CACHE.getValidator()).addValidator((Validator)SoundEventValidators.MONO).addValidator((Validator)SoundEventValidators.ONESHOT).add()).afterDecode(farmingStage -> { if (farmingStage.soundEventId != null) farmingStage.soundEventIndex = SoundEvent.getAssetMap().getIndex(farmingStage.soundEventId);  })).build();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/* 54 */   protected String soundEventId = null;
-/*    */   
-/* 56 */   protected transient int soundEventIndex = 0;
-/*    */   
-/*    */   @Nullable
-/*    */   public Rangef getDuration() {
-/* 60 */     return this.duration;
-/*    */   }
-/*    */   
-/*    */   @Nullable
-/*    */   public String getSoundEventId() {
-/* 65 */     return this.soundEventId;
-/*    */   }
-/*    */   
-/*    */   public int getSoundEventIndex() {
-/* 69 */     return this.soundEventIndex;
-/*    */   }
-/*    */   
-/*    */   public boolean implementsShouldStop() {
-/* 73 */     return false;
-/*    */   }
-/*    */   
-/*    */   public boolean shouldStop(ComponentAccessor<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z) {
-/* 77 */     return false;
-/*    */   }
-/*    */   
-/*    */   public void apply(ComponentAccessor<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z, @Nullable FarmingStageData previousStage) {
-/* 81 */     ChunkSection section = (ChunkSection)commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-/* 82 */     int worldX = ChunkUtil.worldCoordFromLocalCoord(section.getX(), x);
-/* 83 */     int worldY = ChunkUtil.worldCoordFromLocalCoord(section.getY(), y);
-/* 84 */     int worldZ = ChunkUtil.worldCoordFromLocalCoord(section.getZ(), z);
-/* 85 */     SoundUtil.playSoundEvent3d(this.soundEventIndex, SoundCategory.SFX, worldX, worldY, worldZ, (ComponentAccessor)((ChunkStore)commandBuffer.getExternalData()).getWorld().getEntityStore().getStore());
-/*    */     
-/* 87 */     if (previousStage != null) {
-/* 88 */       previousStage.remove(commandBuffer, sectionRef, blockRef, x, y, z);
-/*    */     }
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void remove(ComponentAccessor<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z) {}
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 99 */     return "FarmingStageData{duration=" + String.valueOf(this.duration) + ", soundEventId='" + this.soundEventId + "'}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.asset.type.blocktype.config.farming;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.lookup.CodecMapCodec;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.protocol.Rangef;
+import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
+import com.hypixel.hytale.server.core.asset.type.soundevent.validator.SoundEventValidators;
+import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\type\blocktype\config\farming\FarmingStageData.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class FarmingStageData {
+   @Nonnull
+   public static CodecMapCodec<FarmingStageData> CODEC = new CodecMapCodec<>("Type");
+   @Nonnull
+   public static BuilderCodec<FarmingStageData> BASE_CODEC = BuilderCodec.abstractBuilder(FarmingStageData.class)
+      .append(
+         new KeyedCodec<>("Duration", ProtocolCodecs.RANGEF),
+         (farmingStage, duration) -> farmingStage.duration = duration,
+         farmingStage -> farmingStage.duration
+      )
+      .add()
+      .<String>append(
+         new KeyedCodec<>("SoundEventId", Codec.STRING), (farmingStage, sound) -> farmingStage.soundEventId = sound, farmingStage -> farmingStage.soundEventId
+      )
+      .addValidator(SoundEvent.VALIDATOR_CACHE.getValidator())
+      .addValidator(SoundEventValidators.MONO)
+      .addValidator(SoundEventValidators.ONESHOT)
+      .add()
+      .afterDecode(farmingStage -> {
+         if (farmingStage.soundEventId != null) {
+            farmingStage.soundEventIndex = SoundEvent.getAssetMap().getIndex(farmingStage.soundEventId);
+         }
+      })
+      .build();
+   protected Rangef duration;
+   @Nullable
+   protected String soundEventId;
+   protected transient int soundEventIndex = 0;
+
+   @Nullable
+   public Rangef getDuration() {
+      return this.duration;
+   }
+
+   @Nullable
+   public String getSoundEventId() {
+      return this.soundEventId;
+   }
+
+   public int getSoundEventIndex() {
+      return this.soundEventIndex;
+   }
+
+   public boolean implementsShouldStop() {
+      return false;
+   }
+
+   public boolean shouldStop(
+      @Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z
+   ) {
+      return false;
+   }
+
+   public void apply(
+      @Nonnull ComponentAccessor<ChunkStore> commandBuffer,
+      @Nonnull Ref<ChunkStore> sectionRef,
+      @Nonnull Ref<ChunkStore> blockRef,
+      int x,
+      int y,
+      int z,
+      @Nullable FarmingStageData previousStage
+   ) {
+      ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+      if (chunkSectionComponent != null) {
+         int worldX = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getX(), x);
+         int worldY = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getY(), y);
+         int worldZ = ChunkUtil.worldCoordFromLocalCoord(chunkSectionComponent.getZ(), z);
+         World world = commandBuffer.getExternalData().getWorld();
+         Store<EntityStore> entityStore = world.getEntityStore().getStore();
+         SoundUtil.playSoundEvent3d(this.soundEventIndex, SoundCategory.SFX, worldX, worldY, worldZ, entityStore);
+         if (previousStage != null) {
+            previousStage.remove(commandBuffer, sectionRef, blockRef, x, y, z);
+         }
+      }
+   }
+
+   public void remove(
+      @Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z
+   ) {
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "FarmingStageData{duration=" + this.duration + ", soundEventId='" + this.soundEventId + "'}";
+   }
+}

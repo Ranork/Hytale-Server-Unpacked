@@ -1,13 +1,7 @@
-/*   */ package com.hypixel.hytale.math.hitdetection;
-/*   */ 
-/*   */ public interface LineOfSightProvider {
-/*   */   public static final LineOfSightProvider DEFAULT_TRUE = (fromX, fromY, fromZ, toX, toY, toZ) -> true;
-/*   */   
-/*   */   boolean test(double paramDouble1, double paramDouble2, double paramDouble3, double paramDouble4, double paramDouble5, double paramDouble6);
-/*   */ }
+package com.hypixel.hytale.math.hitdetection;
 
+public interface LineOfSightProvider {
+   LineOfSightProvider DEFAULT_TRUE = (fromX, fromY, fromZ, toX, toY, toZ) -> true;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\math\hitdetection\LineOfSightProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+   boolean test(double var1, double var3, double var5, double var7, double var9, double var11);
+}

@@ -1,27 +1,11 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.framework.math;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class Interpolation
-/*    */ {
-/*    */   public static double linear(double valueA, double valueB, double weight) {
-/* 17 */     if (weight < 0.0D || weight > 1.0D)
-/* 18 */       throw new IllegalArgumentException("weight outside range"); 
-/* 19 */     return valueA * (1.0D - weight) + valueB * weight;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.framework.math;
 
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\framework\math\Interpolation.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Interpolation {
+   public static double linear(double value0, double value1, double weight) {
+      if (weight <= 0.0) {
+         return value0;
+      } else {
+         return weight >= 1.0 ? value1 : value0 * (1.0 - weight) + value1 * weight;
+      }
+   }
+}

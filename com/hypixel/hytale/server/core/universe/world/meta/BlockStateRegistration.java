@@ -1,43 +1,29 @@
-/*    */ package com.hypixel.hytale.server.core.universe.world.meta;
-/*    */ 
-/*    */ import com.hypixel.hytale.registry.Registration;
-/*    */ import java.util.function.BooleanSupplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class BlockStateRegistration
-/*    */   extends Registration
-/*    */ {
-/*    */   private final Class<? extends BlockState> blockStateClass;
-/*    */   
-/*    */   public BlockStateRegistration(Class<? extends BlockState> blockStateClass, BooleanSupplier isEnabled, Runnable unregister) {
-/* 17 */     super(isEnabled, unregister);
-/* 18 */     this.blockStateClass = blockStateClass;
-/*    */   }
-/*    */   
-/*    */   public BlockStateRegistration(@Nonnull BlockStateRegistration registration, BooleanSupplier isEnabled, Runnable unregister) {
-/* 22 */     super(isEnabled, unregister);
-/* 23 */     this.blockStateClass = registration.blockStateClass;
-/*    */   }
-/*    */   
-/*    */   public Class<? extends BlockState> getBlockStateClass() {
-/* 27 */     return this.blockStateClass;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 33 */     return "BlockStateRegistration{blockStateClass=" + String.valueOf(this.blockStateClass) + ", " + super
-/*    */       
-/* 35 */       .toString() + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.universe.world.meta;
 
+import com.hypixel.hytale.registry.Registration;
+import java.util.function.BooleanSupplier;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\meta\BlockStateRegistration.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BlockStateRegistration extends Registration {
+   private final Class<? extends BlockState> blockStateClass;
+
+   public BlockStateRegistration(Class<? extends BlockState> blockStateClass, BooleanSupplier isEnabled, Runnable unregister) {
+      super(isEnabled, unregister);
+      this.blockStateClass = blockStateClass;
+   }
+
+   public BlockStateRegistration(@Nonnull BlockStateRegistration registration, BooleanSupplier isEnabled, Runnable unregister) {
+      super(isEnabled, unregister);
+      this.blockStateClass = registration.blockStateClass;
+   }
+
+   public Class<? extends BlockState> getBlockStateClass() {
+      return this.blockStateClass;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "BlockStateRegistration{blockStateClass=" + this.blockStateClass + ", " + super.toString() + "}";
+   }
+}

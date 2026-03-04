@@ -1,36 +1,25 @@
-/*    */ package com.hypixel.hytale.server.npc.components;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.component.Component;
-/*    */ import com.hypixel.hytale.component.ComponentType;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import com.hypixel.hytale.server.spawning.SpawningPlugin;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class SpawnBeaconReference
-/*    */   extends SpawnReference
-/*    */ {
-/* 16 */   public static final BuilderCodec<SpawnBeaconReference> CODEC = BuilderCodec.builder(SpawnBeaconReference.class, SpawnBeaconReference::new, BASE_CODEC)
-/* 17 */     .build();
-/*    */   
-/*    */   public static ComponentType<EntityStore, SpawnBeaconReference> getComponentType() {
-/* 20 */     return SpawningPlugin.get().getSpawnBeaconReferenceComponentType();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Component<EntityStore> clone() {
-/* 26 */     SpawnBeaconReference reference = new SpawnBeaconReference();
-/* 27 */     reference.reference = this.reference;
-/* 28 */     return reference;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.components;
 
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.spawning.SpawningPlugin;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\components\SpawnBeaconReference.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SpawnBeaconReference extends SpawnReference {
+   public static final BuilderCodec<SpawnBeaconReference> CODEC = BuilderCodec.builder(SpawnBeaconReference.class, SpawnBeaconReference::new, BASE_CODEC)
+      .build();
+
+   public static ComponentType<EntityStore, SpawnBeaconReference> getComponentType() {
+      return SpawningPlugin.get().getSpawnBeaconReferenceComponentType();
+   }
+
+   @Nonnull
+   @Override
+   public Component<EntityStore> clone() {
+      SpawnBeaconReference reference = new SpawnBeaconReference();
+      reference.reference = this.reference;
+      return reference;
+   }
+}

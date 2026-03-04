@@ -1,38 +1,56 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.farming.config.modifiers;
-/*    */ import com.hypixel.hytale.builtin.adventure.farming.states.TilledSoilBlock;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.component.CommandBuffer;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.math.util.ChunkUtil;
-/*    */ import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.GrowthModifierAsset;
-/*    */ import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
-/*    */ import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-/*    */ import java.util.function.Supplier;
-/*    */ 
-/*    */ public class FertilizerGrowthModifierAsset extends GrowthModifierAsset {
-/* 14 */   public static final BuilderCodec<FertilizerGrowthModifierAsset> CODEC = BuilderCodec.builder(FertilizerGrowthModifierAsset.class, FertilizerGrowthModifierAsset::new, ABSTRACT_CODEC)
-/* 15 */     .build();
-/*    */ 
-/*    */   
-/*    */   public double getCurrentGrowthMultiplier(CommandBuffer<ChunkStore> commandBuffer, Ref<ChunkStore> sectionRef, Ref<ChunkStore> blockRef, int x, int y, int z, boolean initialTick) {
-/* 19 */     ChunkSection chunkSection = (ChunkSection)commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
-/* 20 */     Ref<ChunkStore> chunk = chunkSection.getChunkColumnReference();
-/* 21 */     BlockComponentChunk blockComponentChunk = (BlockComponentChunk)commandBuffer.getComponent(chunk, BlockComponentChunk.getComponentType());
-/*    */     
-/* 23 */     Ref<ChunkStore> blockRefBelow = blockComponentChunk.getEntityReference(ChunkUtil.indexBlockInColumn(x, y - 1, z));
-/* 24 */     if (blockRefBelow == null) return 1.0D;
-/*    */     
-/* 26 */     TilledSoilBlock soil = (TilledSoilBlock)commandBuffer.getComponent(blockRefBelow, TilledSoilBlock.getComponentType());
-/* 27 */     if (soil != null && soil.isFertilized()) {
-/* 28 */       return super.getCurrentGrowthMultiplier(commandBuffer, sectionRef, blockRef, x, y, z, initialTick);
-/*    */     }
-/* 30 */     return 1.0D;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.farming.config.modifiers;
 
+import com.hypixel.hytale.builtin.adventure.farming.states.TilledSoilBlock;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.GrowthModifierAsset;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\farming\config\modifiers\FertilizerGrowthModifierAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class FertilizerGrowthModifierAsset extends GrowthModifierAsset {
+   @Nonnull
+   public static final BuilderCodec<FertilizerGrowthModifierAsset> CODEC = BuilderCodec.builder(
+         FertilizerGrowthModifierAsset.class, FertilizerGrowthModifierAsset::new, ABSTRACT_CODEC
+      )
+      .build();
+
+   @Override
+   public double getCurrentGrowthMultiplier(
+      @Nonnull CommandBuffer<ChunkStore> commandBuffer,
+      @Nonnull Ref<ChunkStore> sectionRef,
+      @Nonnull Ref<ChunkStore> blockRef,
+      int x,
+      int y,
+      int z,
+      boolean initialTick
+   ) {
+      ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+
+      assert chunkSectionComponent != null;
+
+      Ref<ChunkStore> chunkRef = chunkSectionComponent.getChunkColumnReference();
+      if (chunkRef != null && chunkRef.isValid()) {
+         BlockComponentChunk blockComponentChunk = commandBuffer.getComponent(chunkRef, BlockComponentChunk.getComponentType());
+         if (blockComponentChunk == null) {
+            return 1.0;
+         } else {
+            int chunkIndexBelow = ChunkUtil.indexBlockInColumn(x, y - 1, z);
+            Ref<ChunkStore> blockBelowRef = blockComponentChunk.getEntityReference(chunkIndexBelow);
+            if (blockBelowRef != null && blockBelowRef.isValid()) {
+               TilledSoilBlock belowTilledSoilComponent = commandBuffer.getComponent(blockBelowRef, TilledSoilBlock.getComponentType());
+               return belowTilledSoilComponent != null && belowTilledSoilComponent.isFertilized()
+                  ? super.getCurrentGrowthMultiplier(commandBuffer, sectionRef, blockRef, x, y, z, initialTick)
+                  : 1.0;
+            } else {
+               return 1.0;
+            }
+         }
+      } else {
+         return 1.0;
+      }
+   }
+}

@@ -6,29 +6,23 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface SpatialStructure<T> {
-  int size();
-  
-  void rebuild(@Nonnull SpatialData<T> paramSpatialData);
-  
-  @Nullable
-  T closest(@Nonnull Vector3d paramVector3d);
-  
-  void collect(@Nonnull Vector3d paramVector3d, double paramDouble, @Nonnull List<T> paramList);
-  
-  void collectCylinder(@Nonnull Vector3d paramVector3d, double paramDouble1, double paramDouble2, @Nonnull List<T> paramList);
-  
-  void collectBox(@Nonnull Vector3d paramVector3d1, @Nonnull Vector3d paramVector3d2, @Nonnull List<T> paramList);
-  
-  void ordered(@Nonnull Vector3d paramVector3d, double paramDouble, @Nonnull List<T> paramList);
-  
-  void ordered3DAxis(@Nonnull Vector3d paramVector3d, double paramDouble1, double paramDouble2, double paramDouble3, @Nonnull List<T> paramList);
-  
-  @Nonnull
-  String dump();
+   int size();
+
+   void rebuild(@Nonnull SpatialData<T> var1);
+
+   @Nullable
+   T closest(@Nonnull Vector3d var1);
+
+   void collect(@Nonnull Vector3d var1, double var2, @Nonnull List<T> var4);
+
+   void collectCylinder(@Nonnull Vector3d var1, double var2, double var4, @Nonnull List<T> var6);
+
+   void collectBox(@Nonnull Vector3d var1, @Nonnull Vector3d var2, @Nonnull List<T> var3);
+
+   void ordered(@Nonnull Vector3d var1, double var2, @Nonnull List<T> var4);
+
+   void ordered3DAxis(@Nonnull Vector3d var1, double var2, double var4, double var6, @Nonnull List<T> var8);
+
+   @Nonnull
+   String dump();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\component\spatial\SpatialStructure.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

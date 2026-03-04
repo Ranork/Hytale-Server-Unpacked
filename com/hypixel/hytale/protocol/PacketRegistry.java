@@ -1,354 +1,3563 @@
-/*     */ package com.hypixel.hytale.protocol;
-/*     */ import com.hypixel.hytale.protocol.io.ValidationResult;
-/*     */ import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateJsonAsset;
-/*     */ import com.hypixel.hytale.protocol.packets.assets.UpdateRecipes;
-/*     */ import com.hypixel.hytale.protocol.packets.connection.Connect;
-/*     */ import com.hypixel.hytale.protocol.packets.machinima.RequestMachinimaActorModel;
-/*     */ import com.hypixel.hytale.protocol.packets.world.UpdateEnvironmentMusic;
-/*     */ import io.netty.buffer.ByteBuf;
-/*     */ import java.util.Map;
-/*     */ import java.util.function.BiFunction;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ public final class PacketRegistry {
-/*  14 */   private static final Map<Integer, PacketInfo> BY_ID = new HashMap<>();
-/*  15 */   private static final Map<Integer, PacketInfo> BY_ID_UNMODIFIABLE = Collections.unmodifiableMap(BY_ID);
-/*  16 */   private static final Map<Class<? extends Packet>, Integer> BY_TYPE = new HashMap<>();
-/*     */   
-/*     */   static {
-/*  19 */     register(0, "Connect", (Class)Connect.class, 46, 38013, false, Connect::validateStructure, Connect::deserialize);
-/*  20 */     register(1, "Disconnect", (Class)Disconnect.class, 2, 16384007, false, Disconnect::validateStructure, Disconnect::deserialize);
-/*  21 */     register(2, "Ping", (Class)Ping.class, 29, 29, false, Ping::validateStructure, Ping::deserialize);
-/*  22 */     register(3, "Pong", (Class)Pong.class, 20, 20, false, Pong::validateStructure, Pong::deserialize);
-/*  23 */     register(10, "Status", (Class)Status.class, 9, 2587, false, Status::validateStructure, Status::deserialize);
-/*  24 */     register(11, "AuthGrant", (Class)AuthGrant.class, 1, 49171, false, AuthGrant::validateStructure, AuthGrant::deserialize);
-/*  25 */     register(12, "AuthToken", (Class)AuthToken.class, 1, 49171, false, AuthToken::validateStructure, AuthToken::deserialize);
-/*  26 */     register(13, "ServerAuthToken", (Class)ServerAuthToken.class, 1, 32851, false, ServerAuthToken::validateStructure, ServerAuthToken::deserialize);
-/*  27 */     register(14, "ConnectAccept", (Class)ConnectAccept.class, 1, 70, false, ConnectAccept::validateStructure, ConnectAccept::deserialize);
-/*  28 */     register(15, "PasswordResponse", (Class)PasswordResponse.class, 1, 70, false, PasswordResponse::validateStructure, PasswordResponse::deserialize);
-/*  29 */     register(16, "PasswordAccepted", (Class)PasswordAccepted.class, 0, 0, false, PasswordAccepted::validateStructure, PasswordAccepted::deserialize);
-/*  30 */     register(17, "PasswordRejected", (Class)PasswordRejected.class, 5, 74, false, PasswordRejected::validateStructure, PasswordRejected::deserialize);
-/*  31 */     register(18, "ClientReferral", (Class)ClientReferral.class, 1, 5141, false, ClientReferral::validateStructure, ClientReferral::deserialize);
-/*  32 */     register(20, "WorldSettings", (Class)WorldSettings.class, 5, 1677721600, true, WorldSettings::validateStructure, WorldSettings::deserialize);
-/*  33 */     register(21, "WorldLoadProgress", (Class)WorldLoadProgress.class, 9, 16384014, false, WorldLoadProgress::validateStructure, WorldLoadProgress::deserialize);
-/*  34 */     register(22, "WorldLoadFinished", (Class)WorldLoadFinished.class, 0, 0, false, WorldLoadFinished::validateStructure, WorldLoadFinished::deserialize);
-/*  35 */     register(23, "RequestAssets", (Class)RequestAssets.class, 1, 1677721600, true, RequestAssets::validateStructure, RequestAssets::deserialize);
-/*  36 */     register(24, "AssetInitialize", (Class)AssetInitialize.class, 4, 2121, false, AssetInitialize::validateStructure, AssetInitialize::deserialize);
-/*  37 */     register(25, "AssetPart", (Class)AssetPart.class, 1, 4096006, true, AssetPart::validateStructure, AssetPart::deserialize);
-/*  38 */     register(26, "AssetFinalize", (Class)AssetFinalize.class, 0, 0, false, AssetFinalize::validateStructure, AssetFinalize::deserialize);
-/*  39 */     register(27, "RemoveAssets", (Class)RemoveAssets.class, 1, 1677721600, false, RemoveAssets::validateStructure, RemoveAssets::deserialize);
-/*  40 */     register(28, "RequestCommonAssetsRebuild", (Class)RequestCommonAssetsRebuild.class, 0, 0, false, RequestCommonAssetsRebuild::validateStructure, RequestCommonAssetsRebuild::deserialize);
-/*  41 */     register(29, "SetUpdateRate", (Class)SetUpdateRate.class, 4, 4, false, SetUpdateRate::validateStructure, SetUpdateRate::deserialize);
-/*  42 */     register(30, "SetTimeDilation", (Class)SetTimeDilation.class, 4, 4, false, SetTimeDilation::validateStructure, SetTimeDilation::deserialize);
-/*  43 */     register(31, "UpdateFeatures", (Class)UpdateFeatures.class, 1, 8192006, false, UpdateFeatures::validateStructure, UpdateFeatures::deserialize);
-/*  44 */     register(32, "ViewRadius", (Class)ViewRadius.class, 4, 4, false, ViewRadius::validateStructure, ViewRadius::deserialize);
-/*  45 */     register(33, "PlayerOptions", (Class)PlayerOptions.class, 1, 327680184, false, PlayerOptions::validateStructure, PlayerOptions::deserialize);
-/*  46 */     register(34, "ServerTags", (Class)ServerTags.class, 1, 1677721600, false, ServerTags::validateStructure, ServerTags::deserialize);
-/*  47 */     register(40, "UpdateBlockTypes", (Class)UpdateBlockTypes.class, 10, 1677721600, true, UpdateBlockTypes::validateStructure, UpdateBlockTypes::deserialize);
-/*  48 */     register(41, "UpdateBlockHitboxes", (Class)UpdateBlockHitboxes.class, 6, 1677721600, true, UpdateBlockHitboxes::validateStructure, UpdateBlockHitboxes::deserialize);
-/*  49 */     register(42, "UpdateBlockSoundSets", (Class)UpdateBlockSoundSets.class, 6, 1677721600, true, UpdateBlockSoundSets::validateStructure, UpdateBlockSoundSets::deserialize);
-/*  50 */     register(43, "UpdateItemSoundSets", (Class)UpdateItemSoundSets.class, 6, 1677721600, true, UpdateItemSoundSets::validateStructure, UpdateItemSoundSets::deserialize);
-/*  51 */     register(44, "UpdateBlockParticleSets", (Class)UpdateBlockParticleSets.class, 2, 1677721600, true, UpdateBlockParticleSets::validateStructure, UpdateBlockParticleSets::deserialize);
-/*  52 */     register(45, "UpdateBlockBreakingDecals", (Class)UpdateBlockBreakingDecals.class, 2, 1677721600, true, UpdateBlockBreakingDecals::validateStructure, UpdateBlockBreakingDecals::deserialize);
-/*  53 */     register(46, "UpdateBlockSets", (Class)UpdateBlockSets.class, 2, 1677721600, true, UpdateBlockSets::validateStructure, UpdateBlockSets::deserialize);
-/*  54 */     register(47, "UpdateWeathers", (Class)UpdateWeathers.class, 6, 1677721600, true, UpdateWeathers::validateStructure, UpdateWeathers::deserialize);
-/*  55 */     register(48, "UpdateTrails", (Class)UpdateTrails.class, 2, 1677721600, true, UpdateTrails::validateStructure, UpdateTrails::deserialize);
-/*  56 */     register(49, "UpdateParticleSystems", (Class)UpdateParticleSystems.class, 2, 1677721600, true, UpdateParticleSystems::validateStructure, UpdateParticleSystems::deserialize);
-/*  57 */     register(50, "UpdateParticleSpawners", (Class)UpdateParticleSpawners.class, 2, 1677721600, true, UpdateParticleSpawners::validateStructure, UpdateParticleSpawners::deserialize);
-/*  58 */     register(51, "UpdateEntityEffects", (Class)UpdateEntityEffects.class, 6, 1677721600, true, UpdateEntityEffects::validateStructure, UpdateEntityEffects::deserialize);
-/*  59 */     register(52, "UpdateItemPlayerAnimations", (Class)UpdateItemPlayerAnimations.class, 2, 1677721600, true, UpdateItemPlayerAnimations::validateStructure, UpdateItemPlayerAnimations::deserialize);
-/*  60 */     register(53, "UpdateModelvfxs", (Class)UpdateModelvfxs.class, 6, 1677721600, true, UpdateModelvfxs::validateStructure, UpdateModelvfxs::deserialize);
-/*  61 */     register(54, "UpdateItems", (Class)UpdateItems.class, 4, 1677721600, true, UpdateItems::validateStructure, UpdateItems::deserialize);
-/*  62 */     register(55, "UpdateItemQualities", (Class)UpdateItemQualities.class, 6, 1677721600, true, UpdateItemQualities::validateStructure, UpdateItemQualities::deserialize);
-/*  63 */     register(56, "UpdateItemCategories", (Class)UpdateItemCategories.class, 2, 1677721600, true, UpdateItemCategories::validateStructure, UpdateItemCategories::deserialize);
-/*  64 */     register(57, "UpdateItemReticles", (Class)UpdateItemReticles.class, 6, 1677721600, true, UpdateItemReticles::validateStructure, UpdateItemReticles::deserialize);
-/*  65 */     register(58, "UpdateFieldcraftCategories", (Class)UpdateFieldcraftCategories.class, 2, 1677721600, true, UpdateFieldcraftCategories::validateStructure, UpdateFieldcraftCategories::deserialize);
-/*  66 */     register(59, "UpdateResourceTypes", (Class)UpdateResourceTypes.class, 2, 1677721600, true, UpdateResourceTypes::validateStructure, UpdateResourceTypes::deserialize);
-/*  67 */     register(60, "UpdateRecipes", (Class)UpdateRecipes.class, 2, 1677721600, true, UpdateRecipes::validateStructure, UpdateRecipes::deserialize);
-/*  68 */     register(61, "UpdateEnvironments", (Class)UpdateEnvironments.class, 7, 1677721600, true, UpdateEnvironments::validateStructure, UpdateEnvironments::deserialize);
-/*  69 */     register(62, "UpdateAmbienceFX", (Class)UpdateAmbienceFX.class, 6, 1677721600, true, UpdateAmbienceFX::validateStructure, UpdateAmbienceFX::deserialize);
-/*  70 */     register(63, "UpdateFluidFX", (Class)UpdateFluidFX.class, 6, 1677721600, true, UpdateFluidFX::validateStructure, UpdateFluidFX::deserialize);
-/*  71 */     register(64, "UpdateTranslations", (Class)UpdateTranslations.class, 2, 1677721600, true, UpdateTranslations::validateStructure, UpdateTranslations::deserialize);
-/*  72 */     register(65, "UpdateSoundEvents", (Class)UpdateSoundEvents.class, 6, 1677721600, true, UpdateSoundEvents::validateStructure, UpdateSoundEvents::deserialize);
-/*  73 */     register(66, "UpdateInteractions", (Class)UpdateInteractions.class, 6, 1677721600, true, UpdateInteractions::validateStructure, UpdateInteractions::deserialize);
-/*  74 */     register(67, "UpdateRootInteractions", (Class)UpdateRootInteractions.class, 6, 1677721600, true, UpdateRootInteractions::validateStructure, UpdateRootInteractions::deserialize);
-/*  75 */     register(68, "UpdateUnarmedInteractions", (Class)UpdateUnarmedInteractions.class, 2, 20480007, true, UpdateUnarmedInteractions::validateStructure, UpdateUnarmedInteractions::deserialize);
-/*  76 */     register(69, "TrackOrUpdateObjective", (Class)TrackOrUpdateObjective.class, 1, 1677721600, false, TrackOrUpdateObjective::validateStructure, TrackOrUpdateObjective::deserialize);
-/*  77 */     register(70, "UntrackObjective", (Class)UntrackObjective.class, 16, 16, false, UntrackObjective::validateStructure, UntrackObjective::deserialize);
-/*  78 */     register(71, "UpdateObjectiveTask", (Class)UpdateObjectiveTask.class, 21, 16384035, false, UpdateObjectiveTask::validateStructure, UpdateObjectiveTask::deserialize);
-/*  79 */     register(72, "UpdateEntityStatTypes", (Class)UpdateEntityStatTypes.class, 6, 1677721600, true, UpdateEntityStatTypes::validateStructure, UpdateEntityStatTypes::deserialize);
-/*  80 */     register(73, "UpdateEntityUIComponents", (Class)UpdateEntityUIComponents.class, 6, 1677721600, true, UpdateEntityUIComponents::validateStructure, UpdateEntityUIComponents::deserialize);
-/*  81 */     register(74, "UpdateHitboxCollisionConfig", (Class)UpdateHitboxCollisionConfig.class, 6, 36864011, true, UpdateHitboxCollisionConfig::validateStructure, UpdateHitboxCollisionConfig::deserialize);
-/*  82 */     register(75, "UpdateRepulsionConfig", (Class)UpdateRepulsionConfig.class, 6, 65536011, true, UpdateRepulsionConfig::validateStructure, UpdateRepulsionConfig::deserialize);
-/*  83 */     register(76, "UpdateViewBobbing", (Class)UpdateViewBobbing.class, 2, 1677721600, true, UpdateViewBobbing::validateStructure, UpdateViewBobbing::deserialize);
-/*  84 */     register(77, "UpdateCameraShake", (Class)UpdateCameraShake.class, 2, 1677721600, true, UpdateCameraShake::validateStructure, UpdateCameraShake::deserialize);
-/*  85 */     register(78, "UpdateBlockGroups", (Class)UpdateBlockGroups.class, 2, 1677721600, true, UpdateBlockGroups::validateStructure, UpdateBlockGroups::deserialize);
-/*  86 */     register(79, "UpdateSoundSets", (Class)UpdateSoundSets.class, 6, 1677721600, true, UpdateSoundSets::validateStructure, UpdateSoundSets::deserialize);
-/*  87 */     register(80, "UpdateAudioCategories", (Class)UpdateAudioCategories.class, 6, 1677721600, true, UpdateAudioCategories::validateStructure, UpdateAudioCategories::deserialize);
-/*  88 */     register(81, "UpdateReverbEffects", (Class)UpdateReverbEffects.class, 6, 1677721600, true, UpdateReverbEffects::validateStructure, UpdateReverbEffects::deserialize);
-/*  89 */     register(82, "UpdateEqualizerEffects", (Class)UpdateEqualizerEffects.class, 6, 1677721600, true, UpdateEqualizerEffects::validateStructure, UpdateEqualizerEffects::deserialize);
-/*  90 */     register(83, "UpdateFluids", (Class)UpdateFluids.class, 6, 1677721600, true, UpdateFluids::validateStructure, UpdateFluids::deserialize);
-/*  91 */     register(84, "UpdateTagPatterns", (Class)UpdateTagPatterns.class, 6, 1677721600, true, UpdateTagPatterns::validateStructure, UpdateTagPatterns::deserialize);
-/*  92 */     register(85, "UpdateProjectileConfigs", (Class)UpdateProjectileConfigs.class, 2, 1677721600, true, UpdateProjectileConfigs::validateStructure, UpdateProjectileConfigs::deserialize);
-/*  93 */     register(100, "SetClientId", (Class)SetClientId.class, 4, 4, false, SetClientId::validateStructure, SetClientId::deserialize);
-/*  94 */     register(101, "SetGameMode", (Class)SetGameMode.class, 1, 1, false, SetGameMode::validateStructure, SetGameMode::deserialize);
-/*  95 */     register(102, "SetMovementStates", (Class)SetMovementStates.class, 2, 2, false, SetMovementStates::validateStructure, SetMovementStates::deserialize);
-/*  96 */     register(103, "SetBlockPlacementOverride", (Class)SetBlockPlacementOverride.class, 1, 1, false, SetBlockPlacementOverride::validateStructure, SetBlockPlacementOverride::deserialize);
-/*  97 */     register(104, "JoinWorld", (Class)JoinWorld.class, 18, 18, false, JoinWorld::validateStructure, JoinWorld::deserialize);
-/*  98 */     register(105, "ClientReady", (Class)ClientReady.class, 2, 2, false, ClientReady::validateStructure, ClientReady::deserialize);
-/*  99 */     register(106, "LoadHotbar", (Class)LoadHotbar.class, 1, 1, false, LoadHotbar::validateStructure, LoadHotbar::deserialize);
-/* 100 */     register(107, "SaveHotbar", (Class)SaveHotbar.class, 1, 1, false, SaveHotbar::validateStructure, SaveHotbar::deserialize);
-/* 101 */     register(108, "ClientMovement", (Class)ClientMovement.class, 153, 153, false, ClientMovement::validateStructure, ClientMovement::deserialize);
-/* 102 */     register(109, "ClientTeleport", (Class)ClientTeleport.class, 52, 52, false, ClientTeleport::validateStructure, ClientTeleport::deserialize);
-/* 103 */     register(110, "UpdateMovementSettings", (Class)UpdateMovementSettings.class, 252, 252, false, UpdateMovementSettings::validateStructure, UpdateMovementSettings::deserialize);
-/* 104 */     register(111, "MouseInteraction", (Class)MouseInteraction.class, 44, 20480071, false, MouseInteraction::validateStructure, MouseInteraction::deserialize);
-/* 105 */     register(112, "DamageInfo", (Class)DamageInfo.class, 29, 32768048, false, DamageInfo::validateStructure, DamageInfo::deserialize);
-/* 106 */     register(113, "ReticleEvent", (Class)ReticleEvent.class, 4, 4, false, ReticleEvent::validateStructure, ReticleEvent::deserialize);
-/* 107 */     register(114, "DisplayDebug", (Class)DisplayDebug.class, 19, 32768037, false, DisplayDebug::validateStructure, DisplayDebug::deserialize);
-/* 108 */     register(115, "ClearDebugShapes", (Class)ClearDebugShapes.class, 0, 0, false, ClearDebugShapes::validateStructure, ClearDebugShapes::deserialize);
-/* 109 */     register(116, "SyncPlayerPreferences", (Class)SyncPlayerPreferences.class, 12, 12, false, SyncPlayerPreferences::validateStructure, SyncPlayerPreferences::deserialize);
-/* 110 */     register(117, "ClientPlaceBlock", (Class)ClientPlaceBlock.class, 20, 20, false, ClientPlaceBlock::validateStructure, ClientPlaceBlock::deserialize);
-/* 111 */     register(118, "UpdateMemoriesFeatureStatus", (Class)UpdateMemoriesFeatureStatus.class, 1, 1, false, UpdateMemoriesFeatureStatus::validateStructure, UpdateMemoriesFeatureStatus::deserialize);
-/* 112 */     register(119, "RemoveMapMarker", (Class)RemoveMapMarker.class, 1, 16384006, false, RemoveMapMarker::validateStructure, RemoveMapMarker::deserialize);
-/* 113 */     register(131, "SetChunk", (Class)SetChunk.class, 13, 12288040, true, SetChunk::validateStructure, SetChunk::deserialize);
-/* 114 */     register(132, "SetChunkHeightmap", (Class)SetChunkHeightmap.class, 9, 4096014, true, SetChunkHeightmap::validateStructure, SetChunkHeightmap::deserialize);
-/* 115 */     register(133, "SetChunkTintmap", (Class)SetChunkTintmap.class, 9, 4096014, true, SetChunkTintmap::validateStructure, SetChunkTintmap::deserialize);
-/* 116 */     register(134, "SetChunkEnvironments", (Class)SetChunkEnvironments.class, 9, 4096014, true, SetChunkEnvironments::validateStructure, SetChunkEnvironments::deserialize);
-/* 117 */     register(135, "UnloadChunk", (Class)UnloadChunk.class, 8, 8, false, UnloadChunk::validateStructure, UnloadChunk::deserialize);
-/* 118 */     register(136, "SetFluids", (Class)SetFluids.class, 13, 4096018, true, SetFluids::validateStructure, SetFluids::deserialize);
-/* 119 */     register(140, "ServerSetBlock", (Class)ServerSetBlock.class, 19, 19, false, ServerSetBlock::validateStructure, ServerSetBlock::deserialize);
-/* 120 */     register(141, "ServerSetBlocks", (Class)ServerSetBlocks.class, 12, 36864017, false, ServerSetBlocks::validateStructure, ServerSetBlocks::deserialize);
-/* 121 */     register(142, "ServerSetFluid", (Class)ServerSetFluid.class, 17, 17, false, ServerSetFluid::validateStructure, ServerSetFluid::deserialize);
-/* 122 */     register(143, "ServerSetFluids", (Class)ServerSetFluids.class, 12, 28672017, false, ServerSetFluids::validateStructure, ServerSetFluids::deserialize);
-/* 123 */     register(144, "UpdateBlockDamage", (Class)UpdateBlockDamage.class, 21, 21, false, UpdateBlockDamage::validateStructure, UpdateBlockDamage::deserialize);
-/* 124 */     register(145, "UpdateTimeSettings", (Class)UpdateTimeSettings.class, 10, 10, false, UpdateTimeSettings::validateStructure, UpdateTimeSettings::deserialize);
-/* 125 */     register(146, "UpdateTime", (Class)UpdateTime.class, 13, 13, false, UpdateTime::validateStructure, UpdateTime::deserialize);
-/* 126 */     register(147, "UpdateEditorTimeOverride", (Class)UpdateEditorTimeOverride.class, 14, 14, false, UpdateEditorTimeOverride::validateStructure, UpdateEditorTimeOverride::deserialize);
-/* 127 */     register(148, "ClearEditorTimeOverride", (Class)ClearEditorTimeOverride.class, 0, 0, false, ClearEditorTimeOverride::validateStructure, ClearEditorTimeOverride::deserialize);
-/* 128 */     register(149, "UpdateWeather", (Class)UpdateWeather.class, 8, 8, false, UpdateWeather::validateStructure, UpdateWeather::deserialize);
-/* 129 */     register(150, "UpdateEditorWeatherOverride", (Class)UpdateEditorWeatherOverride.class, 4, 4, false, UpdateEditorWeatherOverride::validateStructure, UpdateEditorWeatherOverride::deserialize);
-/* 130 */     register(151, "UpdateEnvironmentMusic", (Class)UpdateEnvironmentMusic.class, 4, 4, false, UpdateEnvironmentMusic::validateStructure, UpdateEnvironmentMusic::deserialize);
-/* 131 */     register(152, "SpawnParticleSystem", (Class)SpawnParticleSystem.class, 44, 16384049, false, SpawnParticleSystem::validateStructure, SpawnParticleSystem::deserialize);
-/* 132 */     register(153, "SpawnBlockParticleSystem", (Class)SpawnBlockParticleSystem.class, 30, 30, false, SpawnBlockParticleSystem::validateStructure, SpawnBlockParticleSystem::deserialize);
-/* 133 */     register(154, "PlaySoundEvent2D", (Class)PlaySoundEvent2D.class, 13, 13, false, PlaySoundEvent2D::validateStructure, PlaySoundEvent2D::deserialize);
-/* 134 */     register(155, "PlaySoundEvent3D", (Class)PlaySoundEvent3D.class, 38, 38, false, PlaySoundEvent3D::validateStructure, PlaySoundEvent3D::deserialize);
-/* 135 */     register(156, "PlaySoundEventEntity", (Class)PlaySoundEventEntity.class, 16, 16, false, PlaySoundEventEntity::validateStructure, PlaySoundEventEntity::deserialize);
-/* 136 */     register(157, "UpdateSleepState", (Class)UpdateSleepState.class, 36, 65536050, false, UpdateSleepState::validateStructure, UpdateSleepState::deserialize);
-/* 137 */     register(158, "SetPaused", (Class)SetPaused.class, 1, 1, false, SetPaused::validateStructure, SetPaused::deserialize);
-/* 138 */     register(159, "ServerSetPaused", (Class)ServerSetPaused.class, 1, 1, false, ServerSetPaused::validateStructure, ServerSetPaused::deserialize);
-/* 139 */     register(160, "SetEntitySeed", (Class)SetEntitySeed.class, 4, 4, false, SetEntitySeed::validateStructure, SetEntitySeed::deserialize);
-/* 140 */     register(161, "EntityUpdates", (Class)EntityUpdates.class, 1, 1677721600, true, EntityUpdates::validateStructure, EntityUpdates::deserialize);
-/* 141 */     register(162, "PlayAnimation", (Class)PlayAnimation.class, 6, 32768024, false, PlayAnimation::validateStructure, PlayAnimation::deserialize);
-/* 142 */     register(163, "ChangeVelocity", (Class)ChangeVelocity.class, 35, 35, false, ChangeVelocity::validateStructure, ChangeVelocity::deserialize);
-/* 143 */     register(164, "ApplyKnockback", (Class)ApplyKnockback.class, 38, 38, false, ApplyKnockback::validateStructure, ApplyKnockback::deserialize);
-/* 144 */     register(165, "SpawnModelParticles", (Class)SpawnModelParticles.class, 5, 1677721600, false, SpawnModelParticles::validateStructure, SpawnModelParticles::deserialize);
-/* 145 */     register(166, "MountMovement", (Class)MountMovement.class, 59, 59, false, MountMovement::validateStructure, MountMovement::deserialize);
-/* 146 */     register(170, "UpdatePlayerInventory", (Class)UpdatePlayerInventory.class, 2, 1677721600, true, UpdatePlayerInventory::validateStructure, UpdatePlayerInventory::deserialize);
-/* 147 */     register(171, "SetCreativeItem", (Class)SetCreativeItem.class, 9, 16384019, false, SetCreativeItem::validateStructure, SetCreativeItem::deserialize);
-/* 148 */     register(172, "DropCreativeItem", (Class)DropCreativeItem.class, 0, 16384010, false, DropCreativeItem::validateStructure, DropCreativeItem::deserialize);
-/* 149 */     register(173, "SmartGiveCreativeItem", (Class)SmartGiveCreativeItem.class, 1, 16384011, false, SmartGiveCreativeItem::validateStructure, SmartGiveCreativeItem::deserialize);
-/* 150 */     register(174, "DropItemStack", (Class)DropItemStack.class, 12, 12, false, DropItemStack::validateStructure, DropItemStack::deserialize);
-/* 151 */     register(175, "MoveItemStack", (Class)MoveItemStack.class, 20, 20, false, MoveItemStack::validateStructure, MoveItemStack::deserialize);
-/* 152 */     register(176, "SmartMoveItemStack", (Class)SmartMoveItemStack.class, 13, 13, false, SmartMoveItemStack::validateStructure, SmartMoveItemStack::deserialize);
-/* 153 */     register(177, "SetActiveSlot", (Class)SetActiveSlot.class, 8, 8, false, SetActiveSlot::validateStructure, SetActiveSlot::deserialize);
-/* 154 */     register(178, "SwitchHotbarBlockSet", (Class)SwitchHotbarBlockSet.class, 1, 16384006, false, SwitchHotbarBlockSet::validateStructure, SwitchHotbarBlockSet::deserialize);
-/* 155 */     register(179, "InventoryAction", (Class)InventoryAction.class, 6, 6, false, InventoryAction::validateStructure, InventoryAction::deserialize);
-/* 156 */     register(200, "OpenWindow", (Class)OpenWindow.class, 6, 1677721600, true, OpenWindow::validateStructure, OpenWindow::deserialize);
-/* 157 */     register(201, "UpdateWindow", (Class)UpdateWindow.class, 5, 1677721600, true, UpdateWindow::validateStructure, UpdateWindow::deserialize);
-/* 158 */     register(202, "CloseWindow", (Class)CloseWindow.class, 4, 4, false, CloseWindow::validateStructure, CloseWindow::deserialize);
-/* 159 */     register(203, "SendWindowAction", (Class)SendWindowAction.class, 4, 32768027, false, SendWindowAction::validateStructure, SendWindowAction::deserialize);
-/* 160 */     register(204, "ClientOpenWindow", (Class)ClientOpenWindow.class, 1, 1, false, ClientOpenWindow::validateStructure, ClientOpenWindow::deserialize);
-/* 161 */     register(210, "ServerMessage", (Class)ServerMessage.class, 2, 1677721600, false, ServerMessage::validateStructure, ServerMessage::deserialize);
-/* 162 */     register(211, "ChatMessage", (Class)ChatMessage.class, 1, 16384006, false, ChatMessage::validateStructure, ChatMessage::deserialize);
-/* 163 */     register(212, "Notification", (Class)Notification.class, 2, 1677721600, false, Notification::validateStructure, Notification::deserialize);
-/* 164 */     register(213, "KillFeedMessage", (Class)KillFeedMessage.class, 1, 1677721600, false, KillFeedMessage::validateStructure, KillFeedMessage::deserialize);
-/* 165 */     register(214, "ShowEventTitle", (Class)ShowEventTitle.class, 14, 1677721600, false, ShowEventTitle::validateStructure, ShowEventTitle::deserialize);
-/* 166 */     register(215, "HideEventTitle", (Class)HideEventTitle.class, 4, 4, false, HideEventTitle::validateStructure, HideEventTitle::deserialize);
-/* 167 */     register(216, "SetPage", (Class)SetPage.class, 2, 2, false, SetPage::validateStructure, SetPage::deserialize);
-/* 168 */     register(217, "CustomHud", (Class)CustomHud.class, 2, 1677721600, true, CustomHud::validateStructure, CustomHud::deserialize);
-/* 169 */     register(218, "CustomPage", (Class)CustomPage.class, 4, 1677721600, true, CustomPage::validateStructure, CustomPage::deserialize);
-/* 170 */     register(219, "CustomPageEvent", (Class)CustomPageEvent.class, 2, 16384007, false, CustomPageEvent::validateStructure, CustomPageEvent::deserialize);
-/* 171 */     register(222, "EditorBlocksChange", (Class)EditorBlocksChange.class, 30, 139264048, true, EditorBlocksChange::validateStructure, EditorBlocksChange::deserialize);
-/* 172 */     register(223, "ServerInfo", (Class)ServerInfo.class, 5, 32768023, false, ServerInfo::validateStructure, ServerInfo::deserialize);
-/* 173 */     register(224, "AddToServerPlayerList", (Class)AddToServerPlayerList.class, 1, 1677721600, false, AddToServerPlayerList::validateStructure, AddToServerPlayerList::deserialize);
-/* 174 */     register(225, "RemoveFromServerPlayerList", (Class)RemoveFromServerPlayerList.class, 1, 65536006, false, RemoveFromServerPlayerList::validateStructure, RemoveFromServerPlayerList::deserialize);
-/* 175 */     register(226, "UpdateServerPlayerList", (Class)UpdateServerPlayerList.class, 1, 131072006, false, UpdateServerPlayerList::validateStructure, UpdateServerPlayerList::deserialize);
-/* 176 */     register(227, "UpdateServerPlayerListPing", (Class)UpdateServerPlayerListPing.class, 1, 81920006, false, UpdateServerPlayerListPing::validateStructure, UpdateServerPlayerListPing::deserialize);
-/* 177 */     register(228, "UpdateKnownRecipes", (Class)UpdateKnownRecipes.class, 1, 1677721600, false, UpdateKnownRecipes::validateStructure, UpdateKnownRecipes::deserialize);
-/* 178 */     register(229, "UpdatePortal", (Class)UpdatePortal.class, 6, 16384020, false, UpdatePortal::validateStructure, UpdatePortal::deserialize);
-/* 179 */     register(230, "UpdateVisibleHudComponents", (Class)UpdateVisibleHudComponents.class, 1, 4096006, false, UpdateVisibleHudComponents::validateStructure, UpdateVisibleHudComponents::deserialize);
-/* 180 */     register(231, "ResetUserInterfaceState", (Class)ResetUserInterfaceState.class, 0, 0, false, ResetUserInterfaceState::validateStructure, ResetUserInterfaceState::deserialize);
-/* 181 */     register(232, "UpdateLanguage", (Class)UpdateLanguage.class, 1, 16384006, false, UpdateLanguage::validateStructure, UpdateLanguage::deserialize);
-/* 182 */     register(233, "WorldSavingStatus", (Class)WorldSavingStatus.class, 1, 1, false, WorldSavingStatus::validateStructure, WorldSavingStatus::deserialize);
-/* 183 */     register(234, "OpenChatWithCommand", (Class)OpenChatWithCommand.class, 1, 16384006, false, OpenChatWithCommand::validateStructure, OpenChatWithCommand::deserialize);
-/* 184 */     register(240, "UpdateWorldMapSettings", (Class)UpdateWorldMapSettings.class, 16, 1677721600, false, UpdateWorldMapSettings::validateStructure, UpdateWorldMapSettings::deserialize);
-/* 185 */     register(241, "UpdateWorldMap", (Class)UpdateWorldMap.class, 1, 1677721600, true, UpdateWorldMap::validateStructure, UpdateWorldMap::deserialize);
-/* 186 */     register(242, "ClearWorldMap", (Class)ClearWorldMap.class, 0, 0, false, ClearWorldMap::validateStructure, ClearWorldMap::deserialize);
-/* 187 */     register(243, "UpdateWorldMapVisible", (Class)UpdateWorldMapVisible.class, 1, 1, false, UpdateWorldMapVisible::validateStructure, UpdateWorldMapVisible::deserialize);
-/* 188 */     register(244, "TeleportToWorldMapMarker", (Class)TeleportToWorldMapMarker.class, 1, 16384006, false, TeleportToWorldMapMarker::validateStructure, TeleportToWorldMapMarker::deserialize);
-/* 189 */     register(245, "TeleportToWorldMapPosition", (Class)TeleportToWorldMapPosition.class, 8, 8, false, TeleportToWorldMapPosition::validateStructure, TeleportToWorldMapPosition::deserialize);
-/* 190 */     register(250, "RequestServerAccess", (Class)RequestServerAccess.class, 3, 3, false, RequestServerAccess::validateStructure, RequestServerAccess::deserialize);
-/* 191 */     register(251, "UpdateServerAccess", (Class)UpdateServerAccess.class, 2, 1677721600, false, UpdateServerAccess::validateStructure, UpdateServerAccess::deserialize);
-/* 192 */     register(252, "SetServerAccess", (Class)SetServerAccess.class, 2, 16384007, false, SetServerAccess::validateStructure, SetServerAccess::deserialize);
-/* 193 */     register(260, "RequestMachinimaActorModel", (Class)RequestMachinimaActorModel.class, 1, 49152028, false, RequestMachinimaActorModel::validateStructure, RequestMachinimaActorModel::deserialize);
-/* 194 */     register(261, "SetMachinimaActorModel", (Class)SetMachinimaActorModel.class, 1, 1677721600, false, SetMachinimaActorModel::validateStructure, SetMachinimaActorModel::deserialize);
-/* 195 */     register(262, "UpdateMachinimaScene", (Class)UpdateMachinimaScene.class, 6, 36864033, true, UpdateMachinimaScene::validateStructure, UpdateMachinimaScene::deserialize);
-/* 196 */     register(280, "SetServerCamera", (Class)SetServerCamera.class, 157, 157, false, SetServerCamera::validateStructure, SetServerCamera::deserialize);
-/* 197 */     register(281, "CameraShakeEffect", (Class)CameraShakeEffect.class, 9, 9, false, CameraShakeEffect::validateStructure, CameraShakeEffect::deserialize);
-/* 198 */     register(282, "RequestFlyCameraMode", (Class)RequestFlyCameraMode.class, 1, 1, false, RequestFlyCameraMode::validateStructure, RequestFlyCameraMode::deserialize);
-/* 199 */     register(283, "SetFlyCameraMode", (Class)SetFlyCameraMode.class, 1, 1, false, SetFlyCameraMode::validateStructure, SetFlyCameraMode::deserialize);
-/* 200 */     register(290, "SyncInteractionChains", (Class)SyncInteractionChains.class, 0, 1677721600, false, SyncInteractionChains::validateStructure, SyncInteractionChains::deserialize);
-/* 201 */     register(291, "CancelInteractionChain", (Class)CancelInteractionChain.class, 5, 1038, false, CancelInteractionChain::validateStructure, CancelInteractionChain::deserialize);
-/* 202 */     register(292, "PlayInteractionFor", (Class)PlayInteractionFor.class, 19, 16385065, false, PlayInteractionFor::validateStructure, PlayInteractionFor::deserialize);
-/* 203 */     register(293, "MountNPC", (Class)MountNPC.class, 16, 16, false, MountNPC::validateStructure, MountNPC::deserialize);
-/* 204 */     register(294, "DismountNPC", (Class)DismountNPC.class, 0, 0, false, DismountNPC::validateStructure, DismountNPC::deserialize);
-/* 205 */     register(300, "FailureReply", (Class)FailureReply.class, 5, 1677721600, false, FailureReply::validateStructure, FailureReply::deserialize);
-/* 206 */     register(301, "SuccessReply", (Class)SuccessReply.class, 5, 1677721600, false, SuccessReply::validateStructure, SuccessReply::deserialize);
-/* 207 */     register(302, "AssetEditorInitialize", (Class)AssetEditorInitialize.class, 0, 0, false, AssetEditorInitialize::validateStructure, AssetEditorInitialize::deserialize);
-/* 208 */     register(303, "AssetEditorAuthorization", (Class)AssetEditorAuthorization.class, 1, 1, false, AssetEditorAuthorization::validateStructure, AssetEditorAuthorization::deserialize);
-/* 209 */     register(304, "AssetEditorCapabilities", (Class)AssetEditorCapabilities.class, 5, 5, false, AssetEditorCapabilities::validateStructure, AssetEditorCapabilities::deserialize);
-/* 210 */     register(305, "AssetEditorSetupSchemas", (Class)AssetEditorSetupSchemas.class, 1, 1677721600, true, AssetEditorSetupSchemas::validateStructure, AssetEditorSetupSchemas::deserialize);
-/* 211 */     register(306, "AssetEditorSetupAssetTypes", (Class)AssetEditorSetupAssetTypes.class, 1, 1677721600, false, AssetEditorSetupAssetTypes::validateStructure, AssetEditorSetupAssetTypes::deserialize);
-/* 212 */     register(307, "AssetEditorCreateDirectory", (Class)AssetEditorCreateDirectory.class, 5, 32768024, false, AssetEditorCreateDirectory::validateStructure, AssetEditorCreateDirectory::deserialize);
-/* 213 */     register(308, "AssetEditorDeleteDirectory", (Class)AssetEditorDeleteDirectory.class, 5, 32768024, false, AssetEditorDeleteDirectory::validateStructure, AssetEditorDeleteDirectory::deserialize);
-/* 214 */     register(309, "AssetEditorRenameDirectory", (Class)AssetEditorRenameDirectory.class, 5, 65536051, false, AssetEditorRenameDirectory::validateStructure, AssetEditorRenameDirectory::deserialize);
-/* 215 */     register(310, "AssetEditorFetchAsset", (Class)AssetEditorFetchAsset.class, 6, 32768025, false, AssetEditorFetchAsset::validateStructure, AssetEditorFetchAsset::deserialize);
-/* 216 */     register(311, "AssetEditorFetchJsonAssetWithParents", (Class)AssetEditorFetchJsonAssetWithParents.class, 6, 32768025, false, AssetEditorFetchJsonAssetWithParents::validateStructure, AssetEditorFetchJsonAssetWithParents::deserialize);
-/* 217 */     register(312, "AssetEditorFetchAssetReply", (Class)AssetEditorFetchAssetReply.class, 5, 4096010, false, AssetEditorFetchAssetReply::validateStructure, AssetEditorFetchAssetReply::deserialize);
-/* 218 */     register(313, "AssetEditorFetchJsonAssetWithParentsReply", (Class)AssetEditorFetchJsonAssetWithParentsReply.class, 5, 1677721600, true, AssetEditorFetchJsonAssetWithParentsReply::validateStructure, AssetEditorFetchJsonAssetWithParentsReply::deserialize);
-/* 219 */     register(314, "AssetEditorAssetPackSetup", (Class)AssetEditorAssetPackSetup.class, 1, 1677721600, false, AssetEditorAssetPackSetup::validateStructure, AssetEditorAssetPackSetup::deserialize);
-/* 220 */     register(315, "AssetEditorUpdateAssetPack", (Class)AssetEditorUpdateAssetPack.class, 1, 1677721600, false, AssetEditorUpdateAssetPack::validateStructure, AssetEditorUpdateAssetPack::deserialize);
-/* 221 */     register(316, "AssetEditorCreateAssetPack", (Class)AssetEditorCreateAssetPack.class, 5, 1677721600, false, AssetEditorCreateAssetPack::validateStructure, AssetEditorCreateAssetPack::deserialize);
-/* 222 */     register(317, "AssetEditorDeleteAssetPack", (Class)AssetEditorDeleteAssetPack.class, 1, 16384006, false, AssetEditorDeleteAssetPack::validateStructure, AssetEditorDeleteAssetPack::deserialize);
-/* 223 */     register(318, "AssetEditorEnableAssetPack", (Class)AssetEditorEnableAssetPack.class, 2, 16384007, false, AssetEditorEnableAssetPack::validateStructure, AssetEditorEnableAssetPack::deserialize);
-/* 224 */     register(319, "AssetEditorAssetListSetup", (Class)AssetEditorAssetListSetup.class, 4, 1677721600, true, AssetEditorAssetListSetup::validateStructure, AssetEditorAssetListSetup::deserialize);
-/* 225 */     register(320, "AssetEditorAssetListUpdate", (Class)AssetEditorAssetListUpdate.class, 1, 1677721600, true, AssetEditorAssetListUpdate::validateStructure, AssetEditorAssetListUpdate::deserialize);
-/* 226 */     register(321, "AssetEditorRequestChildrenList", (Class)AssetEditorRequestChildrenList.class, 1, 32768020, false, AssetEditorRequestChildrenList::validateStructure, AssetEditorRequestChildrenList::deserialize);
-/* 227 */     register(322, "AssetEditorRequestChildrenListReply", (Class)AssetEditorRequestChildrenListReply.class, 1, 1677721600, false, AssetEditorRequestChildrenListReply::validateStructure, AssetEditorRequestChildrenListReply::deserialize);
-/* 228 */     register(323, "AssetEditorUpdateJsonAsset", (Class)AssetEditorUpdateJsonAsset.class, 9, 1677721600, true, AssetEditorUpdateJsonAsset::validateStructure, AssetEditorUpdateJsonAsset::deserialize);
-/* 229 */     register(324, "AssetEditorUpdateAsset", (Class)AssetEditorUpdateAsset.class, 9, 53248050, false, AssetEditorUpdateAsset::validateStructure, AssetEditorUpdateAsset::deserialize);
-/* 230 */     register(325, "AssetEditorJsonAssetUpdated", (Class)AssetEditorJsonAssetUpdated.class, 1, 1677721600, false, AssetEditorJsonAssetUpdated::validateStructure, AssetEditorJsonAssetUpdated::deserialize);
-/* 231 */     register(326, "AssetEditorAssetUpdated", (Class)AssetEditorAssetUpdated.class, 1, 36864033, false, AssetEditorAssetUpdated::validateStructure, AssetEditorAssetUpdated::deserialize);
-/* 232 */     register(327, "AssetEditorCreateAsset", (Class)AssetEditorCreateAsset.class, 10, 53248051, false, AssetEditorCreateAsset::validateStructure, AssetEditorCreateAsset::deserialize);
-/* 233 */     register(328, "AssetEditorRenameAsset", (Class)AssetEditorRenameAsset.class, 5, 65536051, false, AssetEditorRenameAsset::validateStructure, AssetEditorRenameAsset::deserialize);
-/* 234 */     register(329, "AssetEditorDeleteAsset", (Class)AssetEditorDeleteAsset.class, 5, 32768024, false, AssetEditorDeleteAsset::validateStructure, AssetEditorDeleteAsset::deserialize);
-/* 235 */     register(330, "AssetEditorDiscardChanges", (Class)AssetEditorDiscardChanges.class, 1, 1677721600, false, AssetEditorDiscardChanges::validateStructure, AssetEditorDiscardChanges::deserialize);
-/* 236 */     register(331, "AssetEditorFetchAutoCompleteData", (Class)AssetEditorFetchAutoCompleteData.class, 5, 32768023, false, AssetEditorFetchAutoCompleteData::validateStructure, AssetEditorFetchAutoCompleteData::deserialize);
-/* 237 */     register(332, "AssetEditorFetchAutoCompleteDataReply", (Class)AssetEditorFetchAutoCompleteDataReply.class, 5, 1677721600, false, AssetEditorFetchAutoCompleteDataReply::validateStructure, AssetEditorFetchAutoCompleteDataReply::deserialize);
-/* 238 */     register(333, "AssetEditorRequestDataset", (Class)AssetEditorRequestDataset.class, 1, 16384006, false, AssetEditorRequestDataset::validateStructure, AssetEditorRequestDataset::deserialize);
-/* 239 */     register(334, "AssetEditorRequestDatasetReply", (Class)AssetEditorRequestDatasetReply.class, 1, 1677721600, false, AssetEditorRequestDatasetReply::validateStructure, AssetEditorRequestDatasetReply::deserialize);
-/* 240 */     register(335, "AssetEditorActivateButton", (Class)AssetEditorActivateButton.class, 1, 16384006, false, AssetEditorActivateButton::validateStructure, AssetEditorActivateButton::deserialize);
-/* 241 */     register(336, "AssetEditorSelectAsset", (Class)AssetEditorSelectAsset.class, 1, 32768020, false, AssetEditorSelectAsset::validateStructure, AssetEditorSelectAsset::deserialize);
-/* 242 */     register(337, "AssetEditorPopupNotification", (Class)AssetEditorPopupNotification.class, 2, 1677721600, false, AssetEditorPopupNotification::validateStructure, AssetEditorPopupNotification::deserialize);
-/* 243 */     register(338, "AssetEditorFetchLastModifiedAssets", (Class)AssetEditorFetchLastModifiedAssets.class, 0, 0, false, AssetEditorFetchLastModifiedAssets::validateStructure, AssetEditorFetchLastModifiedAssets::deserialize);
-/* 244 */     register(339, "AssetEditorLastModifiedAssets", (Class)AssetEditorLastModifiedAssets.class, 1, 1677721600, false, AssetEditorLastModifiedAssets::validateStructure, AssetEditorLastModifiedAssets::deserialize);
-/* 245 */     register(340, "AssetEditorModifiedAssetsCount", (Class)AssetEditorModifiedAssetsCount.class, 4, 4, false, AssetEditorModifiedAssetsCount::validateStructure, AssetEditorModifiedAssetsCount::deserialize);
-/* 246 */     register(341, "AssetEditorSubscribeModifiedAssetsChanges", (Class)AssetEditorSubscribeModifiedAssetsChanges.class, 1, 1, false, AssetEditorSubscribeModifiedAssetsChanges::validateStructure, AssetEditorSubscribeModifiedAssetsChanges::deserialize);
-/* 247 */     register(342, "AssetEditorExportAssets", (Class)AssetEditorExportAssets.class, 1, 1677721600, false, AssetEditorExportAssets::validateStructure, AssetEditorExportAssets::deserialize);
-/* 248 */     register(343, "AssetEditorExportAssetInitialize", (Class)AssetEditorExportAssetInitialize.class, 6, 81920066, false, AssetEditorExportAssetInitialize::validateStructure, AssetEditorExportAssetInitialize::deserialize);
-/* 249 */     register(344, "AssetEditorExportAssetPart", (Class)AssetEditorExportAssetPart.class, 1, 4096006, true, AssetEditorExportAssetPart::validateStructure, AssetEditorExportAssetPart::deserialize);
-/* 250 */     register(345, "AssetEditorExportAssetFinalize", (Class)AssetEditorExportAssetFinalize.class, 0, 0, false, AssetEditorExportAssetFinalize::validateStructure, AssetEditorExportAssetFinalize::deserialize);
-/* 251 */     register(346, "AssetEditorExportDeleteAssets", (Class)AssetEditorExportDeleteAssets.class, 1, 1677721600, false, AssetEditorExportDeleteAssets::validateStructure, AssetEditorExportDeleteAssets::deserialize);
-/* 252 */     register(347, "AssetEditorExportComplete", (Class)AssetEditorExportComplete.class, 1, 1677721600, false, AssetEditorExportComplete::validateStructure, AssetEditorExportComplete::deserialize);
-/* 253 */     register(348, "AssetEditorRebuildCaches", (Class)AssetEditorRebuildCaches.class, 5, 5, false, AssetEditorRebuildCaches::validateStructure, AssetEditorRebuildCaches::deserialize);
-/* 254 */     register(349, "AssetEditorUndoChanges", (Class)AssetEditorUndoChanges.class, 5, 32768024, false, AssetEditorUndoChanges::validateStructure, AssetEditorUndoChanges::deserialize);
-/* 255 */     register(350, "AssetEditorRedoChanges", (Class)AssetEditorRedoChanges.class, 5, 32768024, false, AssetEditorRedoChanges::validateStructure, AssetEditorRedoChanges::deserialize);
-/* 256 */     register(351, "AssetEditorUndoRedoReply", (Class)AssetEditorUndoRedoReply.class, 5, 1677721600, false, AssetEditorUndoRedoReply::validateStructure, AssetEditorUndoRedoReply::deserialize);
-/* 257 */     register(352, "AssetEditorSetGameTime", (Class)AssetEditorSetGameTime.class, 14, 14, false, AssetEditorSetGameTime::validateStructure, AssetEditorSetGameTime::deserialize);
-/* 258 */     register(353, "AssetEditorUpdateSecondsPerGameDay", (Class)AssetEditorUpdateSecondsPerGameDay.class, 8, 8, false, AssetEditorUpdateSecondsPerGameDay::validateStructure, AssetEditorUpdateSecondsPerGameDay::deserialize);
-/* 259 */     register(354, "AssetEditorUpdateWeatherPreviewLock", (Class)AssetEditorUpdateWeatherPreviewLock.class, 1, 1, false, AssetEditorUpdateWeatherPreviewLock::validateStructure, AssetEditorUpdateWeatherPreviewLock::deserialize);
-/* 260 */     register(355, "AssetEditorUpdateModelPreview", (Class)AssetEditorUpdateModelPreview.class, 30, 1677721600, false, AssetEditorUpdateModelPreview::validateStructure, AssetEditorUpdateModelPreview::deserialize);
-/* 261 */     register(360, "UpdateSunSettings", (Class)UpdateSunSettings.class, 8, 8, false, UpdateSunSettings::validateStructure, UpdateSunSettings::deserialize);
-/* 262 */     register(361, "UpdatePostFxSettings", (Class)UpdatePostFxSettings.class, 20, 20, false, UpdatePostFxSettings::validateStructure, UpdatePostFxSettings::deserialize);
-/* 263 */     register(400, "BuilderToolArgUpdate", (Class)BuilderToolArgUpdate.class, 14, 32768032, false, BuilderToolArgUpdate::validateStructure, BuilderToolArgUpdate::deserialize);
-/* 264 */     register(401, "BuilderToolEntityAction", (Class)BuilderToolEntityAction.class, 5, 5, false, BuilderToolEntityAction::validateStructure, BuilderToolEntityAction::deserialize);
-/* 265 */     register(402, "BuilderToolSetEntityTransform", (Class)BuilderToolSetEntityTransform.class, 54, 54, false, BuilderToolSetEntityTransform::validateStructure, BuilderToolSetEntityTransform::deserialize);
-/* 266 */     register(403, "BuilderToolExtrudeAction", (Class)BuilderToolExtrudeAction.class, 24, 24, false, BuilderToolExtrudeAction::validateStructure, BuilderToolExtrudeAction::deserialize);
-/* 267 */     register(404, "BuilderToolStackArea", (Class)BuilderToolStackArea.class, 41, 41, false, BuilderToolStackArea::validateStructure, BuilderToolStackArea::deserialize);
-/* 268 */     register(405, "BuilderToolSelectionTransform", (Class)BuilderToolSelectionTransform.class, 52, 16384057, false, BuilderToolSelectionTransform::validateStructure, BuilderToolSelectionTransform::deserialize);
-/* 269 */     register(406, "BuilderToolRotateClipboard", (Class)BuilderToolRotateClipboard.class, 5, 5, false, BuilderToolRotateClipboard::validateStructure, BuilderToolRotateClipboard::deserialize);
-/* 270 */     register(407, "BuilderToolPasteClipboard", (Class)BuilderToolPasteClipboard.class, 12, 12, false, BuilderToolPasteClipboard::validateStructure, BuilderToolPasteClipboard::deserialize);
-/* 271 */     register(408, "BuilderToolSetTransformationModeState", (Class)BuilderToolSetTransformationModeState.class, 1, 1, false, BuilderToolSetTransformationModeState::validateStructure, BuilderToolSetTransformationModeState::deserialize);
-/* 272 */     register(409, "BuilderToolSelectionUpdate", (Class)BuilderToolSelectionUpdate.class, 24, 24, false, BuilderToolSelectionUpdate::validateStructure, BuilderToolSelectionUpdate::deserialize);
-/* 273 */     register(410, "BuilderToolSelectionToolAskForClipboard", (Class)BuilderToolSelectionToolAskForClipboard.class, 0, 0, false, BuilderToolSelectionToolAskForClipboard::validateStructure, BuilderToolSelectionToolAskForClipboard::deserialize);
-/* 274 */     register(411, "BuilderToolSelectionToolReplyWithClipboard", (Class)BuilderToolSelectionToolReplyWithClipboard.class, 1, 139264019, true, BuilderToolSelectionToolReplyWithClipboard::validateStructure, BuilderToolSelectionToolReplyWithClipboard::deserialize);
-/* 275 */     register(412, "BuilderToolGeneralAction", (Class)BuilderToolGeneralAction.class, 1, 1, false, BuilderToolGeneralAction::validateStructure, BuilderToolGeneralAction::deserialize);
-/* 276 */     register(413, "BuilderToolOnUseInteraction", (Class)BuilderToolOnUseInteraction.class, 57, 57, false, BuilderToolOnUseInteraction::validateStructure, BuilderToolOnUseInteraction::deserialize);
-/* 277 */     register(414, "BuilderToolLineAction", (Class)BuilderToolLineAction.class, 24, 24, false, BuilderToolLineAction::validateStructure, BuilderToolLineAction::deserialize);
-/* 278 */     register(415, "BuilderToolShowAnchor", (Class)BuilderToolShowAnchor.class, 12, 12, false, BuilderToolShowAnchor::validateStructure, BuilderToolShowAnchor::deserialize);
-/* 279 */     register(416, "BuilderToolHideAnchors", (Class)BuilderToolHideAnchors.class, 0, 0, false, BuilderToolHideAnchors::validateStructure, BuilderToolHideAnchors::deserialize);
-/* 280 */     register(417, "PrefabUnselectPrefab", (Class)PrefabUnselectPrefab.class, 0, 0, false, PrefabUnselectPrefab::validateStructure, PrefabUnselectPrefab::deserialize);
-/* 281 */     register(418, "BuilderToolsSetSoundSet", (Class)BuilderToolsSetSoundSet.class, 4, 4, false, BuilderToolsSetSoundSet::validateStructure, BuilderToolsSetSoundSet::deserialize);
-/* 282 */     register(419, "BuilderToolLaserPointer", (Class)BuilderToolLaserPointer.class, 36, 36, false, BuilderToolLaserPointer::validateStructure, BuilderToolLaserPointer::deserialize);
-/* 283 */     register(420, "BuilderToolSetEntityScale", (Class)BuilderToolSetEntityScale.class, 8, 8, false, BuilderToolSetEntityScale::validateStructure, BuilderToolSetEntityScale::deserialize);
-/* 284 */     register(421, "BuilderToolSetEntityPickupEnabled", (Class)BuilderToolSetEntityPickupEnabled.class, 5, 5, false, BuilderToolSetEntityPickupEnabled::validateStructure, BuilderToolSetEntityPickupEnabled::deserialize);
-/* 285 */     register(422, "BuilderToolSetEntityLight", (Class)BuilderToolSetEntityLight.class, 9, 9, false, BuilderToolSetEntityLight::validateStructure, BuilderToolSetEntityLight::deserialize);
-/* 286 */     register(423, "BuilderToolSetNPCDebug", (Class)BuilderToolSetNPCDebug.class, 5, 5, false, BuilderToolSetNPCDebug::validateStructure, BuilderToolSetNPCDebug::deserialize);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static void register(int id, String name, Class<? extends Packet> type, int fixedBlockSize, int maxSize, boolean compressed, BiFunction<ByteBuf, Integer, ValidationResult> validate, BiFunction<ByteBuf, Integer, Packet> deserialize) {
-/* 292 */     PacketInfo existing = BY_ID.get(Integer.valueOf(id));
-/* 293 */     if (existing != null) {
-/* 294 */       throw new IllegalStateException("Duplicate packet ID " + id + ": '" + name + "' conflicts with '" + existing.name() + "'");
-/*     */     }
-/* 296 */     PacketInfo info = new PacketInfo(id, name, type, fixedBlockSize, maxSize, compressed, validate, deserialize);
-/* 297 */     BY_ID.put(Integer.valueOf(id), info);
-/* 298 */     BY_TYPE.put(type, Integer.valueOf(id));
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public static PacketInfo getById(int id) {
-/* 303 */     return BY_ID.get(Integer.valueOf(id));
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public static Integer getId(Class<? extends Packet> type) {
-/* 308 */     return BY_TYPE.get(type);
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   public static Map<Integer, PacketInfo> all() {
-/* 313 */     return BY_ID_UNMODIFIABLE; } public static final class PacketInfo extends Record { private final int id; @Nonnull private final String name; @Nonnull
-/*     */     private final Class<? extends Packet> type; private final int fixedBlockSize; private final int maxSize; private final boolean compressed; @Nonnull
-/*     */     private final BiFunction<ByteBuf, Integer, ValidationResult> validate; @Nonnull
-/* 316 */     private final BiFunction<ByteBuf, Integer, Packet> deserialize; public PacketInfo(int id, @Nonnull String name, @Nonnull Class<? extends Packet> type, int fixedBlockSize, int maxSize, boolean compressed, @Nonnull BiFunction<ByteBuf, Integer, ValidationResult> validate, @Nonnull BiFunction<ByteBuf, Integer, Packet> deserialize) { this.id = id; this.name = name; this.type = type; this.fixedBlockSize = fixedBlockSize; this.maxSize = maxSize; this.compressed = compressed; this.validate = validate; this.deserialize = deserialize; } public final String toString() { // Byte code:
-/*     */       //   0: aload_0
-/*     */       //   1: <illegal opcode> toString : (Lcom/hypixel/hytale/protocol/PacketRegistry$PacketInfo;)Ljava/lang/String;
-/*     */       //   6: areturn
-/*     */       // Line number table:
-/*     */       //   Java source line number -> byte code offset
-/*     */       //   #316	-> 0
-/*     */       // Local variable table:
-/*     */       //   start	length	slot	name	descriptor
-/*     */       //   0	7	0	this	Lcom/hypixel/hytale/protocol/PacketRegistry$PacketInfo; } public final int hashCode() { // Byte code:
-/*     */       //   0: aload_0
-/*     */       //   1: <illegal opcode> hashCode : (Lcom/hypixel/hytale/protocol/PacketRegistry$PacketInfo;)I
-/*     */       //   6: ireturn
-/*     */       // Line number table:
-/*     */       //   Java source line number -> byte code offset
-/*     */       //   #316	-> 0
-/*     */       // Local variable table:
-/*     */       //   start	length	slot	name	descriptor
-/*     */       //   0	7	0	this	Lcom/hypixel/hytale/protocol/PacketRegistry$PacketInfo; } public final boolean equals(Object o) { // Byte code:
-/*     */       //   0: aload_0
-/*     */       //   1: aload_1
-/*     */       //   2: <illegal opcode> equals : (Lcom/hypixel/hytale/protocol/PacketRegistry$PacketInfo;Ljava/lang/Object;)Z
-/*     */       //   7: ireturn
-/*     */       // Line number table:
-/*     */       //   Java source line number -> byte code offset
-/*     */       //   #316	-> 0
-/*     */       // Local variable table:
-/*     */       //   start	length	slot	name	descriptor
-/*     */       //   0	8	0	this	Lcom/hypixel/hytale/protocol/PacketRegistry$PacketInfo;
-/* 316 */       //   0	8	1	o	Ljava/lang/Object; } public int id() { return this.id; } @Nonnull public String name() { return this.name; } @Nonnull public Class<? extends Packet> type() { return this.type; } public int fixedBlockSize() { return this.fixedBlockSize; } public int maxSize() { return this.maxSize; } public boolean compressed() { return this.compressed; } @Nonnull public BiFunction<ByteBuf, Integer, ValidationResult> validate() { return this.validate; } @Nonnull public BiFunction<ByteBuf, Integer, Packet> deserialize() { return this.deserialize; }
-/*     */      }
-/*     */ 
-/*     */ }
+package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ValidationResult;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorActivateButton;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAssetListSetup;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAssetListUpdate;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAssetPackSetup;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAssetUpdated;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAuthorization;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorCapabilities;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorCreateAsset;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorCreateAssetPack;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorCreateDirectory;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorDeleteAsset;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorDeleteAssetPack;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorDeleteDirectory;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorDiscardChanges;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorExportAssetFinalize;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorExportAssetInitialize;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorExportAssetPart;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorExportAssets;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorExportComplete;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorExportDeleteAssets;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFetchAsset;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFetchAssetReply;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFetchAutoCompleteData;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFetchAutoCompleteDataReply;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFetchJsonAssetWithParents;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFetchJsonAssetWithParentsReply;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFetchLastModifiedAssets;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorInitialize;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorJsonAssetUpdated;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorLastModifiedAssets;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorModifiedAssetsCount;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPopupNotification;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorRedoChanges;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorRenameAsset;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorRenameDirectory;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorRequestChildrenList;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorRequestChildrenListReply;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorRequestDataset;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorRequestDatasetReply;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorSelectAsset;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorSetGameTime;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorSetupAssetTypes;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorSetupSchemas;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorSubscribeModifiedAssetsChanges;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUndoChanges;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUndoRedoReply;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateAsset;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateAssetPack;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateJsonAsset;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateModelPreview;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateSecondsPerGameDay;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateWeatherPreviewLock;
+import com.hypixel.hytale.protocol.packets.asseteditor.FailureReply;
+import com.hypixel.hytale.protocol.packets.asseteditor.SuccessReply;
+import com.hypixel.hytale.protocol.packets.assets.TrackOrUpdateObjective;
+import com.hypixel.hytale.protocol.packets.assets.UntrackObjective;
+import com.hypixel.hytale.protocol.packets.assets.UpdateAmbienceFX;
+import com.hypixel.hytale.protocol.packets.assets.UpdateAudioCategories;
+import com.hypixel.hytale.protocol.packets.assets.UpdateBlockBreakingDecals;
+import com.hypixel.hytale.protocol.packets.assets.UpdateBlockGroups;
+import com.hypixel.hytale.protocol.packets.assets.UpdateBlockHitboxes;
+import com.hypixel.hytale.protocol.packets.assets.UpdateBlockParticleSets;
+import com.hypixel.hytale.protocol.packets.assets.UpdateBlockSets;
+import com.hypixel.hytale.protocol.packets.assets.UpdateBlockSoundSets;
+import com.hypixel.hytale.protocol.packets.assets.UpdateBlockTypes;
+import com.hypixel.hytale.protocol.packets.assets.UpdateCameraShake;
+import com.hypixel.hytale.protocol.packets.assets.UpdateEntityEffects;
+import com.hypixel.hytale.protocol.packets.assets.UpdateEntityStatTypes;
+import com.hypixel.hytale.protocol.packets.assets.UpdateEntityUIComponents;
+import com.hypixel.hytale.protocol.packets.assets.UpdateEnvironments;
+import com.hypixel.hytale.protocol.packets.assets.UpdateEqualizerEffects;
+import com.hypixel.hytale.protocol.packets.assets.UpdateFieldcraftCategories;
+import com.hypixel.hytale.protocol.packets.assets.UpdateFluidFX;
+import com.hypixel.hytale.protocol.packets.assets.UpdateFluids;
+import com.hypixel.hytale.protocol.packets.assets.UpdateHitboxCollisionConfig;
+import com.hypixel.hytale.protocol.packets.assets.UpdateInteractions;
+import com.hypixel.hytale.protocol.packets.assets.UpdateItemCategories;
+import com.hypixel.hytale.protocol.packets.assets.UpdateItemPlayerAnimations;
+import com.hypixel.hytale.protocol.packets.assets.UpdateItemQualities;
+import com.hypixel.hytale.protocol.packets.assets.UpdateItemReticles;
+import com.hypixel.hytale.protocol.packets.assets.UpdateItemSoundSets;
+import com.hypixel.hytale.protocol.packets.assets.UpdateItems;
+import com.hypixel.hytale.protocol.packets.assets.UpdateModelvfxs;
+import com.hypixel.hytale.protocol.packets.assets.UpdateObjectiveTask;
+import com.hypixel.hytale.protocol.packets.assets.UpdateParticleSpawners;
+import com.hypixel.hytale.protocol.packets.assets.UpdateParticleSystems;
+import com.hypixel.hytale.protocol.packets.assets.UpdateProjectileConfigs;
+import com.hypixel.hytale.protocol.packets.assets.UpdateRecipes;
+import com.hypixel.hytale.protocol.packets.assets.UpdateRepulsionConfig;
+import com.hypixel.hytale.protocol.packets.assets.UpdateResourceTypes;
+import com.hypixel.hytale.protocol.packets.assets.UpdateReverbEffects;
+import com.hypixel.hytale.protocol.packets.assets.UpdateRootInteractions;
+import com.hypixel.hytale.protocol.packets.assets.UpdateSoundEvents;
+import com.hypixel.hytale.protocol.packets.assets.UpdateSoundSets;
+import com.hypixel.hytale.protocol.packets.assets.UpdateTagPatterns;
+import com.hypixel.hytale.protocol.packets.assets.UpdateTrails;
+import com.hypixel.hytale.protocol.packets.assets.UpdateTranslations;
+import com.hypixel.hytale.protocol.packets.assets.UpdateUnarmedInteractions;
+import com.hypixel.hytale.protocol.packets.assets.UpdateViewBobbing;
+import com.hypixel.hytale.protocol.packets.assets.UpdateWeathers;
+import com.hypixel.hytale.protocol.packets.auth.AuthGrant;
+import com.hypixel.hytale.protocol.packets.auth.AuthToken;
+import com.hypixel.hytale.protocol.packets.auth.ClientReferral;
+import com.hypixel.hytale.protocol.packets.auth.ConnectAccept;
+import com.hypixel.hytale.protocol.packets.auth.PasswordAccepted;
+import com.hypixel.hytale.protocol.packets.auth.PasswordRejected;
+import com.hypixel.hytale.protocol.packets.auth.PasswordResponse;
+import com.hypixel.hytale.protocol.packets.auth.ServerAuthToken;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArgUpdate;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolEntityAction;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolExtrudeAction;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGeneralAction;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolHideAnchors;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLaserPointer;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLineAction;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPasteClipboard;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolRotateClipboard;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolAskForClipboard;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolReplyWithClipboard;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionTransform;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionUpdate;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityCollision;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityLight;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityPickupEnabled;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityScale;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetEntityTransform;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetNPCDebug;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSetTransformationModeState;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolShowAnchor;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolStackArea;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolsSetSoundSet;
+import com.hypixel.hytale.protocol.packets.buildertools.PrefabUnselectPrefab;
+import com.hypixel.hytale.protocol.packets.camera.CameraShakeEffect;
+import com.hypixel.hytale.protocol.packets.camera.RequestFlyCameraMode;
+import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
+import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
+import com.hypixel.hytale.protocol.packets.connection.Connect;
+import com.hypixel.hytale.protocol.packets.connection.Disconnect;
+import com.hypixel.hytale.protocol.packets.connection.Ping;
+import com.hypixel.hytale.protocol.packets.connection.Pong;
+import com.hypixel.hytale.protocol.packets.entities.ApplyKnockback;
+import com.hypixel.hytale.protocol.packets.entities.ChangeVelocity;
+import com.hypixel.hytale.protocol.packets.entities.EntityUpdates;
+import com.hypixel.hytale.protocol.packets.entities.MountMovement;
+import com.hypixel.hytale.protocol.packets.entities.PlayAnimation;
+import com.hypixel.hytale.protocol.packets.entities.SetEntitySeed;
+import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
+import com.hypixel.hytale.protocol.packets.interaction.CancelInteractionChain;
+import com.hypixel.hytale.protocol.packets.interaction.DismountNPC;
+import com.hypixel.hytale.protocol.packets.interaction.MountNPC;
+import com.hypixel.hytale.protocol.packets.interaction.PlayInteractionFor;
+import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChains;
+import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList;
+import com.hypixel.hytale.protocol.packets.interface_.ChatMessage;
+import com.hypixel.hytale.protocol.packets.interface_.CustomHud;
+import com.hypixel.hytale.protocol.packets.interface_.CustomPage;
+import com.hypixel.hytale.protocol.packets.interface_.CustomPageEvent;
+import com.hypixel.hytale.protocol.packets.interface_.EditorBlocksChange;
+import com.hypixel.hytale.protocol.packets.interface_.HideEventTitle;
+import com.hypixel.hytale.protocol.packets.interface_.KillFeedMessage;
+import com.hypixel.hytale.protocol.packets.interface_.Notification;
+import com.hypixel.hytale.protocol.packets.interface_.OpenChatWithCommand;
+import com.hypixel.hytale.protocol.packets.interface_.RemoveFromServerPlayerList;
+import com.hypixel.hytale.protocol.packets.interface_.ResetUserInterfaceState;
+import com.hypixel.hytale.protocol.packets.interface_.ServerInfo;
+import com.hypixel.hytale.protocol.packets.interface_.ServerMessage;
+import com.hypixel.hytale.protocol.packets.interface_.SetPage;
+import com.hypixel.hytale.protocol.packets.interface_.ShowEventTitle;
+import com.hypixel.hytale.protocol.packets.interface_.UpdateAnchorUI;
+import com.hypixel.hytale.protocol.packets.interface_.UpdateKnownRecipes;
+import com.hypixel.hytale.protocol.packets.interface_.UpdateLanguage;
+import com.hypixel.hytale.protocol.packets.interface_.UpdatePortal;
+import com.hypixel.hytale.protocol.packets.interface_.UpdateServerPlayerList;
+import com.hypixel.hytale.protocol.packets.interface_.UpdateServerPlayerListPing;
+import com.hypixel.hytale.protocol.packets.interface_.UpdateVisibleHudComponents;
+import com.hypixel.hytale.protocol.packets.interface_.WorldSavingStatus;
+import com.hypixel.hytale.protocol.packets.inventory.DropCreativeItem;
+import com.hypixel.hytale.protocol.packets.inventory.DropItemStack;
+import com.hypixel.hytale.protocol.packets.inventory.InventoryAction;
+import com.hypixel.hytale.protocol.packets.inventory.MoveItemStack;
+import com.hypixel.hytale.protocol.packets.inventory.SetActiveSlot;
+import com.hypixel.hytale.protocol.packets.inventory.SetCreativeItem;
+import com.hypixel.hytale.protocol.packets.inventory.SmartGiveCreativeItem;
+import com.hypixel.hytale.protocol.packets.inventory.SmartMoveItemStack;
+import com.hypixel.hytale.protocol.packets.inventory.SwitchHotbarBlockSet;
+import com.hypixel.hytale.protocol.packets.inventory.UpdatePlayerInventory;
+import com.hypixel.hytale.protocol.packets.machinima.RequestMachinimaActorModel;
+import com.hypixel.hytale.protocol.packets.machinima.SetMachinimaActorModel;
+import com.hypixel.hytale.protocol.packets.machinima.UpdateMachinimaScene;
+import com.hypixel.hytale.protocol.packets.player.ClearDebugShapes;
+import com.hypixel.hytale.protocol.packets.player.ClientMovement;
+import com.hypixel.hytale.protocol.packets.player.ClientPlaceBlock;
+import com.hypixel.hytale.protocol.packets.player.ClientReady;
+import com.hypixel.hytale.protocol.packets.player.ClientTeleport;
+import com.hypixel.hytale.protocol.packets.player.DamageInfo;
+import com.hypixel.hytale.protocol.packets.player.DisplayDebug;
+import com.hypixel.hytale.protocol.packets.player.JoinWorld;
+import com.hypixel.hytale.protocol.packets.player.LoadHotbar;
+import com.hypixel.hytale.protocol.packets.player.MouseInteraction;
+import com.hypixel.hytale.protocol.packets.player.RemoveMapMarker;
+import com.hypixel.hytale.protocol.packets.player.ReticleEvent;
+import com.hypixel.hytale.protocol.packets.player.SaveHotbar;
+import com.hypixel.hytale.protocol.packets.player.SetBlockPlacementOverride;
+import com.hypixel.hytale.protocol.packets.player.SetClientId;
+import com.hypixel.hytale.protocol.packets.player.SetGameMode;
+import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
+import com.hypixel.hytale.protocol.packets.player.SyncPlayerPreferences;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesFeatureStatus;
+import com.hypixel.hytale.protocol.packets.player.UpdateMovementSettings;
+import com.hypixel.hytale.protocol.packets.serveraccess.RequestServerAccess;
+import com.hypixel.hytale.protocol.packets.serveraccess.SetServerAccess;
+import com.hypixel.hytale.protocol.packets.serveraccess.UpdateServerAccess;
+import com.hypixel.hytale.protocol.packets.setup.AssetFinalize;
+import com.hypixel.hytale.protocol.packets.setup.AssetInitialize;
+import com.hypixel.hytale.protocol.packets.setup.AssetPart;
+import com.hypixel.hytale.protocol.packets.setup.PlayerOptions;
+import com.hypixel.hytale.protocol.packets.setup.RemoveAssets;
+import com.hypixel.hytale.protocol.packets.setup.RequestAssets;
+import com.hypixel.hytale.protocol.packets.setup.RequestCommonAssetsRebuild;
+import com.hypixel.hytale.protocol.packets.setup.ServerTags;
+import com.hypixel.hytale.protocol.packets.setup.SetTimeDilation;
+import com.hypixel.hytale.protocol.packets.setup.SetUpdateRate;
+import com.hypixel.hytale.protocol.packets.setup.UpdateFeatures;
+import com.hypixel.hytale.protocol.packets.setup.ViewRadius;
+import com.hypixel.hytale.protocol.packets.setup.WorldLoadFinished;
+import com.hypixel.hytale.protocol.packets.setup.WorldLoadProgress;
+import com.hypixel.hytale.protocol.packets.setup.WorldSettings;
+import com.hypixel.hytale.protocol.packets.window.ClientOpenWindow;
+import com.hypixel.hytale.protocol.packets.window.CloseWindow;
+import com.hypixel.hytale.protocol.packets.window.OpenWindow;
+import com.hypixel.hytale.protocol.packets.window.SendWindowAction;
+import com.hypixel.hytale.protocol.packets.window.UpdateWindow;
+import com.hypixel.hytale.protocol.packets.world.ClearEditorTimeOverride;
+import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
+import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent3D;
+import com.hypixel.hytale.protocol.packets.world.PlaySoundEventEntity;
+import com.hypixel.hytale.protocol.packets.world.ServerSetBlock;
+import com.hypixel.hytale.protocol.packets.world.ServerSetBlocks;
+import com.hypixel.hytale.protocol.packets.world.ServerSetFluid;
+import com.hypixel.hytale.protocol.packets.world.ServerSetFluids;
+import com.hypixel.hytale.protocol.packets.world.ServerSetPaused;
+import com.hypixel.hytale.protocol.packets.world.SetChunk;
+import com.hypixel.hytale.protocol.packets.world.SetChunkEnvironments;
+import com.hypixel.hytale.protocol.packets.world.SetChunkHeightmap;
+import com.hypixel.hytale.protocol.packets.world.SetChunkTintmap;
+import com.hypixel.hytale.protocol.packets.world.SetFluids;
+import com.hypixel.hytale.protocol.packets.world.SetPaused;
+import com.hypixel.hytale.protocol.packets.world.SpawnBlockParticleSystem;
+import com.hypixel.hytale.protocol.packets.world.SpawnParticleSystem;
+import com.hypixel.hytale.protocol.packets.world.UnloadChunk;
+import com.hypixel.hytale.protocol.packets.world.UpdateBlockDamage;
+import com.hypixel.hytale.protocol.packets.world.UpdateEditorTimeOverride;
+import com.hypixel.hytale.protocol.packets.world.UpdateEditorWeatherOverride;
+import com.hypixel.hytale.protocol.packets.world.UpdateEnvironmentMusic;
+import com.hypixel.hytale.protocol.packets.world.UpdatePostFxSettings;
+import com.hypixel.hytale.protocol.packets.world.UpdateSleepState;
+import com.hypixel.hytale.protocol.packets.world.UpdateSunSettings;
+import com.hypixel.hytale.protocol.packets.world.UpdateTime;
+import com.hypixel.hytale.protocol.packets.world.UpdateTimeSettings;
+import com.hypixel.hytale.protocol.packets.world.UpdateWeather;
+import com.hypixel.hytale.protocol.packets.worldmap.ClearWorldMap;
+import com.hypixel.hytale.protocol.packets.worldmap.CreateUserMarker;
+import com.hypixel.hytale.protocol.packets.worldmap.TeleportToWorldMapMarker;
+import com.hypixel.hytale.protocol.packets.worldmap.TeleportToWorldMapPosition;
+import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
+import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapSettings;
+import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapVisible;
+import io.netty.buffer.ByteBuf;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.BiFunction;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\protocol\PacketRegistry.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public final class PacketRegistry {
+   private static final Map<Integer, PacketRegistry.PacketInfo> BY_ID = new HashMap<>();
+   private static final Map<Integer, PacketRegistry.PacketInfo> TO_SERVER_BY_ID = new HashMap<>();
+   private static final Map<Integer, PacketRegistry.PacketInfo> TO_CLIENT_BY_ID = new HashMap<>();
+   private static final Map<Integer, PacketRegistry.PacketInfo> BY_ID_UNMODIFIABLE = Collections.unmodifiableMap(BY_ID);
+   private static final Map<Class<? extends Packet>, Integer> BY_TYPE = new HashMap<>();
+
+   private PacketRegistry() {
+   }
+
+   private static void register(
+      PacketRegistry.PacketDirection direction,
+      NetworkChannel channel,
+      int id,
+      String name,
+      Class<? extends Packet> type,
+      int fixedBlockSize,
+      int maxSize,
+      boolean compressed,
+      BiFunction<ByteBuf, Integer, ValidationResult> validate,
+      BiFunction<ByteBuf, Integer, Packet> deserialize
+   ) {
+      PacketRegistry.PacketInfo existing = BY_ID.get(id);
+      if (existing != null) {
+         throw new IllegalStateException("Duplicate packet ID " + id + ": '" + name + "' conflicts with '" + existing.name() + "'");
+      } else {
+         PacketRegistry.PacketInfo info = new PacketRegistry.PacketInfo(id, name, channel, type, fixedBlockSize, maxSize, compressed, validate, deserialize);
+         switch (direction) {
+            case ToServer:
+               TO_SERVER_BY_ID.put(id, info);
+               break;
+            case ToClient:
+               TO_CLIENT_BY_ID.put(id, info);
+               break;
+            case Both:
+               TO_SERVER_BY_ID.put(id, info);
+               TO_CLIENT_BY_ID.put(id, info);
+         }
+
+         BY_ID.put(id, info);
+         BY_TYPE.put(type, id);
+      }
+   }
+
+   @Nullable
+   public static PacketRegistry.PacketInfo getToServerPacketById(int id) {
+      return TO_SERVER_BY_ID.get(id);
+   }
+
+   @Nullable
+   public static PacketRegistry.PacketInfo getToClientPacketById(int id) {
+      return TO_CLIENT_BY_ID.get(id);
+   }
+
+   @Nullable
+   public static Integer getId(Class<? extends Packet> type) {
+      return BY_TYPE.get(type);
+   }
+
+   @Nonnull
+   public static Map<Integer, PacketRegistry.PacketInfo> all() {
+      return BY_ID_UNMODIFIABLE;
+   }
+
+   static {
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         0,
+         "Connect",
+         Connect.class,
+         46,
+         38013,
+         false,
+         Connect::validateStructure,
+         Connect::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         1,
+         "Disconnect",
+         Disconnect.class,
+         2,
+         16384007,
+         false,
+         Disconnect::validateStructure,
+         Disconnect::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient, NetworkChannel.Default, 2, "Ping", Ping.class, 29, 29, false, Ping::validateStructure, Ping::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer, NetworkChannel.Default, 3, "Pong", Pong.class, 20, 20, false, Pong::validateStructure, Pong::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         11,
+         "AuthGrant",
+         AuthGrant.class,
+         1,
+         49171,
+         false,
+         AuthGrant::validateStructure,
+         AuthGrant::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         12,
+         "AuthToken",
+         AuthToken.class,
+         1,
+         49171,
+         false,
+         AuthToken::validateStructure,
+         AuthToken::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         13,
+         "ServerAuthToken",
+         ServerAuthToken.class,
+         1,
+         32851,
+         false,
+         ServerAuthToken::validateStructure,
+         ServerAuthToken::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         14,
+         "ConnectAccept",
+         ConnectAccept.class,
+         1,
+         70,
+         false,
+         ConnectAccept::validateStructure,
+         ConnectAccept::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         15,
+         "PasswordResponse",
+         PasswordResponse.class,
+         1,
+         70,
+         false,
+         PasswordResponse::validateStructure,
+         PasswordResponse::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         16,
+         "PasswordAccepted",
+         PasswordAccepted.class,
+         0,
+         0,
+         false,
+         PasswordAccepted::validateStructure,
+         PasswordAccepted::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         17,
+         "PasswordRejected",
+         PasswordRejected.class,
+         5,
+         74,
+         false,
+         PasswordRejected::validateStructure,
+         PasswordRejected::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         18,
+         "ClientReferral",
+         ClientReferral.class,
+         1,
+         5141,
+         false,
+         ClientReferral::validateStructure,
+         ClientReferral::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         20,
+         "WorldSettings",
+         WorldSettings.class,
+         5,
+         1677721600,
+         true,
+         WorldSettings::validateStructure,
+         WorldSettings::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         21,
+         "WorldLoadProgress",
+         WorldLoadProgress.class,
+         9,
+         1677721600,
+         false,
+         WorldLoadProgress::validateStructure,
+         WorldLoadProgress::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         22,
+         "WorldLoadFinished",
+         WorldLoadFinished.class,
+         0,
+         0,
+         false,
+         WorldLoadFinished::validateStructure,
+         WorldLoadFinished::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         23,
+         "RequestAssets",
+         RequestAssets.class,
+         1,
+         1677721600,
+         true,
+         RequestAssets::validateStructure,
+         RequestAssets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         24,
+         "AssetInitialize",
+         AssetInitialize.class,
+         4,
+         2121,
+         false,
+         AssetInitialize::validateStructure,
+         AssetInitialize::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         25,
+         "AssetPart",
+         AssetPart.class,
+         1,
+         4096006,
+         true,
+         AssetPart::validateStructure,
+         AssetPart::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         26,
+         "AssetFinalize",
+         AssetFinalize.class,
+         0,
+         0,
+         false,
+         AssetFinalize::validateStructure,
+         AssetFinalize::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         27,
+         "RemoveAssets",
+         RemoveAssets.class,
+         1,
+         1677721600,
+         false,
+         RemoveAssets::validateStructure,
+         RemoveAssets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         28,
+         "RequestCommonAssetsRebuild",
+         RequestCommonAssetsRebuild.class,
+         0,
+         0,
+         false,
+         RequestCommonAssetsRebuild::validateStructure,
+         RequestCommonAssetsRebuild::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         29,
+         "SetUpdateRate",
+         SetUpdateRate.class,
+         4,
+         4,
+         false,
+         SetUpdateRate::validateStructure,
+         SetUpdateRate::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         30,
+         "SetTimeDilation",
+         SetTimeDilation.class,
+         4,
+         4,
+         false,
+         SetTimeDilation::validateStructure,
+         SetTimeDilation::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         31,
+         "UpdateFeatures",
+         UpdateFeatures.class,
+         1,
+         8192006,
+         false,
+         UpdateFeatures::validateStructure,
+         UpdateFeatures::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         32,
+         "ViewRadius",
+         ViewRadius.class,
+         4,
+         4,
+         false,
+         ViewRadius::validateStructure,
+         ViewRadius::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         33,
+         "PlayerOptions",
+         PlayerOptions.class,
+         1,
+         327680184,
+         false,
+         PlayerOptions::validateStructure,
+         PlayerOptions::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         34,
+         "ServerTags",
+         ServerTags.class,
+         1,
+         1677721600,
+         false,
+         ServerTags::validateStructure,
+         ServerTags::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         40,
+         "UpdateBlockTypes",
+         UpdateBlockTypes.class,
+         10,
+         1677721600,
+         true,
+         UpdateBlockTypes::validateStructure,
+         UpdateBlockTypes::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         41,
+         "UpdateBlockHitboxes",
+         UpdateBlockHitboxes.class,
+         6,
+         1677721600,
+         true,
+         UpdateBlockHitboxes::validateStructure,
+         UpdateBlockHitboxes::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         42,
+         "UpdateBlockSoundSets",
+         UpdateBlockSoundSets.class,
+         6,
+         1677721600,
+         true,
+         UpdateBlockSoundSets::validateStructure,
+         UpdateBlockSoundSets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         43,
+         "UpdateItemSoundSets",
+         UpdateItemSoundSets.class,
+         6,
+         1677721600,
+         true,
+         UpdateItemSoundSets::validateStructure,
+         UpdateItemSoundSets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         44,
+         "UpdateBlockParticleSets",
+         UpdateBlockParticleSets.class,
+         2,
+         1677721600,
+         true,
+         UpdateBlockParticleSets::validateStructure,
+         UpdateBlockParticleSets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         45,
+         "UpdateBlockBreakingDecals",
+         UpdateBlockBreakingDecals.class,
+         2,
+         1677721600,
+         true,
+         UpdateBlockBreakingDecals::validateStructure,
+         UpdateBlockBreakingDecals::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         46,
+         "UpdateBlockSets",
+         UpdateBlockSets.class,
+         2,
+         1677721600,
+         true,
+         UpdateBlockSets::validateStructure,
+         UpdateBlockSets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         47,
+         "UpdateWeathers",
+         UpdateWeathers.class,
+         6,
+         1677721600,
+         true,
+         UpdateWeathers::validateStructure,
+         UpdateWeathers::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         48,
+         "UpdateTrails",
+         UpdateTrails.class,
+         2,
+         1677721600,
+         true,
+         UpdateTrails::validateStructure,
+         UpdateTrails::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         49,
+         "UpdateParticleSystems",
+         UpdateParticleSystems.class,
+         2,
+         1677721600,
+         true,
+         UpdateParticleSystems::validateStructure,
+         UpdateParticleSystems::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         50,
+         "UpdateParticleSpawners",
+         UpdateParticleSpawners.class,
+         2,
+         1677721600,
+         true,
+         UpdateParticleSpawners::validateStructure,
+         UpdateParticleSpawners::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         51,
+         "UpdateEntityEffects",
+         UpdateEntityEffects.class,
+         6,
+         1677721600,
+         true,
+         UpdateEntityEffects::validateStructure,
+         UpdateEntityEffects::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         52,
+         "UpdateItemPlayerAnimations",
+         UpdateItemPlayerAnimations.class,
+         2,
+         1677721600,
+         true,
+         UpdateItemPlayerAnimations::validateStructure,
+         UpdateItemPlayerAnimations::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         53,
+         "UpdateModelvfxs",
+         UpdateModelvfxs.class,
+         6,
+         1677721600,
+         true,
+         UpdateModelvfxs::validateStructure,
+         UpdateModelvfxs::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         54,
+         "UpdateItems",
+         UpdateItems.class,
+         4,
+         1677721600,
+         true,
+         UpdateItems::validateStructure,
+         UpdateItems::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         55,
+         "UpdateItemQualities",
+         UpdateItemQualities.class,
+         6,
+         1677721600,
+         true,
+         UpdateItemQualities::validateStructure,
+         UpdateItemQualities::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         56,
+         "UpdateItemCategories",
+         UpdateItemCategories.class,
+         2,
+         1677721600,
+         true,
+         UpdateItemCategories::validateStructure,
+         UpdateItemCategories::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         57,
+         "UpdateItemReticles",
+         UpdateItemReticles.class,
+         6,
+         1677721600,
+         true,
+         UpdateItemReticles::validateStructure,
+         UpdateItemReticles::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         58,
+         "UpdateFieldcraftCategories",
+         UpdateFieldcraftCategories.class,
+         2,
+         1677721600,
+         true,
+         UpdateFieldcraftCategories::validateStructure,
+         UpdateFieldcraftCategories::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         59,
+         "UpdateResourceTypes",
+         UpdateResourceTypes.class,
+         2,
+         1677721600,
+         true,
+         UpdateResourceTypes::validateStructure,
+         UpdateResourceTypes::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         60,
+         "UpdateRecipes",
+         UpdateRecipes.class,
+         2,
+         1677721600,
+         true,
+         UpdateRecipes::validateStructure,
+         UpdateRecipes::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         61,
+         "UpdateEnvironments",
+         UpdateEnvironments.class,
+         7,
+         1677721600,
+         true,
+         UpdateEnvironments::validateStructure,
+         UpdateEnvironments::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         62,
+         "UpdateAmbienceFX",
+         UpdateAmbienceFX.class,
+         6,
+         1677721600,
+         true,
+         UpdateAmbienceFX::validateStructure,
+         UpdateAmbienceFX::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         63,
+         "UpdateFluidFX",
+         UpdateFluidFX.class,
+         6,
+         1677721600,
+         true,
+         UpdateFluidFX::validateStructure,
+         UpdateFluidFX::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         64,
+         "UpdateTranslations",
+         UpdateTranslations.class,
+         2,
+         1677721600,
+         true,
+         UpdateTranslations::validateStructure,
+         UpdateTranslations::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         65,
+         "UpdateSoundEvents",
+         UpdateSoundEvents.class,
+         6,
+         1677721600,
+         true,
+         UpdateSoundEvents::validateStructure,
+         UpdateSoundEvents::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         66,
+         "UpdateInteractions",
+         UpdateInteractions.class,
+         6,
+         1677721600,
+         true,
+         UpdateInteractions::validateStructure,
+         UpdateInteractions::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         67,
+         "UpdateRootInteractions",
+         UpdateRootInteractions.class,
+         6,
+         1677721600,
+         true,
+         UpdateRootInteractions::validateStructure,
+         UpdateRootInteractions::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         68,
+         "UpdateUnarmedInteractions",
+         UpdateUnarmedInteractions.class,
+         2,
+         20480007,
+         true,
+         UpdateUnarmedInteractions::validateStructure,
+         UpdateUnarmedInteractions::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         69,
+         "TrackOrUpdateObjective",
+         TrackOrUpdateObjective.class,
+         1,
+         1677721600,
+         false,
+         TrackOrUpdateObjective::validateStructure,
+         TrackOrUpdateObjective::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         70,
+         "UntrackObjective",
+         UntrackObjective.class,
+         16,
+         16,
+         false,
+         UntrackObjective::validateStructure,
+         UntrackObjective::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         71,
+         "UpdateObjectiveTask",
+         UpdateObjectiveTask.class,
+         21,
+         1677721600,
+         false,
+         UpdateObjectiveTask::validateStructure,
+         UpdateObjectiveTask::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         72,
+         "UpdateEntityStatTypes",
+         UpdateEntityStatTypes.class,
+         6,
+         1677721600,
+         true,
+         UpdateEntityStatTypes::validateStructure,
+         UpdateEntityStatTypes::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         73,
+         "UpdateEntityUIComponents",
+         UpdateEntityUIComponents.class,
+         6,
+         1677721600,
+         true,
+         UpdateEntityUIComponents::validateStructure,
+         UpdateEntityUIComponents::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         74,
+         "UpdateHitboxCollisionConfig",
+         UpdateHitboxCollisionConfig.class,
+         6,
+         36864011,
+         true,
+         UpdateHitboxCollisionConfig::validateStructure,
+         UpdateHitboxCollisionConfig::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         75,
+         "UpdateRepulsionConfig",
+         UpdateRepulsionConfig.class,
+         6,
+         65536011,
+         true,
+         UpdateRepulsionConfig::validateStructure,
+         UpdateRepulsionConfig::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         76,
+         "UpdateViewBobbing",
+         UpdateViewBobbing.class,
+         2,
+         1677721600,
+         true,
+         UpdateViewBobbing::validateStructure,
+         UpdateViewBobbing::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         77,
+         "UpdateCameraShake",
+         UpdateCameraShake.class,
+         2,
+         1677721600,
+         true,
+         UpdateCameraShake::validateStructure,
+         UpdateCameraShake::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         78,
+         "UpdateBlockGroups",
+         UpdateBlockGroups.class,
+         2,
+         1677721600,
+         true,
+         UpdateBlockGroups::validateStructure,
+         UpdateBlockGroups::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         79,
+         "UpdateSoundSets",
+         UpdateSoundSets.class,
+         6,
+         1677721600,
+         true,
+         UpdateSoundSets::validateStructure,
+         UpdateSoundSets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         80,
+         "UpdateAudioCategories",
+         UpdateAudioCategories.class,
+         6,
+         1677721600,
+         true,
+         UpdateAudioCategories::validateStructure,
+         UpdateAudioCategories::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         81,
+         "UpdateReverbEffects",
+         UpdateReverbEffects.class,
+         6,
+         1677721600,
+         true,
+         UpdateReverbEffects::validateStructure,
+         UpdateReverbEffects::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         82,
+         "UpdateEqualizerEffects",
+         UpdateEqualizerEffects.class,
+         6,
+         1677721600,
+         true,
+         UpdateEqualizerEffects::validateStructure,
+         UpdateEqualizerEffects::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         83,
+         "UpdateFluids",
+         UpdateFluids.class,
+         6,
+         1677721600,
+         true,
+         UpdateFluids::validateStructure,
+         UpdateFluids::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         84,
+         "UpdateTagPatterns",
+         UpdateTagPatterns.class,
+         6,
+         1677721600,
+         true,
+         UpdateTagPatterns::validateStructure,
+         UpdateTagPatterns::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         85,
+         "UpdateProjectileConfigs",
+         UpdateProjectileConfigs.class,
+         2,
+         1677721600,
+         true,
+         UpdateProjectileConfigs::validateStructure,
+         UpdateProjectileConfigs::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         100,
+         "SetClientId",
+         SetClientId.class,
+         4,
+         4,
+         false,
+         SetClientId::validateStructure,
+         SetClientId::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         101,
+         "SetGameMode",
+         SetGameMode.class,
+         1,
+         1,
+         false,
+         SetGameMode::validateStructure,
+         SetGameMode::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         102,
+         "SetMovementStates",
+         SetMovementStates.class,
+         2,
+         2,
+         false,
+         SetMovementStates::validateStructure,
+         SetMovementStates::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         103,
+         "SetBlockPlacementOverride",
+         SetBlockPlacementOverride.class,
+         1,
+         1,
+         false,
+         SetBlockPlacementOverride::validateStructure,
+         SetBlockPlacementOverride::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         104,
+         "JoinWorld",
+         JoinWorld.class,
+         18,
+         18,
+         false,
+         JoinWorld::validateStructure,
+         JoinWorld::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         105,
+         "ClientReady",
+         ClientReady.class,
+         2,
+         2,
+         false,
+         ClientReady::validateStructure,
+         ClientReady::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         106,
+         "LoadHotbar",
+         LoadHotbar.class,
+         1,
+         1,
+         false,
+         LoadHotbar::validateStructure,
+         LoadHotbar::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         107,
+         "SaveHotbar",
+         SaveHotbar.class,
+         1,
+         1,
+         false,
+         SaveHotbar::validateStructure,
+         SaveHotbar::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         108,
+         "ClientMovement",
+         ClientMovement.class,
+         153,
+         153,
+         false,
+         ClientMovement::validateStructure,
+         ClientMovement::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         109,
+         "ClientTeleport",
+         ClientTeleport.class,
+         52,
+         52,
+         false,
+         ClientTeleport::validateStructure,
+         ClientTeleport::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         110,
+         "UpdateMovementSettings",
+         UpdateMovementSettings.class,
+         252,
+         252,
+         false,
+         UpdateMovementSettings::validateStructure,
+         UpdateMovementSettings::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         111,
+         "MouseInteraction",
+         MouseInteraction.class,
+         44,
+         20480071,
+         false,
+         MouseInteraction::validateStructure,
+         MouseInteraction::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         112,
+         "DamageInfo",
+         DamageInfo.class,
+         29,
+         32768048,
+         false,
+         DamageInfo::validateStructure,
+         DamageInfo::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         113,
+         "ReticleEvent",
+         ReticleEvent.class,
+         4,
+         4,
+         false,
+         ReticleEvent::validateStructure,
+         ReticleEvent::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         114,
+         "DisplayDebug",
+         DisplayDebug.class,
+         23,
+         32768041,
+         false,
+         DisplayDebug::validateStructure,
+         DisplayDebug::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         115,
+         "ClearDebugShapes",
+         ClearDebugShapes.class,
+         0,
+         0,
+         false,
+         ClearDebugShapes::validateStructure,
+         ClearDebugShapes::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         116,
+         "SyncPlayerPreferences",
+         SyncPlayerPreferences.class,
+         12,
+         12,
+         false,
+         SyncPlayerPreferences::validateStructure,
+         SyncPlayerPreferences::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         117,
+         "ClientPlaceBlock",
+         ClientPlaceBlock.class,
+         20,
+         20,
+         false,
+         ClientPlaceBlock::validateStructure,
+         ClientPlaceBlock::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         118,
+         "UpdateMemoriesFeatureStatus",
+         UpdateMemoriesFeatureStatus.class,
+         1,
+         1,
+         false,
+         UpdateMemoriesFeatureStatus::validateStructure,
+         UpdateMemoriesFeatureStatus::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         119,
+         "RemoveMapMarker",
+         RemoveMapMarker.class,
+         1,
+         16384006,
+         false,
+         RemoveMapMarker::validateStructure,
+         RemoveMapMarker::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         131,
+         "SetChunk",
+         SetChunk.class,
+         13,
+         12288040,
+         true,
+         SetChunk::validateStructure,
+         SetChunk::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         132,
+         "SetChunkHeightmap",
+         SetChunkHeightmap.class,
+         9,
+         4096014,
+         true,
+         SetChunkHeightmap::validateStructure,
+         SetChunkHeightmap::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         133,
+         "SetChunkTintmap",
+         SetChunkTintmap.class,
+         9,
+         4096014,
+         true,
+         SetChunkTintmap::validateStructure,
+         SetChunkTintmap::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         134,
+         "SetChunkEnvironments",
+         SetChunkEnvironments.class,
+         9,
+         4096014,
+         true,
+         SetChunkEnvironments::validateStructure,
+         SetChunkEnvironments::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         135,
+         "UnloadChunk",
+         UnloadChunk.class,
+         8,
+         8,
+         false,
+         UnloadChunk::validateStructure,
+         UnloadChunk::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         136,
+         "SetFluids",
+         SetFluids.class,
+         13,
+         4096018,
+         true,
+         SetFluids::validateStructure,
+         SetFluids::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         140,
+         "ServerSetBlock",
+         ServerSetBlock.class,
+         19,
+         19,
+         false,
+         ServerSetBlock::validateStructure,
+         ServerSetBlock::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         141,
+         "ServerSetBlocks",
+         ServerSetBlocks.class,
+         12,
+         36864017,
+         false,
+         ServerSetBlocks::validateStructure,
+         ServerSetBlocks::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         142,
+         "ServerSetFluid",
+         ServerSetFluid.class,
+         17,
+         17,
+         false,
+         ServerSetFluid::validateStructure,
+         ServerSetFluid::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         143,
+         "ServerSetFluids",
+         ServerSetFluids.class,
+         12,
+         28672017,
+         false,
+         ServerSetFluids::validateStructure,
+         ServerSetFluids::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Chunks,
+         144,
+         "UpdateBlockDamage",
+         UpdateBlockDamage.class,
+         21,
+         21,
+         false,
+         UpdateBlockDamage::validateStructure,
+         UpdateBlockDamage::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         145,
+         "UpdateTimeSettings",
+         UpdateTimeSettings.class,
+         10,
+         10,
+         false,
+         UpdateTimeSettings::validateStructure,
+         UpdateTimeSettings::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         146,
+         "UpdateTime",
+         UpdateTime.class,
+         13,
+         13,
+         false,
+         UpdateTime::validateStructure,
+         UpdateTime::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         147,
+         "UpdateEditorTimeOverride",
+         UpdateEditorTimeOverride.class,
+         14,
+         14,
+         false,
+         UpdateEditorTimeOverride::validateStructure,
+         UpdateEditorTimeOverride::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         148,
+         "ClearEditorTimeOverride",
+         ClearEditorTimeOverride.class,
+         0,
+         0,
+         false,
+         ClearEditorTimeOverride::validateStructure,
+         ClearEditorTimeOverride::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         149,
+         "UpdateWeather",
+         UpdateWeather.class,
+         8,
+         8,
+         false,
+         UpdateWeather::validateStructure,
+         UpdateWeather::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         150,
+         "UpdateEditorWeatherOverride",
+         UpdateEditorWeatherOverride.class,
+         4,
+         4,
+         false,
+         UpdateEditorWeatherOverride::validateStructure,
+         UpdateEditorWeatherOverride::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         151,
+         "UpdateEnvironmentMusic",
+         UpdateEnvironmentMusic.class,
+         4,
+         4,
+         false,
+         UpdateEnvironmentMusic::validateStructure,
+         UpdateEnvironmentMusic::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         152,
+         "SpawnParticleSystem",
+         SpawnParticleSystem.class,
+         44,
+         16384049,
+         false,
+         SpawnParticleSystem::validateStructure,
+         SpawnParticleSystem::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         153,
+         "SpawnBlockParticleSystem",
+         SpawnBlockParticleSystem.class,
+         30,
+         30,
+         false,
+         SpawnBlockParticleSystem::validateStructure,
+         SpawnBlockParticleSystem::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         154,
+         "PlaySoundEvent2D",
+         PlaySoundEvent2D.class,
+         13,
+         13,
+         false,
+         PlaySoundEvent2D::validateStructure,
+         PlaySoundEvent2D::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         155,
+         "PlaySoundEvent3D",
+         PlaySoundEvent3D.class,
+         38,
+         38,
+         false,
+         PlaySoundEvent3D::validateStructure,
+         PlaySoundEvent3D::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         156,
+         "PlaySoundEventEntity",
+         PlaySoundEventEntity.class,
+         16,
+         16,
+         false,
+         PlaySoundEventEntity::validateStructure,
+         PlaySoundEventEntity::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         157,
+         "UpdateSleepState",
+         UpdateSleepState.class,
+         36,
+         65536050,
+         false,
+         UpdateSleepState::validateStructure,
+         UpdateSleepState::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         158,
+         "SetPaused",
+         SetPaused.class,
+         1,
+         1,
+         false,
+         SetPaused::validateStructure,
+         SetPaused::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         159,
+         "ServerSetPaused",
+         ServerSetPaused.class,
+         1,
+         1,
+         false,
+         ServerSetPaused::validateStructure,
+         ServerSetPaused::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         160,
+         "SetEntitySeed",
+         SetEntitySeed.class,
+         4,
+         4,
+         false,
+         SetEntitySeed::validateStructure,
+         SetEntitySeed::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         161,
+         "EntityUpdates",
+         EntityUpdates.class,
+         1,
+         1677721600,
+         true,
+         EntityUpdates::validateStructure,
+         EntityUpdates::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         162,
+         "PlayAnimation",
+         PlayAnimation.class,
+         6,
+         32768024,
+         false,
+         PlayAnimation::validateStructure,
+         PlayAnimation::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         163,
+         "ChangeVelocity",
+         ChangeVelocity.class,
+         35,
+         35,
+         false,
+         ChangeVelocity::validateStructure,
+         ChangeVelocity::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         164,
+         "ApplyKnockback",
+         ApplyKnockback.class,
+         38,
+         38,
+         false,
+         ApplyKnockback::validateStructure,
+         ApplyKnockback::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         165,
+         "SpawnModelParticles",
+         SpawnModelParticles.class,
+         5,
+         1677721600,
+         false,
+         SpawnModelParticles::validateStructure,
+         SpawnModelParticles::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         166,
+         "MountMovement",
+         MountMovement.class,
+         59,
+         59,
+         false,
+         MountMovement::validateStructure,
+         MountMovement::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         170,
+         "UpdatePlayerInventory",
+         UpdatePlayerInventory.class,
+         2,
+         1677721600,
+         true,
+         UpdatePlayerInventory::validateStructure,
+         UpdatePlayerInventory::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         171,
+         "SetCreativeItem",
+         SetCreativeItem.class,
+         9,
+         16384019,
+         false,
+         SetCreativeItem::validateStructure,
+         SetCreativeItem::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         172,
+         "DropCreativeItem",
+         DropCreativeItem.class,
+         0,
+         16384010,
+         false,
+         DropCreativeItem::validateStructure,
+         DropCreativeItem::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         173,
+         "SmartGiveCreativeItem",
+         SmartGiveCreativeItem.class,
+         1,
+         16384011,
+         false,
+         SmartGiveCreativeItem::validateStructure,
+         SmartGiveCreativeItem::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         174,
+         "DropItemStack",
+         DropItemStack.class,
+         12,
+         12,
+         false,
+         DropItemStack::validateStructure,
+         DropItemStack::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         175,
+         "MoveItemStack",
+         MoveItemStack.class,
+         20,
+         20,
+         false,
+         MoveItemStack::validateStructure,
+         MoveItemStack::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         176,
+         "SmartMoveItemStack",
+         SmartMoveItemStack.class,
+         13,
+         13,
+         false,
+         SmartMoveItemStack::validateStructure,
+         SmartMoveItemStack::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         177,
+         "SetActiveSlot",
+         SetActiveSlot.class,
+         8,
+         8,
+         false,
+         SetActiveSlot::validateStructure,
+         SetActiveSlot::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         178,
+         "SwitchHotbarBlockSet",
+         SwitchHotbarBlockSet.class,
+         1,
+         16384006,
+         false,
+         SwitchHotbarBlockSet::validateStructure,
+         SwitchHotbarBlockSet::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         179,
+         "InventoryAction",
+         InventoryAction.class,
+         6,
+         6,
+         false,
+         InventoryAction::validateStructure,
+         InventoryAction::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         200,
+         "OpenWindow",
+         OpenWindow.class,
+         6,
+         1677721600,
+         true,
+         OpenWindow::validateStructure,
+         OpenWindow::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         201,
+         "UpdateWindow",
+         UpdateWindow.class,
+         5,
+         1677721600,
+         true,
+         UpdateWindow::validateStructure,
+         UpdateWindow::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         202,
+         "CloseWindow",
+         CloseWindow.class,
+         4,
+         4,
+         false,
+         CloseWindow::validateStructure,
+         CloseWindow::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         203,
+         "SendWindowAction",
+         SendWindowAction.class,
+         4,
+         32768027,
+         false,
+         SendWindowAction::validateStructure,
+         SendWindowAction::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         204,
+         "ClientOpenWindow",
+         ClientOpenWindow.class,
+         1,
+         1,
+         false,
+         ClientOpenWindow::validateStructure,
+         ClientOpenWindow::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         210,
+         "ServerMessage",
+         ServerMessage.class,
+         2,
+         1677721600,
+         false,
+         ServerMessage::validateStructure,
+         ServerMessage::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         211,
+         "ChatMessage",
+         ChatMessage.class,
+         1,
+         16384006,
+         false,
+         ChatMessage::validateStructure,
+         ChatMessage::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         212,
+         "Notification",
+         Notification.class,
+         2,
+         1677721600,
+         false,
+         Notification::validateStructure,
+         Notification::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         213,
+         "KillFeedMessage",
+         KillFeedMessage.class,
+         1,
+         1677721600,
+         false,
+         KillFeedMessage::validateStructure,
+         KillFeedMessage::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         214,
+         "ShowEventTitle",
+         ShowEventTitle.class,
+         14,
+         1677721600,
+         false,
+         ShowEventTitle::validateStructure,
+         ShowEventTitle::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         215,
+         "HideEventTitle",
+         HideEventTitle.class,
+         4,
+         4,
+         false,
+         HideEventTitle::validateStructure,
+         HideEventTitle::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         216,
+         "SetPage",
+         SetPage.class,
+         2,
+         2,
+         false,
+         SetPage::validateStructure,
+         SetPage::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         217,
+         "CustomHud",
+         CustomHud.class,
+         2,
+         1677721600,
+         true,
+         CustomHud::validateStructure,
+         CustomHud::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         218,
+         "CustomPage",
+         CustomPage.class,
+         4,
+         1677721600,
+         true,
+         CustomPage::validateStructure,
+         CustomPage::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         219,
+         "CustomPageEvent",
+         CustomPageEvent.class,
+         2,
+         16384007,
+         false,
+         CustomPageEvent::validateStructure,
+         CustomPageEvent::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         222,
+         "EditorBlocksChange",
+         EditorBlocksChange.class,
+         30,
+         139264048,
+         true,
+         EditorBlocksChange::validateStructure,
+         EditorBlocksChange::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         223,
+         "ServerInfo",
+         ServerInfo.class,
+         5,
+         32768023,
+         false,
+         ServerInfo::validateStructure,
+         ServerInfo::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         224,
+         "AddToServerPlayerList",
+         AddToServerPlayerList.class,
+         1,
+         1677721600,
+         false,
+         AddToServerPlayerList::validateStructure,
+         AddToServerPlayerList::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         225,
+         "RemoveFromServerPlayerList",
+         RemoveFromServerPlayerList.class,
+         1,
+         65536006,
+         false,
+         RemoveFromServerPlayerList::validateStructure,
+         RemoveFromServerPlayerList::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         226,
+         "UpdateServerPlayerList",
+         UpdateServerPlayerList.class,
+         1,
+         131072006,
+         false,
+         UpdateServerPlayerList::validateStructure,
+         UpdateServerPlayerList::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         227,
+         "UpdateServerPlayerListPing",
+         UpdateServerPlayerListPing.class,
+         1,
+         81920006,
+         false,
+         UpdateServerPlayerListPing::validateStructure,
+         UpdateServerPlayerListPing::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         228,
+         "UpdateKnownRecipes",
+         UpdateKnownRecipes.class,
+         1,
+         1677721600,
+         false,
+         UpdateKnownRecipes::validateStructure,
+         UpdateKnownRecipes::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         229,
+         "UpdatePortal",
+         UpdatePortal.class,
+         6,
+         16384020,
+         false,
+         UpdatePortal::validateStructure,
+         UpdatePortal::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         230,
+         "UpdateVisibleHudComponents",
+         UpdateVisibleHudComponents.class,
+         1,
+         4096006,
+         false,
+         UpdateVisibleHudComponents::validateStructure,
+         UpdateVisibleHudComponents::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         231,
+         "ResetUserInterfaceState",
+         ResetUserInterfaceState.class,
+         0,
+         0,
+         false,
+         ResetUserInterfaceState::validateStructure,
+         ResetUserInterfaceState::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         232,
+         "UpdateLanguage",
+         UpdateLanguage.class,
+         1,
+         16384006,
+         false,
+         UpdateLanguage::validateStructure,
+         UpdateLanguage::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         233,
+         "WorldSavingStatus",
+         WorldSavingStatus.class,
+         1,
+         1,
+         false,
+         WorldSavingStatus::validateStructure,
+         WorldSavingStatus::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         234,
+         "OpenChatWithCommand",
+         OpenChatWithCommand.class,
+         1,
+         16384006,
+         false,
+         OpenChatWithCommand::validateStructure,
+         OpenChatWithCommand::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         235,
+         "UpdateAnchorUI",
+         UpdateAnchorUI.class,
+         2,
+         1677721600,
+         true,
+         UpdateAnchorUI::validateStructure,
+         UpdateAnchorUI::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         240,
+         "UpdateWorldMapSettings",
+         UpdateWorldMapSettings.class,
+         20,
+         1677721600,
+         false,
+         UpdateWorldMapSettings::validateStructure,
+         UpdateWorldMapSettings::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.WorldMap,
+         241,
+         "UpdateWorldMap",
+         UpdateWorldMap.class,
+         1,
+         1677721600,
+         true,
+         UpdateWorldMap::validateStructure,
+         UpdateWorldMap::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.WorldMap,
+         242,
+         "ClearWorldMap",
+         ClearWorldMap.class,
+         0,
+         0,
+         false,
+         ClearWorldMap::validateStructure,
+         ClearWorldMap::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         243,
+         "UpdateWorldMapVisible",
+         UpdateWorldMapVisible.class,
+         1,
+         1,
+         false,
+         UpdateWorldMapVisible::validateStructure,
+         UpdateWorldMapVisible::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         244,
+         "TeleportToWorldMapMarker",
+         TeleportToWorldMapMarker.class,
+         1,
+         16384006,
+         false,
+         TeleportToWorldMapMarker::validateStructure,
+         TeleportToWorldMapMarker::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         245,
+         "TeleportToWorldMapPosition",
+         TeleportToWorldMapPosition.class,
+         8,
+         8,
+         false,
+         TeleportToWorldMapPosition::validateStructure,
+         TeleportToWorldMapPosition::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         246,
+         "CreateUserMarker",
+         CreateUserMarker.class,
+         13,
+         32768031,
+         false,
+         CreateUserMarker::validateStructure,
+         CreateUserMarker::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         250,
+         "RequestServerAccess",
+         RequestServerAccess.class,
+         3,
+         3,
+         false,
+         RequestServerAccess::validateStructure,
+         RequestServerAccess::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         251,
+         "UpdateServerAccess",
+         UpdateServerAccess.class,
+         2,
+         1677721600,
+         false,
+         UpdateServerAccess::validateStructure,
+         UpdateServerAccess::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         252,
+         "SetServerAccess",
+         SetServerAccess.class,
+         2,
+         16384007,
+         false,
+         SetServerAccess::validateStructure,
+         SetServerAccess::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         260,
+         "RequestMachinimaActorModel",
+         RequestMachinimaActorModel.class,
+         1,
+         49152028,
+         false,
+         RequestMachinimaActorModel::validateStructure,
+         RequestMachinimaActorModel::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         261,
+         "SetMachinimaActorModel",
+         SetMachinimaActorModel.class,
+         1,
+         1677721600,
+         false,
+         SetMachinimaActorModel::validateStructure,
+         SetMachinimaActorModel::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         262,
+         "UpdateMachinimaScene",
+         UpdateMachinimaScene.class,
+         6,
+         36864033,
+         true,
+         UpdateMachinimaScene::validateStructure,
+         UpdateMachinimaScene::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         280,
+         "SetServerCamera",
+         SetServerCamera.class,
+         157,
+         157,
+         false,
+         SetServerCamera::validateStructure,
+         SetServerCamera::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         281,
+         "CameraShakeEffect",
+         CameraShakeEffect.class,
+         9,
+         9,
+         false,
+         CameraShakeEffect::validateStructure,
+         CameraShakeEffect::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         282,
+         "RequestFlyCameraMode",
+         RequestFlyCameraMode.class,
+         1,
+         1,
+         false,
+         RequestFlyCameraMode::validateStructure,
+         RequestFlyCameraMode::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         283,
+         "SetFlyCameraMode",
+         SetFlyCameraMode.class,
+         1,
+         1,
+         false,
+         SetFlyCameraMode::validateStructure,
+         SetFlyCameraMode::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         290,
+         "SyncInteractionChains",
+         SyncInteractionChains.class,
+         0,
+         1677721600,
+         false,
+         SyncInteractionChains::validateStructure,
+         SyncInteractionChains::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         291,
+         "CancelInteractionChain",
+         CancelInteractionChain.class,
+         5,
+         1038,
+         false,
+         CancelInteractionChain::validateStructure,
+         CancelInteractionChain::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         292,
+         "PlayInteractionFor",
+         PlayInteractionFor.class,
+         19,
+         16385065,
+         false,
+         PlayInteractionFor::validateStructure,
+         PlayInteractionFor::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         293,
+         "MountNPC",
+         MountNPC.class,
+         16,
+         16,
+         false,
+         MountNPC::validateStructure,
+         MountNPC::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         294,
+         "DismountNPC",
+         DismountNPC.class,
+         0,
+         0,
+         false,
+         DismountNPC::validateStructure,
+         DismountNPC::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         300,
+         "FailureReply",
+         FailureReply.class,
+         5,
+         1677721600,
+         false,
+         FailureReply::validateStructure,
+         FailureReply::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         301,
+         "SuccessReply",
+         SuccessReply.class,
+         5,
+         1677721600,
+         false,
+         SuccessReply::validateStructure,
+         SuccessReply::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         302,
+         "AssetEditorInitialize",
+         AssetEditorInitialize.class,
+         0,
+         0,
+         false,
+         AssetEditorInitialize::validateStructure,
+         AssetEditorInitialize::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         303,
+         "AssetEditorAuthorization",
+         AssetEditorAuthorization.class,
+         1,
+         1,
+         false,
+         AssetEditorAuthorization::validateStructure,
+         AssetEditorAuthorization::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         304,
+         "AssetEditorCapabilities",
+         AssetEditorCapabilities.class,
+         5,
+         5,
+         false,
+         AssetEditorCapabilities::validateStructure,
+         AssetEditorCapabilities::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         305,
+         "AssetEditorSetupSchemas",
+         AssetEditorSetupSchemas.class,
+         1,
+         1677721600,
+         true,
+         AssetEditorSetupSchemas::validateStructure,
+         AssetEditorSetupSchemas::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         306,
+         "AssetEditorSetupAssetTypes",
+         AssetEditorSetupAssetTypes.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorSetupAssetTypes::validateStructure,
+         AssetEditorSetupAssetTypes::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         307,
+         "AssetEditorCreateDirectory",
+         AssetEditorCreateDirectory.class,
+         5,
+         32768024,
+         false,
+         AssetEditorCreateDirectory::validateStructure,
+         AssetEditorCreateDirectory::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         308,
+         "AssetEditorDeleteDirectory",
+         AssetEditorDeleteDirectory.class,
+         5,
+         32768024,
+         false,
+         AssetEditorDeleteDirectory::validateStructure,
+         AssetEditorDeleteDirectory::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         309,
+         "AssetEditorRenameDirectory",
+         AssetEditorRenameDirectory.class,
+         5,
+         65536051,
+         false,
+         AssetEditorRenameDirectory::validateStructure,
+         AssetEditorRenameDirectory::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         310,
+         "AssetEditorFetchAsset",
+         AssetEditorFetchAsset.class,
+         6,
+         32768025,
+         false,
+         AssetEditorFetchAsset::validateStructure,
+         AssetEditorFetchAsset::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         311,
+         "AssetEditorFetchJsonAssetWithParents",
+         AssetEditorFetchJsonAssetWithParents.class,
+         6,
+         32768025,
+         false,
+         AssetEditorFetchJsonAssetWithParents::validateStructure,
+         AssetEditorFetchJsonAssetWithParents::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         312,
+         "AssetEditorFetchAssetReply",
+         AssetEditorFetchAssetReply.class,
+         5,
+         4096010,
+         false,
+         AssetEditorFetchAssetReply::validateStructure,
+         AssetEditorFetchAssetReply::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         313,
+         "AssetEditorFetchJsonAssetWithParentsReply",
+         AssetEditorFetchJsonAssetWithParentsReply.class,
+         5,
+         1677721600,
+         true,
+         AssetEditorFetchJsonAssetWithParentsReply::validateStructure,
+         AssetEditorFetchJsonAssetWithParentsReply::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         314,
+         "AssetEditorAssetPackSetup",
+         AssetEditorAssetPackSetup.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorAssetPackSetup::validateStructure,
+         AssetEditorAssetPackSetup::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         315,
+         "AssetEditorUpdateAssetPack",
+         AssetEditorUpdateAssetPack.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorUpdateAssetPack::validateStructure,
+         AssetEditorUpdateAssetPack::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         316,
+         "AssetEditorCreateAssetPack",
+         AssetEditorCreateAssetPack.class,
+         5,
+         1677721600,
+         false,
+         AssetEditorCreateAssetPack::validateStructure,
+         AssetEditorCreateAssetPack::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.Both,
+         NetworkChannel.Default,
+         317,
+         "AssetEditorDeleteAssetPack",
+         AssetEditorDeleteAssetPack.class,
+         1,
+         16384006,
+         false,
+         AssetEditorDeleteAssetPack::validateStructure,
+         AssetEditorDeleteAssetPack::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         319,
+         "AssetEditorAssetListSetup",
+         AssetEditorAssetListSetup.class,
+         4,
+         1677721600,
+         true,
+         AssetEditorAssetListSetup::validateStructure,
+         AssetEditorAssetListSetup::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         320,
+         "AssetEditorAssetListUpdate",
+         AssetEditorAssetListUpdate.class,
+         1,
+         1677721600,
+         true,
+         AssetEditorAssetListUpdate::validateStructure,
+         AssetEditorAssetListUpdate::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         321,
+         "AssetEditorRequestChildrenList",
+         AssetEditorRequestChildrenList.class,
+         1,
+         32768020,
+         false,
+         AssetEditorRequestChildrenList::validateStructure,
+         AssetEditorRequestChildrenList::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         322,
+         "AssetEditorRequestChildrenListReply",
+         AssetEditorRequestChildrenListReply.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorRequestChildrenListReply::validateStructure,
+         AssetEditorRequestChildrenListReply::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         323,
+         "AssetEditorUpdateJsonAsset",
+         AssetEditorUpdateJsonAsset.class,
+         9,
+         1677721600,
+         true,
+         AssetEditorUpdateJsonAsset::validateStructure,
+         AssetEditorUpdateJsonAsset::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         324,
+         "AssetEditorUpdateAsset",
+         AssetEditorUpdateAsset.class,
+         9,
+         53248050,
+         false,
+         AssetEditorUpdateAsset::validateStructure,
+         AssetEditorUpdateAsset::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         325,
+         "AssetEditorJsonAssetUpdated",
+         AssetEditorJsonAssetUpdated.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorJsonAssetUpdated::validateStructure,
+         AssetEditorJsonAssetUpdated::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         326,
+         "AssetEditorAssetUpdated",
+         AssetEditorAssetUpdated.class,
+         1,
+         36864033,
+         false,
+         AssetEditorAssetUpdated::validateStructure,
+         AssetEditorAssetUpdated::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         327,
+         "AssetEditorCreateAsset",
+         AssetEditorCreateAsset.class,
+         10,
+         53248051,
+         false,
+         AssetEditorCreateAsset::validateStructure,
+         AssetEditorCreateAsset::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         328,
+         "AssetEditorRenameAsset",
+         AssetEditorRenameAsset.class,
+         5,
+         65536051,
+         false,
+         AssetEditorRenameAsset::validateStructure,
+         AssetEditorRenameAsset::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         329,
+         "AssetEditorDeleteAsset",
+         AssetEditorDeleteAsset.class,
+         5,
+         32768024,
+         false,
+         AssetEditorDeleteAsset::validateStructure,
+         AssetEditorDeleteAsset::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         330,
+         "AssetEditorDiscardChanges",
+         AssetEditorDiscardChanges.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorDiscardChanges::validateStructure,
+         AssetEditorDiscardChanges::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         331,
+         "AssetEditorFetchAutoCompleteData",
+         AssetEditorFetchAutoCompleteData.class,
+         5,
+         32768023,
+         false,
+         AssetEditorFetchAutoCompleteData::validateStructure,
+         AssetEditorFetchAutoCompleteData::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         332,
+         "AssetEditorFetchAutoCompleteDataReply",
+         AssetEditorFetchAutoCompleteDataReply.class,
+         5,
+         1677721600,
+         false,
+         AssetEditorFetchAutoCompleteDataReply::validateStructure,
+         AssetEditorFetchAutoCompleteDataReply::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         333,
+         "AssetEditorRequestDataset",
+         AssetEditorRequestDataset.class,
+         1,
+         16384006,
+         false,
+         AssetEditorRequestDataset::validateStructure,
+         AssetEditorRequestDataset::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         334,
+         "AssetEditorRequestDatasetReply",
+         AssetEditorRequestDatasetReply.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorRequestDatasetReply::validateStructure,
+         AssetEditorRequestDatasetReply::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         335,
+         "AssetEditorActivateButton",
+         AssetEditorActivateButton.class,
+         1,
+         16384006,
+         false,
+         AssetEditorActivateButton::validateStructure,
+         AssetEditorActivateButton::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         336,
+         "AssetEditorSelectAsset",
+         AssetEditorSelectAsset.class,
+         1,
+         32768020,
+         false,
+         AssetEditorSelectAsset::validateStructure,
+         AssetEditorSelectAsset::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         337,
+         "AssetEditorPopupNotification",
+         AssetEditorPopupNotification.class,
+         2,
+         1677721600,
+         false,
+         AssetEditorPopupNotification::validateStructure,
+         AssetEditorPopupNotification::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         338,
+         "AssetEditorFetchLastModifiedAssets",
+         AssetEditorFetchLastModifiedAssets.class,
+         0,
+         0,
+         false,
+         AssetEditorFetchLastModifiedAssets::validateStructure,
+         AssetEditorFetchLastModifiedAssets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         339,
+         "AssetEditorLastModifiedAssets",
+         AssetEditorLastModifiedAssets.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorLastModifiedAssets::validateStructure,
+         AssetEditorLastModifiedAssets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         340,
+         "AssetEditorModifiedAssetsCount",
+         AssetEditorModifiedAssetsCount.class,
+         4,
+         4,
+         false,
+         AssetEditorModifiedAssetsCount::validateStructure,
+         AssetEditorModifiedAssetsCount::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         341,
+         "AssetEditorSubscribeModifiedAssetsChanges",
+         AssetEditorSubscribeModifiedAssetsChanges.class,
+         1,
+         1,
+         false,
+         AssetEditorSubscribeModifiedAssetsChanges::validateStructure,
+         AssetEditorSubscribeModifiedAssetsChanges::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         342,
+         "AssetEditorExportAssets",
+         AssetEditorExportAssets.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorExportAssets::validateStructure,
+         AssetEditorExportAssets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         343,
+         "AssetEditorExportAssetInitialize",
+         AssetEditorExportAssetInitialize.class,
+         6,
+         81920066,
+         false,
+         AssetEditorExportAssetInitialize::validateStructure,
+         AssetEditorExportAssetInitialize::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         344,
+         "AssetEditorExportAssetPart",
+         AssetEditorExportAssetPart.class,
+         1,
+         4096006,
+         true,
+         AssetEditorExportAssetPart::validateStructure,
+         AssetEditorExportAssetPart::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         345,
+         "AssetEditorExportAssetFinalize",
+         AssetEditorExportAssetFinalize.class,
+         0,
+         0,
+         false,
+         AssetEditorExportAssetFinalize::validateStructure,
+         AssetEditorExportAssetFinalize::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         346,
+         "AssetEditorExportDeleteAssets",
+         AssetEditorExportDeleteAssets.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorExportDeleteAssets::validateStructure,
+         AssetEditorExportDeleteAssets::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         347,
+         "AssetEditorExportComplete",
+         AssetEditorExportComplete.class,
+         1,
+         1677721600,
+         false,
+         AssetEditorExportComplete::validateStructure,
+         AssetEditorExportComplete::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         349,
+         "AssetEditorUndoChanges",
+         AssetEditorUndoChanges.class,
+         5,
+         32768024,
+         false,
+         AssetEditorUndoChanges::validateStructure,
+         AssetEditorUndoChanges::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         350,
+         "AssetEditorRedoChanges",
+         AssetEditorRedoChanges.class,
+         5,
+         32768024,
+         false,
+         AssetEditorRedoChanges::validateStructure,
+         AssetEditorRedoChanges::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         351,
+         "AssetEditorUndoRedoReply",
+         AssetEditorUndoRedoReply.class,
+         5,
+         1677721600,
+         false,
+         AssetEditorUndoRedoReply::validateStructure,
+         AssetEditorUndoRedoReply::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         352,
+         "AssetEditorSetGameTime",
+         AssetEditorSetGameTime.class,
+         14,
+         14,
+         false,
+         AssetEditorSetGameTime::validateStructure,
+         AssetEditorSetGameTime::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         353,
+         "AssetEditorUpdateSecondsPerGameDay",
+         AssetEditorUpdateSecondsPerGameDay.class,
+         8,
+         8,
+         false,
+         AssetEditorUpdateSecondsPerGameDay::validateStructure,
+         AssetEditorUpdateSecondsPerGameDay::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         354,
+         "AssetEditorUpdateWeatherPreviewLock",
+         AssetEditorUpdateWeatherPreviewLock.class,
+         1,
+         1,
+         false,
+         AssetEditorUpdateWeatherPreviewLock::validateStructure,
+         AssetEditorUpdateWeatherPreviewLock::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         355,
+         "AssetEditorUpdateModelPreview",
+         AssetEditorUpdateModelPreview.class,
+         30,
+         1677721600,
+         false,
+         AssetEditorUpdateModelPreview::validateStructure,
+         AssetEditorUpdateModelPreview::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         360,
+         "UpdateSunSettings",
+         UpdateSunSettings.class,
+         8,
+         8,
+         false,
+         UpdateSunSettings::validateStructure,
+         UpdateSunSettings::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         361,
+         "UpdatePostFxSettings",
+         UpdatePostFxSettings.class,
+         20,
+         20,
+         false,
+         UpdatePostFxSettings::validateStructure,
+         UpdatePostFxSettings::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         400,
+         "BuilderToolArgUpdate",
+         BuilderToolArgUpdate.class,
+         14,
+         32768032,
+         false,
+         BuilderToolArgUpdate::validateStructure,
+         BuilderToolArgUpdate::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         401,
+         "BuilderToolEntityAction",
+         BuilderToolEntityAction.class,
+         5,
+         5,
+         false,
+         BuilderToolEntityAction::validateStructure,
+         BuilderToolEntityAction::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         402,
+         "BuilderToolSetEntityTransform",
+         BuilderToolSetEntityTransform.class,
+         54,
+         54,
+         false,
+         BuilderToolSetEntityTransform::validateStructure,
+         BuilderToolSetEntityTransform::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         403,
+         "BuilderToolExtrudeAction",
+         BuilderToolExtrudeAction.class,
+         24,
+         24,
+         false,
+         BuilderToolExtrudeAction::validateStructure,
+         BuilderToolExtrudeAction::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         404,
+         "BuilderToolStackArea",
+         BuilderToolStackArea.class,
+         41,
+         41,
+         false,
+         BuilderToolStackArea::validateStructure,
+         BuilderToolStackArea::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         405,
+         "BuilderToolSelectionTransform",
+         BuilderToolSelectionTransform.class,
+         80,
+         80,
+         false,
+         BuilderToolSelectionTransform::validateStructure,
+         BuilderToolSelectionTransform::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         406,
+         "BuilderToolRotateClipboard",
+         BuilderToolRotateClipboard.class,
+         5,
+         5,
+         false,
+         BuilderToolRotateClipboard::validateStructure,
+         BuilderToolRotateClipboard::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         407,
+         "BuilderToolPasteClipboard",
+         BuilderToolPasteClipboard.class,
+         12,
+         12,
+         false,
+         BuilderToolPasteClipboard::validateStructure,
+         BuilderToolPasteClipboard::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         408,
+         "BuilderToolSetTransformationModeState",
+         BuilderToolSetTransformationModeState.class,
+         1,
+         1,
+         false,
+         BuilderToolSetTransformationModeState::validateStructure,
+         BuilderToolSetTransformationModeState::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         409,
+         "BuilderToolSelectionUpdate",
+         BuilderToolSelectionUpdate.class,
+         24,
+         24,
+         false,
+         BuilderToolSelectionUpdate::validateStructure,
+         BuilderToolSelectionUpdate::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         410,
+         "BuilderToolSelectionToolAskForClipboard",
+         BuilderToolSelectionToolAskForClipboard.class,
+         0,
+         0,
+         false,
+         BuilderToolSelectionToolAskForClipboard::validateStructure,
+         BuilderToolSelectionToolAskForClipboard::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         411,
+         "BuilderToolSelectionToolReplyWithClipboard",
+         BuilderToolSelectionToolReplyWithClipboard.class,
+         1,
+         139264019,
+         true,
+         BuilderToolSelectionToolReplyWithClipboard::validateStructure,
+         BuilderToolSelectionToolReplyWithClipboard::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         412,
+         "BuilderToolGeneralAction",
+         BuilderToolGeneralAction.class,
+         1,
+         1,
+         false,
+         BuilderToolGeneralAction::validateStructure,
+         BuilderToolGeneralAction::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         413,
+         "BuilderToolOnUseInteraction",
+         BuilderToolOnUseInteraction.class,
+         57,
+         57,
+         false,
+         BuilderToolOnUseInteraction::validateStructure,
+         BuilderToolOnUseInteraction::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         414,
+         "BuilderToolLineAction",
+         BuilderToolLineAction.class,
+         24,
+         24,
+         false,
+         BuilderToolLineAction::validateStructure,
+         BuilderToolLineAction::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         415,
+         "BuilderToolShowAnchor",
+         BuilderToolShowAnchor.class,
+         12,
+         12,
+         false,
+         BuilderToolShowAnchor::validateStructure,
+         BuilderToolShowAnchor::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         416,
+         "BuilderToolHideAnchors",
+         BuilderToolHideAnchors.class,
+         0,
+         0,
+         false,
+         BuilderToolHideAnchors::validateStructure,
+         BuilderToolHideAnchors::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         417,
+         "PrefabUnselectPrefab",
+         PrefabUnselectPrefab.class,
+         0,
+         0,
+         false,
+         PrefabUnselectPrefab::validateStructure,
+         PrefabUnselectPrefab::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         418,
+         "BuilderToolsSetSoundSet",
+         BuilderToolsSetSoundSet.class,
+         4,
+         4,
+         false,
+         BuilderToolsSetSoundSet::validateStructure,
+         BuilderToolsSetSoundSet::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         419,
+         "BuilderToolLaserPointer",
+         BuilderToolLaserPointer.class,
+         36,
+         36,
+         false,
+         BuilderToolLaserPointer::validateStructure,
+         BuilderToolLaserPointer::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         420,
+         "BuilderToolSetEntityScale",
+         BuilderToolSetEntityScale.class,
+         8,
+         8,
+         false,
+         BuilderToolSetEntityScale::validateStructure,
+         BuilderToolSetEntityScale::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         421,
+         "BuilderToolSetEntityPickupEnabled",
+         BuilderToolSetEntityPickupEnabled.class,
+         5,
+         5,
+         false,
+         BuilderToolSetEntityPickupEnabled::validateStructure,
+         BuilderToolSetEntityPickupEnabled::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         422,
+         "BuilderToolSetEntityLight",
+         BuilderToolSetEntityLight.class,
+         9,
+         9,
+         false,
+         BuilderToolSetEntityLight::validateStructure,
+         BuilderToolSetEntityLight::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         423,
+         "BuilderToolSetNPCDebug",
+         BuilderToolSetNPCDebug.class,
+         5,
+         5,
+         false,
+         BuilderToolSetNPCDebug::validateStructure,
+         BuilderToolSetNPCDebug::deserialize
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         425,
+         "BuilderToolSetEntityCollision",
+         BuilderToolSetEntityCollision.class,
+         5,
+         16384010,
+         false,
+         BuilderToolSetEntityCollision::validateStructure,
+         BuilderToolSetEntityCollision::deserialize
+      );
+   }
+
+   public static enum PacketDirection {
+      ToServer,
+      ToClient,
+      Both;
+   }
+
+   public record PacketInfo(
+      int id,
+      @Nonnull String name,
+      @Nonnull NetworkChannel channel,
+      @Nonnull Class<? extends Packet> type,
+      int fixedBlockSize,
+      int maxSize,
+      boolean compressed,
+      @Nonnull BiFunction<ByteBuf, Integer, ValidationResult> validate,
+      @Nonnull BiFunction<ByteBuf, Integer, Packet> deserialize
+   ) {
+   }
+}

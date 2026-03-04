@@ -2,11 +2,5 @@ package com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.function
 
 @FunctionalInterface
 public interface TriFunction<A, B, C, R> {
-  R apply(A paramA, B paramB, C paramC);
+   R apply(A var1, B var2, C var3);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\framework\interfaces\functions\TriFunction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

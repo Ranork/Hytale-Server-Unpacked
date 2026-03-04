@@ -1,97 +1,82 @@
-/*    */ package com.hypixel.hytale.procedurallib.logic.point;
-/*    */ 
-/*    */ import com.hypixel.hytale.procedurallib.logic.ResultBuffer;
-/*    */ import com.hypixel.hytale.procedurallib.random.ICoordinateRandomizer;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class DistortedPointGenerator
-/*    */   implements IPointGenerator
-/*    */ {
-/*    */   protected final IPointGenerator pointGenerator;
-/*    */   protected final ICoordinateRandomizer coordinateRandomizer;
-/*    */   
-/*    */   public DistortedPointGenerator(IPointGenerator pointGenerator, ICoordinateRandomizer coordinateRandomizer) {
-/* 20 */     this.pointGenerator = pointGenerator;
-/* 21 */     this.coordinateRandomizer = coordinateRandomizer;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public ResultBuffer.ResultBuffer2d nearest2D(int seed, double x, double y) {
-/* 26 */     return this.pointGenerator.nearest2D(seed, this.coordinateRandomizer
-/* 27 */         .randomDoubleX(seed, x, y), this.coordinateRandomizer
-/* 28 */         .randomDoubleY(seed, x, y));
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public ResultBuffer.ResultBuffer3d nearest3D(int seed, double x, double y, double z) {
-/* 34 */     return this.pointGenerator.nearest3D(seed, this.coordinateRandomizer
-/* 35 */         .randomDoubleX(seed, x, y, z), this.coordinateRandomizer
-/* 36 */         .randomDoubleY(seed, x, y, z), this.coordinateRandomizer
-/* 37 */         .randomDoubleZ(seed, x, y, z));
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public ResultBuffer.ResultBuffer2d transition2D(int seed, double x, double y) {
-/* 43 */     return this.pointGenerator.transition2D(seed, this.coordinateRandomizer
-/* 44 */         .randomDoubleX(seed, x, y), this.coordinateRandomizer
-/* 45 */         .randomDoubleY(seed, x, y));
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public ResultBuffer.ResultBuffer3d transition3D(int seed, double x, double y, double z) {
-/* 51 */     return this.pointGenerator.transition3D(seed, this.coordinateRandomizer
-/* 52 */         .randomDoubleX(seed, x, y, z), this.coordinateRandomizer
-/* 53 */         .randomDoubleY(seed, x, y, z), this.coordinateRandomizer
-/* 54 */         .randomDoubleZ(seed, x, y, z));
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public double getInterval() {
-/* 60 */     return this.pointGenerator.getInterval();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void collect(int seed, double minX, double minY, double maxX, double maxY, IPointGenerator.PointConsumer2d consumer) {
-/* 65 */     this.pointGenerator.collect(seed, minX, minY, maxX, maxY, consumer);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean equals(@Nullable Object o) {
-/* 70 */     if (this == o) return true; 
-/* 71 */     if (o == null || getClass() != o.getClass()) return false;
-/*    */     
-/* 73 */     DistortedPointGenerator that = (DistortedPointGenerator)o;
-/*    */     
-/* 75 */     if (!this.pointGenerator.equals(that.pointGenerator)) return false; 
-/* 76 */     return this.coordinateRandomizer.equals(that.coordinateRandomizer);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int hashCode() {
-/* 81 */     int result = this.pointGenerator.hashCode();
-/* 82 */     result = 31 * result + this.coordinateRandomizer.hashCode();
-/* 83 */     return result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 89 */     return "DistortedPointGenerator{pointGenerator=" + String.valueOf(this.pointGenerator) + ", coordinateRandomizer=" + String.valueOf(this.coordinateRandomizer) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.logic.point;
 
+import com.hypixel.hytale.procedurallib.logic.ResultBuffer;
+import com.hypixel.hytale.procedurallib.random.ICoordinateRandomizer;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\logic\point\DistortedPointGenerator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class DistortedPointGenerator implements IPointGenerator {
+   protected final IPointGenerator pointGenerator;
+   protected final ICoordinateRandomizer coordinateRandomizer;
+
+   public DistortedPointGenerator(IPointGenerator pointGenerator, ICoordinateRandomizer coordinateRandomizer) {
+      this.pointGenerator = pointGenerator;
+      this.coordinateRandomizer = coordinateRandomizer;
+   }
+
+   @Override
+   public ResultBuffer.ResultBuffer2d nearest2D(int seed, double x, double y) {
+      return this.pointGenerator.nearest2D(seed, this.coordinateRandomizer.randomDoubleX(seed, x, y), this.coordinateRandomizer.randomDoubleY(seed, x, y));
+   }
+
+   @Override
+   public ResultBuffer.ResultBuffer3d nearest3D(int seed, double x, double y, double z) {
+      return this.pointGenerator
+         .nearest3D(
+            seed,
+            this.coordinateRandomizer.randomDoubleX(seed, x, y, z),
+            this.coordinateRandomizer.randomDoubleY(seed, x, y, z),
+            this.coordinateRandomizer.randomDoubleZ(seed, x, y, z)
+         );
+   }
+
+   @Override
+   public ResultBuffer.ResultBuffer2d transition2D(int seed, double x, double y) {
+      return this.pointGenerator.transition2D(seed, this.coordinateRandomizer.randomDoubleX(seed, x, y), this.coordinateRandomizer.randomDoubleY(seed, x, y));
+   }
+
+   @Override
+   public ResultBuffer.ResultBuffer3d transition3D(int seed, double x, double y, double z) {
+      return this.pointGenerator
+         .transition3D(
+            seed,
+            this.coordinateRandomizer.randomDoubleX(seed, x, y, z),
+            this.coordinateRandomizer.randomDoubleY(seed, x, y, z),
+            this.coordinateRandomizer.randomDoubleZ(seed, x, y, z)
+         );
+   }
+
+   @Override
+   public double getInterval() {
+      return this.pointGenerator.getInterval();
+   }
+
+   @Override
+   public void collect(int seed, double minX, double minY, double maxX, double maxY, IPointGenerator.PointConsumer2d consumer) {
+      this.pointGenerator.collect(seed, minX, minY, maxX, maxY, consumer);
+   }
+
+   @Override
+   public boolean equals(@Nullable Object o) {
+      if (this == o) {
+         return true;
+      } else if (o != null && this.getClass() == o.getClass()) {
+         DistortedPointGenerator that = (DistortedPointGenerator)o;
+         return !this.pointGenerator.equals(that.pointGenerator) ? false : this.coordinateRandomizer.equals(that.coordinateRandomizer);
+      } else {
+         return false;
+      }
+   }
+
+   @Override
+   public int hashCode() {
+      int result = this.pointGenerator.hashCode();
+      return 31 * result + this.coordinateRandomizer.hashCode();
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "DistortedPointGenerator{pointGenerator=" + this.pointGenerator + ", coordinateRandomizer=" + this.coordinateRandomizer + "}";
+   }
+}

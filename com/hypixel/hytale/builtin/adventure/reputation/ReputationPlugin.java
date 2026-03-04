@@ -1,266 +1,277 @@
-/*     */ package com.hypixel.hytale.builtin.adventure.reputation;
-/*     */ import com.hypixel.hytale.assetstore.AssetMap;
-/*     */ import com.hypixel.hytale.assetstore.AssetRegistry;
-/*     */ import com.hypixel.hytale.assetstore.AssetStore;
-/*     */ import com.hypixel.hytale.assetstore.codec.AssetCodec;
-/*     */ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-/*     */ import com.hypixel.hytale.builtin.adventure.reputation.assets.ReputationGroup;
-/*     */ import com.hypixel.hytale.builtin.adventure.reputation.assets.ReputationRank;
-/*     */ import com.hypixel.hytale.builtin.adventure.reputation.choices.ReputationRequirement;
-/*     */ import com.hypixel.hytale.builtin.adventure.reputation.store.ReputationDataResource;
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.ComponentType;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.ResourceType;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.math.util.MathUtil;
-/*     */ import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
-/*     */ import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
-/*     */ import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
-/*     */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
-/*     */ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-/*     */ import com.hypixel.hytale.server.core.universe.world.World;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import it.unimi.dsi.fastutil.objects.Object2IntMap;
-/*     */ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-/*     */ import java.util.List;
-/*     */ import java.util.logging.Level;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ public class ReputationPlugin extends JavaPlugin {
-/*     */   public static ReputationPlugin get() {
-/*  36 */     return instance;
-/*     */   }
-/*     */   private static ReputationPlugin instance;
-/*     */   private ComponentType<EntityStore, ReputationGroupComponent> reputationGroupComponentType;
-/*     */   private ResourceType<EntityStore, ReputationDataResource> reputationDataResourceType;
-/*     */   private List<ReputationRank> reputationRanks;
-/*  42 */   private int maxReputationValue = Integer.MIN_VALUE;
-/*  43 */   private int minReputationValue = Integer.MAX_VALUE;
-/*     */   
-/*     */   public static final int NO_REPUTATION_GROUP = -2147483648;
-/*     */   
-/*     */   public ReputationPlugin(@Nonnull JavaPluginInit init) {
-/*  48 */     super(init);
-/*     */   }
-/*     */   
-/*     */   public ComponentType<EntityStore, ReputationGroupComponent> getReputationGroupComponentType() {
-/*  52 */     return this.reputationGroupComponentType;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void setup() {
-/*  57 */     instance = this;
-/*     */     
-/*  59 */     AssetRegistry.register((AssetStore)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(ReputationRank.class, (AssetMap)new DefaultAssetMap())
-/*  60 */         .setPath("NPC/Reputation/Ranks"))
-/*  61 */         .setCodec((AssetCodec)ReputationRank.CODEC))
-/*  62 */         .setKeyFunction(ReputationRank::getId))
-/*  63 */         .build());
-/*     */     
-/*  65 */     AssetRegistry.register((AssetStore)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(ReputationGroup.class, (AssetMap)new DefaultAssetMap())
-/*  66 */         .setPath("NPC/Reputation/Groups"))
-/*  67 */         .setCodec((AssetCodec)ReputationGroup.CODEC))
-/*  68 */         .setKeyFunction(ReputationGroup::getId))
-/*  69 */         .build());
-/*     */     
-/*  71 */     getCommandRegistry().registerCommand((AbstractCommand)new ReputationCommand());
-/*     */     
-/*  73 */     ChoiceRequirement.CODEC.register("Reputation", ReputationRequirement.class, (Codec)ReputationRequirement.CODEC);
-/*     */     
-/*  75 */     this.reputationDataResourceType = getEntityStoreRegistry().registerResource(ReputationDataResource.class, "ReputationData", ReputationDataResource.CODEC);
-/*  76 */     this.reputationGroupComponentType = getEntityStoreRegistry().registerComponent(ReputationGroupComponent.class, () -> {
-/*     */           throw new UnsupportedOperationException("Not implemented!");
-/*     */         });
-/*     */     
-/*  80 */     GameplayConfig.PLUGIN_CODEC.register(ReputationGameplayConfig.class, "Reputation", (Codec)ReputationGameplayConfig.CODEC);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void start() {
-/*  85 */     this.reputationRanks = (List<ReputationRank>)new ObjectArrayList(ReputationRank.getAssetMap().getAssetMap().values());
-/*     */     
-/*  87 */     if (this.reputationRanks.size() <= 1)
-/*     */       return; 
-/*  89 */     this.reputationRanks.sort(Comparator.comparingInt(ReputationRank::getMinValue));
-/*     */     
-/*  91 */     int previousMaxValue = ((ReputationRank)this.reputationRanks.getFirst()).getMaxValue();
-/*  92 */     for (int i = 1; i < this.reputationRanks.size(); i++) {
-/*  93 */       ReputationRank reputationRank = this.reputationRanks.get(i);
-/*  94 */       if (previousMaxValue < reputationRank.getMinValue()) {
-/*  95 */         getLogger().at(Level.WARNING).log("There is a gap between the values of the ReputationRank %s and %s, please review the assets.", reputationRank.getId(), ((ReputationRank)this.reputationRanks.get(i - 1)).getId());
-/*     */       }
-/*  97 */       if (previousMaxValue > reputationRank.getMinValue()) {
-/*  98 */         getLogger().at(Level.WARNING).log("Min value of rank %s is already contained in rank %s, please review the asset.", reputationRank.getId(), ((ReputationRank)this.reputationRanks.get(i - 1)).getId());
-/*     */       }
-/* 100 */       previousMaxValue = reputationRank.getMaxValue();
-/*     */     } 
-/*     */     
-/* 103 */     this.minReputationValue = ((ReputationRank)this.reputationRanks.getFirst()).getMinValue();
-/* 104 */     this.maxReputationValue = ((ReputationRank)this.reputationRanks.getLast()).getMaxValue();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int changeReputation(@Nonnull Player player, @Nonnull Ref<EntityStore> npcRef, int value, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-/* 111 */     ReputationGroupComponent reputationGroupComponent = (ReputationGroupComponent)componentAccessor.getComponent(npcRef, this.reputationGroupComponentType);
-/* 112 */     if (reputationGroupComponent == null) return Integer.MIN_VALUE;
-/*     */     
-/* 114 */     return changeReputation(player, reputationGroupComponent.getReputationGroupId(), value, componentAccessor);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int changeReputation(@Nonnull Player player, @Nonnull String reputationGroupId, int value, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-/* 130 */     World world = ((EntityStore)componentAccessor.getExternalData()).getWorld();
-/* 131 */     ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
-/*     */     
-/* 133 */     if (reputationGameplayConfig.getReputationStorageType() == ReputationGameplayConfig.ReputationStorageType.PerPlayer) {
-/* 134 */       ReputationGroup reputationGroup = (ReputationGroup)ReputationGroup.getAssetMap().getAsset(reputationGroupId);
-/* 135 */       if (reputationGroup == null) return Integer.MIN_VALUE;
-/*     */       
-/* 137 */       PlayerConfigData playerConfigData = player.getPlayerConfigData();
-/* 138 */       Object2IntOpenHashMap<String> reputationData = new Object2IntOpenHashMap(playerConfigData.getReputationData());
-/* 139 */       int newReputationValue = computeReputation((Object2IntMap<String>)reputationData, reputationGroup, value);
-/* 140 */       playerConfigData.setReputationData((Object2IntMap)reputationData);
-/* 141 */       return newReputationValue;
-/*     */     } 
-/* 143 */     return changeReputation(world, reputationGroupId, value);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public int changeReputation(@Nonnull World world, @Nonnull String reputationGroupId, int value) {
-/* 148 */     ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
-/* 149 */     if (reputationGameplayConfig.getReputationStorageType() != ReputationGameplayConfig.ReputationStorageType.PerWorld) return -1;
-/*     */     
-/* 151 */     ReputationGroup reputationGroup = (ReputationGroup)ReputationGroup.getAssetMap().getAsset(reputationGroupId);
-/* 152 */     if (reputationGroup == null) return Integer.MIN_VALUE;
-/*     */     
-/* 154 */     ReputationDataResource reputationDataResource = (ReputationDataResource)world.getEntityStore().getStore().getResource(this.reputationDataResourceType);
-/* 155 */     return computeReputation(reputationDataResource.getReputationStats(), reputationGroup, value);
-/*     */   }
-/*     */   
-/*     */   private int computeReputation(@Nonnull Object2IntMap<String> reputationData, @Nonnull ReputationGroup reputationGroup, int value) {
-/* 159 */     return ((Integer)reputationData.compute(reputationGroup.getId(), (k, oldValue) -> { int newValue = (oldValue == null) ? (reputationGroup.getInitialReputationValue() + value) : (oldValue.intValue() + value); return Integer.valueOf(MathUtil.clamp(newValue, this.minReputationValue, this.maxReputationValue - 1)); })).intValue();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int getReputationValue(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> playerEntityRef, @Nonnull Ref<EntityStore> npcEntityRef) {
-/* 166 */     ReputationGroupComponent reputationGroupComponent = (ReputationGroupComponent)store.getComponent(npcEntityRef, this.reputationGroupComponentType);
-/* 167 */     if (reputationGroupComponent == null) return Integer.MIN_VALUE;
-/*     */     
-/* 169 */     return getReputationValue(store, playerEntityRef, reputationGroupComponent.getReputationGroupId());
-/*     */   }
-/*     */   
-/*     */   public int getReputationValue(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> playerEntityRef, @Nonnull String reputationGroupId) {
-/* 173 */     World world = ((EntityStore)store.getExternalData()).getWorld();
-/* 174 */     Player playerComponent = (Player)store.getComponent(playerEntityRef, Player.getComponentType());
-/*     */     
-/* 176 */     ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
-/*     */     
-/* 178 */     if (reputationGameplayConfig.getReputationStorageType() == ReputationGameplayConfig.ReputationStorageType.PerPlayer) {
-/* 179 */       ReputationGroup reputationGroup = (ReputationGroup)ReputationGroup.getAssetMap().getAsset(reputationGroupId);
-/* 180 */       if (reputationGroup != null) {
-/* 181 */         Object2IntMap<String> reputationData = playerComponent.getPlayerConfigData().getReputationData();
-/* 182 */         return getReputationValueForGroup(reputationData, reputationGroup);
-/*     */       } 
-/*     */     } else {
-/* 185 */       return getReputationValue(store, reputationGroupId);
-/*     */     } 
-/*     */     
-/* 188 */     return Integer.MIN_VALUE;
-/*     */   }
-/*     */   
-/*     */   public int getReputationValue(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> npcRef) {
-/* 192 */     String reputationGroupId = ((ReputationGroupComponent)store.getComponent(npcRef, this.reputationGroupComponentType)).getReputationGroupId();
-/* 193 */     return getReputationValue(store, reputationGroupId);
-/*     */   }
-/*     */   
-/*     */   public int getReputationValue(@Nonnull Store<EntityStore> store, String reputationGroupId) {
-/* 197 */     World world = ((EntityStore)store.getExternalData()).getWorld();
-/* 198 */     ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
-/* 199 */     if (reputationGameplayConfig.getReputationStorageType() != ReputationGameplayConfig.ReputationStorageType.PerWorld) return Integer.MIN_VALUE;
-/*     */     
-/* 201 */     ReputationGroup reputationGroup = (ReputationGroup)ReputationGroup.getAssetMap().getAsset(reputationGroupId);
-/* 202 */     if (reputationGroup == null) return Integer.MIN_VALUE;
-/*     */     
-/* 204 */     Object2IntMap<String> reputationData = ((ReputationDataResource)world.getEntityStore().getStore().getResource(this.reputationDataResourceType)).getReputationStats();
-/* 205 */     return getReputationValueForGroup(reputationData, reputationGroup);
-/*     */   }
-/*     */   
-/*     */   private int getReputationValueForGroup(@Nonnull Object2IntMap<String> reputationData, @Nonnull ReputationGroup reputationGroup) {
-/* 209 */     return reputationData.getOrDefault(reputationGroup.getId(), reputationGroup.getInitialReputationValue());
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public ReputationRank getReputationRank(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> npcRef) {
-/* 214 */     ReputationGroupComponent reputationGroupComponent = (ReputationGroupComponent)store.getComponent(npcRef, this.reputationGroupComponentType);
-/* 215 */     if (reputationGroupComponent == null) return null;
-/*     */     
-/* 217 */     String reputationGroupId = reputationGroupComponent.getReputationGroupId();
-/* 218 */     return getReputationRank(store, ref, reputationGroupId);
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public ReputationRank getReputationRank(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull String reputationGroupId) {
-/* 223 */     int value = getReputationValue(store, ref, reputationGroupId);
-/* 224 */     return getReputationRankFromValue(value);
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public ReputationRank getReputationRankFromValue(int value) {
-/* 229 */     if (value == Integer.MIN_VALUE) return null;
-/*     */     
-/* 231 */     for (int i = 0; i < this.reputationRanks.size(); i++) {
-/* 232 */       if (((ReputationRank)this.reputationRanks.get(i)).containsValue(value)) {
-/* 233 */         return this.reputationRanks.get(i);
-/*     */       }
-/*     */     } 
-/* 236 */     return null;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public ReputationRank getReputationRank(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> npcRef) {
-/* 241 */     World world = ((EntityStore)store.getExternalData()).getWorld();
-/* 242 */     ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
-/* 243 */     if (reputationGameplayConfig.getReputationStorageType() != ReputationGameplayConfig.ReputationStorageType.PerWorld) return null;
-/*     */     
-/* 245 */     int value = getReputationValue(store, npcRef);
-/* 246 */     return getReputationRankFromValue(value);
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public Attitude getAttitude(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> npc) {
-/* 251 */     ReputationRank reputationRank = getReputationRank(store, ref, npc);
-/* 252 */     return (reputationRank != null) ? reputationRank.getAttitude() : null;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public Attitude getAttitude(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> npcRef) {
-/* 257 */     ReputationRank reputationRank = getReputationRank(store, npcRef);
-/* 258 */     return (reputationRank != null) ? reputationRank.getAttitude() : null;
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.builtin.adventure.reputation;
 
+import com.hypixel.hytale.assetstore.AssetRegistry;
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.builtin.adventure.reputation.assets.ReputationGroup;
+import com.hypixel.hytale.builtin.adventure.reputation.assets.ReputationRank;
+import com.hypixel.hytale.builtin.adventure.reputation.choices.ReputationRequirement;
+import com.hypixel.hytale.builtin.adventure.reputation.command.ReputationCommand;
+import com.hypixel.hytale.builtin.adventure.reputation.store.ReputationDataResource;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.ResourceType;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
+import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
+import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.choices.ChoiceRequirement;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.logging.Level;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\reputation\ReputationPlugin.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ReputationPlugin extends JavaPlugin {
+   private static ReputationPlugin instance;
+   private ComponentType<EntityStore, ReputationGroupComponent> reputationGroupComponentType;
+   private ResourceType<EntityStore, ReputationDataResource> reputationDataResourceType;
+   private List<ReputationRank> reputationRanks;
+   private int maxReputationValue = Integer.MIN_VALUE;
+   private int minReputationValue = Integer.MAX_VALUE;
+   public static final int NO_REPUTATION_GROUP = Integer.MIN_VALUE;
+
+   public static ReputationPlugin get() {
+      return instance;
+   }
+
+   public ReputationPlugin(@Nonnull JavaPluginInit init) {
+      super(init);
+   }
+
+   public ComponentType<EntityStore, ReputationGroupComponent> getReputationGroupComponentType() {
+      return this.reputationGroupComponentType;
+   }
+
+   @Override
+   protected void setup() {
+      instance = this;
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(ReputationRank.class, new DefaultAssetMap())
+                     .setPath("NPC/Reputation/Ranks"))
+                  .setCodec(ReputationRank.CODEC))
+               .setKeyFunction(ReputationRank::getId))
+            .build()
+      );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(ReputationGroup.class, new DefaultAssetMap())
+                     .setPath("NPC/Reputation/Groups"))
+                  .setCodec(ReputationGroup.CODEC))
+               .setKeyFunction(ReputationGroup::getId))
+            .build()
+      );
+      this.getCommandRegistry().registerCommand(new ReputationCommand());
+      ChoiceRequirement.CODEC.register("Reputation", ReputationRequirement.class, ReputationRequirement.CODEC);
+      this.reputationDataResourceType = this.getEntityStoreRegistry()
+         .registerResource(ReputationDataResource.class, "ReputationData", ReputationDataResource.CODEC);
+      this.reputationGroupComponentType = this.getEntityStoreRegistry().registerComponent(ReputationGroupComponent.class, () -> {
+         throw new UnsupportedOperationException("Not implemented!");
+      });
+      GameplayConfig.PLUGIN_CODEC.register(ReputationGameplayConfig.class, "Reputation", ReputationGameplayConfig.CODEC);
+   }
+
+   @Override
+   protected void start() {
+      this.reputationRanks = new ObjectArrayList(ReputationRank.getAssetMap().getAssetMap().values());
+      if (this.reputationRanks.size() > 1) {
+         this.reputationRanks.sort(Comparator.comparingInt(ReputationRank::getMinValue));
+         int previousMaxValue = this.reputationRanks.getFirst().getMaxValue();
+
+         for (int i = 1; i < this.reputationRanks.size(); i++) {
+            ReputationRank reputationRank = this.reputationRanks.get(i);
+            if (previousMaxValue < reputationRank.getMinValue()) {
+               this.getLogger()
+                  .at(Level.WARNING)
+                  .log(
+                     "There is a gap between the values of the ReputationRank %s and %s, please review the assets.",
+                     reputationRank.getId(),
+                     this.reputationRanks.get(i - 1).getId()
+                  );
+            }
+
+            if (previousMaxValue > reputationRank.getMinValue()) {
+               this.getLogger()
+                  .at(Level.WARNING)
+                  .log(
+                     "Min value of rank %s is already contained in rank %s, please review the asset.",
+                     reputationRank.getId(),
+                     this.reputationRanks.get(i - 1).getId()
+                  );
+            }
+
+            previousMaxValue = reputationRank.getMaxValue();
+         }
+
+         this.minReputationValue = this.reputationRanks.getFirst().getMinValue();
+         this.maxReputationValue = this.reputationRanks.getLast().getMaxValue();
+      }
+   }
+
+   public int changeReputation(@Nonnull Player player, @Nonnull Ref<EntityStore> npcRef, int value, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      ReputationGroupComponent reputationGroupComponent = componentAccessor.getComponent(npcRef, this.reputationGroupComponentType);
+      return reputationGroupComponent == null
+         ? Integer.MIN_VALUE
+         : this.changeReputation(player, reputationGroupComponent.getReputationGroupId(), value, componentAccessor);
+   }
+
+   public int changeReputation(@Nonnull Player player, @Nonnull String reputationGroupId, int value, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      World world = componentAccessor.getExternalData().getWorld();
+      ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
+      if (reputationGameplayConfig.getReputationStorageType() == ReputationGameplayConfig.ReputationStorageType.PerPlayer) {
+         ReputationGroup reputationGroup = ReputationGroup.getAssetMap().getAsset(reputationGroupId);
+         if (reputationGroup == null) {
+            return Integer.MIN_VALUE;
+         } else {
+            PlayerConfigData playerConfigData = player.getPlayerConfigData();
+            Object2IntOpenHashMap<String> reputationData = new Object2IntOpenHashMap(playerConfigData.getReputationData());
+            int newReputationValue = this.computeReputation(reputationData, reputationGroup, value);
+            playerConfigData.setReputationData(reputationData);
+            return newReputationValue;
+         }
+      } else {
+         return this.changeReputation(world, reputationGroupId, value);
+      }
+   }
+
+   public int changeReputation(@Nonnull World world, @Nonnull String reputationGroupId, int value) {
+      ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
+      if (reputationGameplayConfig.getReputationStorageType() != ReputationGameplayConfig.ReputationStorageType.PerWorld) {
+         return -1;
+      } else {
+         ReputationGroup reputationGroup = ReputationGroup.getAssetMap().getAsset(reputationGroupId);
+         if (reputationGroup == null) {
+            return Integer.MIN_VALUE;
+         } else {
+            ReputationDataResource reputationDataResource = world.getEntityStore().getStore().getResource(this.reputationDataResourceType);
+            return this.computeReputation(reputationDataResource.getReputationStats(), reputationGroup, value);
+         }
+      }
+   }
+
+   private int computeReputation(@Nonnull Object2IntMap<String> reputationData, @Nonnull ReputationGroup reputationGroup, int value) {
+      return (Integer)reputationData.compute(reputationGroup.getId(), (k, oldValue) -> {
+         int newValue = oldValue == null ? reputationGroup.getInitialReputationValue() + value : oldValue + value;
+         return MathUtil.clamp(newValue, this.minReputationValue, this.maxReputationValue - 1);
+      });
+   }
+
+   public int getReputationValue(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> playerEntityRef, @Nonnull Ref<EntityStore> npcEntityRef) {
+      ReputationGroupComponent reputationGroupComponent = store.getComponent(npcEntityRef, this.reputationGroupComponentType);
+      return reputationGroupComponent == null
+         ? Integer.MIN_VALUE
+         : this.getReputationValue(store, playerEntityRef, reputationGroupComponent.getReputationGroupId());
+   }
+
+   public int getReputationValue(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> playerEntityRef, @Nonnull String reputationGroupId) {
+      World world = store.getExternalData().getWorld();
+      Player playerComponent = store.getComponent(playerEntityRef, Player.getComponentType());
+      if (playerComponent == null) {
+         return Integer.MIN_VALUE;
+      } else {
+         ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
+         if (reputationGameplayConfig.getReputationStorageType() == ReputationGameplayConfig.ReputationStorageType.PerPlayer) {
+            ReputationGroup reputationGroup = ReputationGroup.getAssetMap().getAsset(reputationGroupId);
+            if (reputationGroup != null) {
+               Object2IntMap<String> reputationData = playerComponent.getPlayerConfigData().getReputationData();
+               return this.getReputationValueForGroup(reputationData, reputationGroup);
+            } else {
+               return Integer.MIN_VALUE;
+            }
+         } else {
+            return this.getReputationValue(store, reputationGroupId);
+         }
+      }
+   }
+
+   public int getReputationValue(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> npcRef) {
+      String reputationGroupId = store.getComponent(npcRef, this.reputationGroupComponentType).getReputationGroupId();
+      return this.getReputationValue(store, reputationGroupId);
+   }
+
+   public int getReputationValue(@Nonnull Store<EntityStore> store, @Nonnull String reputationGroupId) {
+      World world = store.getExternalData().getWorld();
+      ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
+      if (reputationGameplayConfig.getReputationStorageType() != ReputationGameplayConfig.ReputationStorageType.PerWorld) {
+         return Integer.MIN_VALUE;
+      } else {
+         ReputationGroup reputationGroup = ReputationGroup.getAssetMap().getAsset(reputationGroupId);
+         if (reputationGroup == null) {
+            return Integer.MIN_VALUE;
+         } else {
+            ReputationDataResource reputationDataResource = world.getEntityStore().getStore().getResource(this.reputationDataResourceType);
+            Object2IntMap<String> reputationData = reputationDataResource.getReputationStats();
+            return this.getReputationValueForGroup(reputationData, reputationGroup);
+         }
+      }
+   }
+
+   private int getReputationValueForGroup(@Nonnull Object2IntMap<String> reputationData, @Nonnull ReputationGroup reputationGroup) {
+      return reputationData.getOrDefault(reputationGroup.getId(), reputationGroup.getInitialReputationValue());
+   }
+
+   @Nullable
+   public ReputationRank getReputationRank(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> npcRef) {
+      ReputationGroupComponent reputationGroupComponent = store.getComponent(npcRef, this.reputationGroupComponentType);
+      if (reputationGroupComponent == null) {
+         return null;
+      } else {
+         String reputationGroupId = reputationGroupComponent.getReputationGroupId();
+         return this.getReputationRank(store, ref, reputationGroupId);
+      }
+   }
+
+   @Nullable
+   public ReputationRank getReputationRank(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull String reputationGroupId) {
+      int value = this.getReputationValue(store, ref, reputationGroupId);
+      return this.getReputationRankFromValue(value);
+   }
+
+   @Nullable
+   public ReputationRank getReputationRankFromValue(int value) {
+      if (value == Integer.MIN_VALUE) {
+         return null;
+      } else {
+         for (int i = 0; i < this.reputationRanks.size(); i++) {
+            if (this.reputationRanks.get(i).containsValue(value)) {
+               return this.reputationRanks.get(i);
+            }
+         }
+
+         return null;
+      }
+   }
+
+   @Nullable
+   public ReputationRank getReputationRank(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> npcRef) {
+      World world = store.getExternalData().getWorld();
+      ReputationGameplayConfig reputationGameplayConfig = ReputationGameplayConfig.getOrDefault(world.getGameplayConfig());
+      if (reputationGameplayConfig.getReputationStorageType() != ReputationGameplayConfig.ReputationStorageType.PerWorld) {
+         return null;
+      } else {
+         int value = this.getReputationValue(store, npcRef);
+         return this.getReputationRankFromValue(value);
+      }
+   }
+
+   @Nullable
+   public Attitude getAttitude(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> npc) {
+      ReputationRank reputationRank = this.getReputationRank(store, ref, npc);
+      return reputationRank != null ? reputationRank.getAttitude() : null;
+   }
+
+   @Nullable
+   public Attitude getAttitude(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> npcRef) {
+      ReputationRank reputationRank = this.getReputationRank(store, npcRef);
+      return reputationRank != null ? reputationRank.getAttitude() : null;
+   }
+}

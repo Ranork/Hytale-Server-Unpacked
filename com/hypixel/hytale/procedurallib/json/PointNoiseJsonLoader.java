@@ -1,44 +1,33 @@
-/*    */ package com.hypixel.hytale.procedurallib.json;
-/*    */ 
-/*    */ import com.google.gson.JsonElement;
-/*    */ import com.hypixel.hytale.procedurallib.logic.PointNoise;
-/*    */ import java.nio.file.Path;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ public class PointNoiseJsonLoader<K extends SeedResource>
-/*    */   extends JsonLoader<K, PointNoise>
-/*    */ {
-/*    */   public PointNoiseJsonLoader(SeedString<K> seed, Path dataFolder, @Nullable JsonElement json) {
-/* 13 */     super(seed, dataFolder, json);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public PointNoise load() {
-/* 19 */     return new PointNoise(
-/* 20 */         mustGetNumber("X", Constants.DEFAULT_COORD).doubleValue(), 
-/* 21 */         mustGetNumber("Y", Constants.DEFAULT_COORD).doubleValue(), 
-/* 22 */         mustGetNumber("Z", Constants.DEFAULT_COORD).doubleValue(), 
-/* 23 */         mustGetNumber("InnerRadius", Constants.DEFAULT_RADIUS).doubleValue(), 
-/* 24 */         mustGetNumber("OuterRadius", Constants.DEFAULT_RADIUS).doubleValue());
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public static interface Constants
-/*    */   {
-/*    */     public static final String KEY_X = "X";
-/*    */     public static final String KEY_Y = "Y";
-/*    */     public static final String KEY_Z = "Z";
-/*    */     public static final String KEY_INNER_RADIUS = "InnerRadius";
-/*    */     public static final String KEY_OUTER_RADIUS = "OuterRadius";
-/* 35 */     public static final Double DEFAULT_COORD = Double.valueOf(0.0D);
-/* 36 */     public static final Double DEFAULT_RADIUS = Double.valueOf(0.0D);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.json;
 
+import com.google.gson.JsonElement;
+import com.hypixel.hytale.procedurallib.logic.PointNoise;
+import java.nio.file.Path;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\json\PointNoiseJsonLoader.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PointNoiseJsonLoader<K extends SeedResource> extends JsonLoader<K, PointNoise> {
+   public PointNoiseJsonLoader(SeedString<K> seed, Path dataFolder, @Nullable JsonElement json) {
+      super(seed, dataFolder, json);
+   }
+
+   @Nullable
+   public PointNoise load() {
+      return new PointNoise(
+         this.mustGetNumber("X", PointNoiseJsonLoader.Constants.DEFAULT_COORD).doubleValue(),
+         this.mustGetNumber("Y", PointNoiseJsonLoader.Constants.DEFAULT_COORD).doubleValue(),
+         this.mustGetNumber("Z", PointNoiseJsonLoader.Constants.DEFAULT_COORD).doubleValue(),
+         this.mustGetNumber("InnerRadius", PointNoiseJsonLoader.Constants.DEFAULT_RADIUS).doubleValue(),
+         this.mustGetNumber("OuterRadius", PointNoiseJsonLoader.Constants.DEFAULT_RADIUS).doubleValue()
+      );
+   }
+
+   public interface Constants {
+      String KEY_X = "X";
+      String KEY_Y = "Y";
+      String KEY_Z = "Z";
+      String KEY_INNER_RADIUS = "InnerRadius";
+      String KEY_OUTER_RADIUS = "OuterRadius";
+      Double DEFAULT_COORD = 0.0;
+      Double DEFAULT_RADIUS = 0.0;
+   }
+}

@@ -1,73 +1,68 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.shop;
-/*    */ import com.hypixel.hytale.assetstore.AssetMap;
-/*    */ import com.hypixel.hytale.assetstore.AssetStore;
-/*    */ import com.hypixel.hytale.assetstore.codec.AssetCodec;
-/*    */ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-/*    */ import com.hypixel.hytale.builtin.adventure.shop.barter.BarterShopAsset;
-/*    */ import com.hypixel.hytale.builtin.adventure.shop.barter.BarterShopState;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.lookup.StringCodecMapCodec;
-/*    */ import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
-/*    */ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.player.pages.choices.ChoiceElement;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.player.pages.choices.ChoiceInteraction;
-/*    */ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
-/*    */ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-/*    */ import java.util.logging.Level;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class ShopPlugin extends JavaPlugin {
-/*    */   public static ShopPlugin get() {
-/* 21 */     return instance;
-/*    */   }
-/*    */   protected static ShopPlugin instance;
-/*    */   public ShopPlugin(@Nonnull JavaPluginInit init) {
-/* 25 */     super(init);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected void setup() {
-/* 30 */     instance = this;
-/*    */ 
-/*    */     
-/* 33 */     getAssetRegistry().register((AssetStore)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(ShopAsset.class, (AssetMap)new DefaultAssetMap())
-/* 34 */         .setPath("Shops"))
-/* 35 */         .setCodec((AssetCodec)ShopAsset.CODEC))
-/* 36 */         .setKeyFunction(ShopAsset::getId))
-/* 37 */         .loadsAfter(new Class[] { Item.class
-/* 38 */           })).build());
-/*    */ 
-/*    */     
-/* 41 */     getAssetRegistry().register((AssetStore)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(BarterShopAsset.class, (AssetMap)new DefaultAssetMap())
-/* 42 */         .setPath("BarterShops"))
-/* 43 */         .setCodec((AssetCodec)BarterShopAsset.CODEC))
-/* 44 */         .setKeyFunction(BarterShopAsset::getId))
-/* 45 */         .loadsAfter(new Class[] { Item.class
-/* 46 */           })).build());
-/*    */     
-/* 48 */     getCodecRegistry((StringCodecMapCodec)ChoiceElement.CODEC).register("ShopElement", ShopElement.class, (Codec)ShopElement.CODEC);
-/*    */     
-/* 50 */     getCodecRegistry((StringCodecMapCodec)ChoiceInteraction.CODEC).register("GiveItem", GiveItemInteraction.class, (Codec)GiveItemInteraction.CODEC);
-/*    */     
-/* 52 */     getCodecRegistry((StringCodecMapCodec)OpenCustomUIInteraction.PAGE_CODEC).register("Shop", ShopPageSupplier.class, (Codec)ShopPageSupplier.CODEC);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected void start() {
-/* 57 */     BarterShopState.initialize(getDataDirectory());
-/* 58 */     getLogger().at(Level.INFO).log("Barter shop state initialized");
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   protected void shutdown() {
-/* 64 */     BarterShopState.shutdown();
-/* 65 */     getLogger().at(Level.INFO).log("Barter shop state saved");
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.shop;
 
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.builtin.adventure.shop.barter.BarterShopAsset;
+import com.hypixel.hytale.builtin.adventure.shop.barter.BarterShopState;
+import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.choices.ChoiceElement;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.choices.ChoiceInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.plugin.registry.AssetRegistry;
+import java.util.logging.Level;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\shop\ShopPlugin.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ShopPlugin extends JavaPlugin {
+   protected static ShopPlugin instance;
+
+   public static ShopPlugin get() {
+      return instance;
+   }
+
+   public ShopPlugin(@Nonnull JavaPluginInit init) {
+      super(init);
+   }
+
+   @Override
+   protected void setup() {
+      instance = this;
+      AssetRegistry assetRegistry = this.getAssetRegistry();
+      assetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                           ShopAsset.class, new DefaultAssetMap()
+                        )
+                        .setPath("Shops"))
+                     .setCodec(ShopAsset.CODEC))
+                  .setKeyFunction(ShopAsset::getId))
+               .loadsAfter(Item.class))
+            .build()
+      );
+      assetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                           BarterShopAsset.class, new DefaultAssetMap()
+                        )
+                        .setPath("BarterShops"))
+                     .setCodec(BarterShopAsset.CODEC))
+                  .setKeyFunction(BarterShopAsset::getId))
+               .loadsAfter(Item.class))
+            .build()
+      );
+      this.getCodecRegistry(ChoiceElement.CODEC).register("ShopElement", ShopElement.class, ShopElement.CODEC);
+      this.getCodecRegistry(ChoiceInteraction.CODEC).register("GiveItem", GiveItemInteraction.class, GiveItemInteraction.CODEC);
+      this.getCodecRegistry(OpenCustomUIInteraction.PAGE_CODEC).register("Shop", ShopPageSupplier.class, ShopPageSupplier.CODEC);
+   }
+
+   @Override
+   protected void start() {
+      BarterShopState.initialize(this.getDataDirectory());
+      this.getLogger().at(Level.INFO).log("Barter shop state initialized");
+   }
+
+   @Override
+   protected void shutdown() {
+      BarterShopState.shutdown();
+      this.getLogger().at(Level.INFO).log("Barter shop state saved");
+   }
+}

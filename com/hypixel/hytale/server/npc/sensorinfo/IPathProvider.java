@@ -1,43 +1,21 @@
-/*    */ package com.hypixel.hytale.server.npc.sensorinfo;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.universe.world.path.IPath;
-/*    */ import com.hypixel.hytale.server.core.universe.world.path.IPathWaypoint;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public interface IPathProvider
-/*    */   extends ExtraInfoProvider
-/*    */ {
-/*    */   boolean hasPath();
-/*    */   
-/*    */   @Nullable
-/*    */   IPath<? extends IPathWaypoint> getPath();
-/*    */   
-/*    */   void clear();
-/*    */   
-/*    */   @Nonnull
-/*    */   default Class<IPathProvider> getType() {
-/* 35 */     return IPathProvider.class;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.sensorinfo;
 
+import com.hypixel.hytale.server.core.universe.world.path.IPath;
+import com.hypixel.hytale.server.core.universe.world.path.IPathWaypoint;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\sensorinfo\IPathProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface IPathProvider extends ExtraInfoProvider {
+   boolean hasPath();
+
+   @Nullable
+   IPath<? extends IPathWaypoint> getPath();
+
+   void clear();
+
+   @Nonnull
+   @Override
+   default Class<IPathProvider> getType() {
+      return IPathProvider.class;
+   }
+}

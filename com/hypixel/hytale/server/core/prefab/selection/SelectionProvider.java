@@ -9,11 +9,7 @@ import com.hypixel.hytale.sneakythrow.consumer.ThrowableConsumer;
 import javax.annotation.Nonnull;
 
 public interface SelectionProvider {
-  <T extends Throwable> void computeSelectionCopy(@Nonnull Ref<EntityStore> paramRef, @Nonnull Player paramPlayer, @Nonnull ThrowableConsumer<BlockSelection, T> paramThrowableConsumer, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
+   <T extends Throwable> void computeSelectionCopy(
+      @Nonnull Ref<EntityStore> var1, @Nonnull Player var2, @Nonnull ThrowableConsumer<BlockSelection, T> var3, @Nonnull ComponentAccessor<EntityStore> var4
+   );
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\prefab\selection\SelectionProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

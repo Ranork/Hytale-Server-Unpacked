@@ -7,81 +7,127 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface IEventRegistry {
-  @Nullable
-  <EventType extends IBaseEvent<Void>> EventRegistration<Void, EventType> register(@Nonnull Class<? super EventType> paramClass, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <EventType extends IBaseEvent<Void>> EventRegistration<Void, EventType> register(@Nonnull EventPriority paramEventPriority, @Nonnull Class<? super EventType> paramClass, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <EventType extends IBaseEvent<Void>> EventRegistration<Void, EventType> register(short paramShort, @Nonnull Class<? super EventType> paramClass, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> register(@Nonnull Class<? super EventType> paramClass, @Nonnull KeyType paramKeyType, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> register(@Nonnull EventPriority paramEventPriority, @Nonnull Class<? super EventType> paramClass, @Nonnull KeyType paramKeyType, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> register(short paramShort, @Nonnull Class<? super EventType> paramClass, @Nonnull KeyType paramKeyType, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <EventType extends IAsyncEvent<Void>> EventRegistration<Void, EventType> registerAsync(@Nonnull Class<? super EventType> paramClass, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <EventType extends IAsyncEvent<Void>> EventRegistration<Void, EventType> registerAsync(@Nonnull EventPriority paramEventPriority, @Nonnull Class<? super EventType> paramClass, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <EventType extends IAsyncEvent<Void>> EventRegistration<Void, EventType> registerAsync(short paramShort, Class<? super EventType> paramClass, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsync(@Nonnull Class<? super EventType> paramClass, @Nonnull KeyType paramKeyType, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsync(@Nonnull EventPriority paramEventPriority, Class<? super EventType> paramClass, @Nonnull KeyType paramKeyType, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsync(short paramShort, @Nonnull Class<? super EventType> paramClass, @Nonnull KeyType paramKeyType, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerGlobal(@Nonnull Class<? super EventType> paramClass, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerGlobal(@Nonnull EventPriority paramEventPriority, @Nonnull Class<? super EventType> paramClass, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerGlobal(short paramShort, @Nonnull Class<? super EventType> paramClass, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncGlobal(@Nonnull Class<? super EventType> paramClass, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncGlobal(@Nonnull EventPriority paramEventPriority, @Nonnull Class<? super EventType> paramClass, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncGlobal(short paramShort, @Nonnull Class<? super EventType> paramClass, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerUnhandled(@Nonnull Class<? super EventType> paramClass, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerUnhandled(@Nonnull EventPriority paramEventPriority, @Nonnull Class<? super EventType> paramClass, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerUnhandled(short paramShort, @Nonnull Class<? super EventType> paramClass, @Nonnull Consumer<EventType> paramConsumer);
-  
-  @Nullable
-  <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncUnhandled(@Nonnull Class<? super EventType> paramClass, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncUnhandled(@Nonnull EventPriority paramEventPriority, @Nonnull Class<? super EventType> paramClass, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
-  
-  @Nullable
-  <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncUnhandled(short paramShort, @Nonnull Class<? super EventType> paramClass, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> paramFunction);
+   @Nullable
+   <EventType extends IBaseEvent<Void>> EventRegistration<Void, EventType> register(@Nonnull Class<? super EventType> var1, @Nonnull Consumer<EventType> var2);
+
+   @Nullable
+   <EventType extends IBaseEvent<Void>> EventRegistration<Void, EventType> register(
+      @Nonnull EventPriority var1, @Nonnull Class<? super EventType> var2, @Nonnull Consumer<EventType> var3
+   );
+
+   @Nullable
+   <EventType extends IBaseEvent<Void>> EventRegistration<Void, EventType> register(
+      short var1, @Nonnull Class<? super EventType> var2, @Nonnull Consumer<EventType> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> register(
+      @Nonnull Class<? super EventType> var1, @Nonnull KeyType var2, @Nonnull Consumer<EventType> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> register(
+      @Nonnull EventPriority var1, @Nonnull Class<? super EventType> var2, @Nonnull KeyType var3, @Nonnull Consumer<EventType> var4
+   );
+
+   @Nullable
+   <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> register(
+      short var1, @Nonnull Class<? super EventType> var2, @Nonnull KeyType var3, @Nonnull Consumer<EventType> var4
+   );
+
+   @Nullable
+   <EventType extends IAsyncEvent<Void>> EventRegistration<Void, EventType> registerAsync(
+      @Nonnull Class<? super EventType> var1, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var2
+   );
+
+   @Nullable
+   <EventType extends IAsyncEvent<Void>> EventRegistration<Void, EventType> registerAsync(
+      @Nonnull EventPriority var1, @Nonnull Class<? super EventType> var2, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var3
+   );
+
+   @Nullable
+   <EventType extends IAsyncEvent<Void>> EventRegistration<Void, EventType> registerAsync(
+      short var1, Class<? super EventType> var2, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsync(
+      @Nonnull Class<? super EventType> var1, @Nonnull KeyType var2, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsync(
+      @Nonnull EventPriority var1,
+      Class<? super EventType> var2,
+      @Nonnull KeyType var3,
+      @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var4
+   );
+
+   @Nullable
+   <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsync(
+      short var1,
+      @Nonnull Class<? super EventType> var2,
+      @Nonnull KeyType var3,
+      @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var4
+   );
+
+   @Nullable
+   <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerGlobal(
+      @Nonnull Class<? super EventType> var1, @Nonnull Consumer<EventType> var2
+   );
+
+   @Nullable
+   <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerGlobal(
+      @Nonnull EventPriority var1, @Nonnull Class<? super EventType> var2, @Nonnull Consumer<EventType> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerGlobal(
+      short var1, @Nonnull Class<? super EventType> var2, @Nonnull Consumer<EventType> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncGlobal(
+      @Nonnull Class<? super EventType> var1, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var2
+   );
+
+   @Nullable
+   <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncGlobal(
+      @Nonnull EventPriority var1, @Nonnull Class<? super EventType> var2, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncGlobal(
+      short var1, @Nonnull Class<? super EventType> var2, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerUnhandled(
+      @Nonnull Class<? super EventType> var1, @Nonnull Consumer<EventType> var2
+   );
+
+   @Nullable
+   <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerUnhandled(
+      @Nonnull EventPriority var1, @Nonnull Class<? super EventType> var2, @Nonnull Consumer<EventType> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IBaseEvent<KeyType>> EventRegistration<KeyType, EventType> registerUnhandled(
+      short var1, @Nonnull Class<? super EventType> var2, @Nonnull Consumer<EventType> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncUnhandled(
+      @Nonnull Class<? super EventType> var1, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var2
+   );
+
+   @Nullable
+   <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncUnhandled(
+      @Nonnull EventPriority var1, @Nonnull Class<? super EventType> var2, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var3
+   );
+
+   @Nullable
+   <KeyType, EventType extends IAsyncEvent<KeyType>> EventRegistration<KeyType, EventType> registerAsyncUnhandled(
+      short var1, @Nonnull Class<? super EventType> var2, @Nonnull Function<CompletableFuture<EventType>, CompletableFuture<EventType>> var3
+   );
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\event\IEventRegistry.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

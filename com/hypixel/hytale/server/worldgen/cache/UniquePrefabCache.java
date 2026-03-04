@@ -1,41 +1,30 @@
-/*    */ package com.hypixel.hytale.server.worldgen.cache;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.worldgen.container.UniquePrefabContainer;
-/*    */ import com.hypixel.hytale.server.worldgen.util.cache.SizedTimeoutCache;
-/*    */ import java.util.Objects;
-/*    */ import java.util.concurrent.TimeUnit;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class UniquePrefabCache
-/*    */ {
-/*    */   @Nonnull
-/*    */   protected final SizedTimeoutCache<Integer, UniquePrefabContainer.UniquePrefabEntry[]> cache;
-/*    */   
-/*    */   public UniquePrefabCache(@Nonnull UniquePrefabFunction function, int maxSize, long expireAfterSeconds) {
-/* 19 */     Objects.requireNonNull(function); this.cache = new SizedTimeoutCache(expireAfterSeconds, TimeUnit.SECONDS, maxSize, function::get, null);
-/*    */   }
-/*    */   
-/*    */   @Nullable
-/*    */   public UniquePrefabContainer.UniquePrefabEntry[] get(int seed) {
-/*    */     try {
-/* 25 */       return (UniquePrefabContainer.UniquePrefabEntry[])this.cache.get(Integer.valueOf(seed));
-/* 26 */     } catch (Exception e) {
-/* 27 */       throw new Error("Failed to receive UniquePrefabEntry for " + seed, e);
-/*    */     } 
-/*    */   }
-/*    */   
-/*    */   @FunctionalInterface
-/*    */   public static interface UniquePrefabFunction {
-/*    */     UniquePrefabContainer.UniquePrefabEntry[] get(int param1Int);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.worldgen.cache;
 
+import com.hypixel.hytale.server.worldgen.container.UniquePrefabContainer;
+import com.hypixel.hytale.server.worldgen.util.cache.SizedTimeoutCache;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldgen\cache\UniquePrefabCache.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class UniquePrefabCache {
+   @Nonnull
+   protected final SizedTimeoutCache<Integer, UniquePrefabContainer.UniquePrefabEntry[]> cache;
+
+   public UniquePrefabCache(@Nonnull UniquePrefabCache.UniquePrefabFunction function, int maxSize, long expireAfterSeconds) {
+      this.cache = new SizedTimeoutCache<>(expireAfterSeconds, TimeUnit.SECONDS, maxSize, function::get, null);
+   }
+
+   @Nullable
+   public UniquePrefabContainer.UniquePrefabEntry[] get(int seed) {
+      try {
+         return this.cache.get(seed);
+      } catch (Exception var3) {
+         throw new Error("Failed to receive UniquePrefabEntry for " + seed, var3);
+      }
+   }
+
+   @FunctionalInterface
+   public interface UniquePrefabFunction {
+      UniquePrefabContainer.UniquePrefabEntry[] get(int var1);
+   }
+}

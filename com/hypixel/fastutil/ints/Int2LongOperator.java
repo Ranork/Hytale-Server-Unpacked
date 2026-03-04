@@ -2,11 +2,5 @@ package com.hypixel.fastutil.ints;
 
 @FunctionalInterface
 public interface Int2LongOperator {
-  long apply(int paramInt, long paramLong);
+   long apply(int var1, long var2);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\fastutil\ints\Int2LongOperator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

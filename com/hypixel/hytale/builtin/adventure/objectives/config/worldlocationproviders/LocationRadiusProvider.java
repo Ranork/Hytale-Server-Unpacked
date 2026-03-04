@@ -1,84 +1,90 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.objectives.config.worldlocationproviders;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.validation.Validators;
-/*    */ import com.hypixel.hytale.math.util.ChunkUtil;
-/*    */ import com.hypixel.hytale.math.util.MathUtil;
-/*    */ import com.hypixel.hytale.math.util.TrigMathUtil;
-/*    */ import com.hypixel.hytale.math.vector.Vector3i;
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class LocationRadiusProvider
-/*    */   extends WorldLocationProvider
-/*    */ {
-/*    */   public static final BuilderCodec<LocationRadiusProvider> CODEC;
-/*    */   
-/*    */   static {
-/* 34 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(LocationRadiusProvider.class, LocationRadiusProvider::new, BASE_CODEC).append(new KeyedCodec("MinRadius", (Codec)Codec.INTEGER), (locationRadiusCondition, integer) -> locationRadiusCondition.minRadius = integer.intValue(), locationRadiusCondition -> Integer.valueOf(locationRadiusCondition.minRadius)).addValidator(Validators.greaterThan(Integer.valueOf(0))).add()).append(new KeyedCodec("MaxRadius", (Codec)Codec.INTEGER), (locationRadiusCondition, integer) -> locationRadiusCondition.maxRadius = integer.intValue(), locationRadiusCondition -> Integer.valueOf(locationRadiusCondition.maxRadius)).addValidator(Validators.greaterThanOrEqual(Integer.valueOf(1))).add()).afterDecode(locationRadiusCondition -> { if (locationRadiusCondition.minRadius > locationRadiusCondition.maxRadius) throw new IllegalArgumentException("LocationRadiusCondition.MinRadius (" + locationRadiusCondition.minRadius + ") needs to be greater than LocationRadiusCondition.MaxRadius (" + locationRadiusCondition.maxRadius + ")");  })).build();
-/*    */   }
-/* 36 */   protected int minRadius = 10;
-/* 37 */   protected int maxRadius = 50;
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Vector3i runCondition(@Nonnull World world, @Nonnull Vector3i position) {
-/* 42 */     double angle = Math.random() * 6.2831854820251465D;
-/* 43 */     int radius = MathUtil.randomInt(this.minRadius, this.maxRadius);
-/*    */     
-/* 45 */     Vector3i newPosition = position.clone();
-/* 46 */     newPosition.add((int)(radius * TrigMathUtil.cos(angle)), 0, (int)(radius * TrigMathUtil.sin(angle)));
-/* 47 */     newPosition.y = world.getChunk(ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z)).getHeight(newPosition.x, newPosition.z);
-/*    */     
-/* 49 */     return newPosition;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean equals(@Nullable Object o) {
-/* 54 */     if (this == o) return true; 
-/* 55 */     if (o == null || getClass() != o.getClass()) return false;
-/*    */     
-/* 57 */     LocationRadiusProvider that = (LocationRadiusProvider)o;
-/*    */     
-/* 59 */     if (this.minRadius != that.minRadius) return false; 
-/* 60 */     return (this.maxRadius == that.maxRadius);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int hashCode() {
-/* 65 */     int result = this.minRadius;
-/* 66 */     result = 31 * result + this.maxRadius;
-/* 67 */     return result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 73 */     return "LocationRadiusProvider{minRadius=" + this.minRadius + ", maxRadius=" + this.maxRadius + "} " + super
-/*    */ 
-/*    */       
-/* 76 */       .toString();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.objectives.config.worldlocationproviders;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.util.TrigMathUtil;
+import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\objectives\config\worldlocationproviders\LocationRadiusProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class LocationRadiusProvider extends WorldLocationProvider {
+   @Nonnull
+   public static final BuilderCodec<LocationRadiusProvider> CODEC = BuilderCodec.builder(LocationRadiusProvider.class, LocationRadiusProvider::new, BASE_CODEC)
+      .append(
+         new KeyedCodec<>("MinRadius", Codec.INTEGER),
+         (locationRadiusCondition, integer) -> locationRadiusCondition.minRadius = integer,
+         locationRadiusCondition -> locationRadiusCondition.minRadius
+      )
+      .addValidator(Validators.greaterThan(0))
+      .add()
+      .<Integer>append(
+         new KeyedCodec<>("MaxRadius", Codec.INTEGER),
+         (locationRadiusCondition, integer) -> locationRadiusCondition.maxRadius = integer,
+         locationRadiusCondition -> locationRadiusCondition.maxRadius
+      )
+      .addValidator(Validators.greaterThanOrEqual(1))
+      .add()
+      .afterDecode(
+         locationRadiusCondition -> {
+            if (locationRadiusCondition.minRadius > locationRadiusCondition.maxRadius) {
+               throw new IllegalArgumentException(
+                  "LocationRadiusCondition.MinRadius ("
+                     + locationRadiusCondition.minRadius
+                     + ") needs to be greater than LocationRadiusCondition.MaxRadius ("
+                     + locationRadiusCondition.maxRadius
+                     + ")"
+               );
+            }
+         }
+      )
+      .build();
+   protected int minRadius = 10;
+   protected int maxRadius = 50;
+
+   @Nullable
+   @Override
+   public Vector3i runCondition(@Nonnull World world, @Nonnull Vector3i position) {
+      double angle = Math.random() * (float) (Math.PI * 2);
+      int radius = MathUtil.randomInt(this.minRadius, this.maxRadius);
+      Vector3i newPosition = position.clone();
+      newPosition.add((int)(radius * TrigMathUtil.cos(angle)), 0, (int)(radius * TrigMathUtil.sin(angle)));
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z);
+      WorldChunk worldChunkComponent = world.getChunk(chunkIndex);
+      if (worldChunkComponent == null) {
+         return null;
+      } else {
+         newPosition.y = worldChunkComponent.getHeight(newPosition.x, newPosition.z);
+         return newPosition;
+      }
+   }
+
+   @Override
+   public boolean equals(@Nullable Object o) {
+      if (this == o) {
+         return true;
+      } else if (o != null && this.getClass() == o.getClass()) {
+         LocationRadiusProvider that = (LocationRadiusProvider)o;
+         return this.minRadius != that.minRadius ? false : this.maxRadius == that.maxRadius;
+      } else {
+         return false;
+      }
+   }
+
+   @Override
+   public int hashCode() {
+      int result = this.minRadius;
+      return 31 * result + this.maxRadius;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "LocationRadiusProvider{minRadius=" + this.minRadius + ", maxRadius=" + this.maxRadius + "} " + super.toString();
+   }
+}

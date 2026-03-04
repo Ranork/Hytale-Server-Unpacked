@@ -1,81 +1,75 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.objectives.transaction;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.server.core.entity.Entity;
-/*    */ import com.hypixel.hytale.server.core.universe.Universe;
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import java.util.UUID;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class SpawnEntityTransactionRecord
-/*    */   extends TransactionRecord
-/*    */ {
-/*    */   public static final BuilderCodec<SpawnEntityTransactionRecord> CODEC;
-/*    */   protected UUID worldUUID;
-/*    */   protected UUID entityUUID;
-/*    */   
-/*    */   static {
-/* 24 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SpawnEntityTransactionRecord.class, SpawnEntityTransactionRecord::new, BASE_CODEC).append(new KeyedCodec("WorldUUID", (Codec)Codec.UUID_BINARY), (spawnEntityTransactionRecord, uuid) -> spawnEntityTransactionRecord.worldUUID = uuid, spawnEntityTransactionRecord -> spawnEntityTransactionRecord.worldUUID).add()).append(new KeyedCodec("EntityUUID", (Codec)Codec.UUID_BINARY), (spawnEntityTransactionRecord, uuid) -> spawnEntityTransactionRecord.entityUUID = uuid, spawnEntityTransactionRecord -> spawnEntityTransactionRecord.entityUUID).add()).build();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public SpawnEntityTransactionRecord(@Nonnull UUID worldUUID, @Nonnull UUID entityUUID) {
-/* 30 */     this.worldUUID = worldUUID;
-/* 31 */     this.entityUUID = entityUUID;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected SpawnEntityTransactionRecord() {}
-/*    */ 
-/*    */   
-/*    */   public void revert() {
-/* 39 */     removeEntity();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void complete() {
-/* 44 */     removeEntity();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void unload() {}
-/*    */ 
-/*    */   
-/*    */   public boolean shouldBeSerialized() {
-/* 53 */     return true;
-/*    */   }
-/*    */   
-/*    */   private void removeEntity() {
-/* 57 */     World world = Universe.get().getWorld(this.worldUUID);
-/*    */     
-/* 59 */     Entity entity = world.getEntity(this.entityUUID);
-/* 60 */     if (entity == null)
-/*    */       return; 
-/* 62 */     if (!entity.remove()) {
-/* 63 */       throw new RuntimeException("Failed to revert record!");
-/*    */     }
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 70 */     return "SpawnEntityTransactionRecord{worldUUID=" + String.valueOf(this.worldUUID) + ", entityUUID=" + String.valueOf(this.entityUUID) + "} " + super
-/*    */ 
-/*    */       
-/* 73 */       .toString();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.objectives.transaction;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.server.core.entity.Entity;
+import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
+import java.util.UUID;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\objectives\transaction\SpawnEntityTransactionRecord.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SpawnEntityTransactionRecord extends TransactionRecord {
+   @Nonnull
+   public static final BuilderCodec<SpawnEntityTransactionRecord> CODEC = BuilderCodec.builder(
+         SpawnEntityTransactionRecord.class, SpawnEntityTransactionRecord::new, BASE_CODEC
+      )
+      .append(
+         new KeyedCodec<>("WorldUUID", Codec.UUID_BINARY),
+         (spawnEntityTransactionRecord, uuid) -> spawnEntityTransactionRecord.worldUUID = uuid,
+         spawnEntityTransactionRecord -> spawnEntityTransactionRecord.worldUUID
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("EntityUUID", Codec.UUID_BINARY),
+         (spawnEntityTransactionRecord, uuid) -> spawnEntityTransactionRecord.entityUUID = uuid,
+         spawnEntityTransactionRecord -> spawnEntityTransactionRecord.entityUUID
+      )
+      .add()
+      .build();
+   protected UUID worldUUID;
+   protected UUID entityUUID;
+
+   public SpawnEntityTransactionRecord(@Nonnull UUID worldUUID, @Nonnull UUID entityUUID) {
+      this.worldUUID = worldUUID;
+      this.entityUUID = entityUUID;
+   }
+
+   protected SpawnEntityTransactionRecord() {
+   }
+
+   @Override
+   public void revert() {
+      this.removeEntity();
+   }
+
+   @Override
+   public void complete() {
+      this.removeEntity();
+   }
+
+   @Override
+   public void unload() {
+   }
+
+   @Override
+   public boolean shouldBeSerialized() {
+      return true;
+   }
+
+   private void removeEntity() {
+      World world = Universe.get().getWorld(this.worldUUID);
+      Entity entity = world.getEntity(this.entityUUID);
+      if (entity != null) {
+         if (!entity.remove()) {
+            throw new RuntimeException("Failed to revert record!");
+         }
+      }
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "SpawnEntityTransactionRecord{worldUUID=" + this.worldUUID + ", entityUUID=" + this.entityUUID + "} " + super.toString();
+   }
+}

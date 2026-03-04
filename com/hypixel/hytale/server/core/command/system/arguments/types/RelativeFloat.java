@@ -1,129 +1,71 @@
-/*     */ package com.hypixel.hytale.server.core.command.system.arguments.types;
-/*     */ 
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.KeyedCodec;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.codec.validation.Validators;
-/*     */ import com.hypixel.hytale.server.core.Message;
-/*     */ import com.hypixel.hytale.server.core.command.system.ParseResult;
-/*     */ import java.util.function.Supplier;
-/*     */ import java.util.regex.Pattern;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class RelativeFloat
-/*     */ {
-/*     */   @Nonnull
-/*     */   public static final BuilderCodec<RelativeFloat> CODEC;
-/*     */   private float value;
-/*     */   private boolean isRelative;
-/*     */   
-/*     */   static {
-/*  38 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(RelativeFloat.class, RelativeFloat::new).append(new KeyedCodec("Value", (Codec)Codec.FLOAT), (o, i) -> o.value = i.floatValue(), RelativeFloat::getRawValue).addValidator(Validators.nonNull()).add()).append(new KeyedCodec("Relative", (Codec)Codec.BOOLEAN), (o, i) -> o.isRelative = i.booleanValue(), RelativeFloat::isRelative).addValidator(Validators.nonNull()).add()).build();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public RelativeFloat(float value, boolean isRelative) {
-/*  57 */     this.value = value;
-/*  58 */     this.isRelative = isRelative;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   protected RelativeFloat() {}
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nullable
-/*     */   public static RelativeFloat parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
-/*  78 */     boolean relative = input.contains("~");
-/*  79 */     input = input.replaceAll(Pattern.quote("~"), "");
-/*     */     try {
-/*     */       float value;
-/*  82 */       if (input.isBlank()) {
-/*  83 */         value = 0.0F;
-/*     */       } else {
-/*  85 */         value = Float.parseFloat(input);
-/*     */       } 
-/*  87 */       return new RelativeFloat(value, relative);
-/*  88 */     } catch (Exception e) {
-/*  89 */       parseResult.fail(Message.raw("Invalid float: " + input));
-/*  90 */       return null;
-/*     */     } 
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public float getRawValue() {
-/*  98 */     return this.value;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public boolean isRelative() {
-/* 105 */     return this.isRelative;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public float resolve(float baseValue) {
-/* 115 */     return this.isRelative ? (baseValue + this.value) : this.value;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String toString() {
-/* 121 */     return (this.isRelative ? "~" : "") + (this.isRelative ? "~" : "");
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.command.system.arguments.types;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.ParseResult;
+import java.util.regex.Pattern;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\command\system\arguments\types\RelativeFloat.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class RelativeFloat {
+   @Nonnull
+   public static final BuilderCodec<RelativeFloat> CODEC = BuilderCodec.builder(RelativeFloat.class, RelativeFloat::new)
+      .append(new KeyedCodec<>("Value", Codec.FLOAT), (o, i) -> o.value = i, RelativeFloat::getRawValue)
+      .addValidator(Validators.nonNull())
+      .add()
+      .<Boolean>append(new KeyedCodec<>("Relative", Codec.BOOLEAN), (o, i) -> o.isRelative = i, RelativeFloat::isRelative)
+      .addValidator(Validators.nonNull())
+      .add()
+      .build();
+   private float value;
+   private boolean isRelative;
+
+   public RelativeFloat(float value, boolean isRelative) {
+      this.value = value;
+      this.isRelative = isRelative;
+   }
+
+   protected RelativeFloat() {
+   }
+
+   @Nullable
+   public static RelativeFloat parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
+      boolean relative = input.contains("~");
+      input = input.replaceAll(Pattern.quote("~"), "");
+
+      try {
+         float value;
+         if (input.isBlank()) {
+            value = 0.0F;
+         } else {
+            value = Float.parseFloat(input);
+         }
+
+         return new RelativeFloat(value, relative);
+      } catch (Exception var4) {
+         parseResult.fail(Message.raw("Invalid float: " + input));
+         return null;
+      }
+   }
+
+   public float getRawValue() {
+      return this.value;
+   }
+
+   public boolean isRelative() {
+      return this.isRelative;
+   }
+
+   public float resolve(float baseValue) {
+      return this.isRelative ? baseValue + this.value : this.value;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return (this.isRelative ? "~" : "") + this.value;
+   }
+}

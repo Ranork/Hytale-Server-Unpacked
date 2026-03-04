@@ -1,49 +1,37 @@
-/*    */ package com.hypixel.hytale.builtin.buildertools.tooloperations.transform;
-/*    */ 
-/*    */ import com.hypixel.hytale.math.vector.Vector3i;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class Translate
-/*    */   implements Transform {
-/*    */   private final int x;
-/*    */   
-/*    */   private Translate(int x, int y, int z) {
-/* 11 */     this.x = x;
-/* 12 */     this.y = y;
-/* 13 */     this.z = z;
-/*    */   }
-/*    */   private final int y; private final int z;
-/*    */   
-/*    */   public void apply(@Nonnull Vector3i vector3i) {
-/* 18 */     vector3i.add(this.x, this.y, this.z);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 24 */     return "Translate{x=" + this.x + ", y=" + this.y + ", z=" + this.z + "}";
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public static Transform of(@Nonnull Vector3i vector) {
-/* 33 */     return of(vector.getX(), vector.getY(), vector.getZ());
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public static Transform of(int x, int y, int z) {
-/* 38 */     if (x == 0 && y == 0 && z == 0) {
-/* 39 */       return NONE;
-/*    */     }
-/* 41 */     return new Translate(x, y, z);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.buildertools.tooloperations.transform;
 
+import com.hypixel.hytale.math.vector.Vector3i;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\buildertools\tooloperations\transform\Translate.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Translate implements Transform {
+   private final int x;
+   private final int y;
+   private final int z;
+
+   private Translate(int x, int y, int z) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+   }
+
+   @Override
+   public void apply(@Nonnull Vector3i vector3i) {
+      vector3i.add(this.x, this.y, this.z);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "Translate{x=" + this.x + ", y=" + this.y + ", z=" + this.z + "}";
+   }
+
+   @Nonnull
+   public static Transform of(@Nonnull Vector3i vector) {
+      return of(vector.getX(), vector.getY(), vector.getZ());
+   }
+
+   @Nonnull
+   public static Transform of(int x, int y, int z) {
+      return (Transform)(x == 0 && y == 0 && z == 0 ? NONE : new Translate(x, y, z));
+   }
+}

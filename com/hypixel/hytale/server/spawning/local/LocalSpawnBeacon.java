@@ -1,38 +1,22 @@
-/*    */ package com.hypixel.hytale.server.spawning.local;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.component.Component;
-/*    */ import com.hypixel.hytale.component.ComponentType;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import com.hypixel.hytale.server.spawning.SpawningPlugin;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class LocalSpawnBeacon
-/*    */   implements Component<EntityStore>
-/*    */ {
-/* 19 */   public static final BuilderCodec<LocalSpawnBeacon> CODEC = BuilderCodec.builder(LocalSpawnBeacon.class, LocalSpawnBeacon::new)
-/* 20 */     .build();
-/*    */   
-/*    */   public static ComponentType<EntityStore, LocalSpawnBeacon> getComponentType() {
-/* 23 */     return SpawningPlugin.get().getLocalSpawnBeaconComponentType();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Component<EntityStore> clone() {
-/* 30 */     return new LocalSpawnBeacon();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.spawning.local;
 
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.spawning.SpawningPlugin;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\spawning\local\LocalSpawnBeacon.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class LocalSpawnBeacon implements Component<EntityStore> {
+   public static final BuilderCodec<LocalSpawnBeacon> CODEC = BuilderCodec.builder(LocalSpawnBeacon.class, LocalSpawnBeacon::new).build();
+
+   public static ComponentType<EntityStore, LocalSpawnBeacon> getComponentType() {
+      return SpawningPlugin.get().getLocalSpawnBeaconComponentType();
+   }
+
+   @Nonnull
+   @Override
+   public Component<EntityStore> clone() {
+      return new LocalSpawnBeacon();
+   }
+}

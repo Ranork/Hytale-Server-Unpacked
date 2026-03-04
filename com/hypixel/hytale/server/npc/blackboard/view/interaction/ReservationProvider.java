@@ -6,12 +6,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public interface ReservationProvider {
-  @Nonnull
-  ReservationStatus getReservationStatus(@Nonnull Ref<EntityStore> paramRef1, @Nonnull Ref<EntityStore> paramRef2, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
+   @Nonnull
+   ReservationStatus getReservationStatus(@Nonnull Ref<EntityStore> var1, @Nonnull Ref<EntityStore> var2, @Nonnull ComponentAccessor<EntityStore> var3);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\blackboard\view\interaction\ReservationProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

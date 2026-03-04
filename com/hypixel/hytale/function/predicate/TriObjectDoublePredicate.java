@@ -2,11 +2,5 @@ package com.hypixel.hytale.function.predicate;
 
 @FunctionalInterface
 public interface TriObjectDoublePredicate<T, U, V> {
-  boolean test(T paramT, U paramU, V paramV, double paramDouble);
+   boolean test(T var1, U var2, V var3, double var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\function\predicate\TriObjectDoublePredicate.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

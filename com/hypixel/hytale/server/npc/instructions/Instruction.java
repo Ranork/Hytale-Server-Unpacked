@@ -1,408 +1,462 @@
-/*     */ package com.hypixel.hytale.server.npc.instructions;
-/*     */ 
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.function.consumer.QuadConsumer;
-/*     */ import com.hypixel.hytale.logger.HytaleLogger;
-/*     */ import com.hypixel.hytale.server.core.entity.UUIDComponent;
-/*     */ import com.hypixel.hytale.server.core.universe.world.World;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import com.hypixel.hytale.server.npc.NPCPlugin;
-/*     */ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
-/*     */ import com.hypixel.hytale.server.npc.entities.NPCEntity;
-/*     */ import com.hypixel.hytale.server.npc.instructions.builders.BuilderInstruction;
-/*     */ import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
-/*     */ import com.hypixel.hytale.server.npc.role.Role;
-/*     */ import com.hypixel.hytale.server.npc.role.support.DebugSupport;
-/*     */ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
-/*     */ import com.hypixel.hytale.server.npc.util.ComponentInfo;
-/*     */ import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
-/*     */ import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
-/*     */ import java.util.function.BiConsumer;
-/*     */ import java.util.function.Consumer;
-/*     */ import java.util.logging.Level;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ public class Instruction implements RoleStateChange, IAnnotatedComponentCollection {
-/*  29 */   public static final Instruction[] EMPTY_ARRAY = new Instruction[0];
-/*  30 */   public static final HytaleLogger LOGGER = NPCPlugin.get().getLogger();
-/*     */   
-/*     */   protected IAnnotatedComponent parent;
-/*     */   
-/*     */   @Nullable
-/*     */   protected final String name;
-/*     */   
-/*     */   @Nullable
-/*     */   protected final String tag;
-/*     */   
-/*     */   protected final Sensor sensor;
-/*     */   
-/*     */   protected int index;
-/*     */   
-/*     */   protected final Instruction[] instructionList;
-/*     */   
-/*     */   @Nullable
-/*     */   protected final BodyMotion bodyMotion;
-/*     */   
-/*     */   @Nullable
-/*     */   protected final HeadMotion headMotion;
-/*     */   @Nonnull
-/*     */   protected final ActionList actions;
-/*     */   protected final double weight;
-/*     */   protected final boolean treeMode;
-/*     */   protected final boolean invertTreeModeResult;
-/*     */   protected boolean continueAfter;
-/*     */   @Nullable
-/*     */   protected Instruction parentTreeModeStep;
-/*     */   
-/*     */   private Instruction(Instruction[] instructionList, @Nonnull BuilderSupport support) {
-/*  61 */     this.tag = null;
-/*  62 */     this.name = "Root";
-/*  63 */     this.sensor = Sensor.NULL;
-/*  64 */     this.instructionList = instructionList;
-/*  65 */     this.bodyMotion = null;
-/*  66 */     this.headMotion = null;
-/*  67 */     this.actions = ActionList.EMPTY_ACTION_LIST;
-/*  68 */     this.continueAfter = false;
-/*  69 */     this.treeMode = false;
-/*  70 */     this.invertTreeModeResult = false;
-/*  71 */     this.weight = 1.0D;
-/*     */     
-/*  73 */     int index = support.getInstructionSlot(this.name);
-/*  74 */     support.putInstruction(index, this);
-/*     */   }
-/*     */   
-/*     */   public Instruction(@Nonnull BuilderInstruction builder, Sensor sensor, @Nullable Instruction[] instructionList, @Nonnull BuilderSupport support) {
-/*  78 */     this.tag = builder.getTag();
-/*  79 */     this.name = builder.getName();
-/*  80 */     this.sensor = sensor;
-/*  81 */     if (instructionList != null) {
-/*  82 */       this.instructionList = instructionList;
-/*  83 */       this.bodyMotion = null;
-/*  84 */       this.headMotion = null;
-/*  85 */       this.actions = ActionList.EMPTY_ACTION_LIST;
-/*     */     } else {
-/*  87 */       this.instructionList = EMPTY_ARRAY;
-/*  88 */       this.bodyMotion = builder.getBodyMotion(support);
-/*  89 */       this.headMotion = builder.getHeadMotion(support);
-/*  90 */       this.actions = builder.getActionList(support);
-/*     */     } 
-/*  92 */     this.continueAfter = builder.isContinueAfter();
-/*  93 */     this.treeMode = builder.isTreeMode();
-/*  94 */     this.invertTreeModeResult = builder.isInvertTreeModeResult(support);
-/*  95 */     this.weight = builder.getChance(support);
-/*     */     
-/*  97 */     int index = support.getInstructionSlot(this.name);
-/*  98 */     support.putInstruction(index, this);
-/*     */   }
-/*     */   
-/*     */   public Sensor getSensor() {
-/* 102 */     return this.sensor;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public String getDebugTag() {
-/* 107 */     return this.tag;
-/*     */   }
-/*     */   
-/*     */   public double getWeight() {
-/* 111 */     return this.weight;
-/*     */   }
-/*     */   
-/*     */   public boolean isContinueAfter() {
-/* 115 */     return this.continueAfter;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public BodyMotion getBodyMotion() {
-/* 120 */     return this.bodyMotion;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public HeadMotion getHeadMotion() {
-/* 125 */     return this.headMotion;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void registerWithSupport(Role role) {
-/* 134 */     this.sensor.registerWithSupport(role);
-/* 135 */     for (Instruction instruction : this.instructionList) {
-/* 136 */       instruction.registerWithSupport(role);
-/*     */     }
-/* 138 */     if (this.bodyMotion != null) this.bodyMotion.registerWithSupport(role); 
-/* 139 */     if (this.headMotion != null) this.headMotion.registerWithSupport(role); 
-/* 140 */     this.actions.registerWithSupport(role);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void motionControllerChanged(@Nullable Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, MotionController motionController, @Nullable ComponentAccessor<EntityStore> componentAccessor) {
-/* 145 */     this.sensor.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
-/* 146 */     forEachInstruction((instruction, motionController1) -> instruction.motionControllerChanged(ref, npcComponent, motionController1, componentAccessor), motionController);
-/* 147 */     if (this.bodyMotion != null) this.bodyMotion.motionControllerChanged(ref, npcComponent, motionController, componentAccessor); 
-/* 148 */     if (this.headMotion != null) this.headMotion.motionControllerChanged(ref, npcComponent, motionController, componentAccessor); 
-/* 149 */     this.actions.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void loaded(Role role) {
-/* 154 */     this.sensor.loaded(role);
-/* 155 */     forEachInstruction(Instruction::loaded, role);
-/* 156 */     if (this.bodyMotion != null) this.bodyMotion.loaded(role); 
-/* 157 */     if (this.headMotion != null) this.headMotion.loaded(role); 
-/* 158 */     this.actions.loaded(role);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void spawned(Role role) {
-/* 163 */     this.sensor.spawned(role);
-/* 164 */     forEachInstruction(Instruction::spawned, role);
-/* 165 */     if (this.bodyMotion != null) this.bodyMotion.spawned(role); 
-/* 166 */     if (this.headMotion != null) this.headMotion.spawned(role); 
-/* 167 */     this.actions.spawned(role);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void unloaded(Role role) {
-/* 172 */     this.sensor.unloaded(role);
-/* 173 */     forEachInstruction(Instruction::unloaded, role);
-/* 174 */     if (this.bodyMotion != null) this.bodyMotion.unloaded(role); 
-/* 175 */     if (this.headMotion != null) this.headMotion.unloaded(role); 
-/* 176 */     this.actions.unloaded(role);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void removed(Role role) {
-/* 181 */     this.sensor.removed(role);
-/* 182 */     forEachInstruction(Instruction::removed, role);
-/* 183 */     if (this.bodyMotion != null) this.bodyMotion.removed(role); 
-/* 184 */     if (this.headMotion != null) this.headMotion.removed(role); 
-/* 185 */     this.actions.removed(role);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void teleported(Role role, World from, World to) {
-/* 190 */     this.sensor.teleported(role, from, to);
-/* 191 */     forEachInstruction(Instruction::teleported, role, from, to);
-/* 192 */     if (this.bodyMotion != null) this.bodyMotion.teleported(role, from, to); 
-/* 193 */     if (this.headMotion != null) this.headMotion.teleported(role, from, to); 
-/* 194 */     this.actions.teleported(role, from, to);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public int componentCount() {
-/* 199 */     int count = 1;
-/* 200 */     count += this.actions.actionCount();
-/* 201 */     count += this.instructionList.length;
-/* 202 */     if (this.bodyMotion != null) count++; 
-/* 203 */     if (this.headMotion != null) count++; 
-/* 204 */     return count;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public IAnnotatedComponent getComponent(int index) {
-/* 209 */     if (index < 1) return this.sensor; 
-/* 210 */     if (index <= this.actions.actionCount()) return this.actions.getComponent(index - 1); 
-/* 211 */     if (index < componentCount()) {
-/* 212 */       if (this.bodyMotion != null) {
-/* 213 */         if (this.headMotion != null && index == componentCount() - 1) return this.headMotion; 
-/* 214 */         return this.bodyMotion;
-/*     */       } 
-/* 216 */       if (this.headMotion != null) return this.headMotion; 
-/* 217 */       return (IAnnotatedComponent)this.instructionList[index - 1];
-/*     */     } 
-/* 219 */     throw new IndexOutOfBoundsException();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void getInfo(Role role, @Nonnull ComponentInfo holder) {
-/* 224 */     if (this.name != null && !this.name.isEmpty()) holder.addField("Name: " + this.name);
-/*     */   
-/*     */   }
-/*     */   
-/*     */   public IAnnotatedComponent getParent() {
-/* 229 */     return this.parent;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public int getIndex() {
-/* 234 */     return this.index;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String getLabel() {
-/* 240 */     String tag = getDebugTag();
-/* 241 */     if (tag != null) {
-/* 242 */       return tag;
-/*     */     }
-/*     */     
-/* 245 */     return (this.index >= 0) ? String.format("[%s]%s", new Object[] { Integer.valueOf(this.index), getClass().getSimpleName() }) : getClass().getSimpleName();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void setContext(IAnnotatedComponent parent, int index) {
-/* 250 */     this.parent = parent;
-/* 251 */     this.index = index;
-/* 252 */     this.sensor.setContext((IAnnotatedComponent)this, -1);
-/* 253 */     if (this.bodyMotion != null) this.bodyMotion.setContext((IAnnotatedComponent)this, -1); 
-/* 254 */     if (this.headMotion != null) this.headMotion.setContext((IAnnotatedComponent)this, -1); 
-/* 255 */     this.actions.setContext((IAnnotatedComponent)this);
-/* 256 */     for (int i = 0; i < this.instructionList.length; i++) {
-/* 257 */       this.instructionList[i].setContext((IAnnotatedComponent)this, i);
-/*     */     }
-/*     */   }
-/*     */   
-/*     */   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-/* 262 */     DebugSupport debugSupport = role.getDebugSupport();
-/* 263 */     boolean traceSensorFails = debugSupport.isTraceSensorFails();
-/* 264 */     if (traceSensorFails) debugSupport.setLastFailingSensor(this.sensor);
-/*     */     
-/* 266 */     if (this.sensor.matches(ref, role, dt, store)) {
-/*     */ 
-/*     */ 
-/*     */       
-/* 270 */       if (!this.treeMode && !this.continueAfter) role.notifySensorMatch(); 
-/* 271 */       if (traceSensorFails) debugSupport.setLastFailingSensor(null); 
-/* 272 */       return true;
-/*     */     } 
-/* 274 */     if (debugSupport.isTraceFail()) {
-/* 275 */       UUIDComponent uuidComponent = (UUIDComponent)store.getComponent(ref, UUIDComponent.getComponentType());
-/* 276 */       assert uuidComponent != null;
-/* 277 */       LOGGER.at(Level.INFO).log("Instruction Sensor FAIL uuid=%d, debug=%s", uuidComponent.getUuid(), getBreadCrumbs());
-/*     */     } 
-/* 279 */     if (traceSensorFails) {
-/* 280 */       LOGGER.at(Level.INFO).log("Sensor FAIL, sensor=%s", debugSupport.getLastFailingSensor().getBreadCrumbs());
-/* 281 */       debugSupport.setLastFailingSensor(null);
-/*     */     } 
-/*     */     
-/* 284 */     return false;
-/*     */   }
-/*     */   
-/*     */   public void executeActions(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-/* 288 */     if (this.actions.canExecute(ref, role, sensorInfo, dt, store)) {
-/* 289 */       this.actions.execute(ref, role, sensorInfo, dt, store);
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
-/* 295 */     if (this.instructionList.length > 0) {
-/* 296 */       for (Instruction instruction : this.instructionList) {
-/* 297 */         if (instruction.matches(ref, role, dt, store))
-/*     */         
-/* 299 */         { instruction.onMatched(role);
-/* 300 */           instruction.execute(ref, role, dt, store);
-/* 301 */           instruction.onCompleted(role);
-/*     */           
-/* 303 */           if (!instruction.isContinueAfter())
-/*     */             break;  } 
-/* 305 */       }  this.sensor.setOnce();
-/* 306 */       this.sensor.done();
-/*     */       
-/*     */       return;
-/*     */     } 
-/* 310 */     InfoProvider sensorInfo = this.sensor.getSensorInfo();
-/* 311 */     if (this.headMotion != null && 
-/* 312 */       role.getEntitySupport().setNextHeadMotionStep(this)) this.headMotion.preComputeSteering(ref, role, sensorInfo, store);
-/*     */ 
-/*     */     
-/* 315 */     if (this.bodyMotion != null && 
-/* 316 */       role.getEntitySupport().setNextBodyMotionStep(this)) this.bodyMotion.preComputeSteering(ref, role, sensorInfo, store);
-/*     */ 
-/*     */     
-/* 319 */     executeActions(ref, role, sensorInfo, dt, store);
-/*     */     
-/* 321 */     if (this.headMotion == null && this.bodyMotion == null) {
-/* 322 */       this.sensor.setOnce();
-/* 323 */       this.sensor.done();
-/*     */     } 
-/*     */     
-/* 326 */     if (role.getDebugSupport().isTraceSuccess()) {
-/* 327 */       UUIDComponent uuidComponent = (UUIDComponent)store.getComponent(ref, UUIDComponent.getComponentType());
-/* 328 */       assert uuidComponent != null;
-/* 329 */       LOGGER.at(Level.INFO).log("Instruction SUCC uuid=%d, debug=%s", uuidComponent.getUuid(), getBreadCrumbs());
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public void clearOnce() {
-/* 334 */     this.sensor.clearOnce();
-/* 335 */     forEachInstruction(Instruction::clearOnce);
-/* 336 */     this.actions.clearOnce();
-/*     */   }
-/*     */   
-/*     */   public void onEndMotion() {
-/* 340 */     this.actions.onEndMotion();
-/*     */   }
-/*     */   
-/*     */   public void onMatched(@Nonnull Role role) {
-/* 344 */     if (!this.treeMode)
-/*     */       return; 
-/* 346 */     this.parentTreeModeStep = role.swapTreeModeSteps(this);
-/*     */     
-/* 348 */     this.continueAfter = true;
-/*     */   }
-/*     */   
-/*     */   public void onCompleted(@Nonnull Role role) {
-/* 352 */     if (!this.treeMode)
-/*     */       return; 
-/* 354 */     role.swapTreeModeSteps(this.parentTreeModeStep);
-/*     */     
-/* 356 */     if (this.parentTreeModeStep != null) {
-/*     */       
-/* 358 */       if (this.continueAfter == this.invertTreeModeResult) this.parentTreeModeStep.notifyChildSensorMatch(); 
-/* 359 */       this.parentTreeModeStep = null;
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public void notifyChildSensorMatch() {
-/* 364 */     if (!this.treeMode) {
-/*     */       return;
-/*     */     }
-/* 367 */     this.continueAfter = false;
-/*     */   }
-/*     */   
-/*     */   public void reset() {
-/* 371 */     clearOnce();
-/*     */   }
-/*     */   
-/*     */   protected void forEachInstruction(@Nonnull Consumer<Instruction> instructionConsumer) {
-/* 375 */     for (Instruction instruction : this.instructionList) {
-/* 376 */       instructionConsumer.accept(instruction);
-/*     */     }
-/*     */   }
-/*     */   
-/*     */   protected <T> void forEachInstruction(@Nonnull BiConsumer<Instruction, T> instructionConsumer, T obj) {
-/* 381 */     for (Instruction instruction : this.instructionList) {
-/* 382 */       instructionConsumer.accept(instruction, obj);
-/*     */     }
-/*     */   }
-/*     */   
-/*     */   protected <T, U, V> void forEachInstruction(@Nonnull QuadConsumer<Instruction, T, U, V> instructionConsumer, T t, U u, V v) {
-/* 387 */     for (Instruction instruction : this.instructionList) {
-/* 388 */       instructionConsumer.accept(instruction, t, u, v);
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public static Instruction createRootInstruction(Instruction[] instructions, @Nonnull BuilderSupport support) {
-/* 400 */     return new Instruction(instructions, support);
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.npc.instructions;
 
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.function.consumer.QuadConsumer;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.NPCPlugin;
+import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.builders.BuilderInstruction;
+import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
+import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.role.support.DebugSupport;
+import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
+import com.hypixel.hytale.server.npc.util.ComponentInfo;
+import com.hypixel.hytale.server.npc.util.IAnnotatedComponent;
+import com.hypixel.hytale.server.npc.util.IAnnotatedComponentCollection;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.logging.Level;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\instructions\Instruction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Instruction implements RoleStateChange, IAnnotatedComponentCollection {
+   public static final Instruction[] EMPTY_ARRAY = new Instruction[0];
+   public static final HytaleLogger LOGGER = NPCPlugin.get().getLogger();
+   protected IAnnotatedComponent parent;
+   @Nullable
+   protected final String name;
+   @Nullable
+   protected final String tag;
+   protected final Sensor sensor;
+   protected int index;
+   protected final Instruction[] instructionList;
+   @Nullable
+   protected final BodyMotion bodyMotion;
+   @Nullable
+   protected final HeadMotion headMotion;
+   @Nonnull
+   protected final ActionList actions;
+   protected final double weight;
+   protected final boolean treeMode;
+   protected final boolean invertTreeModeResult;
+   protected boolean continueAfter;
+   @Nullable
+   protected Instruction parentTreeModeStep;
+
+   private Instruction(Instruction[] instructionList, @Nonnull BuilderSupport support) {
+      this.tag = null;
+      this.name = "Root";
+      this.sensor = Sensor.NULL;
+      this.instructionList = instructionList;
+      this.bodyMotion = null;
+      this.headMotion = null;
+      this.actions = ActionList.EMPTY_ACTION_LIST;
+      this.continueAfter = false;
+      this.treeMode = false;
+      this.invertTreeModeResult = false;
+      this.weight = 1.0;
+      int index = support.getInstructionSlot(this.name);
+      support.putInstruction(index, this);
+   }
+
+   public Instruction(@Nonnull BuilderInstruction builder, Sensor sensor, @Nullable Instruction[] instructionList, @Nonnull BuilderSupport support) {
+      this.tag = builder.getTag();
+      this.name = builder.getName();
+      this.sensor = sensor;
+      if (instructionList != null) {
+         this.instructionList = instructionList;
+         this.bodyMotion = null;
+         this.headMotion = null;
+         this.actions = ActionList.EMPTY_ACTION_LIST;
+      } else {
+         this.instructionList = EMPTY_ARRAY;
+         this.bodyMotion = builder.getBodyMotion(support);
+         this.headMotion = builder.getHeadMotion(support);
+         this.actions = builder.getActionList(support);
+      }
+
+      this.continueAfter = builder.isContinueAfter();
+      this.treeMode = builder.isTreeMode();
+      this.invertTreeModeResult = builder.isInvertTreeModeResult(support);
+      this.weight = builder.getChance(support);
+      int index = support.getInstructionSlot(this.name);
+      support.putInstruction(index, this);
+   }
+
+   public Sensor getSensor() {
+      return this.sensor;
+   }
+
+   @Nullable
+   public String getDebugTag() {
+      return this.tag;
+   }
+
+   public double getWeight() {
+      return this.weight;
+   }
+
+   public boolean isContinueAfter() {
+      return this.continueAfter;
+   }
+
+   @Nullable
+   public BodyMotion getBodyMotion() {
+      return this.bodyMotion;
+   }
+
+   @Nullable
+   public HeadMotion getHeadMotion() {
+      return this.headMotion;
+   }
+
+   @Override
+   public void registerWithSupport(Role role) {
+      this.sensor.registerWithSupport(role);
+
+      for (Instruction instruction : this.instructionList) {
+         instruction.registerWithSupport(role);
+      }
+
+      if (this.bodyMotion != null) {
+         this.bodyMotion.registerWithSupport(role);
+      }
+
+      if (this.headMotion != null) {
+         this.headMotion.registerWithSupport(role);
+      }
+
+      this.actions.registerWithSupport(role);
+   }
+
+   @Override
+   public void motionControllerChanged(
+      @Nullable Ref<EntityStore> ref,
+      @Nonnull NPCEntity npcComponent,
+      MotionController motionController,
+      @Nullable ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      this.sensor.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
+      this.forEachInstruction(
+         (instruction, motionController1) -> instruction.motionControllerChanged(ref, npcComponent, motionController1, componentAccessor), motionController
+      );
+      if (this.bodyMotion != null) {
+         this.bodyMotion.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
+      }
+
+      if (this.headMotion != null) {
+         this.headMotion.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
+      }
+
+      this.actions.motionControllerChanged(ref, npcComponent, motionController, componentAccessor);
+   }
+
+   @Override
+   public void loaded(Role role) {
+      this.sensor.loaded(role);
+      this.forEachInstruction(Instruction::loaded, role);
+      if (this.bodyMotion != null) {
+         this.bodyMotion.loaded(role);
+      }
+
+      if (this.headMotion != null) {
+         this.headMotion.loaded(role);
+      }
+
+      this.actions.loaded(role);
+   }
+
+   @Override
+   public void spawned(Role role) {
+      this.sensor.spawned(role);
+      this.forEachInstruction(Instruction::spawned, role);
+      if (this.bodyMotion != null) {
+         this.bodyMotion.spawned(role);
+      }
+
+      if (this.headMotion != null) {
+         this.headMotion.spawned(role);
+      }
+
+      this.actions.spawned(role);
+   }
+
+   @Override
+   public void unloaded(Role role) {
+      this.sensor.unloaded(role);
+      this.forEachInstruction(Instruction::unloaded, role);
+      if (this.bodyMotion != null) {
+         this.bodyMotion.unloaded(role);
+      }
+
+      if (this.headMotion != null) {
+         this.headMotion.unloaded(role);
+      }
+
+      this.actions.unloaded(role);
+   }
+
+   @Override
+   public void removed(Role role) {
+      this.sensor.removed(role);
+      this.forEachInstruction(Instruction::removed, role);
+      if (this.bodyMotion != null) {
+         this.bodyMotion.removed(role);
+      }
+
+      if (this.headMotion != null) {
+         this.headMotion.removed(role);
+      }
+
+      this.actions.removed(role);
+   }
+
+   @Override
+   public void teleported(Role role, World from, World to) {
+      this.sensor.teleported(role, from, to);
+      this.forEachInstruction(Instruction::teleported, role, from, to);
+      if (this.bodyMotion != null) {
+         this.bodyMotion.teleported(role, from, to);
+      }
+
+      if (this.headMotion != null) {
+         this.headMotion.teleported(role, from, to);
+      }
+
+      this.actions.teleported(role, from, to);
+   }
+
+   @Override
+   public int componentCount() {
+      int count = 1;
+      count += this.actions.actionCount();
+      count += this.instructionList.length;
+      if (this.bodyMotion != null) {
+         count++;
+      }
+
+      if (this.headMotion != null) {
+         count++;
+      }
+
+      return count;
+   }
+
+   @Override
+   public IAnnotatedComponent getComponent(int index) {
+      if (index < 1) {
+         return this.sensor;
+      } else if (index <= this.actions.actionCount()) {
+         return this.actions.getComponent(index - 1);
+      } else if (index < this.componentCount()) {
+         if (this.bodyMotion != null) {
+            return (IAnnotatedComponent)(this.headMotion != null && index == this.componentCount() - 1 ? this.headMotion : this.bodyMotion);
+         } else {
+            return (IAnnotatedComponent)(this.headMotion != null ? this.headMotion : this.instructionList[index - 1]);
+         }
+      } else {
+         throw new IndexOutOfBoundsException();
+      }
+   }
+
+   @Override
+   public void getInfo(Role role, @Nonnull ComponentInfo holder) {
+      if (this.name != null && !this.name.isEmpty()) {
+         holder.addField("Name: " + this.name);
+      }
+   }
+
+   @Override
+   public IAnnotatedComponent getParent() {
+      return this.parent;
+   }
+
+   @Override
+   public int getIndex() {
+      return this.index;
+   }
+
+   @Nonnull
+   @Override
+   public String getLabel() {
+      String tag = this.getDebugTag();
+      if (tag != null) {
+         return tag;
+      } else {
+         return this.index >= 0 ? String.format("[%s]%s", this.index, this.getClass().getSimpleName()) : this.getClass().getSimpleName();
+      }
+   }
+
+   @Override
+   public void setContext(IAnnotatedComponent parent, int index) {
+      this.parent = parent;
+      this.index = index;
+      this.sensor.setContext(this, -1);
+      if (this.bodyMotion != null) {
+         this.bodyMotion.setContext(this, -1);
+      }
+
+      if (this.headMotion != null) {
+         this.headMotion.setContext(this, -1);
+      }
+
+      this.actions.setContext(this);
+
+      for (int i = 0; i < this.instructionList.length; i++) {
+         this.instructionList[i].setContext(this, i);
+      }
+   }
+
+   public boolean matches(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+      DebugSupport debugSupport = role.getDebugSupport();
+      boolean traceSensorFails = debugSupport.isTraceSensorFails();
+      if (traceSensorFails) {
+         debugSupport.setLastFailingSensor(this.sensor);
+      }
+
+      if (this.sensor.matches(ref, role, dt, store)) {
+         if (!this.treeMode && !this.continueAfter && !this.invertTreeModeResult) {
+            role.notifySensorMatch();
+         }
+
+         if (traceSensorFails) {
+            debugSupport.setLastFailingSensor(null);
+         }
+
+         return true;
+      } else {
+         if (debugSupport.isTraceFail()) {
+            UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
+
+            assert uuidComponent != null;
+
+            LOGGER.at(Level.INFO).log("Instruction Sensor FAIL uuid=%d, debug=%s", uuidComponent.getUuid(), this.getBreadCrumbs());
+         }
+
+         if (traceSensorFails) {
+            LOGGER.at(Level.INFO).log("Sensor FAIL, sensor=%s", debugSupport.getLastFailingSensor().getBreadCrumbs());
+            debugSupport.setLastFailingSensor(null);
+         }
+
+         return false;
+      }
+   }
+
+   public void executeActions(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+      if (this.actions.canExecute(ref, role, sensorInfo, dt, store)) {
+         this.actions.execute(ref, role, sensorInfo, dt, store);
+      }
+   }
+
+   public void execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, double dt, @Nonnull Store<EntityStore> store) {
+      if (this.instructionList.length <= 0) {
+         InfoProvider sensorInfo = this.sensor.getSensorInfo();
+         if (this.headMotion != null && role.getEntitySupport().setNextHeadMotionStep(this)) {
+            this.headMotion.preComputeSteering(ref, role, sensorInfo, store);
+         }
+
+         if (this.bodyMotion != null && role.getEntitySupport().setNextBodyMotionStep(this)) {
+            this.bodyMotion.preComputeSteering(ref, role, sensorInfo, store);
+         }
+
+         this.executeActions(ref, role, sensorInfo, dt, store);
+         if (this.headMotion == null && this.bodyMotion == null) {
+            this.sensor.setOnce();
+            this.sensor.done();
+         }
+
+         if (role.getDebugSupport().isTraceSuccess()) {
+            UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
+
+            assert uuidComponent != null;
+
+            LOGGER.at(Level.INFO).log("Instruction SUCC uuid=%d, debug=%s", uuidComponent.getUuid(), this.getBreadCrumbs());
+         }
+      } else {
+         for (Instruction instruction : this.instructionList) {
+            if (instruction.matches(ref, role, dt, store)) {
+               instruction.onMatched(role);
+               instruction.execute(ref, role, dt, store);
+               instruction.onCompleted(role);
+               if (!instruction.isContinueAfter()) {
+                  break;
+               }
+            }
+         }
+
+         this.sensor.setOnce();
+         this.sensor.done();
+      }
+   }
+
+   public void clearOnce() {
+      this.sensor.clearOnce();
+      this.forEachInstruction(Instruction::clearOnce);
+      this.actions.clearOnce();
+   }
+
+   public void onEndMotion() {
+      this.actions.onEndMotion();
+   }
+
+   public void onMatched(@Nonnull Role role) {
+      if (this.treeMode || this.invertTreeModeResult) {
+         this.parentTreeModeStep = role.swapTreeModeSteps(this);
+         if (this.treeMode) {
+            this.continueAfter = true;
+         }
+      }
+   }
+
+   public void onCompleted(@Nonnull Role role) {
+      if (this.treeMode || this.invertTreeModeResult) {
+         role.swapTreeModeSteps(this.parentTreeModeStep);
+         if (this.parentTreeModeStep != null) {
+            if (this.continueAfter == this.invertTreeModeResult) {
+               this.parentTreeModeStep.notifyChildSensorMatch();
+            }
+
+            this.parentTreeModeStep = null;
+         }
+      }
+   }
+
+   public void notifyChildSensorMatch() {
+      if (this.treeMode) {
+         this.continueAfter = false;
+      }
+   }
+
+   public void reset() {
+      this.clearOnce();
+   }
+
+   protected void forEachInstruction(@Nonnull Consumer<Instruction> instructionConsumer) {
+      for (Instruction instruction : this.instructionList) {
+         instructionConsumer.accept(instruction);
+      }
+   }
+
+   protected <T> void forEachInstruction(@Nonnull BiConsumer<Instruction, T> instructionConsumer, T obj) {
+      for (Instruction instruction : this.instructionList) {
+         instructionConsumer.accept(instruction, obj);
+      }
+   }
+
+   protected <T, U, V> void forEachInstruction(@Nonnull QuadConsumer<Instruction, T, U, V> instructionConsumer, T t, U u, V v) {
+      for (Instruction instruction : this.instructionList) {
+         instructionConsumer.accept(instruction, t, u, v);
+      }
+   }
+
+   @Nonnull
+   public static Instruction createRootInstruction(Instruction[] instructions, @Nonnull BuilderSupport support) {
+      return new Instruction(instructions, support);
+   }
+}

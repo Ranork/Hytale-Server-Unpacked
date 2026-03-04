@@ -1,38 +1,27 @@
-/*    */ package com.hypixel.hytale.server.spawning.world.manager;
-/*    */ 
-/*    */ import java.util.Set;
-/*    */ import java.util.concurrent.ConcurrentHashMap;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class EnvironmentSpawnParameters
-/*    */ {
-/*    */   private double density;
-/* 14 */   private final Set<WorldSpawnWrapper> spawnWrappers = ConcurrentHashMap.newKeySet();
-/*    */   
-/*    */   public EnvironmentSpawnParameters(double density) {
-/* 17 */     this.density = density;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public Set<WorldSpawnWrapper> getSpawnWrappers() {
-/* 22 */     return this.spawnWrappers;
-/*    */   }
-/*    */   
-/*    */   public double getSpawnDensity() {
-/* 26 */     return this.density;
-/*    */   }
-/*    */   
-/*    */   public void setDensity(double density) {
-/* 30 */     this.density = density;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.spawning.world.manager;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\spawning\world\manager\EnvironmentSpawnParameters.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class EnvironmentSpawnParameters {
+   private double density;
+   private final Set<WorldSpawnWrapper> spawnWrappers = ConcurrentHashMap.newKeySet();
+
+   public EnvironmentSpawnParameters(double density) {
+      this.density = density;
+   }
+
+   @Nonnull
+   public Set<WorldSpawnWrapper> getSpawnWrappers() {
+      return this.spawnWrappers;
+   }
+
+   public double getSpawnDensity() {
+      return this.density;
+   }
+
+   public void setDensity(double density) {
+      this.density = density;
+   }
+}

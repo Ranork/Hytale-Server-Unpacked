@@ -1,28 +1,21 @@
-/*    */ package com.hypixel.hytale.server.npc.sensorinfo.parameterproviders;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public abstract class SingleParameterProvider
-/*    */   implements ParameterProvider
-/*    */ {
-/*    */   private final int parameter;
-/*    */   
-/*    */   public SingleParameterProvider(int parameter) {
-/* 13 */     this.parameter = parameter;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public ParameterProvider getParameterProvider(int parameter) {
-/* 19 */     if (this.parameter != parameter) throw new IllegalStateException("Parameter does not match!"); 
-/* 20 */     return this;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.sensorinfo.parameterproviders;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\sensorinfo\parameterproviders\SingleParameterProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class SingleParameterProvider implements ParameterProvider {
+   private final int parameter;
+
+   public SingleParameterProvider(int parameter) {
+      this.parameter = parameter;
+   }
+
+   @Nonnull
+   @Override
+   public ParameterProvider getParameterProvider(int parameter) {
+      if (this.parameter != parameter) {
+         throw new IllegalStateException("Parameter does not match!");
+      } else {
+         return this;
+      }
+   }
+}

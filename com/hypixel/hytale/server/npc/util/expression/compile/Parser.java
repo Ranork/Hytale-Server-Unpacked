@@ -1,309 +1,241 @@
-/*     */ package com.hypixel.hytale.server.npc.util.expression.compile;
-/*     */ 
-/*     */ import java.text.ParseException;
-/*     */ import java.util.ArrayDeque;
-/*     */ import java.util.Deque;
-/*     */ import java.util.EnumSet;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class Parser
-/*     */ {
-/*     */   public static final String MISMATCHED_CLOSING_BRACKET = "Mismatched closing bracket";
-/*     */   public static final String TOO_MANY_OPERANDS = "Too many operands";
-/*     */   public static final String NOT_ENOUGH_OPERANDS = "Not enough operands";
-/*     */   public static final String EXPECTED_UNARY_OPERATOR = "Expected unary operator";
-/*     */   public static final String EXPECTED_BINARY_OPERATOR = "Expected binary operator";
-/*     */   public static final String MISSING_CLOSING_BRACKET = "Missing closing bracket";
-/*     */   public static final String ILLEGAL_USE_OF_ARGUMENT_LIST = "Illegal use of argument list";
-/*     */   private Lexer<Token> lexer;
-/*     */   private LexerContext<Token> context;
-/*     */   
-/*     */   public static class ParsedToken
-/*     */   {
-/*     */     @Nullable
-/*     */     public Token token;
-/*     */     @Nullable
-/*     */     public String tokenString;
-/*     */     public double tokenNumber;
-/*     */     public int tokenPosition;
-/*     */     public int operandCount;
-/*     */     public boolean isTuple;
-/*     */     public boolean isFunctionCall;
-/*     */     public int tupleLength;
-/*     */     
-/*     */     public ParsedToken(@Nonnull LexerContext<Token> context) {
-/*  40 */       this(context.getToken());
-/*  41 */       this.tokenString = context.getTokenString();
-/*  42 */       this.tokenNumber = context.getTokenNumber();
-/*  43 */       this.tokenPosition = context.getTokenPosition();
-/*     */     }
-/*     */     
-/*     */     public ParsedToken(Token token) {
-/*  47 */       this.token = token;
-/*  48 */       this.tokenString = null;
-/*  49 */       this.tokenNumber = 0.0D;
-/*  50 */       this.tokenPosition = 0;
-/*  51 */       this.operandCount = 0;
-/*  52 */       this.isTuple = false;
-/*  53 */       this.isFunctionCall = false;
-/*  54 */       this.tupleLength = 0;
-/*     */     }
-/*     */     
-/*     */     @Nonnull
-/*     */     static ParsedToken fromLexer(@Nonnull Lexer<Token> lexer, @Nonnull LexerContext<Token> context) throws ParseException {
-/*  59 */       lexer.nextToken(context);
-/*  60 */       return new ParsedToken(context);
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/* 108 */   private Deque<ParsedToken> operatorStack = new ArrayDeque<>();
-/*     */   @Nonnull
-/* 110 */   private Deque<ParsedToken> bracketStack = new ArrayDeque<>();
-/*     */ 
-/*     */   
-/*     */   public Parser(Lexer<Token> lexer) {
-/* 114 */     this.lexer = lexer;
-/* 115 */     this.context = new LexerContext<>();
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   private ParsedToken nextToken() throws ParseException {
-/* 120 */     return ParsedToken.fromLexer(this.lexer, this.context);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void parse(@Nonnull String expression, @Nonnull ParsedTokenConsumer tokenConsumer) throws ParseException {
-/* 132 */     this.operatorStack.clear();
-/* 133 */     this.bracketStack.clear();
-/* 134 */     this.bracketStack.push(new ParsedToken(Token.END));
-/* 135 */     this.context.init(expression);
-/* 136 */     ParsedToken parsedToken = nextToken();
-/* 137 */     Token token = parsedToken.token;
-/* 138 */     Token lastToken = null;
-/* 139 */     ParsedToken bracket = this.bracketStack.peek();
-/*     */     
-/* 141 */     while (!token.isEndToken()) {
-/* 142 */       if (token.isOperand()) {
-/* 143 */         tokenConsumer.pushOperand(parsedToken);
-/* 144 */         bracket.operandCount++;
-/* 145 */       } else if (token.isOpenBracket()) {
-/* 146 */         if (token == Token.OPEN_BRACKET) {
-/* 147 */           if (lastToken == Token.IDENTIFIER) {
-/*     */             
-/* 149 */             parsedToken.isTuple = true;
-/* 150 */             parsedToken.isFunctionCall = true;
-/*     */           } 
-/* 152 */         } else if (token.isOpenTuple()) {
-/* 153 */           parsedToken.isTuple = true;
-/* 154 */           parsedToken.isFunctionCall = false;
-/*     */         } 
-/* 156 */         this.operatorStack.push(parsedToken);
-/* 157 */         this.bracketStack.push(parsedToken);
-/* 158 */         bracket = this.bracketStack.peek();
-/* 159 */       } else if (token.isCloseBracket()) {
-/* 160 */         int deltaArity; Token otherBracket = token.getMatchingBracket();
-/* 161 */         if (bracket.token != otherBracket) {
-/* 162 */           throw new ParseException("Mismatched closing bracket", parsedToken.tokenPosition);
-/*     */         }
-/*     */         
-/* 165 */         ParsedToken first = this.operatorStack.pop();
-/* 166 */         while (!first.token.isOpenBracket()) {
-/* 167 */           bracket.operandCount = adjustOperandCount(first, bracket.operandCount);
-/* 168 */           tokenConsumer.processOperator(first);
-/* 169 */           first = this.operatorStack.pop();
-/*     */         } 
-/* 171 */         validateOperandCount(bracket);
-/*     */         
-/* 173 */         if (bracket.isFunctionCall) {
-/*     */           
-/* 175 */           bracket.tupleLength += bracket.operandCount;
-/* 176 */           tokenConsumer.processFunction(bracket.tupleLength);
-/* 177 */           deltaArity = 0;
-/* 178 */         } else if (bracket.isTuple) {
-/* 179 */           bracket.tupleLength += bracket.operandCount;
-/* 180 */           tokenConsumer.processTuple(bracket, bracket.tupleLength);
-/* 181 */           deltaArity = 1;
-/*     */         } else {
-/* 183 */           deltaArity = 1;
-/*     */         } 
-/* 185 */         this.bracketStack.pop();
-/* 186 */         bracket = this.bracketStack.peek();
-/* 187 */         bracket.operandCount += deltaArity;
-/* 188 */       } else if (token.isList()) {
-/* 189 */         if (!bracket.isTuple) {
-/* 190 */           throw new ParseException("Illegal use of argument list", parsedToken.tokenPosition);
-/*     */         }
-/*     */         
-/* 193 */         ParsedToken first = peekOperator();
-/* 194 */         while (!first.token.isOpenBracket()) {
-/* 195 */           bracket.operandCount = adjustOperandCount(first, bracket.operandCount);
-/* 196 */           tokenConsumer.processOperator(first);
-/* 197 */           this.operatorStack.pop();
-/* 198 */           first = peekOperator();
-/*     */         } 
-/* 200 */         validateOperandCount(bracket);
-/*     */         
-/* 202 */         bracket.tupleLength++;
-/* 203 */         bracket.operandCount = 0;
-/* 204 */       } else if (token.isOperator()) {
-/*     */         
-/* 206 */         boolean mustBeUnary = (lastToken == null || lastToken.containsAnyFlag(EnumSet.of(TokenFlags.OPERATOR, TokenFlags.LIST, TokenFlags.OPENING_BRACKET)));
-/* 207 */         if (token.canBeUnary() && mustBeUnary)
-/* 208 */         { token = token.getUnaryVariant();
-/* 209 */           parsedToken.token = token; }
-/* 210 */         else { if (mustBeUnary && !token.isUnary())
-/* 211 */             throw new ParseException("Expected unary operator", parsedToken.tokenPosition); 
-/* 212 */           if (token.isUnary() && !mustBeUnary) {
-/* 213 */             throw new ParseException("Expected binary operator", parsedToken.tokenPosition);
-/*     */           } }
-/*     */         
-/* 216 */         ParsedToken stackToken = peekOperator();
-/* 217 */         while (hasLowerPrecedence(token, stackToken)) {
-/* 218 */           bracket.operandCount = adjustOperandCount(stackToken, bracket.operandCount);
-/* 219 */           tokenConsumer.processOperator(stackToken);
-/* 220 */           this.operatorStack.pop();
-/* 221 */           stackToken = peekOperator();
-/*     */         } 
-/* 223 */         this.operatorStack.push(parsedToken);
-/*     */       } else {
-/* 225 */         throw new RuntimeException("Internal parser error: " + String.valueOf(token));
-/*     */       } 
-/*     */       
-/* 228 */       lastToken = token;
-/* 229 */       parsedToken = nextToken();
-/* 230 */       token = parsedToken.token;
-/*     */     } 
-/* 232 */     if (bracket.token != Token.END) {
-/* 233 */       throw new ParseException("Missing closing bracket", bracket.tokenPosition);
-/*     */     }
-/*     */     
-/* 236 */     while (!this.operatorStack.isEmpty()) {
-/* 237 */       parsedToken = this.operatorStack.pop();
-/* 238 */       bracket.operandCount = adjustOperandCount(parsedToken, bracket.operandCount);
-/* 239 */       tokenConsumer.processOperator(parsedToken);
-/*     */     } 
-/*     */     
-/* 242 */     validateOperandCount(bracket);
-/* 243 */     tokenConsumer.done();
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public ParsedToken peekOperator() {
-/* 248 */     return this.operatorStack.isEmpty() ? null : this.operatorStack.peek();
-/*     */   }
-/*     */   
-/*     */   private void validateOperandCount(@Nonnull ParsedToken bracket) throws ParseException {
-/* 252 */     if (bracket.isTuple && bracket.tupleLength == 0 && bracket.operandCount == 0) {
-/*     */       return;
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */     
-/* 258 */     if (bracket.operandCount <= 0) {
-/* 259 */       throw new ParseException("Not enough operands", 0);
-/*     */     }
-/* 261 */     if (bracket.operandCount > 1) {
-/* 262 */       throw new ParseException("Too many operands", 0);
-/*     */     }
-/*     */   }
-/*     */   
-/*     */   private int adjustOperandCount(@Nonnull ParsedToken parsedToken, int operandCount) throws ParseException {
-/* 267 */     int requiredOperands = arity(parsedToken.token);
-/*     */     
-/* 269 */     if (operandCount < requiredOperands) {
-/* 270 */       throw new ParseException("Not enough operands", parsedToken.tokenPosition);
-/*     */     }
-/* 272 */     return operandCount - requiredOperands + 1;
-/*     */   }
-/*     */   
-/*     */   private boolean hasLowerPrecedence(@Nonnull Token token, @Nullable ParsedToken stackToken) {
-/* 276 */     if (stackToken == null || stackToken.token.isList() || stackToken.token.isOpenBracket()) {
-/* 277 */       return false;
-/*     */     }
-/* 279 */     int tokenPrecedence = token.getPrecedence();
-/* 280 */     int stackTokenPrecedence = stackToken.token.getPrecedence();
-/* 281 */     return (tokenPrecedence == stackTokenPrecedence) ? (!token.isRightToLeft()) : ((tokenPrecedence < stackTokenPrecedence));
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   private int arity(@Nonnull Token operator) {
-/* 286 */     if (!operator.isOperator()) {
-/* 287 */       throw new RuntimeException("Arity only possible with operators");
-/*     */     }
-/* 289 */     return operator.isUnary() ? 1 : 2;
-/*     */   }
-/*     */   
-/*     */   public static interface ParsedTokenConsumer {
-/*     */     void pushOperand(Parser.ParsedToken param1ParsedToken);
-/*     */     
-/*     */     void processOperator(Parser.ParsedToken param1ParsedToken) throws ParseException;
-/*     */     
-/*     */     void processFunction(int param1Int) throws ParseException;
-/*     */     
-/*     */     void processTuple(Parser.ParsedToken param1ParsedToken, int param1Int);
-/*     */     
-/*     */     void done();
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.npc.util.expression.compile;
 
+import java.text.ParseException;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.EnumSet;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\np\\util\expression\compile\Parser.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Parser {
+   public static final String MISMATCHED_CLOSING_BRACKET = "Mismatched closing bracket";
+   public static final String TOO_MANY_OPERANDS = "Too many operands";
+   public static final String NOT_ENOUGH_OPERANDS = "Not enough operands";
+   public static final String EXPECTED_UNARY_OPERATOR = "Expected unary operator";
+   public static final String EXPECTED_BINARY_OPERATOR = "Expected binary operator";
+   public static final String MISSING_CLOSING_BRACKET = "Missing closing bracket";
+   public static final String ILLEGAL_USE_OF_ARGUMENT_LIST = "Illegal use of argument list";
+   private Lexer<Token> lexer;
+   private LexerContext<Token> context;
+   @Nonnull
+   private Deque<Parser.ParsedToken> operatorStack = new ArrayDeque<>();
+   @Nonnull
+   private Deque<Parser.ParsedToken> bracketStack = new ArrayDeque<>();
+
+   public Parser(Lexer<Token> lexer) {
+      this.lexer = lexer;
+      this.context = new LexerContext<>();
+   }
+
+   @Nonnull
+   private Parser.ParsedToken nextToken() throws ParseException {
+      return Parser.ParsedToken.fromLexer(this.lexer, this.context);
+   }
+
+   public void parse(@Nonnull String expression, @Nonnull Parser.ParsedTokenConsumer tokenConsumer) throws ParseException {
+      this.operatorStack.clear();
+      this.bracketStack.clear();
+      this.bracketStack.push(new Parser.ParsedToken(Token.END));
+      this.context.init(expression);
+      Parser.ParsedToken parsedToken = this.nextToken();
+      Token token = parsedToken.token;
+      Token lastToken = null;
+
+      Parser.ParsedToken bracket;
+      for (bracket = this.bracketStack.peek(); !token.isEndToken(); token = parsedToken.token) {
+         if (token.isOperand()) {
+            tokenConsumer.pushOperand(parsedToken);
+            bracket.operandCount++;
+         } else if (token.isOpenBracket()) {
+            if (token == Token.OPEN_BRACKET) {
+               if (lastToken == Token.IDENTIFIER) {
+                  parsedToken.isTuple = true;
+                  parsedToken.isFunctionCall = true;
+               }
+            } else if (token.isOpenTuple()) {
+               parsedToken.isTuple = true;
+               parsedToken.isFunctionCall = false;
+            }
+
+            this.operatorStack.push(parsedToken);
+            this.bracketStack.push(parsedToken);
+            bracket = this.bracketStack.peek();
+         } else if (token.isCloseBracket()) {
+            Token otherBracket = token.getMatchingBracket();
+            if (bracket.token != otherBracket) {
+               throw new ParseException("Mismatched closing bracket", parsedToken.tokenPosition);
+            }
+
+            for (Parser.ParsedToken first = this.operatorStack.pop(); !first.token.isOpenBracket(); first = this.operatorStack.pop()) {
+               bracket.operandCount = this.adjustOperandCount(first, bracket.operandCount);
+               tokenConsumer.processOperator(first);
+            }
+
+            this.validateOperandCount(bracket);
+            int deltaArity;
+            if (bracket.isFunctionCall) {
+               bracket.tupleLength = bracket.tupleLength + bracket.operandCount;
+               tokenConsumer.processFunction(bracket.tupleLength);
+               deltaArity = 0;
+            } else if (bracket.isTuple) {
+               bracket.tupleLength = bracket.tupleLength + bracket.operandCount;
+               tokenConsumer.processTuple(bracket, bracket.tupleLength);
+               deltaArity = 1;
+            } else {
+               deltaArity = 1;
+            }
+
+            this.bracketStack.pop();
+            bracket = this.bracketStack.peek();
+            bracket.operandCount += deltaArity;
+         } else if (token.isList()) {
+            if (!bracket.isTuple) {
+               throw new ParseException("Illegal use of argument list", parsedToken.tokenPosition);
+            }
+
+            for (Parser.ParsedToken first = this.peekOperator(); !first.token.isOpenBracket(); first = this.peekOperator()) {
+               bracket.operandCount = this.adjustOperandCount(first, bracket.operandCount);
+               tokenConsumer.processOperator(first);
+               this.operatorStack.pop();
+            }
+
+            this.validateOperandCount(bracket);
+            bracket.tupleLength++;
+            bracket.operandCount = 0;
+         } else {
+            if (!token.isOperator()) {
+               throw new RuntimeException("Internal parser error: " + token);
+            }
+
+            boolean mustBeUnary = lastToken == null || lastToken.containsAnyFlag(EnumSet.of(TokenFlags.OPERATOR, TokenFlags.LIST, TokenFlags.OPENING_BRACKET));
+            if (token.canBeUnary() && mustBeUnary) {
+               token = token.getUnaryVariant();
+               parsedToken.token = token;
+            } else {
+               if (mustBeUnary && !token.isUnary()) {
+                  throw new ParseException("Expected unary operator", parsedToken.tokenPosition);
+               }
+
+               if (token.isUnary() && !mustBeUnary) {
+                  throw new ParseException("Expected binary operator", parsedToken.tokenPosition);
+               }
+            }
+
+            for (Parser.ParsedToken stackToken = this.peekOperator(); this.hasLowerPrecedence(token, stackToken); stackToken = this.peekOperator()) {
+               bracket.operandCount = this.adjustOperandCount(stackToken, bracket.operandCount);
+               tokenConsumer.processOperator(stackToken);
+               this.operatorStack.pop();
+            }
+
+            this.operatorStack.push(parsedToken);
+         }
+
+         lastToken = token;
+         parsedToken = this.nextToken();
+      }
+
+      if (bracket.token != Token.END) {
+         throw new ParseException("Missing closing bracket", bracket.tokenPosition);
+      } else {
+         while (!this.operatorStack.isEmpty()) {
+            parsedToken = this.operatorStack.pop();
+            bracket.operandCount = this.adjustOperandCount(parsedToken, bracket.operandCount);
+            tokenConsumer.processOperator(parsedToken);
+         }
+
+         this.validateOperandCount(bracket);
+         tokenConsumer.done();
+      }
+   }
+
+   @Nullable
+   public Parser.ParsedToken peekOperator() {
+      return this.operatorStack.isEmpty() ? null : this.operatorStack.peek();
+   }
+
+   private void validateOperandCount(@Nonnull Parser.ParsedToken bracket) throws ParseException {
+      if (!bracket.isTuple || bracket.tupleLength != 0 || bracket.operandCount != 0) {
+         if (bracket.operandCount <= 0) {
+            throw new ParseException("Not enough operands", 0);
+         } else if (bracket.operandCount > 1) {
+            throw new ParseException("Too many operands", 0);
+         }
+      }
+   }
+
+   private int adjustOperandCount(@Nonnull Parser.ParsedToken parsedToken, int operandCount) throws ParseException {
+      int requiredOperands = this.arity(parsedToken.token);
+      if (operandCount < requiredOperands) {
+         throw new ParseException("Not enough operands", parsedToken.tokenPosition);
+      } else {
+         return operandCount - requiredOperands + 1;
+      }
+   }
+
+   private boolean hasLowerPrecedence(@Nonnull Token token, @Nullable Parser.ParsedToken stackToken) {
+      if (stackToken != null && !stackToken.token.isList() && !stackToken.token.isOpenBracket()) {
+         int tokenPrecedence = token.getPrecedence();
+         int stackTokenPrecedence = stackToken.token.getPrecedence();
+         return tokenPrecedence == stackTokenPrecedence ? !token.isRightToLeft() : tokenPrecedence < stackTokenPrecedence;
+      } else {
+         return false;
+      }
+   }
+
+   private int arity(@Nonnull Token operator) {
+      if (!operator.isOperator()) {
+         throw new RuntimeException("Arity only possible with operators");
+      } else {
+         return operator.isUnary() ? 1 : 2;
+      }
+   }
+
+   public static class ParsedToken {
+      @Nullable
+      public Token token;
+      @Nullable
+      public String tokenString;
+      public double tokenNumber;
+      public int tokenPosition;
+      public int operandCount;
+      public boolean isTuple;
+      public boolean isFunctionCall;
+      public int tupleLength;
+
+      public ParsedToken(@Nonnull LexerContext<Token> context) {
+         this(context.getToken());
+         this.tokenString = context.getTokenString();
+         this.tokenNumber = context.getTokenNumber();
+         this.tokenPosition = context.getTokenPosition();
+      }
+
+      public ParsedToken(Token token) {
+         this.token = token;
+         this.tokenString = null;
+         this.tokenNumber = 0.0;
+         this.tokenPosition = 0;
+         this.operandCount = 0;
+         this.isTuple = false;
+         this.isFunctionCall = false;
+         this.tupleLength = 0;
+      }
+
+      @Nonnull
+      static Parser.ParsedToken fromLexer(@Nonnull Lexer<Token> lexer, @Nonnull LexerContext<Token> context) throws ParseException {
+         lexer.nextToken(context);
+         return new Parser.ParsedToken(context);
+      }
+   }
+
+   public interface ParsedTokenConsumer {
+      void pushOperand(Parser.ParsedToken var1);
+
+      void processOperator(Parser.ParsedToken var1) throws ParseException;
+
+      void processFunction(int var1) throws ParseException;
+
+      void processTuple(Parser.ParsedToken var1, int var2);
+
+      void done();
+   }
+}

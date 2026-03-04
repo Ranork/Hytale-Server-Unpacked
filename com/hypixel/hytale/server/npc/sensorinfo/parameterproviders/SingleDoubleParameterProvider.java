@@ -1,33 +1,23 @@
-/*    */ package com.hypixel.hytale.server.npc.sensorinfo.parameterproviders;
-/*    */ 
-/*    */ 
-/*    */ public class SingleDoubleParameterProvider
-/*    */   extends SingleParameterProvider
-/*    */   implements DoubleParameterProvider
-/*    */ {
-/*    */   private double value;
-/*    */   
-/*    */   public SingleDoubleParameterProvider(int parameter) {
-/* 11 */     super(parameter);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getDoubleParameter() {
-/* 16 */     return this.value;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void clear() {
-/* 21 */     this.value = -1.7976931348623157E308D;
-/*    */   }
-/*    */   
-/*    */   public void overrideDouble(double value) {
-/* 25 */     this.value = value;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.sensorinfo.parameterproviders;
 
+public class SingleDoubleParameterProvider extends SingleParameterProvider implements DoubleParameterProvider {
+   private double value;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\sensorinfo\parameterproviders\SingleDoubleParameterProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+   public SingleDoubleParameterProvider(int parameter) {
+      super(parameter);
+   }
+
+   @Override
+   public double getDoubleParameter() {
+      return this.value;
+   }
+
+   @Override
+   public void clear() {
+      this.value = -Double.MAX_VALUE;
+   }
+
+   public void overrideDouble(double value) {
+      this.value = value;
+   }
+}

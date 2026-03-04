@@ -7,19 +7,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public interface IPathWaypoint {
-  int getOrder();
-  
-  Vector3d getWaypointPosition(@Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
-  
-  Vector3f getWaypointRotation(@Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
-  
-  double getPauseTime();
-  
-  float getObservationAngle();
+   int getOrder();
+
+   Vector3d getWaypointPosition(@Nonnull ComponentAccessor<EntityStore> var1);
+
+   Vector3f getWaypointRotation(@Nonnull ComponentAccessor<EntityStore> var1);
+
+   double getPauseTime();
+
+   float getObservationAngle();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\path\IPathWaypoint.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

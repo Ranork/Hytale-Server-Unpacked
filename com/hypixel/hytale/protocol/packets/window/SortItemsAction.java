@@ -1,97 +1,75 @@
-/*    */ package com.hypixel.hytale.protocol.packets.window;
-/*    */ 
-/*    */ import com.hypixel.hytale.protocol.SortType;
-/*    */ import com.hypixel.hytale.protocol.io.ValidationResult;
-/*    */ import io.netty.buffer.ByteBuf;
-/*    */ import java.util.Objects;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class SortItemsAction
-/*    */   extends WindowAction
-/*    */ {
-/*    */   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-/*    */   public static final int FIXED_BLOCK_SIZE = 1;
-/*    */   public static final int VARIABLE_FIELD_COUNT = 0;
-/*    */   public static final int VARIABLE_BLOCK_START = 1;
-/*    */   public static final int MAX_SIZE = 1;
-/*    */   @Nonnull
-/* 20 */   public SortType sortType = SortType.Name;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public SortItemsAction(@Nonnull SortType sortType) {
-/* 26 */     this.sortType = sortType;
-/*    */   }
-/*    */   
-/*    */   public SortItemsAction(@Nonnull SortItemsAction other) {
-/* 30 */     this.sortType = other.sortType;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public static SortItemsAction deserialize(@Nonnull ByteBuf buf, int offset) {
-/* 35 */     SortItemsAction obj = new SortItemsAction();
-/*    */     
-/* 37 */     obj.sortType = SortType.fromValue(buf.getByte(offset + 0));
-/*    */ 
-/*    */     
-/* 40 */     return obj;
-/*    */   }
-/*    */   
-/*    */   public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-/* 44 */     return 1;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int serialize(@Nonnull ByteBuf buf) {
-/* 49 */     int startPos = buf.writerIndex();
-/*    */     
-/* 51 */     buf.writeByte(this.sortType.getValue());
-/*    */     
-/* 53 */     return buf.writerIndex() - startPos;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public int computeSize() {
-/* 59 */     return 1;
-/*    */   }
-/*    */   
-/*    */   public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-/* 63 */     if (buffer.readableBytes() - offset < 1) {
-/* 64 */       return ValidationResult.error("Buffer too small: expected at least 1 bytes");
-/*    */     }
-/*    */ 
-/*    */     
-/* 68 */     return ValidationResult.OK;
-/*    */   }
-/*    */   
-/*    */   public SortItemsAction clone() {
-/* 72 */     SortItemsAction copy = new SortItemsAction();
-/* 73 */     copy.sortType = this.sortType;
-/* 74 */     return copy;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean equals(Object obj) {
-/*    */     SortItemsAction other;
-/* 80 */     if (this == obj) return true; 
-/* 81 */     if (obj instanceof SortItemsAction) { other = (SortItemsAction)obj; } else { return false; }
-/* 82 */      return Objects.equals(this.sortType, other.sortType);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int hashCode() {
-/* 87 */     return Objects.hash(new Object[] { this.sortType });
-/*    */   }
-/*    */   
-/*    */   public SortItemsAction() {}
-/*    */ }
+package com.hypixel.hytale.protocol.packets.window;
 
+import com.hypixel.hytale.protocol.SortType;
+import com.hypixel.hytale.protocol.io.ValidationResult;
+import io.netty.buffer.ByteBuf;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\protocol\packets\window\SortItemsAction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SortItemsAction extends WindowAction {
+   public static final int NULLABLE_BIT_FIELD_SIZE = 0;
+   public static final int FIXED_BLOCK_SIZE = 1;
+   public static final int VARIABLE_FIELD_COUNT = 0;
+   public static final int VARIABLE_BLOCK_START = 1;
+   public static final int MAX_SIZE = 1;
+   @Nonnull
+   public SortType sortType = SortType.Name;
+
+   public SortItemsAction() {
+   }
+
+   public SortItemsAction(@Nonnull SortType sortType) {
+      this.sortType = sortType;
+   }
+
+   public SortItemsAction(@Nonnull SortItemsAction other) {
+      this.sortType = other.sortType;
+   }
+
+   @Nonnull
+   public static SortItemsAction deserialize(@Nonnull ByteBuf buf, int offset) {
+      SortItemsAction obj = new SortItemsAction();
+      obj.sortType = SortType.fromValue(buf.getByte(offset + 0));
+      return obj;
+   }
+
+   public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
+      return 1;
+   }
+
+   @Override
+   public int serialize(@Nonnull ByteBuf buf) {
+      int startPos = buf.writerIndex();
+      buf.writeByte(this.sortType.getValue());
+      return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int computeSize() {
+      return 1;
+   }
+
+   public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
+      return buffer.readableBytes() - offset < 1 ? ValidationResult.error("Buffer too small: expected at least 1 bytes") : ValidationResult.OK;
+   }
+
+   public SortItemsAction clone() {
+      SortItemsAction copy = new SortItemsAction();
+      copy.sortType = this.sortType;
+      return copy;
+   }
+
+   @Override
+   public boolean equals(Object obj) {
+      if (this == obj) {
+         return true;
+      } else {
+         return obj instanceof SortItemsAction other ? Objects.equals(this.sortType, other.sortType) : false;
+      }
+   }
+
+   @Override
+   public int hashCode() {
+      return Objects.hash(this.sortType);
+   }
+}

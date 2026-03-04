@@ -1,166 +1,179 @@
-/*     */ package com.hypixel.hytale.server.core.modules.entity.system;
-/*     */ import com.hypixel.hytale.component.ArchetypeChunk;
-/*     */ import com.hypixel.hytale.component.CommandBuffer;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.ComponentType;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.component.query.Query;
-/*     */ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-/*     */ import com.hypixel.hytale.math.vector.Vector3d;
-/*     */ import com.hypixel.hytale.protocol.BlockSoundEvent;
-/*     */ import com.hypixel.hytale.protocol.ComponentUpdate;
-/*     */ import com.hypixel.hytale.protocol.SoundCategory;
-/*     */ import com.hypixel.hytale.server.core.asset.type.blocksound.config.BlockSoundSet;
-/*     */ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-/*     */ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.MovementAudioComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.PositionDataComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
-/*     */ import com.hypixel.hytale.server.core.universe.world.SoundUtil;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import java.util.Map;
-/*     */ import java.util.function.Predicate;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ public class AudioSystems {
-/*     */   public static class EntityTrackerUpdate extends EntityTickingSystem<EntityStore> {
-/*  31 */     private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType = EntityTrackerSystems.Visible.getComponentType();
-/*  32 */     private final ComponentType<EntityStore, AudioComponent> audioComponentType = AudioComponent.getComponentType();
-/*  33 */     private final Query<EntityStore> query = (Query<EntityStore>)Query.and(new Query[] { (Query)this.visibleComponentType, (Query)this.audioComponentType });
-/*     */ 
-/*     */     
-/*     */     @Nullable
-/*     */     public SystemGroup<EntityStore> getGroup() {
-/*  38 */       return EntityTrackerSystems.QUEUE_UPDATE_GROUP;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public Query<EntityStore> getQuery() {
-/*  44 */       return this.query;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public boolean isParallel(int archetypeChunkSize, int taskCount) {
-/*  49 */       return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/*  54 */       EntityTrackerSystems.Visible visibleComponent = (EntityTrackerSystems.Visible)archetypeChunk.getComponent(index, this.visibleComponentType);
-/*  55 */       assert visibleComponent != null;
-/*     */       
-/*  57 */       AudioComponent audioComponent = (AudioComponent)archetypeChunk.getComponent(index, this.audioComponentType);
-/*  58 */       assert audioComponent != null;
-/*     */       
-/*  60 */       Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-/*     */       
-/*  62 */       if (audioComponent.consumeNetworkOutdated()) {
-/*  63 */         queueUpdatesFor(ref, audioComponent, visibleComponent.visibleTo);
-/*  64 */       } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
-/*  65 */         queueUpdatesFor(ref, audioComponent, visibleComponent.newlyVisibleTo);
-/*     */       } 
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     private static void queueUpdatesFor(@Nonnull Ref<EntityStore> ref, @Nonnull AudioComponent audioComponent, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo) {
-/*  72 */       ComponentUpdate update = new ComponentUpdate();
-/*  73 */       update.type = ComponentUpdateType.Audio;
-/*  74 */       update.soundEventIds = audioComponent.getSoundEventIds();
-/*  75 */       for (Map.Entry<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> entry : visibleTo.entrySet()) {
-/*  76 */         ((EntityTrackerSystems.EntityViewer)entry.getValue()).queueUpdate(ref, update);
-/*     */       }
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public static class TickMovementAudio
-/*     */     extends EntityTickingSystem<EntityStore>
-/*     */   {
-/*     */     @Nonnull
-/*     */     public Query<EntityStore> getQuery() {
-/*  88 */       return (Query<EntityStore>)Query.and(new Query[] { (Query)TransformComponent.getComponentType(), (Query)PositionDataComponent.getComponentType(), (Query)MovementAudioComponent.getComponentType(), 
-/*  89 */             (Query)MovementStatesComponent.getComponentType() });
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/*  95 */       TransformComponent transformComponent = (TransformComponent)archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-/*  96 */       assert transformComponent != null;
-/*     */       
-/*  98 */       PositionDataComponent positionDataComponent = (PositionDataComponent)archetypeChunk.getComponent(index, PositionDataComponent.getComponentType());
-/*  99 */       assert positionDataComponent != null;
-/*     */       
-/* 101 */       MovementAudioComponent movementAudioComponent = (MovementAudioComponent)archetypeChunk.getComponent(index, MovementAudioComponent.getComponentType());
-/* 102 */       assert movementAudioComponent != null;
-/*     */       
-/* 104 */       int insideBlockTypeId = positionDataComponent.getInsideBlockTypeId();
-/* 105 */       int lastInsideBlockTypeId = movementAudioComponent.getLastInsideBlockTypeId();
-/*     */       
-/* 107 */       Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-/* 108 */       Vector3d position = transformComponent.getPosition();
-/*     */       
-/* 110 */       if (lastInsideBlockTypeId != insideBlockTypeId) {
-/* 111 */         movementAudioComponent.setLastInsideBlockTypeId(insideBlockTypeId);
-/*     */         
-/* 113 */         playMoveInSound(ref, (ComponentAccessor<EntityStore>)store, movementAudioComponent, position, insideBlockTypeId);
-/*     */         
-/* 115 */         if (lastInsideBlockTypeId != 0) {
-/* 116 */           BlockType blockType = (BlockType)BlockType.getAssetMap().getAsset(lastInsideBlockTypeId);
-/* 117 */           int soundSetId = blockType.getBlockSoundSetIndex();
-/* 118 */           if (soundSetId != 0) {
-/* 119 */             BlockSoundSet soundSet = (BlockSoundSet)BlockSoundSet.getAssetMap().getAsset(soundSetId);
-/* 120 */             int soundEvent = soundSet.getSoundEventIndices().getOrDefault(BlockSoundEvent.MoveOut, 0);
-/* 121 */             if (soundEvent != 0) {
-/* 122 */               SoundUtil.playSoundEvent3d(soundEvent, SoundCategory.SFX, position.x, position.y, position.z, (Predicate)movementAudioComponent
-/* 123 */                   .getShouldHearPredicate(ref), (ComponentAccessor)commandBuffer);
-/*     */             }
-/*     */           } 
-/*     */         } 
-/*     */       } 
-/*     */       
-/* 129 */       MovementStatesComponent movementStates = (MovementStatesComponent)archetypeChunk.getComponent(index, MovementStatesComponent.getComponentType());
-/* 130 */       assert movementStates != null;
-/*     */       
-/* 132 */       if (!(movementStates.getMovementStates()).idle && movementAudioComponent.canMoveInRepeat() && movementAudioComponent.tickMoveInRepeat(dt)) {
-/* 133 */         playMoveInSound(ref, (ComponentAccessor<EntityStore>)commandBuffer, movementAudioComponent, position, insideBlockTypeId);
-/*     */       }
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     private static void playMoveInSound(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store, @Nonnull MovementAudioComponent movementAudioComponent, @Nonnull Vector3d position, int insideBlockTypeId) {
-/* 142 */       movementAudioComponent.setNextMoveInRepeat(MovementAudioComponent.NO_REPEAT);
-/*     */       
-/* 144 */       if (insideBlockTypeId == 0)
-/*     */         return; 
-/* 146 */       BlockType blockType = (BlockType)BlockType.getAssetMap().getAsset(insideBlockTypeId);
-/* 147 */       int soundSetId = blockType.getBlockSoundSetIndex();
-/* 148 */       if (soundSetId == 0)
-/*     */         return; 
-/* 150 */       BlockSoundSet soundSet = (BlockSoundSet)BlockSoundSet.getAssetMap().getAsset(soundSetId);
-/* 151 */       int soundEvent = soundSet.getSoundEventIndices().getOrDefault(BlockSoundEvent.MoveIn, 0);
-/* 152 */       if (soundEvent == 0)
-/*     */         return; 
-/* 154 */       SoundUtil.playSoundEvent3d(soundEvent, SoundCategory.SFX, position.x, position.y, position.z, (Predicate)movementAudioComponent
-/* 155 */           .getShouldHearPredicate(ref), store);
-/* 156 */       movementAudioComponent.setNextMoveInRepeat(RandomExtra.randomRange(soundSet.getMoveInRepeatRange().getInclusiveMin(), soundSet
-/* 157 */             .getMoveInRepeatRange().getInclusiveMax()));
-/*     */     }
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.modules.entity.system;
 
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.SystemGroup;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.math.random.RandomExtra;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.protocol.AudioUpdate;
+import com.hypixel.hytale.protocol.BlockSoundEvent;
+import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.server.core.asset.type.blocksound.config.BlockSoundSet;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.MovementAudioComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PositionDataComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.Map;
+import java.util.Map.Entry;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\entity\system\AudioSystems.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AudioSystems {
+   public static class EntityTrackerUpdate extends EntityTickingSystem<EntityStore> {
+      private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType = EntityTrackerSystems.Visible.getComponentType();
+      private final ComponentType<EntityStore, AudioComponent> audioComponentType = AudioComponent.getComponentType();
+      private final Query<EntityStore> query = Query.and(this.visibleComponentType, this.audioComponentType);
+
+      @Nullable
+      @Override
+      public SystemGroup<EntityStore> getGroup() {
+         return EntityTrackerSystems.QUEUE_UPDATE_GROUP;
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         EntityTrackerSystems.Visible visibleComponent = archetypeChunk.getComponent(index, this.visibleComponentType);
+
+         assert visibleComponent != null;
+
+         AudioComponent audioComponent = archetypeChunk.getComponent(index, this.audioComponentType);
+
+         assert audioComponent != null;
+
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+         if (audioComponent.consumeNetworkOutdated()) {
+            queueUpdatesFor(ref, audioComponent, visibleComponent.visibleTo);
+         } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
+            queueUpdatesFor(ref, audioComponent, visibleComponent.newlyVisibleTo);
+         }
+      }
+
+      private static void queueUpdatesFor(
+         @Nonnull Ref<EntityStore> ref, @Nonnull AudioComponent audioComponent, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
+      ) {
+         AudioUpdate update = new AudioUpdate(audioComponent.getSoundEventIds());
+
+         for (Entry<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> entry : visibleTo.entrySet()) {
+            entry.getValue().queueUpdate(ref, update);
+         }
+      }
+   }
+
+   public static class TickMovementAudio extends EntityTickingSystem<EntityStore> {
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return Query.and(
+            TransformComponent.getComponentType(),
+            PositionDataComponent.getComponentType(),
+            MovementAudioComponent.getComponentType(),
+            MovementStatesComponent.getComponentType()
+         );
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+
+         assert transformComponent != null;
+
+         PositionDataComponent positionDataComponent = archetypeChunk.getComponent(index, PositionDataComponent.getComponentType());
+
+         assert positionDataComponent != null;
+
+         MovementAudioComponent movementAudioComponent = archetypeChunk.getComponent(index, MovementAudioComponent.getComponentType());
+
+         assert movementAudioComponent != null;
+
+         int insideBlockTypeId = positionDataComponent.getInsideBlockTypeId();
+         int lastInsideBlockTypeId = movementAudioComponent.getLastInsideBlockTypeId();
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+         Vector3d position = transformComponent.getPosition();
+         if (lastInsideBlockTypeId != insideBlockTypeId) {
+            movementAudioComponent.setLastInsideBlockTypeId(insideBlockTypeId);
+            playMoveInSound(ref, store, movementAudioComponent, position, insideBlockTypeId);
+            if (lastInsideBlockTypeId != 0) {
+               BlockType blockType = BlockType.getAssetMap().getAsset(lastInsideBlockTypeId);
+               int soundSetId = blockType.getBlockSoundSetIndex();
+               if (soundSetId != 0) {
+                  BlockSoundSet soundSet = BlockSoundSet.getAssetMap().getAsset(soundSetId);
+                  int soundEvent = soundSet.getSoundEventIndices().getOrDefault(BlockSoundEvent.MoveOut, 0);
+                  if (soundEvent != 0) {
+                     SoundUtil.playSoundEvent3d(
+                        soundEvent, SoundCategory.SFX, position.x, position.y, position.z, movementAudioComponent.getShouldHearPredicate(ref), commandBuffer
+                     );
+                  }
+               }
+            }
+         }
+
+         MovementStatesComponent movementStates = archetypeChunk.getComponent(index, MovementStatesComponent.getComponentType());
+
+         assert movementStates != null;
+
+         if (!movementStates.getMovementStates().idle && movementAudioComponent.canMoveInRepeat() && movementAudioComponent.tickMoveInRepeat(dt)) {
+            playMoveInSound(ref, commandBuffer, movementAudioComponent, position, insideBlockTypeId);
+         }
+      }
+
+      private static void playMoveInSound(
+         @Nonnull Ref<EntityStore> ref,
+         @Nonnull ComponentAccessor<EntityStore> store,
+         @Nonnull MovementAudioComponent movementAudioComponent,
+         @Nonnull Vector3d position,
+         int insideBlockTypeId
+      ) {
+         movementAudioComponent.setNextMoveInRepeat(MovementAudioComponent.NO_REPEAT);
+         if (insideBlockTypeId != 0) {
+            BlockType blockType = BlockType.getAssetMap().getAsset(insideBlockTypeId);
+            int soundSetId = blockType.getBlockSoundSetIndex();
+            if (soundSetId != 0) {
+               BlockSoundSet soundSet = BlockSoundSet.getAssetMap().getAsset(soundSetId);
+               int soundEvent = soundSet.getSoundEventIndices().getOrDefault(BlockSoundEvent.MoveIn, 0);
+               if (soundEvent != 0) {
+                  SoundUtil.playSoundEvent3d(
+                     soundEvent, SoundCategory.SFX, position.x, position.y, position.z, movementAudioComponent.getShouldHearPredicate(ref), store
+                  );
+                  movementAudioComponent.setNextMoveInRepeat(
+                     RandomExtra.randomRange(soundSet.getMoveInRepeatRange().getInclusiveMin(), soundSet.getMoveInRepeatRange().getInclusiveMax())
+                  );
+               }
+            }
+         }
+      }
+   }
+}

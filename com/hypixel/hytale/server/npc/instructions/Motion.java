@@ -12,17 +12,21 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface Motion extends RoleStateChange, IAnnotatedComponent {
-  default void preComputeSteering(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider provider, @Nonnull Store<EntityStore> store) {}
-  
-  default void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {}
-  
-  default void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {}
-  
-  boolean computeSteering(@Nonnull Ref<EntityStore> paramRef, @Nonnull Role paramRole, @Nullable InfoProvider paramInfoProvider, double paramDouble, @Nonnull Steering paramSteering, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
+   default void preComputeSteering(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider provider, @Nonnull Store<EntityStore> store) {
+   }
+
+   default void activate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   }
+
+   default void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   }
+
+   boolean computeSteering(
+      @Nonnull Ref<EntityStore> var1,
+      @Nonnull Role var2,
+      @Nullable InfoProvider var3,
+      double var4,
+      @Nonnull Steering var6,
+      @Nonnull ComponentAccessor<EntityStore> var7
+   );
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\instructions\Motion.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

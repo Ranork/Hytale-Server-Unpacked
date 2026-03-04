@@ -1,166 +1,97 @@
-/*     */ package com.hypixel.hytale.server.core.event.events.player;
-/*     */ 
-/*     */ import com.hypixel.hytale.event.IAsyncEvent;
-/*     */ import com.hypixel.hytale.event.ICancellable;
-/*     */ import com.hypixel.hytale.server.core.Message;
-/*     */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*     */ import java.util.List;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ public class PlayerChatEvent
-/*     */   implements IAsyncEvent<String>, ICancellable {
-/*     */   @Nonnull
-/*     */   public static final Formatter DEFAULT_FORMATTER;
-/*     */   @Nonnull
-/*     */   private PlayerRef sender;
-/*     */   @Nonnull
-/*     */   private List<PlayerRef> targets;
-/*     */   
-/*     */   static {
-/*  20 */     DEFAULT_FORMATTER = ((playerRef, msg) -> Message.translation("server.chat.playerMessage").param("username", playerRef.getUsername()).param("message", msg));
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   private String content;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private Formatter formatter;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private boolean cancelled;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public PlayerChatEvent(@Nonnull PlayerRef sender, @Nonnull List<PlayerRef> targets, @Nonnull String content) {
-/*  60 */     this.sender = sender;
-/*  61 */     this.targets = targets;
-/*  62 */     this.content = content;
-/*  63 */     this.formatter = DEFAULT_FORMATTER;
-/*  64 */     this.cancelled = false;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public PlayerRef getSender() {
-/*  72 */     return this.sender;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void setSender(@Nonnull PlayerRef sender) {
-/*  81 */     this.sender = sender;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public List<PlayerRef> getTargets() {
-/*  89 */     return this.targets;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void setTargets(@Nonnull List<PlayerRef> targets) {
-/*  98 */     this.targets = targets;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String getContent() {
-/* 106 */     return this.content;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void setContent(@Nonnull String content) {
-/* 115 */     this.content = content;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public Formatter getFormatter() {
-/* 123 */     return this.formatter;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void setFormatter(@Nonnull Formatter formatter) {
-/* 132 */     this.formatter = formatter;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean isCancelled() {
-/* 137 */     return this.cancelled;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void setCancelled(boolean cancelled) {
-/* 142 */     this.cancelled = cancelled;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String toString() {
-/* 148 */     return "PlayerChatEvent{message=" + this.content + ", targets=" + String.valueOf(this.targets) + ", formatter=" + String.valueOf(this.formatter) + ", cancelled=" + this.cancelled + "} " + super
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */       
-/* 153 */       .toString();
-/*     */   }
-/*     */   
-/*     */   public static interface Formatter {
-/*     */     @Nonnull
-/*     */     Message format(@Nonnull PlayerRef param1PlayerRef, @Nonnull String param1String);
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.event.events.player;
 
+import com.hypixel.hytale.event.IAsyncEvent;
+import com.hypixel.hytale.event.ICancellable;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import java.util.List;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\event\events\player\PlayerChatEvent.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PlayerChatEvent implements IAsyncEvent<String>, ICancellable {
+   @Nonnull
+   public static final PlayerChatEvent.Formatter DEFAULT_FORMATTER = (playerRef, msg) -> Message.translation("server.chat.playerMessage")
+      .param("username", playerRef.getUsername())
+      .param("message", msg);
+   @Nonnull
+   private PlayerRef sender;
+   @Nonnull
+   private List<PlayerRef> targets;
+   @Nonnull
+   private String content;
+   private PlayerChatEvent.Formatter formatter;
+   private boolean cancelled;
+
+   public PlayerChatEvent(@Nonnull PlayerRef sender, @Nonnull List<PlayerRef> targets, @Nonnull String content) {
+      this.sender = sender;
+      this.targets = targets;
+      this.content = content;
+      this.formatter = DEFAULT_FORMATTER;
+      this.cancelled = false;
+   }
+
+   @Nonnull
+   public PlayerRef getSender() {
+      return this.sender;
+   }
+
+   public void setSender(@Nonnull PlayerRef sender) {
+      this.sender = sender;
+   }
+
+   @Nonnull
+   public List<PlayerRef> getTargets() {
+      return this.targets;
+   }
+
+   public void setTargets(@Nonnull List<PlayerRef> targets) {
+      this.targets = targets;
+   }
+
+   @Nonnull
+   public String getContent() {
+      return this.content;
+   }
+
+   public void setContent(@Nonnull String content) {
+      this.content = content;
+   }
+
+   @Nonnull
+   public PlayerChatEvent.Formatter getFormatter() {
+      return this.formatter;
+   }
+
+   public void setFormatter(@Nonnull PlayerChatEvent.Formatter formatter) {
+      this.formatter = formatter;
+   }
+
+   @Override
+   public boolean isCancelled() {
+      return this.cancelled;
+   }
+
+   @Override
+   public void setCancelled(boolean cancelled) {
+      this.cancelled = cancelled;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "PlayerChatEvent{message="
+         + this.content
+         + ", targets="
+         + this.targets
+         + ", formatter="
+         + this.formatter
+         + ", cancelled="
+         + this.cancelled
+         + "} "
+         + super.toString();
+   }
+
+   public interface Formatter {
+      @Nonnull
+      Message format(@Nonnull PlayerRef var1, @Nonnull String var2);
+   }
+}

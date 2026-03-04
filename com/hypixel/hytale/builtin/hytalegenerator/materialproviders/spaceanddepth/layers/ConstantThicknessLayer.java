@@ -1,40 +1,29 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.layers;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.SpaceAndDepthMaterialProvider;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class ConstantThicknessLayer<V>
-/*    */   extends SpaceAndDepthMaterialProvider.Layer<V> {
-/*    */   private final int thickness;
-/*    */   @Nullable
-/*    */   private final MaterialProvider<V> materialProvider;
-/*    */   
-/*    */   public ConstantThicknessLayer(int thickness, @Nullable MaterialProvider<V> materialProvider) {
-/* 14 */     this.thickness = thickness;
-/* 15 */     this.materialProvider = materialProvider;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public int getThicknessAt(int x, int y, int z, int depthIntoFloor, int depthIntoCeiling, int spaceAboveFloor, int spaceBelowCeiling, double distanceTOBiomeEdge) {
-/* 26 */     return this.thickness;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public MaterialProvider<V> getMaterialProvider() {
-/* 32 */     return this.materialProvider;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.layers;
 
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.spaceanddepth.SpaceAndDepthMaterialProvider;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\materialproviders\spaceanddepth\layers\ConstantThicknessLayer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ConstantThicknessLayer<V> extends SpaceAndDepthMaterialProvider.Layer<V> {
+   private final int thickness;
+   @Nullable
+   private final MaterialProvider<V> materialProvider;
+
+   public ConstantThicknessLayer(int thickness, @Nullable MaterialProvider<V> materialProvider) {
+      this.thickness = thickness;
+      this.materialProvider = materialProvider;
+   }
+
+   @Override
+   public int getThicknessAt(
+      int x, int y, int z, int depthIntoFloor, int depthIntoCeiling, int spaceAboveFloor, int spaceBelowCeiling, double distanceTOBiomeEdge
+   ) {
+      return this.thickness;
+   }
+
+   @Nullable
+   @Override
+   public MaterialProvider<V> getMaterialProvider() {
+      return this.materialProvider;
+   }
+}

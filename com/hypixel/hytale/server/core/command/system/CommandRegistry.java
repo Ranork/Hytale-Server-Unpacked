@@ -1,38 +1,26 @@
-/*    */ package com.hypixel.hytale.server.core.command.system;
-/*    */ 
-/*    */ import com.hypixel.hytale.function.consumer.BooleanConsumer;
-/*    */ import com.hypixel.hytale.registry.Registry;
-/*    */ import com.hypixel.hytale.server.core.plugin.PluginBase;
-/*    */ import java.util.List;
-/*    */ import java.util.function.BooleanSupplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class CommandRegistry
-/*    */   extends Registry<CommandRegistration> {
-/*    */   private final PluginBase plugin;
-/*    */   
-/*    */   public CommandRegistry(@Nonnull List<BooleanConsumer> registrations, BooleanSupplier precondition, String preconditionMessage, PluginBase plugin) {
-/* 15 */     super(registrations, precondition, preconditionMessage, CommandRegistration::new);
-/* 16 */     this.plugin = plugin;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public CommandRegistration registerCommand(@Nonnull AbstractCommand command) {
-/* 27 */     checkPrecondition();
-/* 28 */     if (this.plugin != null) command.setOwner((CommandOwner)this.plugin);
-/*    */     
-/* 30 */     return (CommandRegistration)register(CommandManager.get().register(command));
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.command.system;
 
+import com.hypixel.hytale.function.consumer.BooleanConsumer;
+import com.hypixel.hytale.registry.Registry;
+import com.hypixel.hytale.server.core.plugin.PluginBase;
+import java.util.List;
+import java.util.function.BooleanSupplier;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\command\system\CommandRegistry.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class CommandRegistry extends Registry<CommandRegistration> {
+   private final PluginBase plugin;
+
+   public CommandRegistry(@Nonnull List<BooleanConsumer> registrations, BooleanSupplier precondition, String preconditionMessage, PluginBase plugin) {
+      super(registrations, precondition, preconditionMessage, CommandRegistration::new);
+      this.plugin = plugin;
+   }
+
+   public CommandRegistration registerCommand(@Nonnull AbstractCommand command) {
+      this.checkPrecondition();
+      if (this.plugin != null) {
+         command.setOwner(this.plugin);
+      }
+
+      return this.register(CommandManager.get().register(command));
+   }
+}

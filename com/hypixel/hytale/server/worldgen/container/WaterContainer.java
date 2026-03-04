@@ -1,106 +1,92 @@
-/*    */ package com.hypixel.hytale.server.worldgen.container;
-/*    */ 
-/*    */ import com.hypixel.hytale.math.util.MathUtil;
-/*    */ import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
-/*    */ import com.hypixel.hytale.procedurallib.supplier.IDoubleCoordinateSupplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class WaterContainer
-/*    */ {
-/*    */   public static final int NO_WATER_AT_COORDINATED = -2147483648;
-/*    */   private final Entry[] entries;
-/*    */   
-/*    */   public static boolean isValidWaterHeight(int height) {
-/* 17 */     return (height > 0);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public WaterContainer(Entry[] entries) {
-/* 23 */     this.entries = entries;
-/*    */   }
-/*    */   
-/*    */   public boolean hasEntries() {
-/* 27 */     return (this.entries.length != 0);
-/*    */   }
-/*    */   
-/*    */   public Entry[] getEntries() {
-/* 31 */     return this.entries;
-/*    */   }
-/*    */   
-/*    */   public int getMaxHeight(int seed, int x, int z) {
-/* 35 */     int totalMax = Integer.MIN_VALUE;
-/* 36 */     for (Entry entry : this.entries) {
-/* 37 */       int min = entry.getMin(seed, x, z);
-/* 38 */       int max = entry.getMax(seed, x, z);
-/* 39 */       if (min <= max && 
-/* 40 */         max > totalMax) totalMax = max; 
-/*    */     } 
-/* 42 */     if (totalMax < 0) return Integer.MIN_VALUE; 
-/* 43 */     return totalMax;
-/*    */   }
-/*    */   
-/*    */   public static class Entry {
-/* 47 */     public static final Entry[] EMPTY_ARRAY = new Entry[0];
-/*    */     
-/*    */     private final int block;
-/*    */     
-/*    */     private final int fluid;
-/*    */     
-/*    */     private final IDoubleCoordinateSupplier min;
-/*    */     
-/*    */     private final IDoubleCoordinateSupplier max;
-/*    */     private final ICoordinateCondition mask;
-/*    */     
-/*    */     public Entry(int block, int fluid, IDoubleCoordinateSupplier min, IDoubleCoordinateSupplier max, ICoordinateCondition mask) {
-/* 59 */       this.block = block;
-/* 60 */       this.fluid = fluid;
-/* 61 */       this.min = min;
-/* 62 */       this.max = max;
-/* 63 */       this.mask = mask;
-/*    */     }
-/*    */     
-/*    */     public int getBlock() {
-/* 67 */       return this.block;
-/*    */     }
-/*    */     
-/*    */     public int getFluid() {
-/* 71 */       return this.fluid;
-/*    */     }
-/*    */     
-/*    */     public int getMax(int seed, int x, int z) {
-/* 75 */       return MathUtil.floor(this.max.get(seed, x, z));
-/*    */     }
-/*    */     
-/*    */     public int getMin(int seed, int x, int z) {
-/* 79 */       return MathUtil.floor(this.min.get(seed, x, z));
-/*    */     }
-/*    */     
-/*    */     public boolean shouldPopulate(int seed, int x, int z) {
-/* 83 */       return this.mask.eval(seed, x, z);
-/*    */     }
-/*    */     
-/*    */     public IDoubleCoordinateSupplier getMax() {
-/* 87 */       return this.max;
-/*    */     }
-/*    */     
-/*    */     public IDoubleCoordinateSupplier getMin() {
-/* 91 */       return this.min;
-/*    */     }
-/*    */ 
-/*    */     
-/*    */     @Nonnull
-/*    */     public String toString() {
-/* 97 */       return "Entry{, fluid=" + this.fluid + ", min=" + String.valueOf(this.min) + ", max=" + String.valueOf(this.max) + ", mask=" + String.valueOf(this.mask) + "}";
-/*    */     }
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.worldgen.container;
 
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
+import com.hypixel.hytale.procedurallib.supplier.IDoubleCoordinateSupplier;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldgen\container\WaterContainer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class WaterContainer {
+   public static final int NO_WATER_AT_COORDINATED = Integer.MIN_VALUE;
+   private final WaterContainer.Entry[] entries;
+
+   public static boolean isValidWaterHeight(int height) {
+      return height > 0;
+   }
+
+   public WaterContainer(WaterContainer.Entry[] entries) {
+      this.entries = entries;
+   }
+
+   public boolean hasEntries() {
+      return this.entries.length != 0;
+   }
+
+   public WaterContainer.Entry[] getEntries() {
+      return this.entries;
+   }
+
+   public int getMaxHeight(int seed, int x, int z) {
+      int totalMax = Integer.MIN_VALUE;
+
+      for (WaterContainer.Entry entry : this.entries) {
+         int min = entry.getMin(seed, x, z);
+         int max = entry.getMax(seed, x, z);
+         if (min <= max && max > totalMax) {
+            totalMax = max;
+         }
+      }
+
+      return totalMax < 0 ? Integer.MIN_VALUE : totalMax;
+   }
+
+   public static class Entry {
+      public static final WaterContainer.Entry[] EMPTY_ARRAY = new WaterContainer.Entry[0];
+      private final int block;
+      private final int fluid;
+      private final IDoubleCoordinateSupplier min;
+      private final IDoubleCoordinateSupplier max;
+      private final ICoordinateCondition mask;
+
+      public Entry(int block, int fluid, IDoubleCoordinateSupplier min, IDoubleCoordinateSupplier max, ICoordinateCondition mask) {
+         this.block = block;
+         this.fluid = fluid;
+         this.min = min;
+         this.max = max;
+         this.mask = mask;
+      }
+
+      public int getBlock() {
+         return this.block;
+      }
+
+      public int getFluid() {
+         return this.fluid;
+      }
+
+      public int getMax(int seed, int x, int z) {
+         return MathUtil.floor(this.max.get(seed, x, z));
+      }
+
+      public int getMin(int seed, int x, int z) {
+         return MathUtil.floor(this.min.get(seed, x, z));
+      }
+
+      public boolean shouldPopulate(int seed, int x, int z) {
+         return this.mask.eval(seed, x, z);
+      }
+
+      public IDoubleCoordinateSupplier getMax() {
+         return this.max;
+      }
+
+      public IDoubleCoordinateSupplier getMin() {
+         return this.min;
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "Entry{, fluid=" + this.fluid + ", min=" + this.min + ", max=" + this.max + ", mask=" + this.mask + "}";
+      }
+   }
+}

@@ -1,63 +1,24 @@
-/*    */ package com.hypixel.hytale.server.core.receiver;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.Message;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public interface IEventTitleReceiver
-/*    */ {
-/*    */   public static final float DEFAULT_DURATION = 4.0F;
-/*    */   public static final float DEFAULT_FADE_DURATION = 1.5F;
-/*    */   
-/*    */   default void showEventTitle(Message primaryTitle, Message secondaryTitle, boolean isMajor, String icon) {
-/* 23 */     showEventTitle(primaryTitle, secondaryTitle, isMajor, icon, 4.0F);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   default void showEventTitle(Message primaryTitle, Message secondaryTitle, boolean isMajor, String icon, float duration) {
-/* 36 */     showEventTitle(primaryTitle, secondaryTitle, isMajor, icon, duration, 1.5F, 1.5F);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   void showEventTitle(Message paramMessage1, Message paramMessage2, boolean paramBoolean, String paramString, float paramFloat1, float paramFloat2, float paramFloat3);
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   default void hideEventTitle() {
-/* 53 */     hideEventTitle(1.5F);
-/*    */   }
-/*    */   
-/*    */   void hideEventTitle(float paramFloat);
-/*    */ }
+package com.hypixel.hytale.server.core.receiver;
 
+import com.hypixel.hytale.server.core.Message;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\receiver\IEventTitleReceiver.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface IEventTitleReceiver {
+   float DEFAULT_DURATION = 4.0F;
+   float DEFAULT_FADE_DURATION = 1.5F;
+
+   default void showEventTitle(Message primaryTitle, Message secondaryTitle, boolean isMajor, String icon) {
+      this.showEventTitle(primaryTitle, secondaryTitle, isMajor, icon, 4.0F);
+   }
+
+   default void showEventTitle(Message primaryTitle, Message secondaryTitle, boolean isMajor, String icon, float duration) {
+      this.showEventTitle(primaryTitle, secondaryTitle, isMajor, icon, duration, 1.5F, 1.5F);
+   }
+
+   void showEventTitle(Message var1, Message var2, boolean var3, String var4, float var5, float var6, float var7);
+
+   default void hideEventTitle() {
+      this.hideEventTitle(1.5F);
+   }
+
+   void hideEventTitle(float var1);
+}

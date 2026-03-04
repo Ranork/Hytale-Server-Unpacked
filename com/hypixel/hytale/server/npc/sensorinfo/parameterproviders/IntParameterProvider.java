@@ -1,13 +1,7 @@
 package com.hypixel.hytale.server.npc.sensorinfo.parameterproviders;
 
 public interface IntParameterProvider extends ParameterProvider {
-  public static final int NOT_PROVIDED = -2147483648;
-  
-  int getIntParameter();
+   int NOT_PROVIDED = Integer.MIN_VALUE;
+
+   int getIntParameter();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\sensorinfo\parameterproviders\IntParameterProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

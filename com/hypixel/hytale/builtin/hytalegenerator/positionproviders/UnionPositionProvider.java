@@ -1,27 +1,21 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
-/*    */ 
-/*    */ import java.util.ArrayList;
-/*    */ import java.util.List;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class UnionPositionProvider extends PositionProvider {
-/*    */   @Nonnull
-/*    */   private final List<PositionProvider> positionProviders;
-/*    */   
-/*    */   public UnionPositionProvider(@Nonnull List<PositionProvider> positionProviders) {
-/* 12 */     this.positionProviders = new ArrayList<>();
-/* 13 */     this.positionProviders.addAll(positionProviders);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void positionsIn(@Nonnull PositionProvider.Context context) {
-/* 18 */     for (PositionProvider position : this.positionProviders)
-/* 19 */       position.positionsIn(context); 
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
+import java.util.ArrayList;
+import java.util.List;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\positionproviders\UnionPositionProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class UnionPositionProvider extends PositionProvider {
+   @Nonnull
+   private final List<PositionProvider> positionProviders = new ArrayList<>();
+
+   public UnionPositionProvider(@Nonnull List<PositionProvider> positionProviders) {
+      this.positionProviders.addAll(positionProviders);
+   }
+
+   @Override
+   public void positionsIn(@Nonnull PositionProvider.Context context) {
+      for (PositionProvider position : this.positionProviders) {
+         position.positionsIn(context);
+      }
+   }
+}

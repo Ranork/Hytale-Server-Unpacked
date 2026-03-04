@@ -1,83 +1,68 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures;
-/*    */ import com.hypixel.hytale.assetstore.AssetExtraInfo;
-/*    */ import com.hypixel.hytale.assetstore.codec.AssetCodec;
-/*    */ import com.hypixel.hytale.assetstore.codec.AssetCodecMapCodec;
-/*    */ import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
-/*    */ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-/*    */ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.biomemap.BiomeMap;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.material.SolidMaterial;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public abstract class WorldStructureAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, WorldStructureAsset>> {
-/*    */   static {
-/* 21 */     CODEC = new AssetCodecMapCodec((Codec)Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public static final AssetCodecMapCodec<String, WorldStructureAsset> CODEC;
-/*    */   
-/*    */   public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY;
-/*    */   
-/* 29 */   public static final Codec<String> CHILD_ASSET_CODEC = (Codec<String>)new ContainedAssetCodec(WorldStructureAsset.class, (AssetCodec)CODEC); static {
-/* 30 */     CHILD_ASSET_CODEC_ARRAY = (Codec<String[]>)new ArrayCodec(CHILD_ASSET_CODEC, x$0 -> new String[x$0]);
-/* 31 */   } public static final BuilderCodec<WorldStructureAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(WorldStructureAsset.class)
-/* 32 */     .build();
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   private String id;
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   private AssetExtraInfo.Data data;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public String getId() {
-/* 46 */     return this.id;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public static class Argument
-/*    */   {
-/*    */     public MaterialCache materialCache;
-/*    */     
-/*    */     public SeedBox parentSeed;
-/*    */     public WorkerIndexer workerIndexer;
-/*    */     
-/*    */     public Argument(@Nonnull MaterialCache materialCache, @Nonnull SeedBox parentSeed, @Nonnull WorkerIndexer workerIndexer) {
-/* 58 */       this.materialCache = materialCache;
-/* 59 */       this.parentSeed = parentSeed;
-/* 60 */       this.workerIndexer = workerIndexer;
-/*    */     }
-/*    */     
-/*    */     public Argument(@Nonnull Argument argument) {
-/* 64 */       this.materialCache = argument.materialCache;
-/* 65 */       this.parentSeed = argument.parentSeed;
-/* 66 */       this.workerIndexer = argument.workerIndexer;
-/*    */     }
-/*    */   }
-/*    */   
-/*    */   public void cleanUp() {}
-/*    */   
-/*    */   public abstract BiomeMap<SolidMaterial> buildBiomeMap(@Nonnull Argument paramArgument);
-/*    */   
-/*    */   public abstract int getBiomeTransitionDistance();
-/*    */   
-/*    */   public abstract int getMaxBiomeEdgeDistance();
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures;
 
+import com.hypixel.hytale.assetstore.AssetExtraInfo;
+import com.hypixel.hytale.assetstore.codec.AssetCodecMapCodec;
+import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.PositionProviderAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
+import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\worldstructures\WorldStructureAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class WorldStructureAsset implements Cleanable, JsonAssetWithMap<String, DefaultAssetMap<String, WorldStructureAsset>> {
+   @Nonnull
+   public static final AssetCodecMapCodec<String, WorldStructureAsset> CODEC = new AssetCodecMapCodec<>(
+      Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
+   );
+   @Nonnull
+   public static final Codec<String> CHILD_ASSET_CODEC = new ContainedAssetCodec<>(WorldStructureAsset.class, CODEC);
+   @Nonnull
+   public static final Codec<String[]> CHILD_ASSET_CODEC_ARRAY = new ArrayCodec<>(CHILD_ASSET_CODEC, String[]::new);
+   @Nonnull
+   public static final BuilderCodec<WorldStructureAsset> ABSTRACT_CODEC = BuilderCodec.abstractBuilder(WorldStructureAsset.class).build();
+   private String id;
+   private AssetExtraInfo.Data data;
+
+   protected WorldStructureAsset() {
+   }
+
+   @Nullable
+   public abstract WorldStructure build(@Nonnull WorldStructureAsset.Argument var1);
+
+   @Nonnull
+   public abstract PositionProviderAsset getSpawnPositionsAsset();
+
+   public String getId() {
+      return this.id;
+   }
+
+   @Override
+   public void cleanUp() {
+   }
+
+   public static class Argument {
+      public MaterialCache materialCache;
+      public SeedBox parentSeed;
+      public WorkerIndexer.Id workerId;
+
+      public Argument(@Nonnull MaterialCache materialCache, @Nonnull SeedBox parentSeed, @Nonnull WorkerIndexer.Id workerId) {
+         this.materialCache = materialCache;
+         this.parentSeed = parentSeed;
+         this.workerId = workerId;
+      }
+
+      public Argument(@Nonnull WorldStructureAsset.Argument argument) {
+         this.materialCache = argument.materialCache;
+         this.parentSeed = argument.parentSeed;
+         this.workerId = argument.workerId;
+      }
+   }
+}

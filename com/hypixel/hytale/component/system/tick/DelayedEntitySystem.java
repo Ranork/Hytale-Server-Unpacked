@@ -1,60 +1,49 @@
-/*    */ package com.hypixel.hytale.component.system.tick;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.Resource;
-/*    */ import com.hypixel.hytale.component.ResourceType;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public abstract class DelayedEntitySystem<ECS_TYPE>
-/*    */   extends EntityTickingSystem<ECS_TYPE>
-/*    */ {
-/* 14 */   private final ResourceType<ECS_TYPE, Data<ECS_TYPE>> resourceType = registerResource(Data.class, Data::new);
-/*    */   private final float intervalSec;
-/*    */   
-/*    */   public DelayedEntitySystem(float intervalSec) {
-/* 18 */     this.intervalSec = intervalSec;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public ResourceType<ECS_TYPE, Data<ECS_TYPE>> getResourceType() {
-/* 23 */     return this.resourceType;
-/*    */   }
-/*    */   
-/*    */   public float getIntervalSec() {
-/* 27 */     return this.intervalSec;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void tick(float dt, int systemIndex, @Nonnull Store<ECS_TYPE> store) {
-/* 32 */     Data<ECS_TYPE> data = (Data<ECS_TYPE>)store.getResource(this.resourceType);
-/*    */     
-/* 34 */     data.dt += dt;
-/* 35 */     if (data.dt >= this.intervalSec) {
-/* 36 */       float fullDt = data.dt;
-/* 37 */       data.dt = 0.0F;
-/*    */       
-/* 39 */       super.tick(fullDt, systemIndex, store);
-/*    */     } 
-/*    */   }
-/*    */   
-/*    */   private static class Data<ECS_TYPE>
-/*    */     implements Resource<ECS_TYPE> {
-/*    */     private float dt;
-/*    */     
-/*    */     @Nonnull
-/*    */     public Resource<ECS_TYPE> clone() {
-/* 49 */       Data<ECS_TYPE> data = new Data();
-/* 50 */       data.dt = this.dt;
-/* 51 */       return data;
-/*    */     }
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.component.system.tick;
 
+import com.hypixel.hytale.component.Resource;
+import com.hypixel.hytale.component.ResourceType;
+import com.hypixel.hytale.component.Store;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\component\system\tick\DelayedEntitySystem.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class DelayedEntitySystem<ECS_TYPE> extends EntityTickingSystem<ECS_TYPE> {
+   private final ResourceType<ECS_TYPE, DelayedEntitySystem.Data<ECS_TYPE>> resourceType = this.registerResource(
+      DelayedEntitySystem.Data.class, DelayedEntitySystem.Data::new
+   );
+   private final float intervalSec;
+
+   public DelayedEntitySystem(float intervalSec) {
+      this.intervalSec = intervalSec;
+   }
+
+   @Nonnull
+   public ResourceType<ECS_TYPE, DelayedEntitySystem.Data<ECS_TYPE>> getResourceType() {
+      return this.resourceType;
+   }
+
+   public float getIntervalSec() {
+      return this.intervalSec;
+   }
+
+   @Override
+   public void tick(float dt, int systemIndex, @Nonnull Store<ECS_TYPE> store) {
+      DelayedEntitySystem.Data<ECS_TYPE> data = store.getResource(this.resourceType);
+      data.dt += dt;
+      if (data.dt >= this.intervalSec) {
+         float fullDt = data.dt;
+         data.dt = 0.0F;
+         super.tick(fullDt, systemIndex, store);
+      }
+   }
+
+   private static class Data<ECS_TYPE> implements Resource<ECS_TYPE> {
+      private float dt;
+
+      @Nonnull
+      @Override
+      public Resource<ECS_TYPE> clone() {
+         DelayedEntitySystem.Data<ECS_TYPE> data = new DelayedEntitySystem.Data<>();
+         data.dt = this.dt;
+         return data;
+      }
+   }
+}

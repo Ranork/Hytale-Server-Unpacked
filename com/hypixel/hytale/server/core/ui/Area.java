@@ -1,67 +1,43 @@
-/*    */ package com.hypixel.hytale.server.core.ui;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class Area
-/*    */ {
-/*    */   public static final BuilderCodec<Area> CODEC;
-/*    */   private int x;
-/*    */   private int y;
-/*    */   private int width;
-/*    */   private int height;
-/*    */   
-/*    */   static {
-/* 31 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(Area.class, Area::new).addField(new KeyedCodec("X", (Codec)Codec.INTEGER), (p, t) -> p.x = t.intValue(), p -> Integer.valueOf(p.x))).addField(new KeyedCodec("Y", (Codec)Codec.INTEGER), (p, t) -> p.y = t.intValue(), p -> Integer.valueOf(p.y))).addField(new KeyedCodec("Width", (Codec)Codec.INTEGER), (p, t) -> p.width = t.intValue(), p -> Integer.valueOf(p.width))).addField(new KeyedCodec("Height", (Codec)Codec.INTEGER), (p, t) -> p.height = t.intValue(), p -> Integer.valueOf(p.height))).build();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public Area setX(int x) {
-/* 40 */     this.x = x;
-/* 41 */     return this;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public Area setY(int y) {
-/* 46 */     this.y = y;
-/* 47 */     return this;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public Area setWidth(int width) {
-/* 52 */     this.width = width;
-/* 53 */     return this;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public Area setHeight(int height) {
-/* 58 */     this.height = height;
-/* 59 */     return this;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.ui;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\ui\Area.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Area {
+   public static final BuilderCodec<Area> CODEC = BuilderCodec.builder(Area.class, Area::new)
+      .addField(new KeyedCodec<>("X", Codec.INTEGER), (p, t) -> p.x = t, p -> p.x)
+      .addField(new KeyedCodec<>("Y", Codec.INTEGER), (p, t) -> p.y = t, p -> p.y)
+      .addField(new KeyedCodec<>("Width", Codec.INTEGER), (p, t) -> p.width = t, p -> p.width)
+      .addField(new KeyedCodec<>("Height", Codec.INTEGER), (p, t) -> p.height = t, p -> p.height)
+      .build();
+   private int x;
+   private int y;
+   private int width;
+   private int height;
+
+   @Nonnull
+   public Area setX(int x) {
+      this.x = x;
+      return this;
+   }
+
+   @Nonnull
+   public Area setY(int y) {
+      this.y = y;
+      return this;
+   }
+
+   @Nonnull
+   public Area setWidth(int width) {
+      this.width = width;
+      return this;
+   }
+
+   @Nonnull
+   public Area setHeight(int height) {
+      this.height = height;
+      return this;
+   }
+}

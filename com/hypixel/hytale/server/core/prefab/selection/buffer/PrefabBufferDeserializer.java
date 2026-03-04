@@ -4,11 +4,5 @@ import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import java.nio.file.Path;
 
 public interface PrefabBufferDeserializer<T> {
-  PrefabBuffer deserialize(Path paramPath, T paramT);
+   PrefabBuffer deserialize(Path var1, T var2);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\prefab\selection\buffer\PrefabBufferDeserializer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

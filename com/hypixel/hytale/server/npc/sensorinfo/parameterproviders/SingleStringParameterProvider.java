@@ -1,37 +1,27 @@
-/*    */ package com.hypixel.hytale.server.npc.sensorinfo.parameterproviders;
-/*    */ 
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ public class SingleStringParameterProvider
-/*    */   extends SingleParameterProvider
-/*    */   implements StringParameterProvider
-/*    */ {
-/*    */   @Nullable
-/*    */   private String value;
-/*    */   
-/*    */   public SingleStringParameterProvider(int parameter) {
-/* 14 */     super(parameter);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public String getStringParameter() {
-/* 20 */     return this.value;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void clear() {
-/* 25 */     this.value = null;
-/*    */   }
-/*    */   
-/*    */   public void overrideString(String value) {
-/* 29 */     this.value = value;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.sensorinfo.parameterproviders;
 
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\sensorinfo\parameterproviders\SingleStringParameterProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SingleStringParameterProvider extends SingleParameterProvider implements StringParameterProvider {
+   @Nullable
+   private String value;
+
+   public SingleStringParameterProvider(int parameter) {
+      super(parameter);
+   }
+
+   @Nullable
+   @Override
+   public String getStringParameter() {
+      return this.value;
+   }
+
+   @Override
+   public void clear() {
+      this.value = null;
+   }
+
+   public void overrideString(String value) {
+      this.value = value;
+   }
+}

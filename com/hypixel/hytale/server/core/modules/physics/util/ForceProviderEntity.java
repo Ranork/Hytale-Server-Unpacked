@@ -1,64 +1,54 @@
-/*    */ package com.hypixel.hytale.server.core.modules.physics.util;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ @Deprecated
-/*    */ public class ForceProviderEntity
-/*    */   extends ForceProviderStandard
-/*    */ {
-/*    */   protected BoundingBox boundingBox;
-/*    */   protected ForceProviderStandardState forceProviderStandardState;
-/* 12 */   protected double density = 700.0D;
-/*    */   
-/*    */   public ForceProviderEntity(BoundingBox boundingBox) {
-/* 15 */     this.boundingBox = boundingBox;
-/*    */   }
-/*    */   
-/*    */   public void setDensity(double density) {
-/* 19 */     this.density = density;
-/*    */   }
-/*    */   
-/*    */   public void setForceProviderStandardState(ForceProviderStandardState forceProviderStandardState) {
-/* 23 */     this.forceProviderStandardState = forceProviderStandardState;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public ForceProviderStandardState getForceProviderStandardState() {
-/* 28 */     return this.forceProviderStandardState;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getMass(double volume) {
-/* 33 */     return volume * getDensity();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getVolume() {
-/* 38 */     return this.boundingBox.getBoundingBox().getVolume();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getProjectedArea(@Nonnull PhysicsBodyState bodyState, double speed) {
-/* 43 */     double area = PhysicsMath.computeProjectedArea(bodyState.velocity, this.boundingBox.getBoundingBox());
-/* 44 */     return (area == 0.0D) ? 0.0D : (area / speed);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public double getDensity() {
-/* 50 */     return this.density;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public double getFrictionCoefficient() {
-/* 56 */     return 0.0D;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.physics.util;
 
+import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\physic\\util\ForceProviderEntity.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+@Deprecated
+public class ForceProviderEntity extends ForceProviderStandard {
+   protected BoundingBox boundingBox;
+   protected ForceProviderStandardState forceProviderStandardState;
+   protected double density = 700.0;
+
+   public ForceProviderEntity(BoundingBox boundingBox) {
+      this.boundingBox = boundingBox;
+   }
+
+   public void setDensity(double density) {
+      this.density = density;
+   }
+
+   public void setForceProviderStandardState(ForceProviderStandardState forceProviderStandardState) {
+      this.forceProviderStandardState = forceProviderStandardState;
+   }
+
+   @Override
+   public ForceProviderStandardState getForceProviderStandardState() {
+      return this.forceProviderStandardState;
+   }
+
+   @Override
+   public double getMass(double volume) {
+      return volume * this.getDensity();
+   }
+
+   @Override
+   public double getVolume() {
+      return this.boundingBox.getBoundingBox().getVolume();
+   }
+
+   @Override
+   public double getProjectedArea(@Nonnull PhysicsBodyState bodyState, double speed) {
+      double area = PhysicsMath.computeProjectedArea(bodyState.velocity, this.boundingBox.getBoundingBox());
+      return area == 0.0 ? 0.0 : area / speed;
+   }
+
+   @Override
+   public double getDensity() {
+      return this.density;
+   }
+
+   @Override
+   public double getFrictionCoefficient() {
+      return 0.0;
+   }
+}

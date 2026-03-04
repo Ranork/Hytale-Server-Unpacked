@@ -1,39 +1,28 @@
-/*    */ package com.hypixel.hytale.server.worldgen.util.condition;
-/*    */ 
-/*    */ import com.hypixel.hytale.procedurallib.condition.IIntCondition;
-/*    */ import it.unimi.dsi.fastutil.ints.IntSet;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class HashSetIntCondition
-/*    */   implements IIntCondition
-/*    */ {
-/*    */   protected final IntSet set;
-/*    */   
-/*    */   public HashSetIntCondition(IntSet set) {
-/* 16 */     this.set = set;
-/*    */   }
-/*    */   
-/*    */   public IntSet getSet() {
-/* 20 */     return this.set;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean eval(int i) {
-/* 25 */     return this.set.contains(i);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 31 */     return "HashSetIntCondition{set=" + String.valueOf(this.set) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.worldgen.util.condition;
 
+import com.hypixel.hytale.procedurallib.condition.IIntCondition;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldge\\util\condition\HashSetIntCondition.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class HashSetIntCondition implements IIntCondition {
+   protected final IntSet set;
+
+   public HashSetIntCondition(IntSet set) {
+      this.set = set;
+   }
+
+   public IntSet getSet() {
+      return this.set;
+   }
+
+   @Override
+   public boolean eval(int i) {
+      return this.set.contains(i);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "HashSetIntCondition{set=" + this.set + "}";
+   }
+}

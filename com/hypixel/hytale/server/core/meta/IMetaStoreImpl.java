@@ -6,17 +6,11 @@ import org.bson.BsonDocument;
 import org.bson.BsonValue;
 
 public interface IMetaStoreImpl<K> extends IMetaStore<K> {
-  IMetaRegistry<K> getRegistry();
-  
-  void decode(BsonDocument paramBsonDocument, ExtraInfo paramExtraInfo);
-  
-  BsonDocument encode(ExtraInfo paramExtraInfo);
-  
-  void forEachUnknownEntry(BiConsumer<String, BsonValue> paramBiConsumer);
+   IMetaRegistry<K> getRegistry();
+
+   void decode(BsonDocument var1, ExtraInfo var2);
+
+   BsonDocument encode(ExtraInfo var1);
+
+   void forEachUnknownEntry(BiConsumer<String, BsonValue> var1);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\meta\IMetaStoreImpl.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

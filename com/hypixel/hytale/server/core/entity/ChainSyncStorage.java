@@ -9,26 +9,20 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public interface ChainSyncStorage {
-  InteractionState getClientState();
-  
-  void setClientState(InteractionState paramInteractionState);
-  
-  @Nullable
-  InteractionEntry getInteraction(int paramInt);
-  
-  void putInteractionSyncData(int paramInt, InteractionSyncData paramInteractionSyncData);
-  
-  void updateSyncPosition(int paramInt);
-  
-  boolean isSyncDataOutOfOrder(int paramInt);
-  
-  void syncFork(@Nonnull Ref<EntityStore> paramRef, @Nonnull InteractionManager paramInteractionManager, @Nonnull SyncInteractionChain paramSyncInteractionChain);
-  
-  void clearInteractionSyncData(int paramInt);
+   InteractionState getClientState();
+
+   void setClientState(InteractionState var1);
+
+   @Nullable
+   InteractionEntry getInteraction(int var1);
+
+   void putInteractionSyncData(int var1, InteractionSyncData var2);
+
+   void updateSyncPosition(int var1);
+
+   boolean isSyncDataOutOfOrder(int var1);
+
+   void syncFork(@Nonnull Ref<EntityStore> var1, @Nonnull InteractionManager var2, @Nonnull SyncInteractionChain var3);
+
+   void clearInteractionSyncData(int var1);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\entity\ChainSyncStorage.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

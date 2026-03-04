@@ -1,113 +1,111 @@
-/*     */ package com.hypixel.hytale.builtin.adventure.objectives.task;
-/*     */ import com.hypixel.hytale.builtin.adventure.objectives.Objective;
-/*     */ import com.hypixel.hytale.builtin.adventure.objectives.config.task.BlockTagOrItemIdField;
-/*     */ import com.hypixel.hytale.builtin.adventure.objectives.config.task.CountObjectiveTaskAsset;
-/*     */ import com.hypixel.hytale.builtin.adventure.objectives.config.task.GatherObjectiveTaskAsset;
-/*     */ import com.hypixel.hytale.builtin.adventure.objectives.config.task.ObjectiveTaskAsset;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.server.core.entity.LivingEntity;
-/*     */ import com.hypixel.hytale.server.core.entity.UUIDComponent;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*     */ import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
-/*     */ import com.hypixel.hytale.server.core.inventory.ItemStack;
-/*     */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*     */ import com.hypixel.hytale.server.core.universe.world.World;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import java.util.Set;
-/*     */ import java.util.UUID;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ public class GatherObjectiveTask extends CountObjectiveTask {
-/*  24 */   public static final BuilderCodec<GatherObjectiveTask> CODEC = BuilderCodec.builder(GatherObjectiveTask.class, GatherObjectiveTask::new, CountObjectiveTask.CODEC)
-/*  25 */     .build();
-/*     */   
-/*     */   public GatherObjectiveTask(@Nonnull GatherObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {
-/*  28 */     super((CountObjectiveTaskAsset)asset, taskSetIndex, taskIndex);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected GatherObjectiveTask() {}
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public GatherObjectiveTaskAsset getAsset() {
-/*  37 */     return (GatherObjectiveTaskAsset)super.getAsset();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nullable
-/*     */   protected TransactionRecord[] setup0(@Nonnull Objective objective, @Nonnull World world, @Nonnull Store<EntityStore> store) {
-/*  44 */     Set<UUID> participatingPlayers = objective.getPlayerUUIDs();
-/*  45 */     int countItem = countObjectiveItemInInventories(participatingPlayers, (ComponentAccessor<EntityStore>)store);
-/*  46 */     if (areTaskConditionsFulfilled(null, null, participatingPlayers)) {
-/*  47 */       this.count = MathUtil.clamp(countItem, 0, getAsset().getCount());
-/*  48 */       if (checkCompletion()) {
-/*  49 */         consumeTaskConditions(null, null, participatingPlayers);
-/*  50 */         this.complete = true;
-/*  51 */         return null;
-/*     */       } 
-/*     */     } 
-/*     */ 
-/*     */ 
-/*     */     
-/*  57 */     this.eventRegistry.register(LivingEntityInventoryChangeEvent.class, world.getName(), event -> {
-/*     */           LivingEntity livingEntity = (LivingEntity)event.getEntity();
-/*     */ 
-/*     */           
-/*     */           if (!(livingEntity instanceof Player)) {
-/*     */             return;
-/*     */           }
-/*     */ 
-/*     */           
-/*     */           Ref<EntityStore> ref = livingEntity.getReference();
-/*     */ 
-/*     */           
-/*     */           if (ref == null || !ref.isValid()) {
-/*     */             return;
-/*     */           }
-/*     */           
-/*     */           World refWorld = ((EntityStore)store.getExternalData()).getWorld();
-/*     */           
-/*     */           refWorld.execute(());
-/*     */         });
-/*     */     
-/*  78 */     return RegistrationTransactionRecord.wrap(this.eventRegistry);
-/*     */   }
-/*     */   
-/*     */   private int countObjectiveItemInInventories(@Nonnull Set<UUID> participatingPlayers, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-/*  82 */     int count = 0;
-/*  83 */     BlockTagOrItemIdField blockTypeOrSet = getAsset().getBlockTagOrItemIdField();
-/*  84 */     for (UUID playerUUID : participatingPlayers) {
-/*     */       
-/*  86 */       PlayerRef playerRefComponent = Universe.get().getPlayer(playerUUID);
-/*  87 */       if (playerRefComponent == null)
-/*     */         continue; 
-/*  89 */       Ref<EntityStore> playerRef = playerRefComponent.getReference();
-/*  90 */       if (playerRef == null || !playerRef.isValid())
-/*     */         continue; 
-/*  92 */       Player playerComponent = (Player)componentAccessor.getComponent(playerRef, Player.getComponentType());
-/*  93 */       assert playerComponent != null;
-/*     */       
-/*  95 */       CombinedItemContainer inventory = playerComponent.getInventory().getCombinedHotbarFirst();
-/*  96 */       count += inventory.countItemStacks(itemStack -> blockTypeOrSet.isBlockTypeIncluded(itemStack.getItemId()));
-/*     */     } 
-/*     */     
-/*  99 */     return count;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String toString() {
-/* 105 */     return "GatherObjectiveTask{} " + super.toString();
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.builtin.adventure.objectives.task;
 
+import com.hypixel.hytale.builtin.adventure.objectives.Objective;
+import com.hypixel.hytale.builtin.adventure.objectives.config.task.BlockTagOrItemIdField;
+import com.hypixel.hytale.builtin.adventure.objectives.config.task.GatherObjectiveTaskAsset;
+import com.hypixel.hytale.builtin.adventure.objectives.transaction.RegistrationTransactionRecord;
+import com.hypixel.hytale.builtin.adventure.objectives.transaction.TransactionRecord;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.Set;
+import java.util.UUID;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\objectives\task\GatherObjectiveTask.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class GatherObjectiveTask extends CountObjectiveTask {
+   @Nonnull
+   public static final BuilderCodec<GatherObjectiveTask> CODEC = BuilderCodec.builder(
+         GatherObjectiveTask.class, GatherObjectiveTask::new, CountObjectiveTask.CODEC
+      )
+      .build();
+
+   public GatherObjectiveTask(@Nonnull GatherObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {
+      super(asset, taskSetIndex, taskIndex);
+   }
+
+   protected GatherObjectiveTask() {
+   }
+
+   @Nonnull
+   public GatherObjectiveTaskAsset getAsset() {
+      return (GatherObjectiveTaskAsset)super.getAsset();
+   }
+
+   @Nullable
+   @Override
+   protected TransactionRecord[] setup0(@Nonnull Objective objective, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+      Set<UUID> participatingPlayers = objective.getPlayerUUIDs();
+      int countItem = this.countObjectiveItemInInventories(participatingPlayers, store);
+      if (this.areTaskConditionsFulfilled(null, null, participatingPlayers)) {
+         this.count = MathUtil.clamp(countItem, 0, this.getAsset().getCount());
+         if (this.checkCompletion()) {
+            this.consumeTaskConditions(null, null, participatingPlayers);
+            this.complete = true;
+            return null;
+         }
+      }
+
+      this.eventRegistry.register(LivingEntityInventoryChangeEvent.class, world.getName(), event -> {
+         LivingEntity livingEntity = event.getEntity();
+         if (livingEntity instanceof Player) {
+            Ref<EntityStore> ref = livingEntity.getReference();
+            if (ref != null && ref.isValid()) {
+               World refWorld = store.getExternalData().getWorld();
+               refWorld.execute(() -> {
+                  if (ref.isValid()) {
+                     UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
+                     if (uuidComponent != null) {
+                        Set<UUID> activePlayerUUIDs = objective.getActivePlayerUUIDs();
+                        if (activePlayerUUIDs.contains(uuidComponent.getUuid())) {
+                           int count = this.countObjectiveItemInInventories(activePlayerUUIDs, store);
+                           this.setTaskCompletion(store, ref, count, objective);
+                        }
+                     }
+                  }
+               });
+            }
+         }
+      });
+      return RegistrationTransactionRecord.wrap(this.eventRegistry);
+   }
+
+   private int countObjectiveItemInInventories(@Nonnull Set<UUID> participatingPlayers, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      int count = 0;
+      BlockTagOrItemIdField blockTypeOrSet = this.getAsset().getBlockTagOrItemIdField();
+
+      for (UUID playerUUID : participatingPlayers) {
+         PlayerRef playerRefComponent = Universe.get().getPlayer(playerUUID);
+         if (playerRefComponent != null) {
+            Ref<EntityStore> playerRef = playerRefComponent.getReference();
+            if (playerRef != null && playerRef.isValid()) {
+               Player playerComponent = componentAccessor.getComponent(playerRef, Player.getComponentType());
+
+               assert playerComponent != null;
+
+               CombinedItemContainer inventory = playerComponent.getInventory().getCombinedHotbarFirst();
+               count += inventory.countItemStacks(itemStack -> blockTypeOrSet.isBlockTypeIncluded(itemStack.getItemId()));
+            }
+         }
+      }
+
+      return count;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "GatherObjectiveTask{} " + super.toString();
+   }
+}

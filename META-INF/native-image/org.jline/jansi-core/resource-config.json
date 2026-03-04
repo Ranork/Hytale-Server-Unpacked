@@ -1,6 +1,0 @@
-{
-  "resources": [
-    {"pattern": "org/jline/jansi/jansi.properties"},
-    {"pattern": "org/jline/jansi/jansi.txt"}
-  ]
-}

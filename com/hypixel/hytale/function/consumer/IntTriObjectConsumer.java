@@ -2,11 +2,5 @@ package com.hypixel.hytale.function.consumer;
 
 @FunctionalInterface
 public interface IntTriObjectConsumer<T, J, K> {
-  void accept(int paramInt, T paramT, J paramJ, K paramK);
+   void accept(int var1, T var2, J var3, K var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\function\consumer\IntTriObjectConsumer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

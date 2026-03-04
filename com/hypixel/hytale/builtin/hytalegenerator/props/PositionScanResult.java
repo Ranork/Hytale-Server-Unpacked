@@ -1,39 +1,34 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.props;
-/*    */ 
-/*    */ import com.hypixel.hytale.math.vector.Vector3i;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class PositionScanResult
-/*    */   implements ScanResult {
-/*    */   private Vector3i position;
-/*    */   
-/*    */   public PositionScanResult(@Nullable Vector3i position) {
-/* 12 */     if (position == null)
-/* 13 */       return;  this.position = position.clone();
-/*    */   }
-/*    */   @Nullable
-/*    */   public Vector3i getPosition() {
-/* 17 */     if (this.position == null) return null; 
-/* 18 */     return this.position.clone();
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public static PositionScanResult cast(ScanResult scanResult) {
-/* 23 */     if (!(scanResult instanceof PositionScanResult)) {
-/* 24 */       throw new IllegalArgumentException("The provided ScanResult isn't compatible with this prop.");
-/*    */     }
-/* 26 */     return (PositionScanResult)scanResult;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean isNegative() {
-/* 31 */     return (this.position == null);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.props;
 
+import com.hypixel.hytale.math.vector.Vector3i;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\props\PositionScanResult.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PositionScanResult implements ScanResult {
+   private Vector3i position;
+
+   public PositionScanResult(@Nullable Vector3i position) {
+      if (position != null) {
+         this.position = position.clone();
+      }
+   }
+
+   @Nullable
+   public Vector3i getPosition() {
+      return this.position == null ? null : this.position.clone();
+   }
+
+   @Nonnull
+   public static PositionScanResult cast(ScanResult scanResult) {
+      if (!(scanResult instanceof PositionScanResult)) {
+         throw new IllegalArgumentException("The provided ScanResult isn't compatible with this prop.");
+      } else {
+         return (PositionScanResult)scanResult;
+      }
+   }
+
+   @Override
+   public boolean isNegative() {
+      return this.position == null;
+   }
+}

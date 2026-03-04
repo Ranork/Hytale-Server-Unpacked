@@ -1,13 +1,7 @@
 package com.hypixel.hytale.server.npc.asset.builder.validators;
 
 public abstract class EnumArrayValidator extends Validator {
-  public abstract <T extends Enum<T>> boolean test(T[] paramArrayOfT, Class<T> paramClass);
-  
-  public abstract <T extends Enum<T>> String errorMessage(String paramString, T[] paramArrayOfT);
+   public abstract <T extends Enum<T>> boolean test(T[] var1, Class<T> var2);
+
+   public abstract <T extends Enum<T>> String errorMessage(String var1, T[] var2);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\asset\builder\validators\EnumArrayValidator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

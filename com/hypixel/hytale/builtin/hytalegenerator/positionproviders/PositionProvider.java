@@ -1,67 +1,57 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
-/*    */ import com.hypixel.hytale.math.vector.Vector3d;
-/*    */ import java.util.function.Consumer;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ public abstract class PositionProvider
-/*    */ {
-/*    */   public abstract void positionsIn(@Nonnull Context paramContext);
-/*    */   
-/*    */   @Nonnull
-/*    */   public static PositionProvider noPositionProvider() {
-/* 16 */     return new PositionProvider() {
-/*    */         public void positionsIn(@Nonnull PositionProvider.Context context) {}
-/*    */       };
-/*    */   }
-/*    */   
-/*    */   public static class Context {
-/*    */     public static final Consumer<Vector3d> EMPTY_CONSUMER = p -> {
-/*    */       
-/*    */       };
-/*    */     public Vector3d minInclusive;
-/*    */     public Vector3d maxExclusive;
-/*    */     public Consumer<Vector3d> consumer;
-/*    */     @Nullable
-/*    */     public Vector3d anchor;
-/*    */     public WorkerIndexer.Id workerId;
-/*    */     
-/*    */     public Context() {
-/* 33 */       this.minInclusive = Vector3d.ZERO;
-/* 34 */       this.maxExclusive = Vector3d.ZERO;
-/* 35 */       this.consumer = EMPTY_CONSUMER;
-/* 36 */       this.anchor = null;
-/* 37 */       this.workerId = WorkerIndexer.Id.UNKNOWN;
-/*    */     }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */     
-/*    */     public Context(@Nonnull Vector3d minInclusive, @Nonnull Vector3d maxExclusive, @Nonnull Consumer<Vector3d> consumer, @Nullable Vector3d anchor, WorkerIndexer.Id workerId) {
-/* 46 */       this.minInclusive = minInclusive;
-/* 47 */       this.maxExclusive = maxExclusive;
-/* 48 */       this.consumer = consumer;
-/* 49 */       this.anchor = anchor;
-/* 50 */       this.workerId = workerId;
-/*    */     }
-/*    */     
-/*    */     public Context(@Nonnull Context other) {
-/* 54 */       this.minInclusive = other.minInclusive;
-/* 55 */       this.maxExclusive = other.maxExclusive;
-/* 56 */       this.consumer = other.consumer;
-/* 57 */       this.anchor = other.anchor;
-/* 58 */       this.workerId = other.workerId;
-/*    */     }
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
+import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.function.Consumer;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\positionproviders\PositionProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class PositionProvider {
+   public abstract void positionsIn(@Nonnull PositionProvider.Context var1);
+
+   @Nonnull
+   public static PositionProvider noPositionProvider() {
+      return new PositionProvider() {
+         @Override
+         public void positionsIn(@Nonnull PositionProvider.Context context) {
+         }
+      };
+   }
+
+   public static class Context {
+      @Nonnull
+      public static final Consumer<Vector3d> EMPTY_CONSUMER = p -> {};
+      public Vector3d minInclusive;
+      public Vector3d maxExclusive;
+      public Consumer<Vector3d> consumer;
+      @Nullable
+      public Vector3d anchor;
+
+      public Context() {
+         this.minInclusive = Vector3d.ZERO;
+         this.maxExclusive = Vector3d.ZERO;
+         this.consumer = EMPTY_CONSUMER;
+         this.anchor = null;
+      }
+
+      public Context(@Nonnull Vector3d minInclusive, @Nonnull Vector3d maxExclusive, @Nonnull Consumer<Vector3d> consumer, @Nullable Vector3d anchor) {
+         this.minInclusive = minInclusive;
+         this.maxExclusive = maxExclusive;
+         this.consumer = consumer;
+         this.anchor = anchor;
+      }
+
+      public Context(@Nonnull PositionProvider.Context other) {
+         this.minInclusive = other.minInclusive;
+         this.maxExclusive = other.maxExclusive;
+         this.consumer = other.consumer;
+         this.anchor = other.anchor;
+      }
+
+      public void assign(@Nonnull PositionProvider.Context other) {
+         this.minInclusive = other.minInclusive;
+         this.maxExclusive = other.maxExclusive;
+         this.consumer = other.consumer;
+         this.anchor = other.anchor;
+      }
+   }
+}

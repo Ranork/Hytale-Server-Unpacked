@@ -3,44 +3,80 @@ package com.hypixel.fastutil;
 import java.util.Collection;
 
 public interface FastCollection<E> extends Collection<E> {
-  void forEachWithFloat(FastConsumerF<? super E> paramFastConsumerF, float paramFloat);
-  
-  void forEachWithInt(FastConsumerI<? super E> paramFastConsumerI, int paramInt);
-  
-  void forEachWithLong(FastConsumerL<? super E> paramFastConsumerL, long paramLong);
-  
-  <A, B, C, D> void forEach(FastConsumerD9<? super E, A, B, C, D> paramFastConsumerD9, A paramA, double paramDouble1, double paramDouble2, double paramDouble3, double paramDouble4, double paramDouble5, double paramDouble6, double paramDouble7, double paramDouble8, double paramDouble9, B paramB, C paramC, D paramD);
-  
-  <A, B, C, D> void forEach(FastConsumerD6<? super E, A, B, C, D> paramFastConsumerD6, A paramA, double paramDouble1, double paramDouble2, double paramDouble3, double paramDouble4, double paramDouble5, double paramDouble6, B paramB, C paramC, D paramD);
-  
-  @FunctionalInterface
-  public static interface FastConsumerD6<A, B, C, D, E> {
-    void accept(A param1A, B param1B, double param1Double1, double param1Double2, double param1Double3, double param1Double4, double param1Double5, double param1Double6, C param1C, D param1D, E param1E);
-  }
-  
-  @FunctionalInterface
-  public static interface FastConsumerD9<A, B, C, D, E> {
-    void accept(A param1A, B param1B, double param1Double1, double param1Double2, double param1Double3, double param1Double4, double param1Double5, double param1Double6, double param1Double7, double param1Double8, double param1Double9, C param1C, D param1D, E param1E);
-  }
-  
-  @FunctionalInterface
-  public static interface FastConsumerL<A> {
-    void accept(A param1A, long param1Long);
-  }
-  
-  @FunctionalInterface
-  public static interface FastConsumerI<A> {
-    void accept(A param1A, int param1Int);
-  }
-  
-  @FunctionalInterface
-  public static interface FastConsumerF<A> {
-    void accept(A param1A, float param1Float);
-  }
+   void forEachWithFloat(FastCollection.FastConsumerF<? super E> var1, float var2);
+
+   void forEachWithInt(FastCollection.FastConsumerI<? super E> var1, int var2);
+
+   void forEachWithLong(FastCollection.FastConsumerL<? super E> var1, long var2);
+
+   <A, B, C, D> void forEach(
+      FastCollection.FastConsumerD9<? super E, A, B, C, D> var1,
+      A var2,
+      double var3,
+      double var5,
+      double var7,
+      double var9,
+      double var11,
+      double var13,
+      double var15,
+      double var17,
+      double var19,
+      B var21,
+      C var22,
+      D var23
+   );
+
+   <A, B, C, D> void forEach(
+      FastCollection.FastConsumerD6<? super E, A, B, C, D> var1,
+      A var2,
+      double var3,
+      double var5,
+      double var7,
+      double var9,
+      double var11,
+      double var13,
+      B var15,
+      C var16,
+      D var17
+   );
+
+   @FunctionalInterface
+   public interface FastConsumerD6<A, B, C, D, E> {
+      void accept(A var1, B var2, double var3, double var5, double var7, double var9, double var11, double var13, C var15, D var16, E var17);
+   }
+
+   @FunctionalInterface
+   public interface FastConsumerD9<A, B, C, D, E> {
+      void accept(
+         A var1,
+         B var2,
+         double var3,
+         double var5,
+         double var7,
+         double var9,
+         double var11,
+         double var13,
+         double var15,
+         double var17,
+         double var19,
+         C var21,
+         D var22,
+         E var23
+      );
+   }
+
+   @FunctionalInterface
+   public interface FastConsumerF<A> {
+      void accept(A var1, float var2);
+   }
+
+   @FunctionalInterface
+   public interface FastConsumerI<A> {
+      void accept(A var1, int var2);
+   }
+
+   @FunctionalInterface
+   public interface FastConsumerL<A> {
+      void accept(A var1, long var2);
+   }
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\fastutil\FastCollection.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

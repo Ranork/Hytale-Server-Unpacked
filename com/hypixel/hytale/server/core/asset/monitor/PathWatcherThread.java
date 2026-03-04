@@ -1,143 +1,151 @@
-/*     */ package com.hypixel.hytale.server.core.asset.monitor;
-/*     */ import com.hypixel.hytale.common.util.SystemUtil;
-/*     */ import com.hypixel.hytale.logger.HytaleLogger;
-/*     */ import com.hypixel.hytale.server.core.util.io.FileUtil;
-/*     */ import com.hypixel.hytale.sneakythrow.SneakyThrow;
-/*     */ import com.sun.nio.file.SensitivityWatchEventModifier;
-/*     */ import java.io.IOException;
-/*     */ import java.nio.file.Files;
-/*     */ import java.nio.file.Path;
-/*     */ import java.nio.file.StandardWatchEventKinds;
-/*     */ import java.nio.file.WatchEvent;
-/*     */ import java.nio.file.WatchKey;
-/*     */ import java.util.function.BiConsumer;
-/*     */ import java.util.logging.Level;
-/*     */ import java.util.stream.Stream;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ public class PathWatcherThread implements Runnable {
-/*  19 */   public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-/*     */   
-/*  21 */   public static final boolean HAS_FILE_TREE_SUPPORT = (SystemUtil.TYPE == SystemUtil.SystemType.WINDOWS);
-/*  22 */   public static final WatchEvent.Kind<?>[] WATCH_EVENT_KINDS = new WatchEvent.Kind[] { StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY };
-/*     */   
-/*     */   private final BiConsumer<Path, EventKind> consumer;
-/*     */   
-/*     */   @Nonnull
-/*     */   private final Thread thread;
-/*     */   private final WatchService service;
-/*  29 */   private final Map<Path, WatchKey> registered = new ConcurrentHashMap<>();
-/*     */   
-/*     */   public PathWatcherThread(BiConsumer<Path, EventKind> consumer) throws IOException {
-/*  32 */     this.consumer = consumer;
-/*     */     
-/*  34 */     this.thread = new Thread(this, "PathWatcher");
-/*  35 */     this.thread.setDaemon(true);
-/*     */     
-/*  37 */     this.service = FileSystems.getDefault().newWatchService();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public final void run() {
-/*     */     try {
-/*  43 */       while (!Thread.interrupted())
-/*  44 */       { WatchKey key = this.service.take();
-/*     */         
-/*  46 */         Path directory = (Path)key.watchable();
-/*  47 */         for (WatchEvent<?> event : key.pollEvents()) {
-/*  48 */           WatchEvent.Kind<?> kind = event.kind();
-/*  49 */           if (kind == StandardWatchEventKinds.OVERFLOW) {
-/*  50 */             LOGGER.at(Level.WARNING).log("Event Overflow, Unable to detect all file changed! This may cause server instability!! More than AbstractWatchKey.MAX_EVENT_LIST_SIZE queued events (512)");
-/*     */             
-/*     */             continue;
-/*     */           } 
-/*     */           
-/*  55 */           WatchEvent<Path> pathEvent = (WatchEvent)event;
-/*  56 */           Path path = directory.resolve(pathEvent.context());
-/*     */ 
-/*     */ 
-/*     */           
-/*  60 */           if (!HAS_FILE_TREE_SUPPORT && pathEvent.kind() == StandardWatchEventKinds.ENTRY_CREATE && Files.isDirectory(path, new java.nio.file.LinkOption[0])) {
-/*  61 */             addPath(path);
-/*     */           }
-/*     */           
-/*  64 */           this.consumer.accept(path, EventKind.parse(pathEvent.kind()));
-/*     */         } 
-/*     */         
-/*  67 */         if (!key.reset())
-/*     */           break;  } 
-/*  69 */     } catch (InterruptedException ignored) {
-/*  70 */       Thread.currentThread().interrupt();
-/*  71 */     } catch (Throwable t) {
-/*  72 */       ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(t)).log("Exception occurred when polling:");
-/*     */     } 
-/*  74 */     LOGGER.at(Level.INFO).log("Stopped polling for changes in assets. Server will need to be rebooted to load changes!");
-/*     */     
-/*     */     try {
-/*  77 */       this.service.close();
-/*  78 */     } catch (IOException iOException) {}
-/*     */     
-/*  80 */     this.registered.clear();
-/*     */   }
-/*     */   
-/*     */   public void start() {
-/*  84 */     this.thread.start();
-/*     */   }
-/*     */   
-/*     */   public void shutdown() {
-/*  88 */     this.thread.interrupt();
-/*     */     try {
-/*  90 */       this.thread.join(1000L);
-/*     */       
-/*     */       try {
-/*  93 */         this.service.close();
-/*  94 */       } catch (IOException iOException) {}
-/*     */       
-/*  96 */       this.registered.clear();
-/*  97 */     } catch (InterruptedException ignored) {
-/*  98 */       Thread.currentThread().interrupt();
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public void addPath(Path path) throws IOException {
-/* 103 */     path = path.toAbsolutePath();
-/* 104 */     if (Files.isRegularFile(path, new java.nio.file.LinkOption[0])) path = path.getParent();
-/*     */ 
-/*     */     
-/* 107 */     Path parent = path;
-/*     */     do {
-/* 109 */       WatchKey keys = this.registered.get(parent);
-/* 110 */       if (keys != null) {
-/* 111 */         if (!HAS_FILE_TREE_SUPPORT) watchPath(path); 
-/*     */         return;
-/*     */       } 
-/* 114 */     } while ((parent = parent.getParent()) != null);
-/*     */     
-/* 116 */     watchPath(path);
-/*     */   }
-/*     */   
-/*     */   private void watchPath(@Nonnull Path path) throws IOException {
-/* 120 */     if (HAS_FILE_TREE_SUPPORT) {
-/* 121 */       this.registered.put(path, path.register(this.service, WATCH_EVENT_KINDS, new WatchEvent.Modifier[] { SensitivityWatchEventModifier.HIGH, ExtendedWatchEventModifier.FILE_TREE }));
-/* 122 */       LOGGER.at(Level.FINEST).log("Register path: %s", path);
-/*     */     } else {
-/* 124 */       WatchEvent.Modifier[] modifiers = { SensitivityWatchEventModifier.HIGH };
-/* 125 */       Stream<Path> stream = Files.walk(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_ARRAY); 
-/* 126 */       try { stream.forEach(SneakyThrow.sneakyConsumer(childPath -> {
-/*     */                 if (Files.isDirectory(childPath, new java.nio.file.LinkOption[0])) {
-/*     */                   this.registered.put(childPath, childPath.register(this.service, WATCH_EVENT_KINDS, modifiers));
-/*     */                   LOGGER.at(Level.FINEST).log("Register path: %s", childPath);
-/*     */                 } 
-/*     */               }));
-/* 132 */         if (stream != null) stream.close();  } catch (Throwable throwable) { if (stream != null)
-/*     */           try { stream.close(); } catch (Throwable throwable1) { throwable.addSuppressed(throwable1); }   throw throwable; }
-/*     */     
-/* 135 */     }  LOGGER.at(Level.FINER).log("Watching path: %s", path);
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.asset.monitor;
 
+import com.hypixel.hytale.common.util.SystemUtil;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.util.io.FileUtil;
+import com.hypixel.hytale.sneakythrow.SneakyThrow;
+import com.sun.nio.file.ExtendedWatchEventModifier;
+import com.sun.nio.file.SensitivityWatchEventModifier;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+import java.nio.file.WatchEvent.Kind;
+import java.nio.file.WatchEvent.Modifier;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
+import java.util.logging.Level;
+import java.util.stream.Stream;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\monitor\PathWatcherThread.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PathWatcherThread implements Runnable {
+   public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+   public static final boolean HAS_FILE_TREE_SUPPORT = SystemUtil.TYPE == SystemUtil.SystemType.WINDOWS;
+   public static final Kind<?>[] WATCH_EVENT_KINDS = new Kind[]{
+      StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_DELETE, StandardWatchEventKinds.ENTRY_MODIFY
+   };
+   private final BiConsumer<Path, EventKind> consumer;
+   @Nonnull
+   private final Thread thread;
+   private final WatchService service;
+   private final Map<Path, WatchKey> registered = new ConcurrentHashMap<>();
+
+   public PathWatcherThread(BiConsumer<Path, EventKind> consumer) throws IOException {
+      this.consumer = consumer;
+      this.thread = new Thread(this, "PathWatcher");
+      this.thread.setDaemon(true);
+      this.service = FileSystems.getDefault().newWatchService();
+   }
+
+   @Override
+   public final void run() {
+      try {
+         while (!Thread.interrupted()) {
+            WatchKey key = this.service.take();
+            Path directory = (Path)key.watchable();
+
+            for (WatchEvent<?> event : key.pollEvents()) {
+               Kind<?> kind = event.kind();
+               if (kind == StandardWatchEventKinds.OVERFLOW) {
+                  LOGGER.at(Level.WARNING)
+                     .log(
+                        "Event Overflow, Unable to detect all file changed! This may cause server instability!! More than AbstractWatchKey.MAX_EVENT_LIST_SIZE queued events (512)"
+                     );
+               } else {
+                  Path path = directory.resolve((Path)event.context());
+                  if (!HAS_FILE_TREE_SUPPORT && event.kind() == StandardWatchEventKinds.ENTRY_CREATE && Files.isDirectory(path)) {
+                     this.addPath(path);
+                  }
+
+                  this.consumer.accept(path, EventKind.parse((Kind<Path>)event.kind()));
+               }
+            }
+
+            if (!key.reset()) {
+               break;
+            }
+         }
+      } catch (InterruptedException var9) {
+         Thread.currentThread().interrupt();
+      } catch (Throwable var10) {
+         ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(var10)).log("Exception occurred when polling:");
+      }
+
+      LOGGER.at(Level.INFO).log("Stopped polling for changes in assets. Server will need to be rebooted to load changes!");
+
+      try {
+         this.service.close();
+      } catch (IOException var8) {
+      }
+
+      this.registered.clear();
+   }
+
+   public void start() {
+      this.thread.start();
+   }
+
+   public void shutdown() {
+      this.thread.interrupt();
+
+      try {
+         this.thread.join(1000L);
+
+         try {
+            this.service.close();
+         } catch (IOException var2) {
+         }
+
+         this.registered.clear();
+      } catch (InterruptedException var3) {
+         Thread.currentThread().interrupt();
+      }
+   }
+
+   public void addPath(Path path) throws IOException {
+      path = path.toAbsolutePath();
+      if (Files.isRegularFile(path)) {
+         path = path.getParent();
+      }
+
+      Path parent = path;
+
+      do {
+         WatchKey keys = this.registered.get(parent);
+         if (keys != null) {
+            if (!HAS_FILE_TREE_SUPPORT) {
+               this.watchPath(path);
+            }
+
+            return;
+         }
+      } while ((parent = parent.getParent()) != null);
+
+      this.watchPath(path);
+   }
+
+   private void watchPath(@Nonnull Path path) throws IOException {
+      if (HAS_FILE_TREE_SUPPORT) {
+         this.registered.put(path, path.register(this.service, WATCH_EVENT_KINDS, SensitivityWatchEventModifier.HIGH, ExtendedWatchEventModifier.FILE_TREE));
+         LOGGER.at(Level.FINEST).log("Register path: %s", path);
+      } else {
+         Modifier[] modifiers = new Modifier[]{SensitivityWatchEventModifier.HIGH};
+
+         try (Stream<Path> stream = Files.walk(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_ARRAY)) {
+            stream.forEach(SneakyThrow.sneakyConsumer(childPath -> {
+               if (Files.isDirectory(childPath)) {
+                  this.registered.put(childPath, childPath.register(this.service, WATCH_EVENT_KINDS, modifiers));
+                  LOGGER.at(Level.FINEST).log("Register path: %s", childPath);
+               }
+            }));
+         }
+      }
+
+      LOGGER.at(Level.FINER).log("Watching path: %s", path);
+   }
+}

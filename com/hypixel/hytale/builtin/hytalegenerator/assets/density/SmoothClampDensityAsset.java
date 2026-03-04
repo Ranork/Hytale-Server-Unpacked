@@ -1,59 +1,48 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ClampDensity;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.SmoothClampDensity;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.validation.Validators;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class SmoothClampDensityAsset
-/*    */   extends DensityAsset
-/*    */ {
-/*    */   public static final BuilderCodec<SmoothClampDensityAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 32 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SmoothClampDensityAsset.class, SmoothClampDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("WallA", (Codec)Codec.DOUBLE, true), (t, k) -> t.wallA = k.doubleValue(), k -> Double.valueOf(k.wallA)).add()).append(new KeyedCodec("WallB", (Codec)Codec.DOUBLE, true), (t, k) -> t.wallB = k.doubleValue(), k -> Double.valueOf(k.wallB)).add()).append(new KeyedCodec("Range", (Codec)Codec.DOUBLE, true), (t, k) -> t.range = k.doubleValue(), k -> Double.valueOf(k.range)).addValidator(Validators.greaterThanOrEqual(Double.valueOf(0.0D))).add()).build();
-/*    */   }
-/* 34 */   private double wallA = -1.0D;
-/* 35 */   private double wallB = 1.0D;
-/* 36 */   private double range = 0.01D;
-/*    */   
-/*    */   @Nonnull
-/*    */   public Density build(@Nonnull DensityAsset.Argument argument) {
-/* 40 */     if (isSkipped()) return (Density)new ConstantValueDensity(0.0D); 
-/* 41 */     if (this.range == 0.0D) {
-/* 42 */       return (Density)new ClampDensity(this.wallA, this.wallB, buildSecondInput(argument));
-/*    */     }
-/* 44 */     double min = Math.min(this.wallA, this.wallB);
-/* 45 */     double max = Math.max(this.wallA, this.wallB);
-/* 46 */     return (Density)new SmoothClampDensity(min, max, this.range, buildSecondInput(argument));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 51 */     cleanUpInputs();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ClampDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.SmoothClampDensity;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\density\SmoothClampDensityAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SmoothClampDensityAsset extends DensityAsset {
+   @Nonnull
+   public static final BuilderCodec<SmoothClampDensityAsset> CODEC = BuilderCodec.builder(
+         SmoothClampDensityAsset.class, SmoothClampDensityAsset::new, DensityAsset.ABSTRACT_CODEC
+      )
+      .append(new KeyedCodec<>("WallA", Codec.DOUBLE, true), (t, k) -> t.wallA = k, k -> k.wallA)
+      .add()
+      .append(new KeyedCodec<>("WallB", Codec.DOUBLE, true), (t, k) -> t.wallB = k, k -> k.wallB)
+      .add()
+      .<Double>append(new KeyedCodec<>("Range", Codec.DOUBLE, true), (t, k) -> t.range = k, k -> k.range)
+      .addValidator(Validators.greaterThanOrEqual(0.0))
+      .add()
+      .build();
+   private double wallA = -1.0;
+   private double wallB = 1.0;
+   private double range = 0.01;
+
+   @Nonnull
+   @Override
+   public Density build(@Nonnull DensityAsset.Argument argument) {
+      if (this.isSkipped()) {
+         return new ConstantValueDensity(0.0);
+      } else if (this.range == 0.0) {
+         return new ClampDensity(this.wallA, this.wallB, this.buildSecondInput(argument));
+      } else {
+         double min = Math.min(this.wallA, this.wallB);
+         double max = Math.max(this.wallA, this.wallB);
+         return new SmoothClampDensity(min, max, this.range, this.buildSecondInput(argument));
+      }
+   }
+
+   @Override
+   public void cleanUp() {
+      this.cleanUpInputs();
+   }
+}

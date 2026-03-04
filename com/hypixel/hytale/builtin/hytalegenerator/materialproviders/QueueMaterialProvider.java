@@ -1,37 +1,36 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.materialproviders;
-/*    */ 
-/*    */ import java.util.List;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class QueueMaterialProvider<V> extends MaterialProvider<V> {
-/*    */   @Nonnull
-/*    */   private final MaterialProvider<V>[] queue;
-/*    */   
-/*    */   public QueueMaterialProvider(@Nonnull List<MaterialProvider<V>> queue) {
-/* 12 */     this.queue = (MaterialProvider<V>[])new MaterialProvider[queue.size()];
-/*    */     
-/* 14 */     for (int i = 0; i < queue.size(); i++) {
-/* 15 */       MaterialProvider<V> l = queue.get(i);
-/* 16 */       if (l == null) throw new IllegalArgumentException("null element in layers"); 
-/* 17 */       this.queue[i] = l;
-/*    */     } 
-/*    */   } @Nullable
-/*    */   public V getVoxelTypeAt(@Nonnull MaterialProvider.Context context) {
-/*    */     MaterialProvider<V>[] arrayOfMaterialProvider;
-/*    */     int i;
-/*    */     byte b;
-/* 24 */     for (arrayOfMaterialProvider = this.queue, i = arrayOfMaterialProvider.length, b = 0; b < i; ) { MaterialProvider<V> layer = arrayOfMaterialProvider[b];
-/* 25 */       V material = layer.getVoxelTypeAt(context);
-/* 26 */       if (material == null) { b++; continue; }
-/* 27 */        return material; }
-/*    */     
-/* 29 */     return null;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.materialproviders;
 
+import java.util.List;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\materialproviders\QueueMaterialProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class QueueMaterialProvider<V> extends MaterialProvider<V> {
+   @Nonnull
+   private final MaterialProvider<V>[] queue;
+
+   public QueueMaterialProvider(@Nonnull List<MaterialProvider<V>> queue) {
+      this.queue = new MaterialProvider[queue.size()];
+
+      for (int i = 0; i < queue.size(); i++) {
+         MaterialProvider<V> l = queue.get(i);
+         if (l == null) {
+            throw new IllegalArgumentException("null element in layers");
+         }
+
+         this.queue[i] = l;
+      }
+   }
+
+   @Nullable
+   @Override
+   public V getVoxelTypeAt(@Nonnull MaterialProvider.Context context) {
+      for (MaterialProvider<V> layer : this.queue) {
+         V material = layer.getVoxelTypeAt(context);
+         if (material != null) {
+            return material;
+         }
+      }
+
+      return null;
+   }
+}

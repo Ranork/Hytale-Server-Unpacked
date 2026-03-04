@@ -1,22 +1,15 @@
-/*    */ package com.hypixel.hytale.sneakythrow;
-/*    */ 
-/*    */ @FunctionalInterface
-/*    */ public interface ThrowableRunnable<E extends Throwable>
-/*    */   extends Runnable
-/*    */ {
-/*    */   default void run() {
-/*    */     try {
-/*  9 */       runNow();
-/* 10 */     } catch (Throwable e) {
-/* 11 */       throw SneakyThrow.sneakyThrow(e);
-/*    */     } 
-/*    */   }
-/*    */   
-/*    */   void runNow() throws E;
-/*    */ }
+package com.hypixel.hytale.sneakythrow;
 
+@FunctionalInterface
+public interface ThrowableRunnable<E extends Throwable> extends Runnable {
+   @Override
+   default void run() {
+      try {
+         this.runNow();
+      } catch (Throwable var2) {
+         throw SneakyThrow.sneakyThrow(var2);
+      }
+   }
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\sneakythrow\ThrowableRunnable.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+   void runNow() throws E;
+}

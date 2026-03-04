@@ -1,49 +1,31 @@
-/*    */ package com.hypixel.hytale.server.core.modules.prefabspawner.commands;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.Message;
-/*    */ import com.hypixel.hytale.server.core.command.system.CommandContext;
-/*    */ import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerState;
-/*    */ import com.hypixel.hytale.server.core.prefab.PrefabWeights;
-/*    */ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-/*    */ import java.util.Objects;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class PrefabSpawnerGetCommand
-/*    */   extends TargetPrefabSpawnerCommand
-/*    */ {
-/*    */   public PrefabSpawnerGetCommand() {
-/* 20 */     super("get", "server.commands.prefabspawner.get.desc");
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected void execute(@Nonnull CommandContext context, @Nonnull WorldChunk chunk, @Nonnull PrefabSpawnerState prefabSpawner) {
-/* 25 */     String prefab = Objects.<String>requireNonNullElse(prefabSpawner.getPrefabPath(), "<undefined>");
-/* 26 */     context.sendMessage(Message.translation("server.commands.prefabspawner.get.path")
-/* 27 */         .param("prefab", prefab));
-/* 28 */     context.sendMessage(Message.translation("server.commands.prefabspawner.get.fitsHeightmap")
-/* 29 */         .param("fitHeightmap", prefabSpawner.isFitHeightmap()));
-/* 30 */     context.sendMessage(Message.translation("server.commands.prefabspawner.get.inheritsSeed")
-/* 31 */         .param("inheritSeed", prefabSpawner.isInheritSeed()));
-/* 32 */     context.sendMessage(Message.translation("server.commands.prefabspawner.get.inheritsHeightCheck")
-/* 33 */         .param("inheritHeightCheck", prefabSpawner.isInheritHeightCondition()));
-/*    */     
-/* 35 */     PrefabWeights weights = prefabSpawner.getPrefabWeights();
-/* 36 */     if (weights.size() == 0)
-/*    */       return; 
-/* 38 */     context.sendMessage(Message.translation("server.commands.prefabspawner.get.defaultWeight")
-/* 39 */         .param("weight", weights.getDefaultWeight()));
-/* 40 */     context.sendMessage(Message.translation("server.commands.prefabspawner.get.weights")
-/* 41 */         .param("weights", weights.getMappingString()));
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.prefabspawner.commands;
 
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerState;
+import com.hypixel.hytale.server.core.prefab.PrefabWeights;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\prefabspawner\commands\PrefabSpawnerGetCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PrefabSpawnerGetCommand extends TargetPrefabSpawnerCommand {
+   public PrefabSpawnerGetCommand() {
+      super("get", "server.commands.prefabspawner.get.desc");
+   }
+
+   @Override
+   protected void execute(@Nonnull CommandContext context, @Nonnull WorldChunk chunk, @Nonnull PrefabSpawnerState prefabSpawner) {
+      String prefab = Objects.requireNonNullElse(prefabSpawner.getPrefabPath(), "<undefined>");
+      context.sendMessage(Message.translation("server.commands.prefabspawner.get.path").param("prefab", prefab));
+      context.sendMessage(Message.translation("server.commands.prefabspawner.get.fitsHeightmap").param("fitHeightmap", prefabSpawner.isFitHeightmap()));
+      context.sendMessage(Message.translation("server.commands.prefabspawner.get.inheritsSeed").param("inheritSeed", prefabSpawner.isInheritSeed()));
+      context.sendMessage(
+         Message.translation("server.commands.prefabspawner.get.inheritsHeightCheck").param("inheritHeightCheck", prefabSpawner.isInheritHeightCondition())
+      );
+      PrefabWeights weights = prefabSpawner.getPrefabWeights();
+      if (weights.size() != 0) {
+         context.sendMessage(Message.translation("server.commands.prefabspawner.get.defaultWeight").param("weight", weights.getDefaultWeight()));
+         context.sendMessage(Message.translation("server.commands.prefabspawner.get.weights").param("weights", weights.getMappingString()));
+      }
+   }
+}

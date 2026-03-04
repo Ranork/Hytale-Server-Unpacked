@@ -8,20 +8,14 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 public interface IChunkSaver extends Closeable {
-  @Nonnull
-  CompletableFuture<Void> saveHolder(int paramInt1, int paramInt2, @Nonnull Holder<ChunkStore> paramHolder);
-  
-  @Nonnull
-  CompletableFuture<Void> removeHolder(int paramInt1, int paramInt2);
-  
-  @Nonnull
-  LongSet getIndexes() throws IOException;
-  
-  void flush() throws IOException;
+   @Nonnull
+   CompletableFuture<Void> saveHolder(int var1, int var2, @Nonnull Holder<ChunkStore> var3);
+
+   @Nonnull
+   CompletableFuture<Void> removeHolder(int var1, int var2);
+
+   @Nonnull
+   LongSet getIndexes() throws IOException;
+
+   void flush() throws IOException;
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\storage\IChunkSaver.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

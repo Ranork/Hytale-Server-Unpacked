@@ -1,36 +1,26 @@
-/*    */ package com.hypixel.hytale.server.npc.storage;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.entity.Entity;
-/*    */ import java.util.HashMap;
-/*    */ import java.util.Map;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public abstract class ParameterStore<Type extends PersistentParameter<?>>
-/*    */ {
-/* 14 */   protected Map<String, Type> parameters = new HashMap<>();
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public Type get(@Nonnull Entity owner, String name) {
-/* 20 */     PersistentParameter persistentParameter = (PersistentParameter)this.parameters.get(name);
-/* 21 */     if (persistentParameter == null) {
-/* 22 */       persistentParameter = (PersistentParameter)createParameter();
-/* 23 */       this.parameters.put(name, (Type)persistentParameter);
-/* 24 */       owner.markNeedsSave();
-/*    */     } 
-/* 26 */     return (Type)persistentParameter;
-/*    */   }
-/*    */   
-/*    */   protected abstract Type createParameter();
-/*    */ }
+package com.hypixel.hytale.server.npc.storage;
 
+import com.hypixel.hytale.server.core.entity.Entity;
+import java.util.HashMap;
+import java.util.Map;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\storage\ParameterStore.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class ParameterStore<Type extends PersistentParameter<?>> {
+   protected Map<String, Type> parameters = new HashMap<>();
+
+   protected ParameterStore() {
+   }
+
+   public Type get(@Nonnull Entity owner, String name) {
+      Type parameter = this.parameters.get(name);
+      if (parameter == null) {
+         parameter = this.createParameter();
+         this.parameters.put(name, parameter);
+         owner.markNeedsSave();
+      }
+
+      return parameter;
+   }
+
+   protected abstract Type createParameter();
+}

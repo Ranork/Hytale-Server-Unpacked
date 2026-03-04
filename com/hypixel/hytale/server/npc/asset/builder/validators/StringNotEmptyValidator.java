@@ -1,46 +1,37 @@
-/*    */ package com.hypixel.hytale.server.npc.asset.builder.validators;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ public class StringNotEmptyValidator
-/*    */   extends StringValidator
-/*    */ {
-/* 10 */   private static final StringNotEmptyValidator INSTANCE = new StringNotEmptyValidator();
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public boolean test(@Nullable String value) {
-/* 17 */     return (value != null && !value.isEmpty());
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String errorMessage(String value) {
-/* 23 */     return errorMessage0(value, "Value");
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String errorMessage(String value, String name) {
-/* 29 */     return errorMessage0(value, "\"" + name + "\"");
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   private String errorMessage0(String value, String name) {
-/* 34 */     return name + " must not be an empty string";
-/*    */   }
-/*    */   
-/*    */   public static StringNotEmptyValidator get() {
-/* 38 */     return INSTANCE;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.asset.builder.validators;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\asset\builder\validators\StringNotEmptyValidator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class StringNotEmptyValidator extends StringValidator {
+   private static final StringNotEmptyValidator INSTANCE = new StringNotEmptyValidator();
+
+   private StringNotEmptyValidator() {
+   }
+
+   @Override
+   public boolean test(@Nullable String value) {
+      return value != null && !value.isEmpty();
+   }
+
+   @Nonnull
+   @Override
+   public String errorMessage(String value) {
+      return this.errorMessage0(value, "Value");
+   }
+
+   @Nonnull
+   @Override
+   public String errorMessage(String value, String name) {
+      return this.errorMessage0(value, "\"" + name + "\"");
+   }
+
+   @Nonnull
+   private String errorMessage0(String value, String name) {
+      return name + " must not be an empty string";
+   }
+
+   public static StringNotEmptyValidator get() {
+      return INSTANCE;
+   }
+}

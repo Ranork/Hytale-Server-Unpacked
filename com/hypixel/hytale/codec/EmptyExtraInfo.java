@@ -1,85 +1,77 @@
-/*    */ package com.hypixel.hytale.codec;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.util.RawJsonReader;
-/*    */ import java.util.Collections;
-/*    */ import java.util.List;
-/*    */ import java.util.function.Function;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ @Deprecated
-/*    */ public class EmptyExtraInfo
-/*    */   extends ExtraInfo
-/*    */ {
-/* 13 */   public static final EmptyExtraInfo EMPTY = new EmptyExtraInfo();
-/*    */   
-/*    */   private EmptyExtraInfo() {
-/* 16 */     super(2147483647, com.hypixel.hytale.codec.validation.ThrowingValidationResults::new);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void pushKey(String key) {}
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void pushIntKey(int i) {}
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void pushKey(String key, RawJsonReader reader) {}
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void pushIntKey(int key, RawJsonReader reader) {}
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void popKey() {}
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void addUnknownKey(@Nonnull String key) {}
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void ignoreUnusedKey(String key) {}
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void popIgnoredUnusedKey() {}
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String peekKey() {
-/* 54 */     return "<empty>";
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String peekKey(char separator) {
-/* 60 */     return "<empty>";
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public List<String> getUnknownKeys() {
-/* 66 */     return Collections.emptyList();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void appendDetailsTo(@Nonnull StringBuilder sb) {
-/* 71 */     sb.append("EmptyExtraInfo\n");
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 77 */     return "EmptyExtraInfo{} " + super.toString();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.codec;
 
+import com.hypixel.hytale.codec.util.RawJsonReader;
+import com.hypixel.hytale.codec.validation.ThrowingValidationResults;
+import java.util.Collections;
+import java.util.List;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\codec\EmptyExtraInfo.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+@Deprecated
+public class EmptyExtraInfo extends ExtraInfo {
+   public static final EmptyExtraInfo EMPTY = new EmptyExtraInfo();
+
+   private EmptyExtraInfo() {
+      super(Integer.MAX_VALUE, ThrowingValidationResults::new);
+   }
+
+   @Override
+   public void pushKey(String key) {
+   }
+
+   @Override
+   public void pushIntKey(int i) {
+   }
+
+   @Override
+   public void pushKey(String key, RawJsonReader reader) {
+   }
+
+   @Override
+   public void pushIntKey(int key, RawJsonReader reader) {
+   }
+
+   @Override
+   public void popKey() {
+   }
+
+   @Override
+   public void addUnknownKey(@Nonnull String key) {
+   }
+
+   @Override
+   public void ignoreUnusedKey(String key) {
+   }
+
+   @Override
+   public void popIgnoredUnusedKey() {
+   }
+
+   @Nonnull
+   @Override
+   public String peekKey() {
+      return "<empty>";
+   }
+
+   @Nonnull
+   @Override
+   public String peekKey(char separator) {
+      return "<empty>";
+   }
+
+   @Nonnull
+   @Override
+   public List<String> getUnknownKeys() {
+      return Collections.emptyList();
+   }
+
+   @Override
+   public void appendDetailsTo(@Nonnull StringBuilder sb) {
+      sb.append("EmptyExtraInfo\n");
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "EmptyExtraInfo{} " + super.toString();
+   }
+}

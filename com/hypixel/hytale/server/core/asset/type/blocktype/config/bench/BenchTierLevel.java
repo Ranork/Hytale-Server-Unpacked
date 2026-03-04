@@ -1,81 +1,69 @@
-/*    */ package com.hypixel.hytale.server.core.asset.type.blocktype.config.bench;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.validation.Validators;
-/*    */ import com.hypixel.hytale.protocol.BenchTierLevel;
-/*    */ import com.hypixel.hytale.server.core.io.NetworkSerializable;
-/*    */ import java.util.function.Supplier;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class BenchTierLevel
-/*    */   implements NetworkSerializable<BenchTierLevel>
-/*    */ {
-/*    */   public static final BuilderCodec<BenchTierLevel> CODEC;
-/*    */   protected BenchUpgradeRequirement upgradeRequirement;
-/*    */   protected float craftingTimeReductionModifier;
-/*    */   protected int extraInputSlot;
-/*    */   protected int extraOutputSlot;
-/*    */   
-/*    */   static {
-/* 37 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BenchTierLevel.class, BenchTierLevel::new).append(new KeyedCodec("UpgradeRequirement", (Codec)BenchUpgradeRequirement.CODEC), (tier, d) -> tier.upgradeRequirement = d, tier -> tier.upgradeRequirement).add()).append(new KeyedCodec("CraftingTimeReductionModifier", (Codec)Codec.DOUBLE), (tier, d) -> tier.craftingTimeReductionModifier = d.floatValue(), tier -> Double.valueOf(tier.craftingTimeReductionModifier)).addValidator(Validators.range(Double.valueOf(0.0D), Double.valueOf(1.0D))).add()).append(new KeyedCodec("ExtraInputSlot", (Codec)Codec.INTEGER), (tier, d) -> tier.extraInputSlot = d.intValue(), tier -> Integer.valueOf(tier.extraInputSlot)).addValidator(Validators.min(Integer.valueOf(0))).add()).append(new KeyedCodec("ExtraOutputSlot", (Codec)Codec.INTEGER), (tier, d) -> tier.extraOutputSlot = d.intValue(), tier -> Integer.valueOf(tier.extraOutputSlot)).addValidator(Validators.min(Integer.valueOf(0))).add()).build();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public BenchTierLevel(BenchUpgradeRequirement upgradeRequirement, float craftingTimeReductionModifier, int extraInputSlot, int extraOutputSlot) {
-/* 45 */     this.upgradeRequirement = upgradeRequirement;
-/* 46 */     this.craftingTimeReductionModifier = craftingTimeReductionModifier;
-/* 47 */     this.extraInputSlot = extraInputSlot;
-/* 48 */     this.extraOutputSlot = extraOutputSlot;
-/*    */   }
-/*    */   
-/*    */   protected BenchTierLevel() {}
-/*    */   
-/*    */   public float getCraftingTimeReductionModifier() {
-/* 54 */     return this.craftingTimeReductionModifier;
-/*    */   } public BenchUpgradeRequirement getUpgradeRequirement() {
-/* 56 */     return this.upgradeRequirement;
-/*    */   } public int getExtraInputSlot() {
-/* 58 */     return this.extraInputSlot;
-/*    */   } public int getExtraOutputSlot() {
-/* 60 */     return this.extraOutputSlot;
-/*    */   }
-/*    */   
-/*    */   public BenchTierLevel toPacket() {
-/* 64 */     BenchTierLevel packet = new BenchTierLevel();
-/*    */     
-/* 66 */     if (this.upgradeRequirement != null) {
-/* 67 */       packet.benchUpgradeRequirement = this.upgradeRequirement.toPacket();
-/*    */     }
-/* 69 */     packet.craftingTimeReductionModifier = this.craftingTimeReductionModifier;
-/* 70 */     packet.extraInputSlot = this.extraInputSlot;
-/* 71 */     packet.extraOutputSlot = this.extraOutputSlot;
-/*    */     
-/* 73 */     return packet;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.asset.type.blocktype.config.bench;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.server.core.io.NetworkSerializable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\type\blocktype\config\bench\BenchTierLevel.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BenchTierLevel implements NetworkSerializable<com.hypixel.hytale.protocol.BenchTierLevel> {
+   public static final BuilderCodec<BenchTierLevel> CODEC = BuilderCodec.builder(BenchTierLevel.class, BenchTierLevel::new)
+      .append(new KeyedCodec<>("UpgradeRequirement", BenchUpgradeRequirement.CODEC), (tier, d) -> tier.upgradeRequirement = d, tier -> tier.upgradeRequirement)
+      .add()
+      .<Double>append(
+         new KeyedCodec<>("CraftingTimeReductionModifier", Codec.DOUBLE),
+         (tier, d) -> tier.craftingTimeReductionModifier = d.floatValue(),
+         tier -> (double)tier.craftingTimeReductionModifier
+      )
+      .addValidator(Validators.range(0.0, 1.0))
+      .add()
+      .<Integer>append(new KeyedCodec<>("ExtraInputSlot", Codec.INTEGER), (tier, d) -> tier.extraInputSlot = d, tier -> tier.extraInputSlot)
+      .addValidator(Validators.min(0))
+      .add()
+      .<Integer>append(new KeyedCodec<>("ExtraOutputSlot", Codec.INTEGER), (tier, d) -> tier.extraOutputSlot = d, tier -> tier.extraOutputSlot)
+      .addValidator(Validators.min(0))
+      .add()
+      .build();
+   protected BenchUpgradeRequirement upgradeRequirement;
+   protected float craftingTimeReductionModifier;
+   protected int extraInputSlot;
+   protected int extraOutputSlot;
+
+   public BenchTierLevel(BenchUpgradeRequirement upgradeRequirement, float craftingTimeReductionModifier, int extraInputSlot, int extraOutputSlot) {
+      this.upgradeRequirement = upgradeRequirement;
+      this.craftingTimeReductionModifier = craftingTimeReductionModifier;
+      this.extraInputSlot = extraInputSlot;
+      this.extraOutputSlot = extraOutputSlot;
+   }
+
+   protected BenchTierLevel() {
+   }
+
+   public float getCraftingTimeReductionModifier() {
+      return this.craftingTimeReductionModifier;
+   }
+
+   public BenchUpgradeRequirement getUpgradeRequirement() {
+      return this.upgradeRequirement;
+   }
+
+   public int getExtraInputSlot() {
+      return this.extraInputSlot;
+   }
+
+   public int getExtraOutputSlot() {
+      return this.extraOutputSlot;
+   }
+
+   public com.hypixel.hytale.protocol.BenchTierLevel toPacket() {
+      com.hypixel.hytale.protocol.BenchTierLevel packet = new com.hypixel.hytale.protocol.BenchTierLevel();
+      if (this.upgradeRequirement != null) {
+         packet.benchUpgradeRequirement = this.upgradeRequirement.toPacket();
+      }
+
+      packet.craftingTimeReductionModifier = this.craftingTimeReductionModifier;
+      packet.extraInputSlot = this.extraInputSlot;
+      packet.extraOutputSlot = this.extraOutputSlot;
+      return packet;
+   }
+}

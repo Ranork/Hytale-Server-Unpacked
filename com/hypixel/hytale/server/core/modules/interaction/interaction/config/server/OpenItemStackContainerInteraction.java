@@ -1,58 +1,55 @@
-/*    */ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.server;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.component.CommandBuffer;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.server.core.asset.type.item.config.ItemStackContainerConfig;
-/*    */ import com.hypixel.hytale.server.core.entity.InteractionContext;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemStackContainerWindow;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
-/*    */ import com.hypixel.hytale.server.core.inventory.ItemStack;
-/*    */ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-/*    */ import com.hypixel.hytale.server.core.inventory.container.ItemStackItemContainer;
-/*    */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class OpenItemStackContainerInteraction extends SimpleInstantInteraction {
-/*    */   @Nonnull
-/* 22 */   public static final BuilderCodec<OpenItemStackContainerInteraction> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(OpenItemStackContainerInteraction.class, OpenItemStackContainerInteraction::new, SimpleInstantInteraction.CODEC)
-/* 23 */     .documentation("Opens a container contained within the current held item."))
-/* 24 */     .build();
-/*    */ 
-/*    */   
-/*    */   protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-/* 28 */     CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
-/* 29 */     Ref<EntityStore> ref = context.getEntity();
-/* 30 */     Store<EntityStore> store = ref.getStore();
-/*    */     
-/* 32 */     Player playerComponent = (Player)commandBuffer.getComponent(ref, Player.getComponentType());
-/* 33 */     if (playerComponent == null)
-/*    */       return; 
-/* 35 */     PageManager pageManager = playerComponent.getPageManager();
-/* 36 */     if (pageManager.getCustomPage() != null)
-/*    */       return; 
-/* 38 */     ItemStack heldItem = context.getHeldItem();
-/* 39 */     if (ItemStack.isEmpty(heldItem))
-/*    */       return; 
-/* 41 */     byte heldItemSlot = context.getHeldItemSlot();
-/* 42 */     ItemContainer itemContainer = playerComponent.getInventory().getSectionById(context.getHeldItemSectionId());
-/* 43 */     if (itemContainer == null)
-/*    */       return; 
-/* 45 */     ItemStack itemStack = itemContainer.getItemStack((short)heldItemSlot);
-/* 46 */     ItemStackContainerConfig config = itemStack.getItem().getItemStackContainerConfig();
-/* 47 */     ItemStackItemContainer itemStackItemContainer = ItemStackItemContainer.ensureConfiguredContainer(itemContainer, (short)heldItemSlot, config);
-/* 48 */     if (itemStackItemContainer == null)
-/*    */       return; 
-/* 50 */     pageManager.setPageWithWindows(ref, store, Page.Bench, true, new Window[] { (Window)new ItemStackContainerWindow(itemStackItemContainer) });
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.interaction.interaction.config.server;
 
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.protocol.packets.interface_.Page;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemStackContainerConfig;
+import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
+import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemStackContainerWindow;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.inventory.container.ItemStackItemContainer;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\interaction\interaction\config\server\OpenItemStackContainerInteraction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class OpenItemStackContainerInteraction extends SimpleInstantInteraction {
+   @Nonnull
+   public static final BuilderCodec<OpenItemStackContainerInteraction> CODEC = BuilderCodec.builder(
+         OpenItemStackContainerInteraction.class, OpenItemStackContainerInteraction::new, SimpleInstantInteraction.CODEC
+      )
+      .documentation("Opens a container contained within the current held item.")
+      .build();
+
+   @Override
+   protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
+      CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+      Ref<EntityStore> ref = context.getEntity();
+      Store<EntityStore> store = ref.getStore();
+      Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
+      if (playerComponent != null) {
+         PageManager pageManager = playerComponent.getPageManager();
+         if (pageManager.getCustomPage() == null) {
+            ItemStack heldItem = context.getHeldItem();
+            if (!ItemStack.isEmpty(heldItem)) {
+               byte heldItemSlot = context.getHeldItemSlot();
+               ItemContainer itemContainer = playerComponent.getInventory().getSectionById(context.getHeldItemSectionId());
+               if (itemContainer != null) {
+                  ItemStack itemStack = itemContainer.getItemStack(heldItemSlot);
+                  ItemStackContainerConfig config = itemStack.getItem().getItemStackContainerConfig();
+                  ItemStackItemContainer itemStackItemContainer = ItemStackItemContainer.ensureConfiguredContainer(itemContainer, heldItemSlot, config);
+                  if (itemStackItemContainer != null) {
+                     pageManager.setPageWithWindows(ref, store, Page.Bench, true, new ItemStackContainerWindow(itemStackItemContainer));
+                  }
+               }
+            }
+         }
+      }
+   }
+}

@@ -11,43 +11,37 @@ import java.nio.file.Path;
 import java.util.List;
 
 public interface PrefabEditorCreationContext {
-  Player getEditor();
-  
-  PlayerRef getEditorRef();
-  
-  List<Path> getPrefabPaths();
-  
-  int getBlocksBetweenEachPrefab();
-  
-  int getPasteLevelGoal();
-  
-  boolean loadChildPrefabs();
-  
-  boolean shouldLoadEntities();
-  
-  PrefabStackingAxis getStackingAxis();
-  
-  WorldGenType getWorldGenType();
-  
-  int getBlocksAboveSurface();
-  
-  PrefabAlignment getAlignment();
-  
-  PrefabRootDirectory getPrefabRootDirectory();
-  
-  boolean isWorldTickingEnabled();
-  
-  PrefabRowSplitMode getRowSplitMode();
-  
-  List<String> getUnprocessedPrefabPaths();
-  
-  String getEnvironment();
-  
-  String getGrassTint();
+   Player getEditor();
+
+   PlayerRef getEditorRef();
+
+   List<Path> getPrefabPaths();
+
+   int getBlocksBetweenEachPrefab();
+
+   int getPasteLevelGoal();
+
+   boolean loadChildPrefabs();
+
+   boolean shouldLoadEntities();
+
+   PrefabStackingAxis getStackingAxis();
+
+   WorldGenType getWorldGenType();
+
+   int getBlocksAboveSurface();
+
+   PrefabAlignment getAlignment();
+
+   PrefabRootDirectory getPrefabRootDirectory();
+
+   boolean isWorldTickingEnabled();
+
+   PrefabRowSplitMode getRowSplitMode();
+
+   List<String> getUnprocessedPrefabPaths();
+
+   String getEnvironment();
+
+   String getGrassTint();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\buildertools\prefabeditor\PrefabEditorCreationContext.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

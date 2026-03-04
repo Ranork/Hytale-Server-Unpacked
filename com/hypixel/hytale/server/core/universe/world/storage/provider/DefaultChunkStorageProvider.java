@@ -1,64 +1,59 @@
-/*    */ package com.hypixel.hytale.server.core.universe.world.storage.provider;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
-/*    */ import java.io.IOException;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class DefaultChunkStorageProvider
-/*    */   implements IChunkStorageProvider
-/*    */ {
-/*    */   @Nonnull
-/* 21 */   public static final DefaultChunkStorageProvider INSTANCE = new DefaultChunkStorageProvider();
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static final String ID = "Hytale";
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/* 32 */   public static final BuilderCodec<DefaultChunkStorageProvider> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(DefaultChunkStorageProvider.class, () -> INSTANCE)
-/* 33 */     .documentation("Selects the default recommended storage as decided by the server."))
-/* 34 */     .build();
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/* 40 */   public static final IChunkStorageProvider DEFAULT = new IndexedStorageChunkStorageProvider();
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public IChunkLoader getLoader(@Nonnull Store<ChunkStore> store) throws IOException {
-/* 45 */     return DEFAULT.getLoader(store);
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public IChunkSaver getSaver(@Nonnull Store<ChunkStore> store) throws IOException {
-/* 50 */     return DEFAULT.getSaver(store);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 56 */     return "DefaultChunkStorageProvider{DEFAULT=" + String.valueOf(DEFAULT) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.universe.world.storage.provider;
 
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
+import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
+import java.io.IOException;
+import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\storage\provider\DefaultChunkStorageProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class DefaultChunkStorageProvider implements IChunkStorageProvider<Object> {
+   public static final int VERSION = 0;
+   public static final String ID = "Hytale";
+   @Nonnull
+   private static final IChunkStorageProvider<?> DEFAULT_INDEXED = new IndexedStorageChunkStorageProvider();
+   @Nonnull
+   public static final BuilderCodec<DefaultChunkStorageProvider> CODEC = BuilderCodec.builder(
+         DefaultChunkStorageProvider.class, DefaultChunkStorageProvider::new
+      )
+      .versioned()
+      .codecVersion(0)
+      .documentation("Selects the default recommended storage as decided by the server.")
+      .build();
+   private IChunkStorageProvider<?> provider = DEFAULT_INDEXED;
+
+   @Override
+   public Object initialize(@Nonnull Store<ChunkStore> store) throws IOException {
+      return this.provider.initialize(store);
+   }
+
+   @Override
+   public void close(@Nonnull Object o, @NonNullDecl Store<ChunkStore> store) throws IOException {
+      ((IChunkStorageProvider<Object>)this.provider).close(o, store);
+   }
+
+   @Nonnull
+   @Override
+   public IChunkLoader getLoader(@Nonnull Object o, @Nonnull Store<ChunkStore> store) throws IOException {
+      return ((IChunkStorageProvider<Object>)this.provider).getLoader(o, store);
+   }
+
+   @Nonnull
+   @Override
+   public IChunkSaver getSaver(@Nonnull Object o, @Nonnull Store<ChunkStore> store) throws IOException {
+      return ((IChunkStorageProvider<Object>)this.provider).getSaver(o, store);
+   }
+
+   @Override
+   public boolean isSame(IChunkStorageProvider<?> other) {
+      return other.getClass().equals(this.getClass()) || this.provider.isSame(other);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "DefaultChunkStorageProvider{DEFAULT=" + this.provider + "}";
+   }
+}

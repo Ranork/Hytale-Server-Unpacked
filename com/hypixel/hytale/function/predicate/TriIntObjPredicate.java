@@ -2,11 +2,5 @@ package com.hypixel.hytale.function.predicate;
 
 @FunctionalInterface
 public interface TriIntObjPredicate<T> {
-  boolean test(int paramInt1, int paramInt2, int paramInt3, T paramT);
+   boolean test(int var1, int var2, int var3, T var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\function\predicate\TriIntObjPredicate.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

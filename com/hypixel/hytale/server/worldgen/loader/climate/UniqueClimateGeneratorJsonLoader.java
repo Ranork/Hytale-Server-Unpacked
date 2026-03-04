@@ -1,46 +1,34 @@
-/*    */ package com.hypixel.hytale.server.worldgen.loader.climate;
-/*    */ 
-/*    */ import com.google.gson.JsonArray;
-/*    */ import com.google.gson.JsonElement;
-/*    */ import com.hypixel.hytale.procedurallib.json.JsonLoader;
-/*    */ import com.hypixel.hytale.procedurallib.json.SeedResource;
-/*    */ import com.hypixel.hytale.procedurallib.json.SeedString;
-/*    */ import com.hypixel.hytale.server.worldgen.climate.UniqueClimateGenerator;
-/*    */ import java.nio.file.Path;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class UniqueClimateGeneratorJsonLoader<K extends SeedResource> extends JsonLoader<K, UniqueClimateGenerator> {
-/*    */   @Nonnull
-/*    */   private final JsonArray array;
-/*    */   
-/*    */   public UniqueClimateGeneratorJsonLoader(SeedString<K> seed, Path dataFolder, @Nonnull JsonArray json) {
-/* 17 */     super(seed, dataFolder, (JsonElement)json);
-/* 18 */     this.array = json;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public UniqueClimateGenerator load() {
-/* 24 */     if (this.array.isEmpty()) {
-/* 25 */       return UniqueClimateGenerator.EMPTY;
-/*    */     }
-/* 27 */     return new UniqueClimateGenerator(
-/* 28 */         loadEntries());
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected UniqueClimateGenerator.Entry[] loadEntries() {
-/* 33 */     UniqueClimateGenerator.Entry[] entries = new UniqueClimateGenerator.Entry[this.array.size()];
-/* 34 */     for (int i = 0; i < this.array.size(); i++) {
-/* 35 */       entries[i] = (new UniqueClimateJsonLoader<>(this.seed, this.dataFolder, this.array.get(i)))
-/* 36 */         .load();
-/*    */     }
-/* 38 */     return entries;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.worldgen.loader.climate;
 
+import com.google.gson.JsonArray;
+import com.hypixel.hytale.procedurallib.json.JsonLoader;
+import com.hypixel.hytale.procedurallib.json.SeedResource;
+import com.hypixel.hytale.procedurallib.json.SeedString;
+import com.hypixel.hytale.server.worldgen.climate.UniqueClimateGenerator;
+import java.nio.file.Path;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldgen\loader\climate\UniqueClimateGeneratorJsonLoader.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class UniqueClimateGeneratorJsonLoader<K extends SeedResource> extends JsonLoader<K, UniqueClimateGenerator> {
+   @Nonnull
+   private final JsonArray array;
+
+   public UniqueClimateGeneratorJsonLoader(SeedString<K> seed, Path dataFolder, @Nonnull JsonArray json) {
+      super(seed, dataFolder, json);
+      this.array = json;
+   }
+
+   @Nonnull
+   public UniqueClimateGenerator load() {
+      return this.array.isEmpty() ? UniqueClimateGenerator.EMPTY : new UniqueClimateGenerator(this.loadEntries());
+   }
+
+   protected UniqueClimateGenerator.Entry[] loadEntries() {
+      UniqueClimateGenerator.Entry[] entries = new UniqueClimateGenerator.Entry[this.array.size()];
+
+      for (int i = 0; i < this.array.size(); i++) {
+         entries[i] = new UniqueClimateJsonLoader<>(this.seed, this.dataFolder, this.array.get(i)).load();
+      }
+
+      return entries;
+   }
+}

@@ -1,46 +1,24 @@
-/*    */ package com.hypixel.hytale.server.core.universe.world.events;
-/*    */ 
-/*    */ import com.hypixel.hytale.event.IEvent;
-/*    */ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public abstract class ChunkEvent
-/*    */   implements IEvent<String>
-/*    */ {
-/*    */   @Nonnull
-/*    */   private final WorldChunk chunk;
-/*    */   
-/*    */   public ChunkEvent(@Nonnull WorldChunk chunk) {
-/* 25 */     this.chunk = chunk;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public WorldChunk getChunk() {
-/* 32 */     return this.chunk;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 38 */     return "ChunkEvent{chunk=" + String.valueOf(this.chunk) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.universe.world.events;
 
+import com.hypixel.hytale.event.IEvent;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\events\ChunkEvent.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class ChunkEvent implements IEvent<String> {
+   @Nonnull
+   private final WorldChunk chunk;
+
+   public ChunkEvent(@Nonnull WorldChunk chunk) {
+      this.chunk = chunk;
+   }
+
+   public WorldChunk getChunk() {
+      return this.chunk;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ChunkEvent{chunk=" + this.chunk + "}";
+   }
+}

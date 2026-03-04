@@ -1,41 +1,29 @@
-/*    */ package com.hypixel.hytale.server.worldgen.util.condition;
-/*    */ 
-/*    */ import com.hypixel.hytale.procedurallib.condition.IBlockFluidCondition;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class FilteredBlockFluidCondition
-/*    */   implements IBlockFluidCondition
-/*    */ {
-/*    */   private final IBlockFluidCondition filter;
-/*    */   private final IBlockFluidCondition condition;
-/*    */   
-/*    */   public FilteredBlockFluidCondition(int blockId, IBlockFluidCondition condition) {
-/* 13 */     this((block, fluid) -> 
-/* 14 */         (block == blockId && fluid == 0), condition);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public FilteredBlockFluidCondition(IBlockFluidCondition filter, IBlockFluidCondition condition) {
-/* 20 */     this.filter = filter;
-/* 21 */     this.condition = condition;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean eval(int block, int fluid) {
-/* 26 */     if (this.filter.eval(block, fluid)) return false; 
-/* 27 */     return this.condition.eval(block, fluid);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 33 */     return "FilteredBlockFluidCondition{filter=" + String.valueOf(this.filter) + ", condition=" + String.valueOf(this.condition) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.worldgen.util.condition;
 
+import com.hypixel.hytale.procedurallib.condition.IBlockFluidCondition;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldge\\util\condition\FilteredBlockFluidCondition.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class FilteredBlockFluidCondition implements IBlockFluidCondition {
+   private final IBlockFluidCondition filter;
+   private final IBlockFluidCondition condition;
+
+   public FilteredBlockFluidCondition(int blockId, IBlockFluidCondition condition) {
+      this((block, fluid) -> block == blockId && fluid == 0, condition);
+   }
+
+   public FilteredBlockFluidCondition(IBlockFluidCondition filter, IBlockFluidCondition condition) {
+      this.filter = filter;
+      this.condition = condition;
+   }
+
+   @Override
+   public boolean eval(int block, int fluid) {
+      return this.filter.eval(block, fluid) ? false : this.condition.eval(block, fluid);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "FilteredBlockFluidCondition{filter=" + this.filter + ", condition=" + this.condition + "}";
+   }
+}

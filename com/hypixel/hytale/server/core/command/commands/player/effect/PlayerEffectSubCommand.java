@@ -1,24 +1,11 @@
-/*    */ package com.hypixel.hytale.server.core.command.commands.player.effect;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class PlayerEffectSubCommand
-/*    */   extends AbstractCommandCollection
-/*    */ {
-/*    */   public PlayerEffectSubCommand() {
-/* 14 */     super("effect", "server.commands.player.effect.desc");
-/* 15 */     addSubCommand((AbstractCommand)new PlayerEffectApplyCommand());
-/* 16 */     addSubCommand((AbstractCommand)new PlayerEffectClearCommand());
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.command.commands.player.effect;
 
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\command\commands\player\effect\PlayerEffectSubCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PlayerEffectSubCommand extends AbstractCommandCollection {
+   public PlayerEffectSubCommand() {
+      super("effect", "server.commands.player.effect.desc");
+      this.addSubCommand(new PlayerEffectApplyCommand());
+      this.addSubCommand(new PlayerEffectClearCommand());
+   }
+}

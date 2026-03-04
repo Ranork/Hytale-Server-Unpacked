@@ -1,31 +1,24 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.AbsDensity;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class AbsDensityAsset
-/*    */   extends DensityAsset {
-/* 12 */   public static final BuilderCodec<AbsDensityAsset> CODEC = BuilderCodec.builder(AbsDensityAsset.class, AbsDensityAsset::new, DensityAsset.ABSTRACT_CODEC)
-/* 13 */     .build();
-/*    */   
-/*    */   @Nonnull
-/*    */   public Density build(@Nonnull DensityAsset.Argument argument) {
-/* 17 */     if (isSkipped()) return (Density)new ConstantValueDensity(0.0D); 
-/* 18 */     return (Density)new AbsDensity(buildFirstInput(argument));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 23 */     cleanUpInputs();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.AbsDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\density\AbsDensityAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AbsDensityAsset extends DensityAsset {
+   @Nonnull
+   public static final BuilderCodec<AbsDensityAsset> CODEC = BuilderCodec.builder(AbsDensityAsset.class, AbsDensityAsset::new, DensityAsset.ABSTRACT_CODEC)
+      .build();
+
+   @Nonnull
+   @Override
+   public Density build(@Nonnull DensityAsset.Argument argument) {
+      return (Density)(this.isSkipped() ? new ConstantValueDensity(0.0) : new AbsDensity(this.buildFirstInput(argument)));
+   }
+
+   @Override
+   public void cleanUp() {
+      this.cleanUpInputs();
+   }
+}

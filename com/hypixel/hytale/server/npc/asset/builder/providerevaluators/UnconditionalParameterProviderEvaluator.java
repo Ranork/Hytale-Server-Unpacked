@@ -1,34 +1,29 @@
-/*    */ package com.hypixel.hytale.server.npc.asset.builder.providerevaluators;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
-/*    */ import java.util.HashMap;
-/*    */ import java.util.Map;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class UnconditionalParameterProviderEvaluator
-/*    */   implements ParameterProviderEvaluator
-/*    */ {
-/* 13 */   private final Map<String, ParameterType> parameters = new HashMap<>();
-/*    */   
-/*    */   public UnconditionalParameterProviderEvaluator(@Nonnull String[] parameters, @Nonnull ParameterType[] types) {
-/* 16 */     if (parameters.length != types.length) throw new IllegalArgumentException("Different number of parameters to types"); 
-/* 17 */     for (int i = 0; i < parameters.length; i++) {
-/* 18 */       this.parameters.put(parameters[i], types[i]);
-/*    */     }
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean hasParameter(String parameter, ParameterType type) {
-/* 24 */     return (this.parameters.get(parameter) == type);
-/*    */   }
-/*    */   
-/*    */   public void resolveReferences(BuilderManager builderManager) {}
-/*    */ }
+package com.hypixel.hytale.server.npc.asset.builder.providerevaluators;
 
+import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
+import java.util.HashMap;
+import java.util.Map;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\asset\builder\providerevaluators\UnconditionalParameterProviderEvaluator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class UnconditionalParameterProviderEvaluator implements ParameterProviderEvaluator {
+   private final Map<String, ParameterType> parameters = new HashMap<>();
+
+   public UnconditionalParameterProviderEvaluator(@Nonnull String[] parameters, @Nonnull ParameterType[] types) {
+      if (parameters.length != types.length) {
+         throw new IllegalArgumentException("Different number of parameters to types");
+      } else {
+         for (int i = 0; i < parameters.length; i++) {
+            this.parameters.put(parameters[i], types[i]);
+         }
+      }
+   }
+
+   @Override
+   public boolean hasParameter(String parameter, ParameterType type) {
+      return this.parameters.get(parameter) == type;
+   }
+
+   @Override
+   public void resolveReferences(BuilderManager builderManager) {
+   }
+}

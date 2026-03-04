@@ -1,86 +1,60 @@
-/*    */ package com.hypixel.hytale.server.core.command.commands.debug.component.hitboxcollision;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.server.core.Message;
-/*    */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*    */ import com.hypixel.hytale.server.core.command.system.CommandContext;
-/*    */ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-/*    */ import com.hypixel.hytale.server.core.command.system.arguments.types.EntityWrappedArg;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractWorldCommand;
-/*    */ import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
-/*    */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ public class HitboxCollisionRemoveCommand
-/*    */   extends AbstractCommandCollection
-/*    */ {
-/* 24 */   private static final Message MESSAGE_COMMANDS_ERRORS_TARGET_NOT_IN_WORLD = Message.translation("server.commands.errors.targetNotInWorld");
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public HitboxCollisionRemoveCommand() {
-/* 30 */     super("remove", "server.commands.hitboxcollision.remove.desc");
-/* 31 */     addSubCommand((AbstractCommand)new HitboxCollisionRemoveEntityCommand());
-/* 32 */     addSubCommand((AbstractCommand)new HitboxCollisionRemoveSelfCommand());
-/*    */   }
-/*    */   
-/*    */   public static class HitboxCollisionRemoveEntityCommand
-/*    */     extends AbstractWorldCommand
-/*    */   {
-/*    */     @Nonnull
-/* 39 */     private final EntityWrappedArg entityArg = (EntityWrappedArg)
-/* 40 */       withRequiredArg("entity", "server.commands.hitboxcollision.remove.entity.desc", ArgTypes.ENTITY_ID);
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */     
-/*    */     public HitboxCollisionRemoveEntityCommand() {
-/* 46 */       super("entity", "server.commands.hitboxcollision.remove.entity.desc");
-/*    */     }
-/*    */ 
-/*    */     
-/*    */     protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
-/* 51 */       Ref<EntityStore> entityRef = this.entityArg.get((ComponentAccessor)store, context);
-/* 52 */       if (entityRef == null || !entityRef.isValid()) {
-/* 53 */         context.sendMessage(HitboxCollisionRemoveCommand.MESSAGE_COMMANDS_ERRORS_TARGET_NOT_IN_WORLD);
-/*    */         
-/*    */         return;
-/*    */       } 
-/* 57 */       store.tryRemoveComponent(entityRef, HitboxCollision.getComponentType());
-/* 58 */       context.sendMessage(Message.translation("server.commands.hitboxcollision.remove.success"));
-/*    */     }
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static class HitboxCollisionRemoveSelfCommand
-/*    */     extends AbstractPlayerCommand
-/*    */   {
-/*    */     public HitboxCollisionRemoveSelfCommand() {
-/* 71 */       super("self", "server.commands.hitboxcollision.remove.self.desc");
-/*    */     }
-/*    */ 
-/*    */     
-/*    */     protected void execute(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world) {
-/* 76 */       store.tryRemoveComponent(ref, HitboxCollision.getComponentType());
-/* 77 */       context.sendMessage(Message.translation("server.commands.hitboxcollision.remove.success"));
-/*    */     }
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.command.commands.debug.component.hitboxcollision;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
+import com.hypixel.hytale.server.core.command.system.arguments.types.EntityWrappedArg;
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractWorldCommand;
+import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\command\commands\debug\component\hitboxcollision\HitboxCollisionRemoveCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class HitboxCollisionRemoveCommand extends AbstractCommandCollection {
+   private static final Message MESSAGE_COMMANDS_ERRORS_TARGET_NOT_IN_WORLD = Message.translation("server.commands.errors.targetNotInWorld");
+
+   public HitboxCollisionRemoveCommand() {
+      super("remove", "server.commands.hitboxcollision.remove.desc");
+      this.addSubCommand(new HitboxCollisionRemoveCommand.HitboxCollisionRemoveEntityCommand());
+      this.addSubCommand(new HitboxCollisionRemoveCommand.HitboxCollisionRemoveSelfCommand());
+   }
+
+   public static class HitboxCollisionRemoveEntityCommand extends AbstractWorldCommand {
+      @Nonnull
+      private final EntityWrappedArg entityArg = this.withRequiredArg("entity", "server.commands.hitboxcollision.remove.entityArg.desc", ArgTypes.ENTITY_ID);
+
+      public HitboxCollisionRemoveEntityCommand() {
+         super("entity", "server.commands.hitboxcollision.remove.entity.desc");
+      }
+
+      @Override
+      protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+         Ref<EntityStore> entityRef = this.entityArg.get(store, context);
+         if (entityRef != null && entityRef.isValid()) {
+            store.tryRemoveComponent(entityRef, HitboxCollision.getComponentType());
+            context.sendMessage(Message.translation("server.commands.hitboxcollision.remove.success"));
+         } else {
+            context.sendMessage(HitboxCollisionRemoveCommand.MESSAGE_COMMANDS_ERRORS_TARGET_NOT_IN_WORLD);
+         }
+      }
+   }
+
+   public static class HitboxCollisionRemoveSelfCommand extends AbstractPlayerCommand {
+      public HitboxCollisionRemoveSelfCommand() {
+         super("self", "server.commands.hitboxcollision.remove.self.desc");
+      }
+
+      @Override
+      protected void execute(
+         @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
+      ) {
+         store.tryRemoveComponent(ref, HitboxCollision.getComponentType());
+         context.sendMessage(Message.translation("server.commands.hitboxcollision.remove.success"));
+      }
+   }
+}

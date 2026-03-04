@@ -1,50 +1,40 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.CacheDensity;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.MultiCacheDensity;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.validation.Validators;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class CacheDensityAsset
-/*    */   extends DensityAsset
-/*    */ {
-/*    */   public static final BuilderCodec<CacheDensityAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 21 */     CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(CacheDensityAsset.class, CacheDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Capacity", (Codec)Codec.INTEGER, true), (asset, value) -> asset.capacity = value.intValue(), asset -> Integer.valueOf(asset.capacity)).addValidator(Validators.greaterThanOrEqual(Integer.valueOf(0))).add()).build();
-/*    */   }
-/* 23 */   public static int DEFAULT_CAPACITY = 3;
-/*    */   
-/* 25 */   private int capacity = DEFAULT_CAPACITY;
-/*    */   
-/*    */   @Nonnull
-/*    */   public Density build(@Nonnull DensityAsset.Argument argument) {
-/* 29 */     if (this.capacity <= 0) {
-/* 30 */       return build(argument);
-/*    */     }
-/*    */     
-/* 33 */     if (this.capacity == 1) {
-/* 34 */       return (Density)new CacheDensity(buildFirstInput(argument), argument.workerIndexer.getWorkerCount());
-/*    */     }
-/*    */     
-/* 37 */     return (Density)new MultiCacheDensity(buildFirstInput(argument), argument.workerIndexer.getWorkerCount(), this.capacity);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 42 */     cleanUpInputs();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.CacheDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.MultiCacheDensity;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\density\CacheDensityAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class CacheDensityAsset extends DensityAsset {
+   @Nonnull
+   public static final BuilderCodec<CacheDensityAsset> CODEC = BuilderCodec.builder(
+         CacheDensityAsset.class, CacheDensityAsset::new, DensityAsset.ABSTRACT_CODEC
+      )
+      .append(new KeyedCodec<>("Capacity", Codec.INTEGER, true), (asset, value) -> asset.capacity = value, asset -> asset.capacity)
+      .addValidator(Validators.greaterThanOrEqual(0))
+      .add()
+      .build();
+   public static int DEFAULT_CAPACITY = 3;
+   private int capacity = DEFAULT_CAPACITY;
+
+   @Nonnull
+   @Override
+   public Density build(@Nonnull DensityAsset.Argument argument) {
+      if (this.capacity <= 0) {
+         return this.build(argument);
+      } else {
+         return (Density)(this.capacity == 1
+            ? new CacheDensity(this.buildFirstInput(argument))
+            : new MultiCacheDensity(this.buildFirstInput(argument), this.capacity));
+      }
+   }
+
+   @Override
+   public void cleanUp() {
+      this.cleanUpInputs();
+   }
+}

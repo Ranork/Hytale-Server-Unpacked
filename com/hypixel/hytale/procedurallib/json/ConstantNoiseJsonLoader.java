@@ -1,44 +1,27 @@
-/*    */ package com.hypixel.hytale.procedurallib.json;
-/*    */ 
-/*    */ import com.google.gson.JsonElement;
-/*    */ import com.hypixel.hytale.procedurallib.NoiseFunction;
-/*    */ import com.hypixel.hytale.procedurallib.logic.ConstantNoise;
-/*    */ import java.nio.file.Path;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class ConstantNoiseJsonLoader<K extends SeedResource>
-/*    */   extends JsonLoader<K, NoiseFunction>
-/*    */ {
-/*    */   public ConstantNoiseJsonLoader(@Nonnull SeedString<K> seed, Path dataFolder, JsonElement json) {
-/* 19 */     super(seed.append(".ConstantNoise"), dataFolder, json);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public NoiseFunction load() {
-/* 25 */     return (NoiseFunction)new ConstantNoise(
-/* 26 */         loadValue());
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected double loadValue() {
-/* 31 */     return has("Value") ? get("Value").getAsDouble() : 0.5D;
-/*    */   }
-/*    */   
-/*    */   public static interface Constants {
-/*    */     public static final String KEY_VALUE = "Value";
-/*    */     public static final double DEFAULT_VALUE = 0.5D;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.json;
 
+import com.google.gson.JsonElement;
+import com.hypixel.hytale.procedurallib.NoiseFunction;
+import com.hypixel.hytale.procedurallib.logic.ConstantNoise;
+import java.nio.file.Path;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\json\ConstantNoiseJsonLoader.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ConstantNoiseJsonLoader<K extends SeedResource> extends JsonLoader<K, NoiseFunction> {
+   public ConstantNoiseJsonLoader(@Nonnull SeedString<K> seed, Path dataFolder, JsonElement json) {
+      super(seed.append(".ConstantNoise"), dataFolder, json);
+   }
+
+   @Nonnull
+   public NoiseFunction load() {
+      return new ConstantNoise(this.loadValue());
+   }
+
+   protected double loadValue() {
+      return this.has("Value") ? this.get("Value").getAsDouble() : 0.5;
+   }
+
+   public interface Constants {
+      String KEY_VALUE = "Value";
+      double DEFAULT_VALUE = 0.5;
+   }
+}

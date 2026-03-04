@@ -1,104 +1,102 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.objectives.task;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.DialogPage;
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.Objective;
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.ObjectiveDataStore;
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin;
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.config.task.CountObjectiveTaskAsset;
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.config.task.ObjectiveTaskAsset;
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.config.task.UseEntityObjectiveTaskAsset;
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.transaction.TransactionRecord;
-/*    */ import com.hypixel.hytale.builtin.adventure.objectives.transaction.UseEntityTransactionRecord;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.server.core.Message;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.player.pages.CustomUIPage;
-/*    */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import java.util.Collections;
-/*    */ import java.util.HashSet;
-/*    */ import java.util.Set;
-/*    */ import java.util.UUID;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class UseEntityObjectiveTask
-/*    */   extends CountObjectiveTask
-/*    */ {
-/*    */   public static final BuilderCodec<UseEntityObjectiveTask> CODEC;
-/*    */   
-/*    */   static {
-/* 37 */     CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(UseEntityObjectiveTask.class, UseEntityObjectiveTask::new, CountObjectiveTask.CODEC).append(new KeyedCodec("NpcUUIDs", (Codec)new ArrayCodec((Codec)Codec.UUID_BINARY, x$0 -> new UUID[x$0])), (useEntityObjectiveTask, uuids) -> { useEntityObjectiveTask.npcUUIDs.clear(); Collections.addAll(useEntityObjectiveTask.npcUUIDs, uuids); }useEntityObjectiveTask -> (UUID[])useEntityObjectiveTask.npcUUIDs.toArray(())).add()).build();
-/*    */   } @Nonnull
-/* 39 */   protected Set<UUID> npcUUIDs = new HashSet<>();
-/*    */ 
-/*    */   
-/*    */   public UseEntityObjectiveTask(@Nonnull UseEntityObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {
-/* 43 */     super((CountObjectiveTaskAsset)asset, taskSetIndex, taskIndex);
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public UseEntityObjectiveTaskAsset getAsset() {
-/* 52 */     return (UseEntityObjectiveTaskAsset)super.getAsset();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   protected TransactionRecord[] setup0(@Nonnull Objective objective, @Nonnull World world, @Nonnull Store<EntityStore> store) {
-/* 58 */     UUID objectiveUUID = objective.getObjectiveUUID();
-/* 59 */     ObjectiveDataStore objectiveDataStore = ObjectivePlugin.get().getObjectiveDataStore();
-/* 60 */     String taskId = getAsset().getTaskId();
-/*    */     
-/* 62 */     for (UUID playerUUID : objective.getActivePlayerUUIDs()) objectiveDataStore.addEntityTaskForPlayer(playerUUID, taskId, objectiveUUID);
-/*    */     
-/* 64 */     return TransactionRecord.appendTransaction(null, (TransactionRecord)new UseEntityTransactionRecord(objectiveUUID, taskId));
-/*    */   }
-/*    */   
-/*    */   public boolean increaseTaskCompletion(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, int qty, @Nonnull Objective objective, @Nonnull PlayerRef playerRef, UUID npcUUID) {
-/* 68 */     if (!this.npcUUIDs.add(npcUUID)) {
-/* 69 */       playerRef.sendMessage(Message.translation("server.modules.objective.task.alreadyInteractedWithNPC"));
-/* 70 */       return false;
-/*    */     } 
-/*    */     
-/* 73 */     increaseTaskCompletion(store, ref, qty, objective);
-/*    */     
-/* 75 */     if (isComplete()) {
-/* 76 */       UseEntityObjectiveTaskAsset.DialogOptions dialogOptions = getAsset().getDialogOptions();
-/* 77 */       if (dialogOptions != null) {
-/* 78 */         Player playerComponent = (Player)store.getComponent(ref, Player.getComponentType());
-/* 79 */         assert playerComponent != null;
-/*    */         
-/* 81 */         playerRef.sendMessage(Message.join(new Message[] { Message.translation(dialogOptions.getEntityNameKey()), Message.raw(": "), Message.translation(dialogOptions.getDialogKey()) }));
-/* 82 */         playerComponent.getPageManager().openCustomPage(ref, store, (CustomUIPage)new DialogPage(playerRef, dialogOptions));
-/*    */       } 
-/*    */     } 
-/*    */     
-/* 86 */     return true;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 92 */     return "UseEntityObjectiveTask{npcUUIDs=" + String.valueOf(this.npcUUIDs) + "} " + super
-/*    */       
-/* 94 */       .toString();
-/*    */   }
-/*    */   
-/*    */   protected UseEntityObjectiveTask() {}
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.objectives.task;
 
+import com.hypixel.hytale.builtin.adventure.objectives.DialogPage;
+import com.hypixel.hytale.builtin.adventure.objectives.Objective;
+import com.hypixel.hytale.builtin.adventure.objectives.ObjectiveDataStore;
+import com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin;
+import com.hypixel.hytale.builtin.adventure.objectives.config.task.UseEntityObjectiveTaskAsset;
+import com.hypixel.hytale.builtin.adventure.objectives.transaction.TransactionRecord;
+import com.hypixel.hytale.builtin.adventure.objectives.transaction.UseEntityTransactionRecord;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\objectives\task\UseEntityObjectiveTask.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class UseEntityObjectiveTask extends CountObjectiveTask {
+   @Nonnull
+   public static final BuilderCodec<UseEntityObjectiveTask> CODEC = BuilderCodec.builder(
+         UseEntityObjectiveTask.class, UseEntityObjectiveTask::new, CountObjectiveTask.CODEC
+      )
+      .append(new KeyedCodec<>("NpcUUIDs", new ArrayCodec<>(Codec.UUID_BINARY, UUID[]::new)), (useEntityObjectiveTask, uuids) -> {
+         useEntityObjectiveTask.npcUUIDs.clear();
+         Collections.addAll(useEntityObjectiveTask.npcUUIDs, uuids);
+      }, useEntityObjectiveTask -> useEntityObjectiveTask.npcUUIDs.toArray(UUID[]::new))
+      .add()
+      .build();
+   @Nonnull
+   private static final Message MESSAGE_SERVER_MODULES_OBJECTIVE_TASK_ALREADY_INTERACTED_WITH_NPC = Message.translation(
+      "server.modules.objective.task.alreadyInteractedWithNPC"
+   );
+   @Nonnull
+   protected Set<UUID> npcUUIDs = new HashSet<>();
+
+   public UseEntityObjectiveTask(@Nonnull UseEntityObjectiveTaskAsset asset, int taskSetIndex, int taskIndex) {
+      super(asset, taskSetIndex, taskIndex);
+   }
+
+   protected UseEntityObjectiveTask() {
+   }
+
+   @Nonnull
+   public UseEntityObjectiveTaskAsset getAsset() {
+      return (UseEntityObjectiveTaskAsset)super.getAsset();
+   }
+
+   @Nonnull
+   @Override
+   protected TransactionRecord[] setup0(@Nonnull Objective objective, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+      UUID objectiveUUID = objective.getObjectiveUUID();
+      ObjectiveDataStore objectiveDataStore = ObjectivePlugin.get().getObjectiveDataStore();
+      String taskId = this.getAsset().getTaskId();
+
+      for (UUID playerUUID : objective.getActivePlayerUUIDs()) {
+         objectiveDataStore.addEntityTaskForPlayer(playerUUID, taskId, objectiveUUID);
+      }
+
+      return TransactionRecord.appendTransaction(null, new UseEntityTransactionRecord(objectiveUUID, taskId));
+   }
+
+   public boolean increaseTaskCompletion(
+      @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, int qty, @Nonnull Objective objective, @Nonnull PlayerRef playerRef, UUID npcUUID
+   ) {
+      if (!this.npcUUIDs.add(npcUUID)) {
+         playerRef.sendMessage(MESSAGE_SERVER_MODULES_OBJECTIVE_TASK_ALREADY_INTERACTED_WITH_NPC);
+         return false;
+      } else {
+         super.increaseTaskCompletion(store, ref, qty, objective);
+         if (this.isComplete()) {
+            UseEntityObjectiveTaskAsset.DialogOptions dialogOptions = this.getAsset().getDialogOptions();
+            if (dialogOptions != null) {
+               Player playerComponent = store.getComponent(ref, Player.getComponentType());
+
+               assert playerComponent != null;
+
+               playerRef.sendMessage(
+                  Message.join(Message.translation(dialogOptions.getEntityNameKey()), Message.raw(": "), Message.translation(dialogOptions.getDialogKey()))
+               );
+               playerComponent.getPageManager().openCustomPage(ref, store, new DialogPage(playerRef, dialogOptions));
+            }
+         }
+
+         return true;
+      }
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "UseEntityObjectiveTask{npcUUIDs=" + this.npcUUIDs + "} " + super.toString();
+   }
+}

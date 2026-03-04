@@ -1,36 +1,23 @@
-/*    */ package com.hypixel.hytale.server.core.util;
-/*    */ 
-/*    */ import com.hypixel.hytale.protocol.Direction;
-/*    */ import com.hypixel.hytale.protocol.Position;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class ValidateUtil
-/*    */ {
-/*    */   public static boolean isSafeDouble(double x) {
-/* 16 */     return (!Double.isNaN(x) && Double.isFinite(x));
-/*    */   }
-/*    */   
-/*    */   public static boolean isSafeFloat(float x) {
-/* 20 */     return (!Float.isNaN(x) && Float.isFinite(x));
-/*    */   }
-/*    */   
-/*    */   public static boolean isSafePosition(@Nonnull Position position) {
-/* 24 */     return (isSafeDouble(position.x) && isSafeDouble(position.y) && isSafeDouble(position.z));
-/*    */   }
-/*    */   
-/*    */   public static boolean isSafeDirection(@Nonnull Direction direction) {
-/* 28 */     return (isSafeFloat(direction.yaw) && isSafeFloat(direction.pitch) && isSafeFloat(direction.roll));
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.util;
 
+import com.hypixel.hytale.protocol.Direction;
+import com.hypixel.hytale.protocol.Position;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\util\ValidateUtil.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ValidateUtil {
+   public static boolean isSafeDouble(double x) {
+      return !Double.isNaN(x) && Double.isFinite(x);
+   }
+
+   public static boolean isSafeFloat(float x) {
+      return !Float.isNaN(x) && Float.isFinite(x);
+   }
+
+   public static boolean isSafePosition(@Nonnull Position position) {
+      return isSafeDouble(position.x) && isSafeDouble(position.y) && isSafeDouble(position.z);
+   }
+
+   public static boolean isSafeDirection(@Nonnull Direction direction) {
+      return isSafeFloat(direction.yaw) && isSafeFloat(direction.pitch) && isSafeFloat(direction.roll);
+   }
+}

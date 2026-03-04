@@ -1,47 +1,34 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.UpwardSpaceMaterialProvider;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class UpwardSpaceMaterialProviderAsset
-/*    */   extends MaterialProviderAsset
-/*    */ {
-/*    */   public static final BuilderCodec<UpwardSpaceMaterialProviderAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 25 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(UpwardSpaceMaterialProviderAsset.class, UpwardSpaceMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("Space", (Codec)Codec.INTEGER, true), (t, k) -> t.space = k.intValue(), k -> Integer.valueOf(k.space)).add()).append(new KeyedCodec("Material", (Codec)MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset).add()).build();
-/*    */   }
-/* 27 */   private int space = 0;
-/* 28 */   private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public MaterialProvider<Material> build(@Nonnull MaterialProviderAsset.Argument argument) {
-/* 34 */     return (MaterialProvider<Material>)new UpwardSpaceMaterialProvider(this.materialProviderAsset.build(argument), this.space);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 39 */     this.materialProviderAsset.cleanUp();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders;
 
+import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.UpwardSpaceMaterialProvider;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\materialproviders\UpwardSpaceMaterialProviderAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class UpwardSpaceMaterialProviderAsset extends MaterialProviderAsset {
+   @Nonnull
+   public static final BuilderCodec<UpwardSpaceMaterialProviderAsset> CODEC = BuilderCodec.builder(
+         UpwardSpaceMaterialProviderAsset.class, UpwardSpaceMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
+      )
+      .append(new KeyedCodec<>("Space", Codec.INTEGER, true), (t, k) -> t.space = k, k -> k.space)
+      .add()
+      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .add()
+      .build();
+   private int space;
+   private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
+
+   @Nonnull
+   @Override
+   public MaterialProvider<Material> build(@Nonnull MaterialProviderAsset.Argument argument) {
+      return new UpwardSpaceMaterialProvider<>(this.materialProviderAsset.build(argument), this.space);
+   }
+
+   @Override
+   public void cleanUp() {
+      this.materialProviderAsset.cleanUp();
+   }
+}

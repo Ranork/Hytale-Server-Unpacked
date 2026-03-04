@@ -9,20 +9,14 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import javax.annotation.Nullable;
 
 public interface TickableBlockState {
-  void tick(float paramFloat, int paramInt, ArchetypeChunk<ChunkStore> paramArchetypeChunk, Store<ChunkStore> paramStore, CommandBuffer<ChunkStore> paramCommandBuffer);
-  
-  Vector3i getPosition();
-  
-  Vector3i getBlockPosition();
-  
-  @Nullable
-  WorldChunk getChunk();
-  
-  void invalidate();
+   void tick(float var1, int var2, ArchetypeChunk<ChunkStore> var3, Store<ChunkStore> var4, CommandBuffer<ChunkStore> var5);
+
+   Vector3i getPosition();
+
+   Vector3i getBlockPosition();
+
+   @Nullable
+   WorldChunk getChunk();
+
+   void invalidate();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\chunk\state\TickableBlockState.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

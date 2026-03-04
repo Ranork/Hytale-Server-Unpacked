@@ -1,67 +1,56 @@
-/*    */ package com.hypixel.hytale.builtin.adventure.objectives.config.task;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*    */ import com.hypixel.hytale.codec.validation.Validators;
-/*    */ import java.text.MessageFormat;
-/*    */ import java.util.Arrays;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class TaskSet
-/*    */ {
-/*    */   public static final BuilderCodec<TaskSet> CODEC;
-/*    */   public static final String TASKSET_DESCRIPTION_KEY = "server.objectives.{0}.taskSet.{1}";
-/*    */   protected String descriptionId;
-/*    */   protected ObjectiveTaskAsset[] tasks;
-/*    */   
-/*    */   static {
-/* 25 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(TaskSet.class, TaskSet::new).append(new KeyedCodec("DescriptionId", (Codec)Codec.STRING), (taskSet, s) -> taskSet.descriptionId = s, taskSet -> taskSet.descriptionId).add()).append(new KeyedCodec("Tasks", (Codec)new ArrayCodec((Codec)ObjectiveTaskAsset.CODEC, x$0 -> new ObjectiveTaskAsset[x$0])), (taskSet, objectiveTaskAssets) -> taskSet.tasks = objectiveTaskAssets, taskSet -> taskSet.tasks).addValidator(Validators.nonEmptyArray()).add()).build();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public TaskSet(String descriptionId, ObjectiveTaskAsset[] tasks) {
-/* 33 */     this.descriptionId = descriptionId;
-/* 34 */     this.tasks = tasks;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected TaskSet() {}
-/*    */   
-/*    */   public String getDescriptionId() {
-/* 41 */     return this.descriptionId;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public String getDescriptionKey(String objectiveId, int taskSetIndex) {
-/* 46 */     if (this.descriptionId != null) return this.descriptionId; 
-/* 47 */     return MessageFormat.format("server.objectives.{0}.taskSet.{1}", new Object[] { objectiveId, Integer.valueOf(taskSetIndex) });
-/*    */   }
-/*    */   
-/*    */   public ObjectiveTaskAsset[] getTasks() {
-/* 51 */     return this.tasks;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 57 */     return "TaskSet{descriptionId='" + this.descriptionId + "', tasks=" + 
-/*    */       
-/* 59 */       Arrays.toString((Object[])this.tasks) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.adventure.objectives.config.task;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import java.text.MessageFormat;
+import java.util.Arrays;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\objectives\config\task\TaskSet.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class TaskSet {
+   @Nonnull
+   public static final BuilderCodec<TaskSet> CODEC = BuilderCodec.builder(TaskSet.class, TaskSet::new)
+      .append(new KeyedCodec<>("DescriptionId", Codec.STRING), (taskSet, s) -> taskSet.descriptionId = s, taskSet -> taskSet.descriptionId)
+      .add()
+      .<ObjectiveTaskAsset[]>append(
+         new KeyedCodec<>("Tasks", new ArrayCodec<>(ObjectiveTaskAsset.CODEC, ObjectiveTaskAsset[]::new)),
+         (taskSet, objectiveTaskAssets) -> taskSet.tasks = objectiveTaskAssets,
+         taskSet -> taskSet.tasks
+      )
+      .addValidator(Validators.nonEmptyArray())
+      .add()
+      .build();
+   @Nonnull
+   public static final String TASKSET_DESCRIPTION_KEY = "server.objectives.{0}.taskSet.{1}";
+   protected String descriptionId;
+   protected ObjectiveTaskAsset[] tasks;
+
+   public TaskSet(String descriptionId, ObjectiveTaskAsset[] tasks) {
+      this.descriptionId = descriptionId;
+      this.tasks = tasks;
+   }
+
+   protected TaskSet() {
+   }
+
+   public String getDescriptionId() {
+      return this.descriptionId;
+   }
+
+   @Nonnull
+   public String getDescriptionKey(String objectiveId, int taskSetIndex) {
+      return this.descriptionId != null ? this.descriptionId : MessageFormat.format("server.objectives.{0}.taskSet.{1}", objectiveId, taskSetIndex);
+   }
+
+   public ObjectiveTaskAsset[] getTasks() {
+      return this.tasks;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "TaskSet{descriptionId='" + this.descriptionId + "', tasks=" + Arrays.toString((Object[])this.tasks) + "}";
+   }
+}

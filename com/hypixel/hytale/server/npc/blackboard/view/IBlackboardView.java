@@ -8,19 +8,13 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import javax.annotation.Nonnull;
 
 public interface IBlackboardView<View extends IBlackboardView<View>> {
-  boolean isOutdated(@Nonnull Ref<EntityStore> paramRef, @Nonnull Store<EntityStore> paramStore);
-  
-  View getUpdatedView(@Nonnull Ref<EntityStore> paramRef, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
-  
-  void initialiseEntity(@Nonnull Ref<EntityStore> paramRef, @Nonnull NPCEntity paramNPCEntity);
-  
-  void cleanup();
-  
-  void onWorldRemoved();
+   boolean isOutdated(@Nonnull Ref<EntityStore> var1, @Nonnull Store<EntityStore> var2);
+
+   View getUpdatedView(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+
+   void initialiseEntity(@Nonnull Ref<EntityStore> var1, @Nonnull NPCEntity var2);
+
+   void cleanup();
+
+   void onWorldRemoved();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\blackboard\view\IBlackboardView.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

@@ -1,40 +1,34 @@
-/*    */ package com.hypixel.hytale.server.core.cosmetics;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ import org.bson.BsonArray;
-/*    */ import org.bson.BsonDocument;
-/*    */ 
-/*    */ public class PlayerSkinTintColor {
-/*    */   protected String id;
-/*    */   protected String[] baseColor;
-/*    */   
-/*    */   protected PlayerSkinTintColor(@Nonnull BsonDocument doc) {
-/* 12 */     this.id = doc.getString("Id").getValue();
-/*    */     
-/* 14 */     BsonArray baseColor = doc.getArray("BaseColor");
-/* 15 */     this.baseColor = new String[baseColor.size()];
-/* 16 */     for (int i = 0; i < baseColor.size(); i++) {
-/* 17 */       this.baseColor[i] = baseColor.get(i).asString().getValue();
-/*    */     }
-/*    */   }
-/*    */   
-/*    */   public String getId() {
-/* 22 */     return this.id;
-/*    */   }
-/*    */   
-/*    */   public String[] getBaseColor() {
-/* 26 */     return this.baseColor;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 32 */     return "PlayerSkinTintColor{id='" + this.id + "', baseColor='" + String.valueOf(this.baseColor) + "'}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.cosmetics;
 
+import javax.annotation.Nonnull;
+import org.bson.BsonArray;
+import org.bson.BsonDocument;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\cosmetics\PlayerSkinTintColor.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PlayerSkinTintColor {
+   protected String id;
+   protected String[] baseColor;
+
+   protected PlayerSkinTintColor(@Nonnull BsonDocument doc) {
+      this.id = doc.getString("Id").getValue();
+      BsonArray baseColor = doc.getArray("BaseColor");
+      this.baseColor = new String[baseColor.size()];
+
+      for (int i = 0; i < baseColor.size(); i++) {
+         this.baseColor[i] = baseColor.get(i).asString().getValue();
+      }
+   }
+
+   public String getId() {
+      return this.id;
+   }
+
+   public String[] getBaseColor() {
+      return this.baseColor;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "PlayerSkinTintColor{id='" + this.id + "', baseColor='" + this.baseColor + "'}";
+   }
+}

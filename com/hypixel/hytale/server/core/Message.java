@@ -1,4 +1,3 @@
-// Source code is decompiled from a .class file using FernFlower decompiler (from Intellij IDEA).
 package com.hypixel.hytale.server.core;
 
 import com.hypixel.hytale.codec.Codec;
@@ -26,7 +25,6 @@ import com.hypixel.hytale.protocol.LongParamValue;
 import com.hypixel.hytale.protocol.MaybeBool;
 import com.hypixel.hytale.protocol.ParamValue;
 import com.hypixel.hytale.protocol.StringParamValue;
-import com.hypixel.hytale.server.core.Message.1;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.util.MessageUtil;
@@ -37,10 +35,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonBoolean;
@@ -53,10 +49,10 @@ import org.bson.BsonValue;
 
 public class Message {
    private static final BuilderCodec.Builder<FormattedMessage> MESSAGE_CODEC_BUILDER = BuilderCodec.builder(FormattedMessage.class, FormattedMessage::new);
-   private static final BuilderCodec<FormattedMessage> MESSAGE_CODEC;
-   private static final Codec<ParamValue> PARAM_CODEC;
-   private static final Codec<MaybeBool> MAYBE_BOOL_CODEC;
-   public static final FunctionCodec<FormattedMessage, Message> CODEC;
+   private static final BuilderCodec<FormattedMessage> MESSAGE_CODEC = MESSAGE_CODEC_BUILDER.build();
+   private static final Codec<ParamValue> PARAM_CODEC = new Message.ParamValueCodec();
+   private static final Codec<MaybeBool> MAYBE_BOOL_CODEC = new Message.MaybeBoolCodec();
+   public static final FunctionCodec<FormattedMessage, Message> CODEC = new FunctionCodec<>(MESSAGE_CODEC, Message::new, Message::getFormattedMessage);
    private final FormattedMessage message;
 
    protected Message(@Nonnull String message, boolean i18n) {
@@ -66,7 +62,6 @@ public class Message {
       } else {
          this.message.rawText = message;
       }
-
    }
 
    protected Message() {
@@ -80,7 +75,7 @@ public class Message {
    @Nonnull
    public Message param(@Nonnull String key, @Nonnull String value) {
       if (this.message.params == null) {
-         this.message.params = new HashMap();
+         this.message.params = new HashMap<>();
       }
 
       StringParamValue val = new StringParamValue();
@@ -92,7 +87,7 @@ public class Message {
    @Nonnull
    public Message param(@Nonnull String key, boolean value) {
       if (this.message.params == null) {
-         this.message.params = new HashMap();
+         this.message.params = new HashMap<>();
       }
 
       BoolParamValue val = new BoolParamValue();
@@ -104,7 +99,7 @@ public class Message {
    @Nonnull
    public Message param(@Nonnull String key, double value) {
       if (this.message.params == null) {
-         this.message.params = new HashMap();
+         this.message.params = new HashMap<>();
       }
 
       DoubleParamValue val = new DoubleParamValue();
@@ -116,7 +111,7 @@ public class Message {
    @Nonnull
    public Message param(@Nonnull String key, int value) {
       if (this.message.params == null) {
-         this.message.params = new HashMap();
+         this.message.params = new HashMap<>();
       }
 
       IntParamValue val = new IntParamValue();
@@ -128,7 +123,7 @@ public class Message {
    @Nonnull
    public Message param(@Nonnull String key, long value) {
       if (this.message.params == null) {
-         this.message.params = new HashMap();
+         this.message.params = new HashMap<>();
       }
 
       LongParamValue val = new LongParamValue();
@@ -140,11 +135,11 @@ public class Message {
    @Nonnull
    public Message param(@Nonnull String key, float value) {
       if (this.message.params == null) {
-         this.message.params = new HashMap();
+         this.message.params = new HashMap<>();
       }
 
       DoubleParamValue val = new DoubleParamValue();
-      val.value = (double)value;
+      val.value = value;
       this.message.params.put(key, val);
       return this;
    }
@@ -152,7 +147,7 @@ public class Message {
    @Nonnull
    public Message param(@Nonnull String key, @Nonnull Message formattedMessage) {
       if (this.message.messageParams == null) {
-         this.message.messageParams = new HashMap();
+         this.message.messageParams = new HashMap<>();
       }
 
       this.message.messageParams.put(key, formattedMessage.message);
@@ -197,7 +192,7 @@ public class Message {
 
    @Nonnull
    public Message insert(@Nonnull Message formattedMessage) {
-      this.message.children = (FormattedMessage[])ArrayUtil.append(this.message.children, formattedMessage.message);
+      this.message.children = ArrayUtil.append(this.message.children, formattedMessage.message);
       return this;
    }
 
@@ -211,16 +206,12 @@ public class Message {
       int offset = 0;
       if (this.message.children != null) {
          offset = this.message.children.length;
-         this.message.children = (FormattedMessage[])Arrays.copyOf(this.message.children, this.message.children.length + formattedMessages.length);
+         this.message.children = Arrays.copyOf(this.message.children, this.message.children.length + formattedMessages.length);
       } else {
          this.message.children = new FormattedMessage[formattedMessages.length];
       }
 
-      Message[] var3 = formattedMessages;
-      int var4 = formattedMessages.length;
-
-      for(int var5 = 0; var5 < var4; ++var5) {
-         Message formattedMessage = var3[var5];
+      for (Message formattedMessage : formattedMessages) {
          this.message.children[offset++] = formattedMessage.message;
       }
 
@@ -232,14 +223,13 @@ public class Message {
       int offset = 0;
       if (this.message.children != null) {
          offset = this.message.children.length;
-         this.message.children = (FormattedMessage[])Arrays.copyOf(this.message.children, this.message.children.length + formattedMessages.size());
+         this.message.children = Arrays.copyOf(this.message.children, this.message.children.length + formattedMessages.size());
       } else {
          this.message.children = new FormattedMessage[formattedMessages.size()];
       }
 
-      Message formattedMessage;
-      for(Iterator var3 = formattedMessages.iterator(); var3.hasNext(); this.message.children[offset++] = formattedMessage.message) {
-         formattedMessage = (Message)var3.next();
+      for (Message formattedMessage : formattedMessages) {
+         this.message.children[offset++] = formattedMessage.message;
       }
 
       return this;
@@ -266,11 +256,8 @@ public class Message {
          return Collections.emptyList();
       } else {
          List<Message> children = new ObjectArrayList();
-         FormattedMessage[] var2 = this.message.children;
-         int var3 = var2.length;
 
-         for(int var4 = 0; var4 < var3; ++var4) {
-            FormattedMessage value = var2[var4];
+         for (FormattedMessage value : this.message.children) {
             children.add(new Message(value));
          }
 
@@ -298,11 +285,8 @@ public class Message {
                }
 
                if (this.message.messageParams != null) {
-                  Iterator var5 = this.message.messageParams.entrySet().iterator();
-
-                  while(var5.hasNext()) {
-                     Map.Entry<String, FormattedMessage> p = (Map.Entry)var5.next();
-                     rawMessage.append(p.getValue()).append("=").append((new Message((FormattedMessage)p.getValue())).getAnsiMessage());
+                  for (Entry<String, FormattedMessage> p : this.message.messageParams.entrySet()) {
+                     rawMessage.append(p.getValue()).append("=").append(new Message(p.getValue()).getAnsiMessage());
                   }
                }
 
@@ -316,6 +300,7 @@ public class Message {
       return this.message;
    }
 
+   @Override
    public String toString() {
       return this.message.toString();
    }
@@ -338,7 +323,7 @@ public class Message {
    @Nonnull
    public static Message parse(@Nonnull String message) {
       try {
-         return (Message)CODEC.decodeJson(new RawJsonReader(message.toCharArray()), EmptyExtraInfo.EMPTY);
+         return CODEC.decodeJson(new RawJsonReader(message.toCharArray()), EmptyExtraInfo.EMPTY);
       } catch (IOException var2) {
          throw SneakyThrow.sneakyThrow(var2);
       }
@@ -346,155 +331,144 @@ public class Message {
 
    @Nonnull
    public static Message join(@Nonnull Message... messages) {
-      return (new Message()).insertAll(messages);
+      return new Message().insertAll(messages);
    }
 
    static {
-      MESSAGE_CODEC = MESSAGE_CODEC_BUILDER.build();
-      PARAM_CODEC = new ParamValueCodec();
-      MAYBE_BOOL_CODEC = new MaybeBoolCodec();
-      ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)MESSAGE_CODEC_BUILDER.appendInherited(new KeyedCodec("RawText", Codec.STRING), (o, v) -> {
-         o.rawText = v;
-      }, (o) -> {
-         return o.rawText;
-      }, (o, p) -> {
-         o.rawText = p.rawText;
-      }).add()).appendInherited(new KeyedCodec("MessageId", Codec.STRING), (o, v) -> {
-         o.messageId = v;
-      }, (o) -> {
-         return o.messageId;
-      }, (o, p) -> {
-         o.messageId = p.messageId;
-      }).add()).appendInherited(new KeyedCodec("Params", new MapCodec(PARAM_CODEC, HashMap::new)), (o, v) -> {
-         o.params = v;
-      }, (o) -> {
-         return o.params;
-      }, (o, p) -> {
-         o.params = p.params;
-      }).add()).appendInherited(new KeyedCodec("MessageParams", new MapCodec(MESSAGE_CODEC, HashMap::new)), (o, v) -> {
-         o.messageParams = v;
-      }, (o) -> {
-         return o.messageParams;
-      }, (o, p) -> {
-         o.messageParams = p.messageParams;
-      }).add()).appendInherited(new KeyedCodec("Children", new ArrayCodec(MESSAGE_CODEC, (x$0) -> {
-         return new FormattedMessage[x$0];
-      })), (o, v) -> {
-         o.children = v;
-      }, (o) -> {
-         return o.children;
-      }, (o, p) -> {
-         o.children = p.children;
-      }).add()).appendInherited(new KeyedCodec("Bold", MAYBE_BOOL_CODEC), (o, v) -> {
-         o.bold = v != null ? v : MaybeBool.Null;
-      }, (o) -> {
-         return o.bold;
-      }, (o, p) -> {
-         o.bold = p.bold;
-      }).add()).appendInherited(new KeyedCodec("Italic", MAYBE_BOOL_CODEC), (o, v) -> {
-         o.italic = v != null ? v : MaybeBool.Null;
-      }, (o) -> {
-         return o.italic;
-      }, (o, p) -> {
-         o.italic = p.italic;
-      }).add()).appendInherited(new KeyedCodec("Monospace", MAYBE_BOOL_CODEC), (o, v) -> {
-         o.monospace = v != null ? v : MaybeBool.Null;
-      }, (o) -> {
-         return o.monospace;
-      }, (o, p) -> {
-         o.monospace = p.monospace;
-      }).add()).appendInherited(new KeyedCodec("Underline", MAYBE_BOOL_CODEC), (o, v) -> {
-         o.underlined = v != null ? v : MaybeBool.Null;
-      }, (o) -> {
-         return o.underlined;
-      }, (o, p) -> {
-         o.underlined = p.underlined;
-      }).add()).appendInherited(new KeyedCodec("Color", Codec.STRING), (o, v) -> {
-         o.color = v;
-      }, (o) -> {
-         return o.color;
-      }, (o, p) -> {
-         o.color = p.color;
-      }).add()).appendInherited(new KeyedCodec("Link", Codec.STRING), (o, v) -> {
-         o.link = v;
-      }, (o) -> {
-         return o.link;
-      }, (o, p) -> {
-         o.link = p.link;
-      }).add();
-      CODEC = new FunctionCodec(MESSAGE_CODEC, Message::new, Message::getFormattedMessage);
+      MESSAGE_CODEC_BUILDER.appendInherited(new KeyedCodec<>("RawText", Codec.STRING), (o, v) -> o.rawText = v, o -> o.rawText, (o, p) -> o.rawText = p.rawText)
+         .add()
+         .appendInherited(new KeyedCodec<>("MessageId", Codec.STRING), (o, v) -> o.messageId = v, o -> o.messageId, (o, p) -> o.messageId = p.messageId)
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("Params", new MapCodec<>(PARAM_CODEC, HashMap::new)), (o, v) -> o.params = v, o -> o.params, (o, p) -> o.params = p.params
+         )
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("MessageParams", new MapCodec<>(MESSAGE_CODEC, HashMap::new)),
+            (o, v) -> o.messageParams = v,
+            o -> o.messageParams,
+            (o, p) -> o.messageParams = p.messageParams
+         )
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("Children", new ArrayCodec<>(MESSAGE_CODEC, FormattedMessage[]::new)),
+            (o, v) -> o.children = v,
+            o -> o.children,
+            (o, p) -> o.children = p.children
+         )
+         .add()
+         .appendInherited(new KeyedCodec<>("Bold", MAYBE_BOOL_CODEC), (o, v) -> o.bold = v != null ? v : MaybeBool.Null, o -> o.bold, (o, p) -> o.bold = p.bold)
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("Italic", MAYBE_BOOL_CODEC), (o, v) -> o.italic = v != null ? v : MaybeBool.Null, o -> o.italic, (o, p) -> o.italic = p.italic
+         )
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("Monospace", MAYBE_BOOL_CODEC),
+            (o, v) -> o.monospace = v != null ? v : MaybeBool.Null,
+            o -> o.monospace,
+            (o, p) -> o.monospace = p.monospace
+         )
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("Underline", MAYBE_BOOL_CODEC),
+            (o, v) -> o.underlined = v != null ? v : MaybeBool.Null,
+            o -> o.underlined,
+            (o, p) -> o.underlined = p.underlined
+         )
+         .add()
+         .appendInherited(new KeyedCodec<>("Color", Codec.STRING), (o, v) -> o.color = v, o -> o.color, (o, p) -> o.color = p.color)
+         .add()
+         .appendInherited(new KeyedCodec<>("Link", Codec.STRING), (o, v) -> o.link = v, o -> o.link, (o, p) -> o.link = p.link)
+         .add();
    }
 
-   private static class ParamValueCodec implements Codec<ParamValue> {
-      private ParamValueCodec() {
+   private static class MaybeBoolCodec implements Codec<MaybeBool> {
+      @Nullable
+      public MaybeBool decode(BsonValue bsonValue, ExtraInfo extraInfo) {
+         if (bsonValue.isNull()) {
+            return MaybeBool.Null;
+         } else {
+            return bsonValue.asBoolean().getValue() ? MaybeBool.True : MaybeBool.False;
+         }
+      }
+
+      public BsonValue encode(MaybeBool maybeBool, ExtraInfo extraInfo) {
+         return (BsonValue)(switch (maybeBool) {
+            case Null -> BsonNull.VALUE;
+            case False -> BsonBoolean.FALSE;
+            case True -> BsonBoolean.TRUE;
+         });
       }
 
       @Nullable
+      public MaybeBool decodeJson(@Nonnull RawJsonReader reader, ExtraInfo extraInfo) throws IOException {
+         if (reader.peekFor('n')) {
+            if (!reader.tryConsume("null")) {
+               throw new IllegalArgumentException("Invalid null value");
+            } else {
+               return MaybeBool.Null;
+            }
+         } else if (reader.peekFor('N')) {
+            if (!reader.tryConsume("NULL")) {
+               throw new IllegalArgumentException("Invalid null value");
+            } else {
+               return MaybeBool.Null;
+            }
+         } else {
+            return reader.readBooleanValue() ? MaybeBool.True : MaybeBool.False;
+         }
+      }
+
+      @Nonnull
+      @Override
+      public Schema toSchema(@Nonnull SchemaContext context) {
+         return Schema.anyOf(new BooleanSchema(), new NullSchema());
+      }
+   }
+
+   private static class ParamValueCodec implements Codec<ParamValue> {
+      @Nullable
       public ParamValue decode(BsonValue bsonValue, ExtraInfo extraInfo) {
-         Object var10000;
-         switch (1.$SwitchMap$org$bson$BsonType[bsonValue.getBsonType().ordinal()]) {
-            case 1:
+         return (ParamValue)(switch (bsonValue.getBsonType()) {
+            case DOUBLE -> {
                DoubleParamValue value = new DoubleParamValue();
                value.value = bsonValue.asDouble().getValue();
-               var10000 = value;
-               break;
-            case 2:
+               yield value;
+            }
+            case STRING -> {
                StringParamValue value = new StringParamValue();
                value.value = bsonValue.asString().getValue();
-               var10000 = value;
-               break;
-            case 3:
+               yield value;
+            }
+            case BOOLEAN -> {
                BoolParamValue value = new BoolParamValue();
                value.value = bsonValue.asBoolean().getValue();
-               var10000 = value;
-               break;
-            case 4:
+               yield value;
+            }
+            case INT32 -> {
                IntParamValue value = new IntParamValue();
                value.value = bsonValue.asInt32().getValue();
-               var10000 = value;
-               break;
-            case 5:
+               yield value;
+            }
+            case INT64 -> {
                LongParamValue value = new LongParamValue();
                value.value = bsonValue.asInt64().getValue();
-               var10000 = value;
-               break;
-            default:
-               throw new IllegalArgumentException("Unsupported bson type: " + String.valueOf(bsonValue.getBsonType()));
-         }
-
-         return (ParamValue)var10000;
+               yield value;
+            }
+            default -> throw new IllegalArgumentException("Unsupported bson type: " + bsonValue.getBsonType());
+         });
       }
 
       public BsonValue encode(ParamValue paramValue, ExtraInfo extraInfo) {
-         Objects.requireNonNull(paramValue);
-         byte var4 = 0;
-         Object var10000;
-         switch (paramValue.typeSwitch<invokedynamic>(paramValue, var4)) {
-            case 0:
-               StringParamValue s = (StringParamValue)paramValue;
-               var10000 = new BsonString(s.value);
-               break;
-            case 1:
-               BoolParamValue b = (BoolParamValue)paramValue;
-               var10000 = BsonBoolean.valueOf(b.value);
-               break;
-            case 2:
-               DoubleParamValue d = (DoubleParamValue)paramValue;
-               var10000 = new BsonDouble(d.value);
-               break;
-            case 3:
-               IntParamValue i = (IntParamValue)paramValue;
-               var10000 = new BsonInt32(i.value);
-               break;
-            case 4:
-               LongParamValue l = (LongParamValue)paramValue;
-               var10000 = new BsonInt64(l.value);
-               break;
-            default:
-               throw new IllegalArgumentException("Unknown ParamValue type: " + String.valueOf(paramValue.getClass()));
-         }
-
-         return (BsonValue)var10000;
+         return (BsonValue)(switch (paramValue) {
+            case StringParamValue s -> new BsonString(s.value);
+            case BoolParamValue b -> BsonBoolean.valueOf(b.value);
+            case DoubleParamValue d -> new BsonDouble(d.value);
+            case IntParamValue i -> new BsonInt32(i.value);
+            case LongParamValue l -> new BsonInt64(l.value);
+            default -> throw new IllegalArgumentException("Unknown ParamValue type: " + paramValue.getClass());
+         });
       }
 
       @Nullable
@@ -518,65 +492,9 @@ public class Message {
       }
 
       @Nonnull
+      @Override
       public Schema toSchema(@Nonnull SchemaContext context) {
-         return Schema.anyOf(new Schema[]{new BooleanSchema(), new NumberSchema(), new IntegerSchema(), new StringSchema()});
-      }
-   }
-
-   private static class MaybeBoolCodec implements Codec<MaybeBool> {
-      private MaybeBoolCodec() {
-      }
-
-      @Nullable
-      public MaybeBool decode(BsonValue bsonValue, ExtraInfo extraInfo) {
-         if (bsonValue.isNull()) {
-            return MaybeBool.Null;
-         } else {
-            return bsonValue.asBoolean().getValue() ? MaybeBool.True : MaybeBool.False;
-         }
-      }
-
-      public BsonValue encode(MaybeBool maybeBool, ExtraInfo extraInfo) {
-         Object var10000;
-         switch (1.$SwitchMap$com$hypixel$hytale$protocol$MaybeBool[maybeBool.ordinal()]) {
-            case 1:
-               var10000 = BsonNull.VALUE;
-               break;
-            case 2:
-               var10000 = BsonBoolean.FALSE;
-               break;
-            case 3:
-               var10000 = BsonBoolean.TRUE;
-               break;
-            default:
-               throw new MatchException((String)null, (Throwable)null);
-         }
-
-         return (BsonValue)var10000;
-      }
-
-      @Nullable
-      public MaybeBool decodeJson(@Nonnull RawJsonReader reader, ExtraInfo extraInfo) throws IOException {
-         if (reader.peekFor('n')) {
-            if (!reader.tryConsume("null")) {
-               throw new IllegalArgumentException("Invalid null value");
-            } else {
-               return MaybeBool.Null;
-            }
-         } else if (reader.peekFor('N')) {
-            if (!reader.tryConsume("NULL")) {
-               throw new IllegalArgumentException("Invalid null value");
-            } else {
-               return MaybeBool.Null;
-            }
-         } else {
-            return reader.readBooleanValue() ? MaybeBool.True : MaybeBool.False;
-         }
-      }
-
-      @Nonnull
-      public Schema toSchema(@Nonnull SchemaContext context) {
-         return Schema.anyOf(new Schema[]{new BooleanSchema(), new NullSchema()});
+         return Schema.anyOf(new BooleanSchema(), new NumberSchema(), new IntegerSchema(), new StringSchema());
       }
    }
 }

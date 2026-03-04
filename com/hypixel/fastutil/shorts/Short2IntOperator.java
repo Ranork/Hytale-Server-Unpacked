@@ -2,11 +2,5 @@ package com.hypixel.fastutil.shorts;
 
 @FunctionalInterface
 public interface Short2IntOperator {
-  int apply(short paramShort, int paramInt);
+   int apply(short var1, int var2);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\fastutil\shorts\Short2IntOperator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

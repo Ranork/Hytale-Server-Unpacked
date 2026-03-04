@@ -1,305 +1,291 @@
-/*     */ package com.hypixel.hytale.server.core.prefab.selection.mask;
-/*     */ 
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.function.FunctionCodec;
-/*     */ import com.hypixel.hytale.common.map.IWeightedMap;
-/*     */ import com.hypixel.hytale.common.map.WeightedMap;
-/*     */ import com.hypixel.hytale.common.util.ArrayUtil;
-/*     */ import com.hypixel.hytale.logger.HytaleLogger;
-/*     */ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-/*     */ import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
-/*     */ import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-/*     */ import com.hypixel.hytale.server.core.asset.type.buildertool.config.BlockTypeListAsset;
-/*     */ import com.hypixel.hytale.server.core.util.FillerBlockUtil;
-/*     */ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-/*     */ import java.util.List;
-/*     */ import java.util.Random;
-/*     */ import java.util.logging.Level;
-/*     */ import java.util.regex.Pattern;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ public class BlockPattern
-/*     */ {
-/*  25 */   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-/*     */ 
-/*     */   
-/*  28 */   public static final Codec<BlockPattern> CODEC = (Codec<BlockPattern>)new FunctionCodec((Codec)Codec.STRING, BlockPattern::parse, BlockPattern::toString);
-/*  29 */   public static final BlockPattern EMPTY = new BlockPattern(parseBlockPattern(new String[] { "Empty" }));
-/*  30 */   public static final BlockPattern[] EMPTY_ARRAY = new BlockPattern[0];
-/*     */   
-/*  32 */   private static final Pattern FILLER_TEMP_REMOVER_PATTERN = Pattern.compile("(Filler=-?\\d+),(-?\\d+),(-?\\d+)");
-/*     */   
-/*     */   private static final String BLOCK_SEPARATOR = ",";
-/*     */   
-/*     */   private static final String ALT_BLOCK_SEPARATOR = ";";
-/*     */   
-/*     */   private static final String CHANCE_SUFFIX = "%";
-/*     */   
-/*     */   private static final double DEFAULT_CHANCE = 100.0D;
-/*     */   
-/*     */   private final IWeightedMap<String> weightedMap;
-/*     */   private final transient String toString0;
-/*     */   private IWeightedMap<Integer> resolvedWeightedMap;
-/*     */   private IWeightedMap<BlockEntry> resolvedWeightedMapBtk;
-/*     */   
-/*     */   public BlockPattern(IWeightedMap<String> weightedMap) {
-/*  48 */     this.weightedMap = weightedMap;
-/*  49 */     this.toString0 = toString0();
-/*     */   }
-/*     */   
-/*     */   public Integer[] getResolvedKeys() {
-/*  53 */     resolve();
-/*  54 */     return (Integer[])this.resolvedWeightedMap.internalKeys();
-/*     */   }
-/*     */   
-/*     */   public void resolve() {
-/*  58 */     if (this.resolvedWeightedMap != null)
-/*     */       return; 
-/*  60 */     WeightedMap.Builder<Integer> mapBuilder = WeightedMap.builder((Object[])ArrayUtil.EMPTY_INTEGER_ARRAY);
-/*  61 */     WeightedMap.Builder<BlockEntry> mapBuilderKey = WeightedMap.builder((Object[])new BlockEntry[0]);
-/*  62 */     this.weightedMap.forEachEntry((blockName, weight) -> {
-/*     */           int blockId = parseBlock(blockName);
-/*     */           
-/*     */           BlockEntry key = tryParseBlockTypeKey(blockName);
-/*     */           
-/*     */           BlockType blockType = (BlockType)BlockType.getAssetMap().getAsset(blockId);
-/*     */           if (blockType != null && blockType.getBlockListAssetId() != null) {
-/*     */             BlockTypeListAsset blockTypeListAsset = (BlockTypeListAsset)BlockTypeListAsset.getAssetMap().getAsset(blockType.getBlockListAssetId());
-/*     */             if (blockTypeListAsset != null && blockTypeListAsset.getBlockPattern() != null) {
-/*     */               for (String resolvedKey : blockTypeListAsset.getBlockTypeKeys()) {
-/*     */                 int resolvedId = BlockType.getAssetMap().getIndex(resolvedKey);
-/*     */                 if (resolvedId == Integer.MIN_VALUE) {
-/*     */                   LOGGER.at(Level.WARNING).log("BlockTypeList '%s' contains invalid block '%s' - skipping", blockType.getBlockListAssetId(), resolvedKey);
-/*     */                   continue;
-/*     */                 } 
-/*     */                 mapBuilder.put(Integer.valueOf(resolvedId), weight / blockTypeListAsset.getBlockTypeKeys().size());
-/*     */               } 
-/*     */               return;
-/*     */             } 
-/*     */           } 
-/*     */           mapBuilder.put(Integer.valueOf(blockId), weight);
-/*     */           if (key != null) {
-/*     */             mapBuilderKey.put(key, weight);
-/*     */           }
-/*     */         });
-/*  87 */     this.resolvedWeightedMap = mapBuilder.build();
-/*  88 */     this.resolvedWeightedMapBtk = mapBuilderKey.build();
-/*     */   }
-/*     */   
-/*     */   public boolean isEmpty() {
-/*  92 */     return (this.weightedMap.size() == 0);
-/*     */   }
-/*     */   
-/*     */   public int nextBlock(Random random) {
-/*  96 */     resolve();
-/*  97 */     return ((Integer)this.resolvedWeightedMap.get(random)).intValue();
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public BlockEntry nextBlockTypeKey(Random random) {
-/* 102 */     resolve();
-/* 103 */     return (BlockEntry)this.resolvedWeightedMapBtk.get(random);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Deprecated
-/*     */   public int firstBlock() {
-/* 109 */     resolve();
-/* 110 */     return (this.resolvedWeightedMap.size() > 0) ? ((Integer[])this.resolvedWeightedMap.internalKeys())[0].intValue() : 0;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public String toString() {
-/* 115 */     return this.toString0;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private String toString0() {
-/* 121 */     if (this.weightedMap.size() == 1) return ((String[])this.weightedMap.internalKeys())[0];
-/*     */     
-/* 123 */     ObjectArrayList objectArrayList = new ObjectArrayList();
-/* 124 */     this.weightedMap.forEachEntry((k, v) -> blocks.add("" + v + "%" + v));
-/* 125 */     return String.join(",", (Iterable<? extends CharSequence>)objectArrayList);
-/*     */   }
-/*     */   
-/*     */   public static BlockPattern parse(@Nonnull String str) {
-/* 129 */     if (str.isEmpty() || str.equals("Empty")) return EMPTY; 
-/* 130 */     if (str.toLowerCase().contains("filler="))
-/* 131 */       str = FILLER_TEMP_REMOVER_PATTERN.matcher(str).replaceAll("$1;$2;$3"); 
-/* 132 */     str = str.replace(";", ",");
-/* 133 */     return new BlockPattern(parseBlockPattern(str.split(",")));
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   private static IWeightedMap<String> parseBlockPattern(@Nonnull String... blocksArgs) {
-/* 138 */     WeightedMap.Builder<String> builder = WeightedMap.builder((Object[])ArrayUtil.EMPTY_STRING_ARRAY);
-/*     */     
-/* 140 */     for (String blockArg : blocksArgs) {
-/* 141 */       if (!blockArg.isEmpty()) {
-/*     */         
-/* 143 */         double chance = 100.0D;
-/* 144 */         String[] blockArr = blockArg.split("%");
-/* 145 */         if (blockArr.length > 1) {
-/*     */           try {
-/* 147 */             chance = Double.parseDouble(blockArr[0]);
-/* 148 */           } catch (NumberFormatException e) {
-/* 149 */             throw new IllegalArgumentException("Invalid Chance Value: " + blockArr[0], e);
-/*     */           } 
-/*     */           
-/* 152 */           blockArg = blockArr[1];
-/*     */         } 
-/*     */         
-/* 155 */         builder.put(blockArg, chance);
-/*     */       } 
-/*     */     } 
-/* 158 */     return builder.build();
-/*     */   }
-/*     */   
-/*     */   public static int parseBlock(@Nonnull String blockText) {
-/*     */     int blockId;
-/*     */     try {
-/* 164 */       blockId = Integer.parseInt(blockText);
-/* 165 */       if (BlockType.getAssetMap().getAsset(blockId) == null) {
-/* 166 */         throw new IllegalArgumentException("Block with id '" + blockText + "' doesn't exist!");
-/*     */       }
-/* 168 */     } catch (NumberFormatException ignored) {
-/* 169 */       blockText = blockText.replace(";", ",");
-/* 170 */       int oldData = blockText.indexOf('|');
-/* 171 */       if (oldData != -1) blockText = blockText.substring(0, oldData); 
-/* 172 */       blockId = BlockType.getAssetMap().getIndex(blockText);
-/* 173 */       if (blockId == Integer.MIN_VALUE) {
-/* 174 */         LOGGER.at(Level.WARNING).log("Invalid block name '%s' - using empty block", blockText);
-/* 175 */         return 0;
-/*     */       } 
-/*     */     } 
-/*     */     
-/* 179 */     return blockId;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   public static BlockEntry tryParseBlockTypeKey(String blockText) {
-/*     */     try {
-/* 185 */       blockText = blockText.replace(";", ",");
-/* 186 */       return BlockEntry.decode(blockText);
-/* 187 */     } catch (Exception e) {
-/* 188 */       return null;
-/*     */     } 
-/*     */   }
-/*     */   public static final class BlockEntry extends Record { private final String blockTypeKey; private final int rotation; private final int filler;
-/* 192 */     public BlockEntry(String blockTypeKey, int rotation, int filler) { this.blockTypeKey = blockTypeKey; this.rotation = rotation; this.filler = filler; } public final String toString() { // Byte code:
-/*     */       //   0: aload_0
-/*     */       //   1: <illegal opcode> toString : (Lcom/hypixel/hytale/server/core/prefab/selection/mask/BlockPattern$BlockEntry;)Ljava/lang/String;
-/*     */       //   6: areturn
-/*     */       // Line number table:
-/*     */       //   Java source line number -> byte code offset
-/*     */       //   #192	-> 0
-/*     */       // Local variable table:
-/*     */       //   start	length	slot	name	descriptor
-/* 192 */       //   0	7	0	this	Lcom/hypixel/hytale/server/core/prefab/selection/mask/BlockPattern$BlockEntry; } public String blockTypeKey() { return this.blockTypeKey; } public final int hashCode() { // Byte code:
-/*     */       //   0: aload_0
-/*     */       //   1: <illegal opcode> hashCode : (Lcom/hypixel/hytale/server/core/prefab/selection/mask/BlockPattern$BlockEntry;)I
-/*     */       //   6: ireturn
-/*     */       // Line number table:
-/*     */       //   Java source line number -> byte code offset
-/*     */       //   #192	-> 0
-/*     */       // Local variable table:
-/*     */       //   start	length	slot	name	descriptor
-/*     */       //   0	7	0	this	Lcom/hypixel/hytale/server/core/prefab/selection/mask/BlockPattern$BlockEntry; } public final boolean equals(Object o) { // Byte code:
-/*     */       //   0: aload_0
-/*     */       //   1: aload_1
-/*     */       //   2: <illegal opcode> equals : (Lcom/hypixel/hytale/server/core/prefab/selection/mask/BlockPattern$BlockEntry;Ljava/lang/Object;)Z
-/*     */       //   7: ireturn
-/*     */       // Line number table:
-/*     */       //   Java source line number -> byte code offset
-/*     */       //   #192	-> 0
-/*     */       // Local variable table:
-/*     */       //   start	length	slot	name	descriptor
-/*     */       //   0	8	0	this	Lcom/hypixel/hytale/server/core/prefab/selection/mask/BlockPattern$BlockEntry;
-/* 192 */       //   0	8	1	o	Ljava/lang/Object; } public int rotation() { return this.rotation; } public int filler() { return this.filler; }
-/*     */     
-/*     */     @Deprecated(forRemoval = true)
-/* 195 */     public static Codec<BlockEntry> CODEC = (Codec<BlockEntry>)new FunctionCodec((Codec)Codec.STRING, BlockEntry::decode, BlockEntry::encode);
-/*     */     
-/*     */     @Deprecated(forRemoval = true)
-/*     */     private String encode() {
-/* 199 */       if (this.filler == 0 && this.rotation == 0) return this.blockTypeKey; 
-/* 200 */       StringBuilder out = new StringBuilder(this.blockTypeKey);
-/* 201 */       RotationTuple rot = RotationTuple.get(this.rotation);
-/* 202 */       if (rot.yaw() != Rotation.None) {
-/* 203 */         out.append("|Yaw=").append(rot.yaw().getDegrees());
-/*     */       }
-/* 205 */       if (rot.pitch() != Rotation.None) {
-/* 206 */         out.append("|Pitch=").append(rot.pitch().getDegrees());
-/*     */       }
-/* 208 */       if (rot.roll() != Rotation.None) {
-/* 209 */         out.append("|Roll=").append(rot.roll().getDegrees());
-/*     */       }
-/* 211 */       if (this.filler != 0) {
-/* 212 */         int fillerX = FillerBlockUtil.unpackX(this.filler);
-/* 213 */         int fillerY = FillerBlockUtil.unpackY(this.filler);
-/* 214 */         int fillerZ = FillerBlockUtil.unpackZ(this.filler);
-/* 215 */         out.append("|Filler=").append(fillerX).append(",").append(fillerY).append(",").append(fillerZ);
-/*     */       } 
-/* 217 */       return out.toString();
-/*     */     }
-/*     */     
-/*     */     @Deprecated(forRemoval = true)
-/*     */     public static BlockEntry decode(String key) {
-/* 222 */       int filler = 0;
-/* 223 */       if (key.contains("|Filler=")) {
-/* 224 */         int start = key.indexOf("|Filler=") + "|Filler=".length();
-/* 225 */         int firstComma = key.indexOf(',', start);
-/* 226 */         if (firstComma == -1) throw new IllegalArgumentException("Invalid filler metadata! Missing comma"); 
-/* 227 */         int secondComma = key.indexOf(',', firstComma + 1);
-/* 228 */         if (secondComma == -1) throw new IllegalArgumentException("Invalid filler metadata! Missing second comma");
-/*     */         
-/* 230 */         int i = key.indexOf('|', start);
-/* 231 */         if (i == -1) i = key.length();
-/*     */         
-/* 233 */         int fillerX = Integer.parseInt(key, start, firstComma, 10);
-/* 234 */         int fillerY = Integer.parseInt(key, firstComma + 1, secondComma, 10);
-/* 235 */         int fillerZ = Integer.parseInt(key, secondComma + 1, i, 10);
-/*     */         
-/* 237 */         filler = FillerBlockUtil.pack(fillerX, fillerY, fillerZ);
-/*     */       } 
-/*     */       
-/* 240 */       Rotation rotationYaw = Rotation.None;
-/* 241 */       Rotation rotationPitch = Rotation.None;
-/* 242 */       Rotation rotationRoll = Rotation.None;
-/*     */       
-/* 244 */       if (key.contains("|Yaw=")) {
-/* 245 */         int start = key.indexOf("|Yaw=") + "|Yaw=".length();
-/* 246 */         int i = key.indexOf('|', start);
-/* 247 */         if (i == -1) i = key.length(); 
-/* 248 */         rotationYaw = Rotation.ofDegrees(Integer.parseInt(key, start, i, 10));
-/*     */       } 
-/* 250 */       if (key.contains("|Pitch=")) {
-/* 251 */         int start = key.indexOf("|Pitch=") + "|Pitch=".length();
-/* 252 */         int i = key.indexOf('|', start);
-/* 253 */         if (i == -1) i = key.length(); 
-/* 254 */         rotationPitch = Rotation.ofDegrees(Integer.parseInt(key, start, i, 10));
-/*     */       } 
-/* 256 */       if (key.contains("|Roll=")) {
-/* 257 */         int start = key.indexOf("|Roll=") + "|Roll=".length();
-/* 258 */         int i = key.indexOf('|', start);
-/* 259 */         if (i == -1) i = key.length(); 
-/* 260 */         rotationRoll = Rotation.ofDegrees(Integer.parseInt(key, start, i, 10));
-/*     */       } 
-/*     */ 
-/*     */       
-/* 264 */       int end = key.indexOf('|');
-/* 265 */       if (end == -1) end = key.length(); 
-/* 266 */       String name = key.substring(0, end);
-/* 267 */       return new BlockEntry(name, RotationTuple.of(rotationYaw, rotationPitch, rotationRoll).index(), filler);
-/*     */     } }
-/*     */ 
-/*     */ }
+package com.hypixel.hytale.server.core.prefab.selection.mask;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.function.FunctionCodec;
+import com.hypixel.hytale.common.map.IWeightedMap;
+import com.hypixel.hytale.common.map.WeightedMap;
+import com.hypixel.hytale.common.util.ArrayUtil;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
+import com.hypixel.hytale.server.core.asset.type.buildertool.config.BlockTypeListAsset;
+import com.hypixel.hytale.server.core.util.FillerBlockUtil;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.logging.Level;
+import java.util.regex.Pattern;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\prefab\selection\mask\BlockPattern.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BlockPattern {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+   public static final Codec<BlockPattern> CODEC = new FunctionCodec<>(Codec.STRING, BlockPattern::parse, BlockPattern::toString);
+   public static final BlockPattern EMPTY = new BlockPattern(parseBlockPattern("Empty"));
+   public static final BlockPattern[] EMPTY_ARRAY = new BlockPattern[0];
+   private static final Pattern FILLER_TEMP_REMOVER_PATTERN = Pattern.compile("(Filler=-?\\d+),(-?\\d+),(-?\\d+)");
+   private static final String BLOCK_SEPARATOR = ",";
+   private static final String ALT_BLOCK_SEPARATOR = ";";
+   private static final String CHANCE_SUFFIX = "%";
+   private static final double DEFAULT_CHANCE = 100.0;
+   private final IWeightedMap<String> weightedMap;
+   private final transient String toString0;
+   private IWeightedMap<Integer> resolvedWeightedMap;
+   private IWeightedMap<BlockPattern.BlockEntry> resolvedWeightedMapBtk;
+
+   public BlockPattern(IWeightedMap<String> weightedMap) {
+      this.weightedMap = weightedMap;
+      this.toString0 = this.toString0();
+   }
+
+   public Integer[] getResolvedKeys() {
+      this.resolve();
+      return this.resolvedWeightedMap.internalKeys();
+   }
+
+   public void resolve() {
+      if (this.resolvedWeightedMap == null) {
+         WeightedMap.Builder<Integer> mapBuilder = WeightedMap.builder(ArrayUtil.EMPTY_INTEGER_ARRAY);
+         WeightedMap.Builder<BlockPattern.BlockEntry> mapBuilderKey = WeightedMap.builder(new BlockPattern.BlockEntry[0]);
+         this.weightedMap.forEachEntry((blockName, weight) -> {
+            int blockId = parseBlock(blockName);
+            BlockPattern.BlockEntry key = tryParseBlockTypeKey(blockName);
+            BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
+            if (blockType != null && blockType.getBlockListAssetId() != null) {
+               BlockTypeListAsset blockTypeListAsset = BlockTypeListAsset.getAssetMap().getAsset(blockType.getBlockListAssetId());
+               if (blockTypeListAsset != null && blockTypeListAsset.getBlockPattern() != null) {
+                  for (String resolvedKey : blockTypeListAsset.getBlockTypeKeys()) {
+                     int resolvedId = BlockType.getAssetMap().getIndex(resolvedKey);
+                     if (resolvedId == Integer.MIN_VALUE) {
+                        LOGGER.at(Level.WARNING).log("BlockTypeList '%s' contains invalid block '%s' - skipping", blockType.getBlockListAssetId(), resolvedKey);
+                     } else {
+                        mapBuilder.put(resolvedId, weight / blockTypeListAsset.getBlockTypeKeys().size());
+                     }
+                  }
+
+                  return;
+               }
+            }
+
+            mapBuilder.put(blockId, weight);
+            if (key != null) {
+               mapBuilderKey.put(key, weight);
+            }
+         });
+         this.resolvedWeightedMap = mapBuilder.build();
+         this.resolvedWeightedMapBtk = mapBuilderKey.build();
+      }
+   }
+
+   public boolean isEmpty() {
+      return this.weightedMap.size() == 0;
+   }
+
+   public int nextBlock(Random random) {
+      this.resolve();
+      return this.resolvedWeightedMap.get(random);
+   }
+
+   @Nullable
+   public BlockPattern.BlockEntry nextBlockTypeKey(Random random) {
+      this.resolve();
+      return this.resolvedWeightedMapBtk.get(random);
+   }
+
+   @Deprecated
+   public int firstBlock() {
+      this.resolve();
+      return this.resolvedWeightedMap.size() > 0 ? this.resolvedWeightedMap.internalKeys()[0] : 0;
+   }
+
+   @Override
+   public String toString() {
+      return this.toString0;
+   }
+
+   private String toString0() {
+      if (this.weightedMap.size() == 1) {
+         return this.weightedMap.internalKeys()[0];
+      } else {
+         List<String> blocks = new ObjectArrayList();
+         this.weightedMap.forEachEntry((k, v) -> blocks.add(v + "%" + k));
+         return String.join(",", blocks);
+      }
+   }
+
+   public static BlockPattern parse(@Nonnull String str) {
+      if (!str.isEmpty() && !str.equals("Empty")) {
+         if (str.toLowerCase().contains("filler=")) {
+            str = FILLER_TEMP_REMOVER_PATTERN.matcher(str).replaceAll("$1;$2;$3");
+         }
+
+         str = str.replace(";", ",");
+         return new BlockPattern(parseBlockPattern(str.split(",")));
+      } else {
+         return EMPTY;
+      }
+   }
+
+   @Nonnull
+   private static IWeightedMap<String> parseBlockPattern(@Nonnull String... blocksArgs) {
+      WeightedMap.Builder<String> builder = WeightedMap.builder(ArrayUtil.EMPTY_STRING_ARRAY);
+
+      for (String blockArg : blocksArgs) {
+         if (!blockArg.isEmpty()) {
+            double chance = 100.0;
+            String[] blockArr = blockArg.split("%");
+            if (blockArr.length > 1) {
+               try {
+                  chance = Double.parseDouble(blockArr[0]);
+               } catch (NumberFormatException var10) {
+                  throw new IllegalArgumentException("Invalid Chance Value: " + blockArr[0], var10);
+               }
+
+               blockArg = blockArr[1];
+            }
+
+            builder.put(blockArg, chance);
+         }
+      }
+
+      return builder.build();
+   }
+
+   public static int parseBlock(@Nonnull String blockText) {
+      int blockId;
+      try {
+         blockId = Integer.parseInt(blockText);
+         if (BlockType.getAssetMap().getAsset(blockId) == null) {
+            throw new IllegalArgumentException("Block with id '" + blockText + "' doesn't exist!");
+         }
+      } catch (NumberFormatException var4) {
+         blockText = blockText.replace(";", ",");
+         int oldData = blockText.indexOf(124);
+         if (oldData != -1) {
+            blockText = blockText.substring(0, oldData);
+         }
+
+         blockId = BlockType.getAssetMap().getIndex(blockText);
+         if (blockId == Integer.MIN_VALUE) {
+            LOGGER.at(Level.WARNING).log("Invalid block name '%s' - using empty block", blockText);
+            return 0;
+         }
+      }
+
+      return blockId;
+   }
+
+   @Nullable
+   public static BlockPattern.BlockEntry tryParseBlockTypeKey(String blockText) {
+      try {
+         blockText = blockText.replace(";", ",");
+         return BlockPattern.BlockEntry.decode(blockText);
+      } catch (Exception var2) {
+         return null;
+      }
+   }
+
+   public record BlockEntry(String blockTypeKey, int rotation, int filler) {
+      @Deprecated(forRemoval = true)
+      public static Codec<BlockPattern.BlockEntry> CODEC = new FunctionCodec<>(Codec.STRING, BlockPattern.BlockEntry::decode, BlockPattern.BlockEntry::encode);
+
+      @Deprecated(forRemoval = true)
+      private String encode() {
+         if (this.filler == 0 && this.rotation == 0) {
+            return this.blockTypeKey;
+         } else {
+            StringBuilder out = new StringBuilder(this.blockTypeKey);
+            RotationTuple rot = RotationTuple.get(this.rotation);
+            if (rot.yaw() != Rotation.None) {
+               out.append("|Yaw=").append(rot.yaw().getDegrees());
+            }
+
+            if (rot.pitch() != Rotation.None) {
+               out.append("|Pitch=").append(rot.pitch().getDegrees());
+            }
+
+            if (rot.roll() != Rotation.None) {
+               out.append("|Roll=").append(rot.roll().getDegrees());
+            }
+
+            if (this.filler != 0) {
+               int fillerX = FillerBlockUtil.unpackX(this.filler);
+               int fillerY = FillerBlockUtil.unpackY(this.filler);
+               int fillerZ = FillerBlockUtil.unpackZ(this.filler);
+               out.append("|Filler=").append(fillerX).append(",").append(fillerY).append(",").append(fillerZ);
+            }
+
+            return out.toString();
+         }
+      }
+
+      @Deprecated(forRemoval = true)
+      public static BlockPattern.BlockEntry decode(String key) {
+         int filler = 0;
+         if (key.contains("|Filler=")) {
+            int start = key.indexOf("|Filler=") + "|Filler=".length();
+            int firstComma = key.indexOf(44, start);
+            if (firstComma == -1) {
+               throw new IllegalArgumentException("Invalid filler metadata! Missing comma");
+            }
+
+            int secondComma = key.indexOf(44, firstComma + 1);
+            if (secondComma == -1) {
+               throw new IllegalArgumentException("Invalid filler metadata! Missing second comma");
+            }
+
+            int end = key.indexOf(124, start);
+            if (end == -1) {
+               end = key.length();
+            }
+
+            int fillerX = Integer.parseInt(key, start, firstComma, 10);
+            int fillerY = Integer.parseInt(key, firstComma + 1, secondComma, 10);
+            int fillerZ = Integer.parseInt(key, secondComma + 1, end, 10);
+            filler = FillerBlockUtil.pack(fillerX, fillerY, fillerZ);
+         }
+
+         Rotation rotationYaw = Rotation.None;
+         Rotation rotationPitch = Rotation.None;
+         Rotation rotationRoll = Rotation.None;
+         if (key.contains("|Yaw=")) {
+            int startx = key.indexOf("|Yaw=") + "|Yaw=".length();
+            int end = key.indexOf(124, startx);
+            if (end == -1) {
+               end = key.length();
+            }
+
+            rotationYaw = Rotation.ofDegrees(Integer.parseInt(key, startx, end, 10));
+         }
+
+         if (key.contains("|Pitch=")) {
+            int startx = key.indexOf("|Pitch=") + "|Pitch=".length();
+            int end = key.indexOf(124, startx);
+            if (end == -1) {
+               end = key.length();
+            }
+
+            rotationPitch = Rotation.ofDegrees(Integer.parseInt(key, startx, end, 10));
+         }
+
+         if (key.contains("|Roll=")) {
+            int startx = key.indexOf("|Roll=") + "|Roll=".length();
+            int end = key.indexOf(124, startx);
+            if (end == -1) {
+               end = key.length();
+            }
+
+            rotationRoll = Rotation.ofDegrees(Integer.parseInt(key, startx, end, 10));
+         }
+
+         int end = key.indexOf(124);
+         if (end == -1) {
+            end = key.length();
+         }
+
+         String name = key.substring(0, end);
+         return new BlockPattern.BlockEntry(name, RotationTuple.of(rotationYaw, rotationPitch, rotationRoll).index(), filler);
+      }
+   }
+}

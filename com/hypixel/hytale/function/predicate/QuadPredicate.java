@@ -1,11 +1,5 @@
 package com.hypixel.hytale.function.predicate;
 
 public interface QuadPredicate<T, R, S, U> {
-  boolean test(T paramT, R paramR, S paramS, U paramU);
+   boolean test(T var1, R var2, S var3, U var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\function\predicate\QuadPredicate.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

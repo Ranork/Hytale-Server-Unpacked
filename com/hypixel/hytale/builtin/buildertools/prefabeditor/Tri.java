@@ -1,34 +1,25 @@
-/*    */ package com.hypixel.hytale.builtin.buildertools.prefabeditor;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class Tri<A, B, C>
-/*    */ {
-/*    */   private final A left;
-/*    */   private final B middle;
-/*    */   private final C right;
-/*    */   
-/*    */   public Tri(A left, B middle, C right) {
-/* 12 */     this.left = left;
-/* 13 */     this.middle = middle;
-/* 14 */     this.right = right;
-/*    */   }
-/*    */   
-/*    */   public A getLeft() {
-/* 18 */     return this.left;
-/*    */   }
-/*    */   
-/*    */   public B getMiddle() {
-/* 22 */     return this.middle;
-/*    */   }
-/*    */   
-/*    */   public C getRight() {
-/* 26 */     return this.right;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.buildertools.prefabeditor;
 
+public class Tri<A, B, C> {
+   private final A left;
+   private final B middle;
+   private final C right;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\buildertools\prefabeditor\Tri.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+   public Tri(A left, B middle, C right) {
+      this.left = left;
+      this.middle = middle;
+      this.right = right;
+   }
+
+   public A getLeft() {
+      return this.left;
+   }
+
+   public B getMiddle() {
+      return this.middle;
+   }
+
+   public C getRight() {
+      return this.right;
+   }
+}

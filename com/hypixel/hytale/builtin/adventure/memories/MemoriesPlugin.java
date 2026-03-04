@@ -1,387 +1,412 @@
-/*     */ package com.hypixel.hytale.builtin.adventure.memories;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.commands.MemoriesCommand;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.component.PlayerMemories;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.interactions.MemoriesConditionInteraction;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.interactions.SetMemoriesCapacityInteraction;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.memories.Memory;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.memories.MemoryProvider;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.memories.npc.NPCMemory;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.memories.npc.NPCMemoryProvider;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.page.MemoriesPage;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.page.MemoriesPageSupplier;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.temple.ForgottenTempleConfig;
-/*     */ import com.hypixel.hytale.builtin.adventure.memories.temple.TempleRespawnPlayersSystem;
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.KeyedCodec;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*     */ import com.hypixel.hytale.codec.util.RawJsonReader;
-/*     */ import com.hypixel.hytale.component.AddReason;
-/*     */ import com.hypixel.hytale.component.CommandBuffer;
-/*     */ import com.hypixel.hytale.component.ComponentRegistryProxy;
-/*     */ import com.hypixel.hytale.component.ComponentType;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.component.dependency.Dependency;
-/*     */ import com.hypixel.hytale.component.query.Query;
-/*     */ import com.hypixel.hytale.component.system.ISystem;
-/*     */ import com.hypixel.hytale.component.system.RefSystem;
-/*     */ import com.hypixel.hytale.server.core.Constants;
-/*     */ import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
-/*     */ import com.hypixel.hytale.server.core.io.PacketHandler;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
-/*     */ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
-/*     */ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-/*     */ import com.hypixel.hytale.server.core.plugin.PluginBase;
-/*     */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import com.hypixel.hytale.server.core.util.BsonUtil;
-/*     */ import com.hypixel.hytale.server.npc.AllNPCsLoadedEvent;
-/*     */ import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
-/*     */ import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
-/*     */ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-/*     */ import java.io.IOException;
-/*     */ import java.nio.file.Path;
-/*     */ import java.util.Collections;
-/*     */ import java.util.HashSet;
-/*     */ import java.util.List;
-/*     */ import java.util.Map;
-/*     */ import java.util.Set;
-/*     */ import java.util.concurrent.locks.ReentrantReadWriteLock;
-/*     */ import java.util.function.Supplier;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ public class MemoriesPlugin extends JavaPlugin {
-/*     */   public static MemoriesPlugin get() {
-/*  59 */     return instance;
-/*     */   }
-/*     */   private static MemoriesPlugin instance;
-/*  62 */   private final Config<MemoriesPluginConfig> config = withConfig(MemoriesPluginConfig.CODEC);
-/*     */   
-/*  64 */   private final List<MemoryProvider<?>> providers = (List<MemoryProvider<?>>)new ObjectArrayList();
-/*     */   
-/*  66 */   private final Map<String, Set<Memory>> allMemories = (Map<String, Set<Memory>>)new Object2ObjectRBTreeMap();
-/*     */   
-/*     */   private ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType;
-/*     */   @Nullable
-/*     */   private RecordedMemories recordedMemories;
-/*     */   private boolean hasInitializedMemories;
-/*     */   
-/*     */   public MemoriesPlugin(@Nonnull JavaPluginInit init) {
-/*  74 */     super(init);
-/*  75 */     instance = this;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void setup() {
-/*  80 */     ComponentRegistryProxy<EntityStore> entityStoreRegistry = getEntityStoreRegistry();
-/*     */     
-/*  82 */     getCommandRegistry().registerCommand((AbstractCommand)new MemoriesCommand());
-/*     */     
-/*  84 */     OpenCustomUIInteraction.registerCustomPageSupplier((PluginBase)this, MemoriesPage.class, "Memories", (OpenCustomUIInteraction.CustomPageSupplier)new MemoriesPageSupplier());
-/*  85 */     OpenCustomUIInteraction.registerCustomPageSupplier((PluginBase)this, MemoriesUnlockedPage.class, "MemoriesUnlocked", (OpenCustomUIInteraction.CustomPageSupplier)new MemoriesUnlockedPageSuplier());
-/*  86 */     Window.CLIENT_REQUESTABLE_WINDOW_TYPES.put(WindowType.Memories, com.hypixel.hytale.builtin.adventure.memories.window.MemoriesWindow::new);
-/*     */     
-/*  88 */     this.playerMemoriesComponentType = entityStoreRegistry.registerComponent(PlayerMemories.class, "PlayerMemories", PlayerMemories.CODEC);
-/*     */ 
-/*     */     
-/*  91 */     NPCMemoryProvider npcMemoryProvider = new NPCMemoryProvider();
-/*  92 */     registerMemoryProvider((MemoryProvider<Memory>)npcMemoryProvider);
-/*  93 */     entityStoreRegistry.registerSystem((ISystem)new NPCMemory.GatherMemoriesSystem(npcMemoryProvider.getCollectionRadius()));
-/*     */ 
-/*     */ 
-/*     */     
-/*  97 */     for (MemoryProvider<?> provider : this.providers) {
-/*  98 */       BuilderCodec<? extends Memory> codec = provider.getCodec();
-/*  99 */       getCodecRegistry((StringCodecMapCodec)Memory.CODEC).register(provider.getId(), codec.getInnerClass(), (Codec)codec);
-/*     */     } 
-/*     */ 
-/*     */     
-/* 103 */     getEventRegistry().register(AllNPCsLoadedEvent.class, event -> onAssetsLoad());
-/*     */     
-/* 105 */     entityStoreRegistry.registerSystem((ISystem)new PlayerAddedSystem());
-/*     */     
-/* 107 */     getCodecRegistry(Interaction.CODEC).register("SetMemoriesCapacity", SetMemoriesCapacityInteraction.class, SetMemoriesCapacityInteraction.CODEC);
-/* 108 */     getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(MemoriesGameplayConfig.class, "Memories", (Codec)MemoriesGameplayConfig.CODEC);
-/*     */     
-/* 110 */     getCodecRegistry(Interaction.CODEC).register("MemoriesCondition", MemoriesConditionInteraction.class, MemoriesConditionInteraction.CODEC);
-/*     */     
-/* 112 */     entityStoreRegistry.registerSystem((ISystem)new TempleRespawnPlayersSystem());
-/* 113 */     getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(ForgottenTempleConfig.class, "ForgottenTemple", (Codec)ForgottenTempleConfig.CODEC);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   protected void start() {
-/*     */     try {
-/* 122 */       Path path = Constants.UNIVERSE_PATH.resolve("memories.json");
-/* 123 */       if (Files.exists(path, new java.nio.file.LinkOption[0])) {
-/* 124 */         this.recordedMemories = (RecordedMemories)RawJsonReader.readSync(path, (Codec)RecordedMemories.CODEC, getLogger());
-/*     */       } else {
-/* 126 */         this.recordedMemories = new RecordedMemories();
-/*     */       } 
-/* 128 */     } catch (IOException e) {
-/* 129 */       throw new RuntimeException(e);
-/*     */     } 
-/*     */     
-/* 132 */     this.hasInitializedMemories = true;
-/* 133 */     onAssetsLoad();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void shutdown() {
-/* 138 */     if (!this.hasInitializedMemories)
-/* 139 */       return;  this.recordedMemories.lock.readLock().lock();
-/*     */     try {
-/* 141 */       BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), (Codec)RecordedMemories.CODEC, this.recordedMemories, getLogger());
-/* 142 */     } catch (IOException e) {
-/* 143 */       throw new RuntimeException(e);
-/*     */     } finally {
-/* 145 */       this.recordedMemories.lock.readLock().unlock();
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   private void onAssetsLoad() {
-/* 150 */     if (!this.hasInitializedMemories)
-/*     */       return; 
-/* 152 */     this.allMemories.clear();
-/* 153 */     for (MemoryProvider<?> provider : this.providers) {
-/* 154 */       for (Map.Entry<String, Set<Memory>> entry : (Iterable<Map.Entry<String, Set<Memory>>>)provider.getAllMemories().entrySet()) {
-/* 155 */         ((Set)this.allMemories.computeIfAbsent(entry.getKey(), k -> new HashSet())).addAll(entry.getValue());
-/*     */       }
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public MemoriesPluginConfig getConfig() {
-/* 161 */     return (MemoriesPluginConfig)this.config.get();
-/*     */   }
-/*     */   
-/*     */   public ComponentType<EntityStore, PlayerMemories> getPlayerMemoriesComponentType() {
-/* 165 */     return this.playerMemoriesComponentType;
-/*     */   }
-/*     */   
-/*     */   public <T extends Memory> void registerMemoryProvider(MemoryProvider<T> memoryProvider) {
-/* 169 */     this.providers.add(memoryProvider);
-/*     */   }
-/*     */   
-/*     */   public Map<String, Set<Memory>> getAllMemories() {
-/* 173 */     return this.allMemories;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int getMemoriesLevel(@Nonnull GameplayConfig gameplayConfig) {
-/* 183 */     MemoriesGameplayConfig config = MemoriesGameplayConfig.get(gameplayConfig);
-/* 184 */     int memoriesLevel = 1;
-/* 185 */     if (config == null) {
-/* 186 */       return memoriesLevel;
-/*     */     }
-/* 188 */     int recordedMemoriesCount = getRecordedMemories().size();
-/*     */     
-/* 190 */     int[] memoriesAmountPerLevel = config.getMemoriesAmountPerLevel();
-/*     */ 
-/*     */     
-/* 193 */     for (int i = memoriesAmountPerLevel.length - 1; i >= 0; i--) {
-/* 194 */       if (recordedMemoriesCount >= memoriesAmountPerLevel[i])
-/*     */       {
-/* 196 */         return i + 2;
-/*     */       }
-/*     */     } 
-/*     */ 
-/*     */     
-/* 201 */     return memoriesLevel;
-/*     */   }
-/*     */   
-/*     */   public boolean hasRecordedMemory(Memory memory) {
-/* 205 */     this.recordedMemories.lock.readLock().lock();
-/*     */     try {
-/* 207 */       return this.recordedMemories.memories.contains(memory);
-/*     */     } finally {
-/* 209 */       this.recordedMemories.lock.readLock().unlock();
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public boolean recordPlayerMemories(@Nonnull PlayerMemories playerMemories) {
-/* 214 */     this.recordedMemories.lock.writeLock().lock();
-/*     */     try {
-/* 216 */       if (playerMemories.takeMemories(this.recordedMemories.memories)) {
-/* 217 */         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), (Codec)RecordedMemories.CODEC, this.recordedMemories, getLogger());
-/* 218 */         return true;
-/*     */       } 
-/* 220 */     } catch (IOException e) {
-/* 221 */       throw new RuntimeException(e);
-/*     */     } finally {
-/* 223 */       this.recordedMemories.lock.writeLock().unlock();
-/*     */     } 
-/* 225 */     return false;
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   public Set<Memory> getRecordedMemories() {
-/* 230 */     this.recordedMemories.lock.readLock().lock();
-/*     */     try {
-/* 232 */       return new HashSet<>(this.recordedMemories.memories);
-/*     */     } finally {
-/* 234 */       this.recordedMemories.lock.readLock().unlock();
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public void clearRecordedMemories() {
-/* 239 */     this.recordedMemories.lock.writeLock().lock();
-/*     */     try {
-/* 241 */       this.recordedMemories.memories.clear();
-/* 242 */       BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), (Codec)RecordedMemories.CODEC, this.recordedMemories, getLogger());
-/* 243 */     } catch (IOException e) {
-/* 244 */       throw new RuntimeException(e);
-/*     */     } finally {
-/* 246 */       this.recordedMemories.lock.writeLock().unlock();
-/*     */     } 
-/*     */   }
-/*     */   
-/*     */   public void recordAllMemories() {
-/* 251 */     this.recordedMemories.lock.writeLock().lock();
-/*     */     try {
-/* 253 */       for (Map.Entry<String, Set<Memory>> entry : this.allMemories.entrySet()) {
-/* 254 */         this.recordedMemories.memories.addAll(entry.getValue());
-/*     */       }
-/* 256 */       BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), (Codec)RecordedMemories.CODEC, this.recordedMemories, getLogger());
-/* 257 */     } catch (IOException e) {
-/* 258 */       throw new RuntimeException(e);
-/*     */     } finally {
-/* 260 */       this.recordedMemories.lock.writeLock().unlock();
-/*     */     } 
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int setRecordedMemoriesCount(int count) {
-/* 272 */     if (count < 0) {
-/* 273 */       count = 0;
-/*     */     }
-/*     */     
-/* 276 */     this.recordedMemories.lock.writeLock().lock();
-/*     */     try {
-/* 278 */       this.recordedMemories.memories.clear();
-/*     */ 
-/*     */       
-/* 281 */       ObjectArrayList<Memory> objectArrayList = new ObjectArrayList();
-/* 282 */       for (Map.Entry<String, Set<Memory>> entry : this.allMemories.entrySet()) {
-/* 283 */         objectArrayList.addAll(entry.getValue());
-/*     */       }
-/*     */ 
-/*     */       
-/* 287 */       int actualCount = Math.min(count, objectArrayList.size()); int i;
-/* 288 */       for (i = 0; i < actualCount; i++) {
-/* 289 */         this.recordedMemories.memories.add(objectArrayList.get(i));
-/*     */       }
-/*     */       
-/* 292 */       BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), (Codec)RecordedMemories.CODEC, this.recordedMemories, getLogger());
-/* 293 */       i = actualCount; return i;
-/* 294 */     } catch (IOException e) {
-/* 295 */       throw new RuntimeException(e);
-/*     */     } finally {
-/* 297 */       this.recordedMemories.lock.writeLock().unlock();
-/*     */     } 
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public static class MemoriesPluginConfig
-/*     */   {
-/*     */     public static final BuilderCodec<MemoriesPluginConfig> CODEC;
-/*     */     
-/*     */     private Object2DoubleMap<String> collectionRadius;
-/*     */     
-/*     */     static {
-/* 309 */       CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(MemoriesPluginConfig.class, MemoriesPluginConfig::new).append(new KeyedCodec("CollectionRadius", (Codec)new Object2DoubleMapCodec((Codec)Codec.STRING, it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap::new)), (config, map) -> config.collectionRadius = map, config -> config.collectionRadius).add()).build();
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public Object2DoubleMap<String> getCollectionRadius() {
-/* 319 */       return (this.collectionRadius != null) ? this.collectionRadius : (Object2DoubleMap<String>)Object2DoubleMaps.EMPTY_MAP;
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static class RecordedMemories
-/*     */   {
-/*     */     public static final BuilderCodec<RecordedMemories> CODEC;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     static {
-/* 334 */       CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(RecordedMemories.class, RecordedMemories::new).append(new KeyedCodec("Memories", (Codec)new ArrayCodec((Codec)Memory.CODEC, x$0 -> new Memory[x$0])), (recordedMemories, memories) -> { if (memories == null) return;  Collections.addAll(recordedMemories.memories, memories); }recordedMemories -> (Memory[])recordedMemories.memories.toArray(())).add()).build();
-/*     */     }
-/* 336 */     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-/* 337 */     private final Set<Memory> memories = new HashSet<>();
-/*     */   }
-/*     */   
-/*     */   public static class PlayerAddedSystem
-/*     */     extends RefSystem<EntityStore> {
-/*     */     @Nonnull
-/* 343 */     private final Set<Dependency<EntityStore>> dependencies = (Set)Set.of(new SystemDependency(Order.AFTER, PlayerSystems.PlayerSpawnedSystem.class));
-/*     */     
-/*     */     @Nonnull
-/*     */     private final Query<EntityStore> query;
-/*     */     
-/*     */     public PlayerAddedSystem() {
-/* 349 */       this.query = (Query<EntityStore>)Query.and(new Query[] { (Query)Player.getComponentType(), (Query)PlayerRef.getComponentType() });
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public Query<EntityStore> getQuery() {
-/* 355 */       return this.query;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public Set<Dependency<EntityStore>> getDependencies() {
-/* 361 */       return this.dependencies;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/* 366 */       Player playerComponent = (Player)store.getComponent(ref, Player.getComponentType());
-/* 367 */       assert playerComponent != null;
-/*     */       
-/* 369 */       PlayerRef playerRefComponent = (PlayerRef)store.getComponent(ref, PlayerRef.getComponentType());
-/* 370 */       assert playerRefComponent != null;
-/*     */       
-/* 372 */       PlayerMemories playerMemoriesComponent = (PlayerMemories)store.getComponent(ref, PlayerMemories.getComponentType());
-/* 373 */       boolean isFeatureUnlockedByPlayer = (playerMemoriesComponent != null);
-/*     */       
-/* 375 */       PacketHandler playerConnection = playerRefComponent.getPacketHandler();
-/* 376 */       playerConnection.writeNoCache((Packet)new UpdateMemoriesFeatureStatus(isFeatureUnlockedByPlayer));
-/*     */     }
-/*     */     
-/*     */     public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {}
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.builtin.adventure.memories;
 
+import com.hypixel.hytale.builtin.adventure.memories.commands.MemoriesCommand;
+import com.hypixel.hytale.builtin.adventure.memories.component.PlayerMemories;
+import com.hypixel.hytale.builtin.adventure.memories.interactions.MemoriesConditionInteraction;
+import com.hypixel.hytale.builtin.adventure.memories.interactions.SetMemoriesCapacityInteraction;
+import com.hypixel.hytale.builtin.adventure.memories.memories.Memory;
+import com.hypixel.hytale.builtin.adventure.memories.memories.MemoryProvider;
+import com.hypixel.hytale.builtin.adventure.memories.memories.npc.NPCMemory;
+import com.hypixel.hytale.builtin.adventure.memories.memories.npc.NPCMemoryProvider;
+import com.hypixel.hytale.builtin.adventure.memories.page.MemoriesPage;
+import com.hypixel.hytale.builtin.adventure.memories.page.MemoriesPageSupplier;
+import com.hypixel.hytale.builtin.adventure.memories.page.MemoriesUnlockedPage;
+import com.hypixel.hytale.builtin.adventure.memories.page.MemoriesUnlockedPageSuplier;
+import com.hypixel.hytale.builtin.adventure.memories.temple.ForgottenTempleConfig;
+import com.hypixel.hytale.builtin.adventure.memories.temple.TempleRespawnPlayersSystem;
+import com.hypixel.hytale.builtin.adventure.memories.window.MemoriesWindow;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.codecs.map.Object2DoubleMapCodec;
+import com.hypixel.hytale.codec.util.RawJsonReader;
+import com.hypixel.hytale.component.AddReason;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentRegistryProxy;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.dependency.Dependency;
+import com.hypixel.hytale.component.dependency.Order;
+import com.hypixel.hytale.component.dependency.SystemDependency;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.RefSystem;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesFeatureStatus;
+import com.hypixel.hytale.protocol.packets.window.WindowType;
+import com.hypixel.hytale.server.core.Constants;
+import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
+import com.hypixel.hytale.server.core.io.PacketHandler;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerSystems;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.BsonUtil;
+import com.hypixel.hytale.server.core.util.Config;
+import com.hypixel.hytale.server.npc.AllNPCsLoadedEvent;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Map.Entry;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\adventure\memories\MemoriesPlugin.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class MemoriesPlugin extends JavaPlugin {
+   @Nonnull
+   public static final String MEMORIES_JSON_PATH = "memories.json";
+   private static MemoriesPlugin instance;
+   @Nonnull
+   private final Config<MemoriesPlugin.MemoriesPluginConfig> config = this.withConfig(MemoriesPlugin.MemoriesPluginConfig.CODEC);
+   @Nonnull
+   private final List<MemoryProvider<?>> providers = new ObjectArrayList();
+   @Nonnull
+   private final Map<String, Set<Memory>> allMemories = new Object2ObjectRBTreeMap();
+   private ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType;
+   @Nullable
+   private MemoriesPlugin.RecordedMemories recordedMemories;
+   private boolean hasInitializedMemories;
+
+   public static MemoriesPlugin get() {
+      return instance;
+   }
+
+   public MemoriesPlugin(@Nonnull JavaPluginInit init) {
+      super(init);
+      instance = this;
+   }
+
+   @Override
+   protected void setup() {
+      ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
+      this.getCommandRegistry().registerCommand(new MemoriesCommand());
+      OpenCustomUIInteraction.registerCustomPageSupplier(this, MemoriesPage.class, "Memories", new MemoriesPageSupplier());
+      OpenCustomUIInteraction.registerCustomPageSupplier(this, MemoriesUnlockedPage.class, "MemoriesUnlocked", new MemoriesUnlockedPageSuplier());
+      Window.CLIENT_REQUESTABLE_WINDOW_TYPES.put(WindowType.Memories, MemoriesWindow::new);
+      this.playerMemoriesComponentType = entityStoreRegistry.registerComponent(PlayerMemories.class, "PlayerMemories", PlayerMemories.CODEC);
+      ComponentType<EntityStore, Player> playerComponentType = Player.getComponentType();
+      ComponentType<EntityStore, PlayerRef> playerRefComponentType = PlayerRef.getComponentType();
+      ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
+      NPCMemoryProvider npcMemoryProvider = new NPCMemoryProvider();
+      this.registerMemoryProvider(npcMemoryProvider);
+      entityStoreRegistry.registerSystem(
+         new NPCMemory.GatherMemoriesSystem(
+            transformComponentType, playerComponentType, playerRefComponentType, this.playerMemoriesComponentType, npcMemoryProvider.getCollectionRadius()
+         )
+      );
+
+      for (MemoryProvider<?> provider : this.providers) {
+         BuilderCodec<? extends Memory> codec = (BuilderCodec<? extends Memory>)provider.getCodec();
+         this.getCodecRegistry(Memory.CODEC).register(provider.getId(), codec.getInnerClass(), codec);
+      }
+
+      this.getEventRegistry().register(AllNPCsLoadedEvent.class, event -> this.onAssetsLoad());
+      entityStoreRegistry.registerSystem(new MemoriesPlugin.PlayerAddedSystem(playerComponentType, playerRefComponentType, this.playerMemoriesComponentType));
+      this.getCodecRegistry(Interaction.CODEC).register("SetMemoriesCapacity", SetMemoriesCapacityInteraction.class, SetMemoriesCapacityInteraction.CODEC);
+      this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(MemoriesGameplayConfig.class, "Memories", MemoriesGameplayConfig.CODEC);
+      this.getCodecRegistry(Interaction.CODEC).register("MemoriesCondition", MemoriesConditionInteraction.class, MemoriesConditionInteraction.CODEC);
+      entityStoreRegistry.registerSystem(new TempleRespawnPlayersSystem(playerRefComponentType, transformComponentType));
+      this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(ForgottenTempleConfig.class, "ForgottenTemple", ForgottenTempleConfig.CODEC);
+   }
+
+   @Override
+   protected void start() {
+      try {
+         Path path = Constants.UNIVERSE_PATH.resolve("memories.json");
+         if (Files.exists(path)) {
+            this.recordedMemories = RawJsonReader.readSync(path, MemoriesPlugin.RecordedMemories.CODEC, this.getLogger());
+         } else {
+            this.recordedMemories = new MemoriesPlugin.RecordedMemories();
+         }
+      } catch (IOException var2) {
+         throw new RuntimeException(var2);
+      }
+
+      this.hasInitializedMemories = true;
+      this.onAssetsLoad();
+   }
+
+   @Override
+   protected void shutdown() {
+      if (this.hasInitializedMemories) {
+         this.recordedMemories.lock.readLock().lock();
+
+         try {
+            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+         } catch (IOException var5) {
+            throw new RuntimeException(var5);
+         } finally {
+            this.recordedMemories.lock.readLock().unlock();
+         }
+      }
+   }
+
+   private void onAssetsLoad() {
+      if (this.hasInitializedMemories) {
+         this.allMemories.clear();
+
+         for (MemoryProvider<?> provider : this.providers) {
+            for (Entry<String, Set<Memory>> entry : provider.getAllMemories().entrySet()) {
+               this.allMemories.computeIfAbsent(entry.getKey(), k -> new HashSet<>()).addAll(entry.getValue());
+            }
+         }
+      }
+   }
+
+   public MemoriesPlugin.MemoriesPluginConfig getConfig() {
+      return this.config.get();
+   }
+
+   public ComponentType<EntityStore, PlayerMemories> getPlayerMemoriesComponentType() {
+      return this.playerMemoriesComponentType;
+   }
+
+   public <T extends Memory> void registerMemoryProvider(MemoryProvider<T> memoryProvider) {
+      this.providers.add(memoryProvider);
+   }
+
+   @Nonnull
+   public Map<String, Set<Memory>> getAllMemories() {
+      return this.allMemories;
+   }
+
+   public int getMemoriesLevel(@Nonnull GameplayConfig gameplayConfig) {
+      MemoriesGameplayConfig config = MemoriesGameplayConfig.get(gameplayConfig);
+      int memoriesLevel = 1;
+      if (config == null) {
+         return memoriesLevel;
+      } else {
+         int recordedMemoriesCount = this.getRecordedMemories().size();
+         int[] memoriesAmountPerLevel = config.getMemoriesAmountPerLevel();
+
+         for (int i = memoriesAmountPerLevel.length - 1; i >= 0; i--) {
+            if (recordedMemoriesCount >= memoriesAmountPerLevel[i]) {
+               return i + 2;
+            }
+         }
+
+         return memoriesLevel;
+      }
+   }
+
+   public boolean hasRecordedMemory(Memory memory) {
+      this.recordedMemories.lock.readLock().lock();
+
+      boolean var2;
+      try {
+         var2 = this.recordedMemories.memories.contains(memory);
+      } finally {
+         this.recordedMemories.lock.readLock().unlock();
+      }
+
+      return var2;
+   }
+
+   public boolean recordPlayerMemories(@Nonnull PlayerMemories playerMemories) {
+      this.recordedMemories.lock.writeLock().lock();
+
+      try {
+         if (playerMemories.takeMemories(this.recordedMemories.memories)) {
+            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+            return true;
+         }
+      } catch (IOException var6) {
+         throw new RuntimeException(var6);
+      } finally {
+         this.recordedMemories.lock.writeLock().unlock();
+      }
+
+      return false;
+   }
+
+   @Nonnull
+   public Set<Memory> getRecordedMemories() {
+      this.recordedMemories.lock.readLock().lock();
+
+      HashSet var1;
+      try {
+         var1 = new HashSet<>(this.recordedMemories.memories);
+      } finally {
+         this.recordedMemories.lock.readLock().unlock();
+      }
+
+      return var1;
+   }
+
+   public void clearRecordedMemories() {
+      this.recordedMemories.lock.writeLock().lock();
+
+      try {
+         this.recordedMemories.memories.clear();
+         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+      } catch (IOException var5) {
+         throw new RuntimeException(var5);
+      } finally {
+         this.recordedMemories.lock.writeLock().unlock();
+      }
+   }
+
+   public void recordAllMemories() {
+      this.recordedMemories.lock.writeLock().lock();
+
+      try {
+         for (Entry<String, Set<Memory>> entry : this.allMemories.entrySet()) {
+            this.recordedMemories.memories.addAll(entry.getValue());
+         }
+
+         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+      } catch (IOException var6) {
+         throw new RuntimeException(var6);
+      } finally {
+         this.recordedMemories.lock.writeLock().unlock();
+      }
+   }
+
+   public int setRecordedMemoriesCount(int count) {
+      if (count < 0) {
+         count = 0;
+      }
+
+      this.recordedMemories.lock.writeLock().lock();
+
+      int var12;
+      try {
+         this.recordedMemories.memories.clear();
+         List<Memory> allAvailableMemories = new ObjectArrayList();
+
+         for (Entry<String, Set<Memory>> entry : this.allMemories.entrySet()) {
+            allAvailableMemories.addAll(entry.getValue());
+         }
+
+         int actualCount = Math.min(count, allAvailableMemories.size());
+
+         for (int i = 0; i < actualCount; i++) {
+            this.recordedMemories.memories.add(allAvailableMemories.get(i));
+         }
+
+         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+         var12 = actualCount;
+      } catch (IOException var8) {
+         throw new RuntimeException(var8);
+      } finally {
+         this.recordedMemories.lock.writeLock().unlock();
+      }
+
+      return var12;
+   }
+
+   public static class MemoriesPluginConfig {
+      @Nonnull
+      public static final BuilderCodec<MemoriesPlugin.MemoriesPluginConfig> CODEC = BuilderCodec.builder(
+            MemoriesPlugin.MemoriesPluginConfig.class, MemoriesPlugin.MemoriesPluginConfig::new
+         )
+         .append(
+            new KeyedCodec<>("CollectionRadius", new Object2DoubleMapCodec<>(Codec.STRING, Object2DoubleOpenHashMap::new)),
+            (config, map) -> config.collectionRadius = map,
+            config -> config.collectionRadius
+         )
+         .add()
+         .build();
+      private Object2DoubleMap<String> collectionRadius;
+
+      @Nonnull
+      public Object2DoubleMap<String> getCollectionRadius() {
+         return (Object2DoubleMap<String>)(this.collectionRadius != null ? this.collectionRadius : Object2DoubleMaps.EMPTY_MAP);
+      }
+   }
+
+   public static class PlayerAddedSystem extends RefSystem<EntityStore> {
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency<>(Order.AFTER, PlayerSystems.PlayerSpawnedSystem.class));
+      @Nonnull
+      private final ComponentType<EntityStore, Player> playerComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public PlayerAddedSystem(
+         @Nonnull ComponentType<EntityStore, Player> playerComponentType,
+         @Nonnull ComponentType<EntityStore, PlayerRef> playerRefComponentType,
+         @Nonnull ComponentType<EntityStore, PlayerMemories> playerMemoriesComponentType
+      ) {
+         this.playerComponentType = playerComponentType;
+         this.playerRefComponentType = playerRefComponentType;
+         this.playerMemoriesComponentType = playerMemoriesComponentType;
+         this.query = Query.and(playerComponentType, playerRefComponentType);
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Override
+      public void onEntityAdded(
+         @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         Player playerComponent = store.getComponent(ref, this.playerComponentType);
+
+         assert playerComponent != null;
+
+         PlayerRef playerRefComponent = store.getComponent(ref, this.playerRefComponentType);
+
+         assert playerRefComponent != null;
+
+         PlayerMemories playerMemoriesComponent = store.getComponent(ref, this.playerMemoriesComponentType);
+         boolean isFeatureUnlockedByPlayer = playerMemoriesComponent != null;
+         PacketHandler playerConnection = playerRefComponent.getPacketHandler();
+         playerConnection.writeNoCache(new UpdateMemoriesFeatureStatus(isFeatureUnlockedByPlayer));
+      }
+
+      @Override
+      public void onEntityRemove(
+         @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+      }
+   }
+
+   private static class RecordedMemories {
+      @Nonnull
+      public static final BuilderCodec<MemoriesPlugin.RecordedMemories> CODEC = BuilderCodec.builder(
+            MemoriesPlugin.RecordedMemories.class, MemoriesPlugin.RecordedMemories::new
+         )
+         .append(new KeyedCodec<>("Memories", new ArrayCodec<>(Memory.CODEC, Memory[]::new)), (recordedMemories, memories) -> {
+            if (memories != null) {
+               Collections.addAll(recordedMemories.memories, memories);
+            }
+         }, recordedMemories -> recordedMemories.memories.toArray(Memory[]::new))
+         .add()
+         .build();
+      @Nonnull
+      private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+      @Nonnull
+      private final Set<Memory> memories = new HashSet<>();
+   }
+}

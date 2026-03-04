@@ -1,41 +1,31 @@
-/*    */ package com.hypixel.hytale.server.core.event.events.entity;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.entity.LivingEntity;
-/*    */ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-/*    */ import com.hypixel.hytale.server.core.inventory.transaction.Transaction;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class LivingEntityInventoryChangeEvent
-/*    */   extends EntityEvent<LivingEntity, String> {
-/*    */   private ItemContainer itemContainer;
-/*    */   private Transaction transaction;
-/*    */   
-/*    */   public LivingEntityInventoryChangeEvent(LivingEntity entity, ItemContainer itemContainer, Transaction transaction) {
-/* 14 */     super(entity);
-/* 15 */     this.itemContainer = itemContainer;
-/* 16 */     this.transaction = transaction;
-/*    */   }
-/*    */   
-/*    */   public ItemContainer getItemContainer() {
-/* 20 */     return this.itemContainer;
-/*    */   }
-/*    */   
-/*    */   public Transaction getTransaction() {
-/* 24 */     return this.transaction;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 30 */     return "LivingEntityInventoryChangeEvent{itemContainer=" + String.valueOf(this.itemContainer) + ", transaction=" + String.valueOf(this.transaction) + "} " + super
-/*    */ 
-/*    */       
-/* 33 */       .toString();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.event.events.entity;
 
+import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.inventory.transaction.Transaction;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\event\events\entity\LivingEntityInventoryChangeEvent.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class LivingEntityInventoryChangeEvent extends EntityEvent<LivingEntity, String> {
+   private ItemContainer itemContainer;
+   private Transaction transaction;
+
+   public LivingEntityInventoryChangeEvent(LivingEntity entity, ItemContainer itemContainer, Transaction transaction) {
+      super(entity);
+      this.itemContainer = itemContainer;
+      this.transaction = transaction;
+   }
+
+   public ItemContainer getItemContainer() {
+      return this.itemContainer;
+   }
+
+   public Transaction getTransaction() {
+      return this.transaction;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "LivingEntityInventoryChangeEvent{itemContainer=" + this.itemContainer + ", transaction=" + this.transaction + "} " + super.toString();
+   }
+}

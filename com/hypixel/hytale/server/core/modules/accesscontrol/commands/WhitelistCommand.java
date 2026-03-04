@@ -1,34 +1,18 @@
-/*    */ package com.hypixel.hytale.server.core.modules.accesscontrol.commands;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
-/*    */ import com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleWhitelistProvider;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class WhitelistCommand
-/*    */   extends AbstractCommandCollection
-/*    */ {
-/*    */   public WhitelistCommand(@Nonnull HytaleWhitelistProvider whitelistProvider) {
-/* 19 */     super("whitelist", "server.commands.whitelist.desc");
-/* 20 */     addSubCommand((AbstractCommand)new WhitelistAddCommand(whitelistProvider));
-/* 21 */     addSubCommand((AbstractCommand)new WhitelistRemoveCommand(whitelistProvider));
-/* 22 */     addSubCommand((AbstractCommand)new WhitelistEnableCommand(whitelistProvider));
-/* 23 */     addSubCommand((AbstractCommand)new WhitelistDisableCommand(whitelistProvider));
-/* 24 */     addSubCommand((AbstractCommand)new WhitelistClearCommand(whitelistProvider));
-/* 25 */     addSubCommand((AbstractCommand)new WhitelistStatusCommand(whitelistProvider));
-/* 26 */     addSubCommand((AbstractCommand)new WhitelistListCommand(whitelistProvider));
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.accesscontrol.commands;
 
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
+import com.hypixel.hytale.server.core.modules.accesscontrol.provider.HytaleWhitelistProvider;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\accesscontrol\commands\WhitelistCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class WhitelistCommand extends AbstractCommandCollection {
+   public WhitelistCommand(@Nonnull HytaleWhitelistProvider whitelistProvider) {
+      super("whitelist", "server.commands.whitelist.desc");
+      this.addSubCommand(new WhitelistAddCommand(whitelistProvider));
+      this.addSubCommand(new WhitelistRemoveCommand(whitelistProvider));
+      this.addSubCommand(new WhitelistEnableCommand(whitelistProvider));
+      this.addSubCommand(new WhitelistDisableCommand(whitelistProvider));
+      this.addSubCommand(new WhitelistClearCommand(whitelistProvider));
+      this.addSubCommand(new WhitelistStatusCommand(whitelistProvider));
+      this.addSubCommand(new WhitelistListCommand(whitelistProvider));
+   }
+}

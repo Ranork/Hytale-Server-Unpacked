@@ -7,11 +7,5 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public interface PlacedByBlockState {
-  void placedBy(@Nonnull Ref<EntityStore> paramRef, @Nonnull String paramString, @Nonnull BlockState paramBlockState, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
+   void placedBy(@Nonnull Ref<EntityStore> var1, @Nonnull String var2, @Nonnull BlockState var3, @Nonnull ComponentAccessor<EntityStore> var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\meta\state\PlacedByBlockState.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

@@ -1,30 +1,21 @@
-/*    */ package com.hypixel.hytale.server.core.universe.world.commands.block;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.Message;
-/*    */ import com.hypixel.hytale.server.core.command.system.CommandContext;
-/*    */ import com.hypixel.hytale.server.core.command.system.CommandSender;
-/*    */ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class BlockSetTickingCommand
-/*    */   extends SimpleBlockCommand {
-/*    */   public BlockSetTickingCommand() {
-/* 12 */     super("setticking", "server.commands.block.setticking.desc");
-/* 13 */     setPermissionGroup(null);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected void executeWithBlock(@Nonnull CommandContext context, @Nonnull WorldChunk chunk, int x, int y, int z) {
-/* 18 */     CommandSender sender = context.sender();
-/*    */     
-/* 20 */     chunk.setTicking(x, y, z, true);
-/* 21 */     sender.sendMessage(Message.translation("server.commands.block.setticking.success")
-/* 22 */         .param("x", x).param("y", y).param("z", z));
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.universe.world.commands.block;
 
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\commands\block\BlockSetTickingCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BlockSetTickingCommand extends SimpleBlockCommand {
+   public BlockSetTickingCommand() {
+      super("setticking", "server.commands.block.setticking.desc");
+      this.setPermissionGroup(null);
+   }
+
+   @Override
+   protected void executeWithBlock(@Nonnull CommandContext context, @Nonnull WorldChunk chunk, int x, int y, int z) {
+      CommandSender sender = context.sender();
+      chunk.setTicking(x, y, z, true);
+      sender.sendMessage(Message.translation("server.commands.block.setticking.success").param("x", x).param("y", y).param("z", z));
+   }
+}

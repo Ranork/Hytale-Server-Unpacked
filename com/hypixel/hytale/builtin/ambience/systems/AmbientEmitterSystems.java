@@ -1,141 +1,210 @@
-/*     */ package com.hypixel.hytale.builtin.ambience.systems;
-/*     */ import com.hypixel.hytale.builtin.ambience.AmbiencePlugin;
-/*     */ import com.hypixel.hytale.builtin.ambience.components.AmbientEmitterComponent;
-/*     */ import com.hypixel.hytale.component.AddReason;
-/*     */ import com.hypixel.hytale.component.ArchetypeChunk;
-/*     */ import com.hypixel.hytale.component.CommandBuffer;
-/*     */ import com.hypixel.hytale.component.Component;
-/*     */ import com.hypixel.hytale.component.Holder;
-/*     */ import com.hypixel.hytale.component.NonSerialized;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.RemoveReason;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.component.query.Query;
-/*     */ import com.hypixel.hytale.component.system.RefSystem;
-/*     */ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
-/*     */ import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import java.util.logging.Level;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ public class AmbientEmitterSystems {
-/*     */   public static class EntityAdded extends HolderSystem<EntityStore> {
-/*  28 */     private final Query<EntityStore> query = (Query<EntityStore>)Query.and(new Query[] { (Query)AmbientEmitterComponent.getComponentType(), (Query)TransformComponent.getComponentType() });
-/*     */ 
-/*     */     
-/*     */     public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-/*  32 */       if (!holder.getArchetype().contains(NetworkId.getComponentType())) {
-/*  33 */         holder.addComponent(NetworkId.getComponentType(), (Component)new NetworkId(((EntityStore)store.getExternalData()).takeNextNetworkId()));
-/*     */       }
-/*     */       
-/*  36 */       holder.ensureComponent(Intangible.getComponentType());
-/*  37 */       holder.ensureComponent(PrefabCopyableComponent.getComponentType());
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {}
-/*     */ 
-/*     */     
-/*     */     public Query<EntityStore> getQuery() {
-/*  46 */       return this.query;
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public static class EntityRefAdded
-/*     */     extends RefSystem<EntityStore>
-/*     */   {
-/*  54 */     private final Query<EntityStore> query = (Query<EntityStore>)Query.and(new Query[] { (Query)AmbientEmitterComponent.getComponentType(), (Query)TransformComponent.getComponentType() });
-/*     */ 
-/*     */     
-/*     */     public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/*  58 */       AmbientEmitterComponent emitterComponent = (AmbientEmitterComponent)store.getComponent(ref, AmbientEmitterComponent.getComponentType());
-/*  59 */       assert emitterComponent != null;
-/*     */       
-/*  61 */       TransformComponent transformComponent = (TransformComponent)store.getComponent(ref, TransformComponent.getComponentType());
-/*  62 */       assert transformComponent != null;
-/*     */ 
-/*     */ 
-/*     */       
-/*  66 */       Holder<EntityStore> emitterHolder = EntityStore.REGISTRY.newHolder();
-/*  67 */       emitterHolder.addComponent(TransformComponent.getComponentType(), (Component)transformComponent.clone());
-/*     */       
-/*  69 */       AudioComponent audioComponent = new AudioComponent();
-/*  70 */       audioComponent.addSound(SoundEvent.getAssetMap().getIndex(emitterComponent.getSoundEventId()));
-/*  71 */       emitterHolder.addComponent(AudioComponent.getComponentType(), (Component)audioComponent);
-/*     */       
-/*  73 */       emitterHolder.addComponent(NetworkId.getComponentType(), (Component)new NetworkId(((EntityStore)store.getExternalData()).takeNextNetworkId()));
-/*  74 */       emitterHolder.ensureComponent(Intangible.getComponentType());
-/*  75 */       emitterHolder.addComponent(EntityStore.REGISTRY.getNonSerializedComponentType(), (Component)NonSerialized.get());
-/*     */       
-/*  77 */       emitterComponent.setSpawnedEmitter(commandBuffer.addEntity(emitterHolder, AddReason.SPAWN));
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/*  84 */       if (reason == RemoveReason.REMOVE) {
-/*  85 */         AmbientEmitterComponent emitterComponent = (AmbientEmitterComponent)store.getComponent(ref, AmbientEmitterComponent.getComponentType());
-/*  86 */         assert emitterComponent != null;
-/*     */         
-/*  88 */         Ref<EntityStore> emitterRef = emitterComponent.getSpawnedEmitter();
-/*  89 */         if (emitterRef != null) {
-/*  90 */           commandBuffer.removeEntity(emitterRef, RemoveReason.REMOVE);
-/*     */         }
-/*     */       } 
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nullable
-/*     */     public Query<EntityStore> getQuery() {
-/*  98 */       return this.query;
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public static class Ticking
-/*     */     extends EntityTickingSystem<EntityStore>
-/*     */   {
-/* 106 */     private final Query<EntityStore> query = (Query<EntityStore>)Query.and(new Query[] { (Query)AmbientEmitterComponent.getComponentType(), (Query)TransformComponent.getComponentType() });
-/*     */ 
-/*     */     
-/*     */     public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/* 110 */       AmbientEmitterComponent emitter = (AmbientEmitterComponent)archetypeChunk.getComponent(index, AmbientEmitterComponent.getComponentType());
-/* 111 */       assert emitter != null;
-/*     */       
-/* 113 */       TransformComponent transform = (TransformComponent)archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-/* 114 */       assert transform != null;
-/*     */       
-/* 116 */       if (emitter.getSpawnedEmitter() == null || !emitter.getSpawnedEmitter().isValid()) {
-/* 117 */         AmbiencePlugin.get().getLogger().at(Level.WARNING).log("Ambient emitter lost at %s: %d %s", transform
-/* 118 */             .getPosition(), Integer.valueOf(archetypeChunk.getReferenceTo(index).getIndex()), emitter.getSoundEventId());
-/* 119 */         commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
-/*     */         
-/*     */         return;
-/*     */       } 
-/* 123 */       TransformComponent ownedEmitterTransform = (TransformComponent)store.getComponent(emitter.getSpawnedEmitter(), TransformComponent.getComponentType());
-/* 124 */       if (transform.getPosition().distanceSquaredTo(ownedEmitterTransform.getPosition()) > 1.0D) {
-/* 125 */         ownedEmitterTransform.setPosition(transform.getPosition());
-/*     */       }
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nullable
-/*     */     public Query<EntityStore> getQuery() {
-/* 132 */       return this.query;
-/*     */     }
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.builtin.ambience.systems;
 
+import com.hypixel.hytale.builtin.ambience.AmbiencePlugin;
+import com.hypixel.hytale.builtin.ambience.components.AmbientEmitterComponent;
+import com.hypixel.hytale.component.AddReason;
+import com.hypixel.hytale.component.Archetype;
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.NonSerialized;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.HolderSystem;
+import com.hypixel.hytale.component.system.RefSystem;
+import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
+import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
+import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.logging.Level;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\ambience\systems\AmbientEmitterSystems.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AmbientEmitterSystems {
+   public static class EntityAdded extends HolderSystem<EntityStore> {
+      @Nonnull
+      private final ComponentType<EntityStore, NetworkId> networkIdComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, Intangible> intangibleComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public EntityAdded(
+         @Nonnull ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType,
+         @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType,
+         @Nonnull ComponentType<EntityStore, NetworkId> networkIdComponentType,
+         @Nonnull ComponentType<EntityStore, Intangible> intangibleComponentType,
+         @Nonnull ComponentType<EntityStore, PrefabCopyableComponent> prefabCopyableComponentType
+      ) {
+         this.networkIdComponentType = networkIdComponentType;
+         this.intangibleComponentType = intangibleComponentType;
+         this.prefabCopyableComponentType = prefabCopyableComponentType;
+         this.query = Query.and(ambientEmitterComponentType, transformComponentType);
+      }
+
+      @Override
+      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
+         Archetype<EntityStore> archetype = holder.getArchetype();
+         if (!archetype.contains(this.networkIdComponentType)) {
+            int nextNetworkId = store.getExternalData().takeNextNetworkId();
+            holder.addComponent(this.networkIdComponentType, new NetworkId(nextNetworkId));
+         }
+
+         holder.ensureComponent(this.intangibleComponentType);
+         holder.ensureComponent(this.prefabCopyableComponentType);
+      }
+
+      @Override
+      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+   }
+
+   public static class EntityRefAdded extends RefSystem<EntityStore> {
+      @Nonnull
+      private final ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, TransformComponent> transformComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, AudioComponent> audioComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, NetworkId> networkIdComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, Intangible> intangibleComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public EntityRefAdded(
+         @Nonnull ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType,
+         @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType,
+         @Nonnull ComponentType<EntityStore, AudioComponent> audioComponentType,
+         @Nonnull ComponentType<EntityStore, NetworkId> networkIdComponentType,
+         @Nonnull ComponentType<EntityStore, Intangible> intangibleComponentType
+      ) {
+         this.ambientEmitterComponentType = ambientEmitterComponentType;
+         this.transformComponentType = transformComponentType;
+         this.audioComponentType = audioComponentType;
+         this.networkIdComponentType = networkIdComponentType;
+         this.intangibleComponentType = intangibleComponentType;
+         this.query = Query.and(ambientEmitterComponentType, transformComponentType);
+      }
+
+      @Override
+      public void onEntityAdded(
+         @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         AmbientEmitterComponent emitterComponent = store.getComponent(ref, this.ambientEmitterComponentType);
+
+         assert emitterComponent != null;
+
+         TransformComponent transformComponent = store.getComponent(ref, this.transformComponentType);
+
+         assert transformComponent != null;
+
+         Holder<EntityStore> emitterHolder = EntityStore.REGISTRY.newHolder();
+         emitterHolder.addComponent(this.transformComponentType, transformComponent.clone());
+         AudioComponent audioComponent = new AudioComponent();
+         audioComponent.addSound(SoundEvent.getAssetMap().getIndex(emitterComponent.getSoundEventId()));
+         emitterHolder.addComponent(this.audioComponentType, audioComponent);
+         int nextNetworkId = store.getExternalData().takeNextNetworkId();
+         emitterHolder.addComponent(this.networkIdComponentType, new NetworkId(nextNetworkId));
+         emitterHolder.ensureComponent(this.intangibleComponentType);
+         emitterHolder.addComponent(EntityStore.REGISTRY.getNonSerializedComponentType(), NonSerialized.get());
+         Ref<EntityStore> emitterRef = commandBuffer.addEntity(emitterHolder, AddReason.SPAWN);
+         emitterComponent.setSpawnedEmitter(emitterRef);
+      }
+
+      @Override
+      public void onEntityRemove(
+         @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         if (reason == RemoveReason.REMOVE) {
+            AmbientEmitterComponent emitterComponent = store.getComponent(ref, this.ambientEmitterComponentType);
+
+            assert emitterComponent != null;
+
+            Ref<EntityStore> emitterRef = emitterComponent.getSpawnedEmitter();
+            if (emitterRef != null) {
+               commandBuffer.removeEntity(emitterRef, RemoveReason.REMOVE);
+            }
+         }
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+   }
+
+   public static class Ticking extends EntityTickingSystem<EntityStore> {
+      @Nonnull
+      private final ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, TransformComponent> transformComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public Ticking(
+         @Nonnull ComponentType<EntityStore, AmbientEmitterComponent> ambientEmitterComponentType,
+         @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType
+      ) {
+         this.ambientEmitterComponentType = ambientEmitterComponentType;
+         this.transformComponentType = transformComponentType;
+         this.query = Query.and(ambientEmitterComponentType, transformComponentType);
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         AmbientEmitterComponent emitterComponent = archetypeChunk.getComponent(index, this.ambientEmitterComponentType);
+
+         assert emitterComponent != null;
+
+         TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
+
+         assert transformComponent != null;
+
+         Ref<EntityStore> spawnedEmitterRef = emitterComponent.getSpawnedEmitter();
+         if (spawnedEmitterRef != null && spawnedEmitterRef.isValid()) {
+            TransformComponent ownedEmitterTransform = commandBuffer.getComponent(spawnedEmitterRef, this.transformComponentType);
+            if (ownedEmitterTransform != null) {
+               if (transformComponent.getPosition().distanceSquaredTo(ownedEmitterTransform.getPosition()) > 1.0) {
+                  ownedEmitterTransform.setPosition(transformComponent.getPosition());
+               }
+            }
+         } else {
+            Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+            AmbiencePlugin.get()
+               .getLogger()
+               .at(Level.WARNING)
+               .log("Ambient emitter lost at %s: %d %s", transformComponent.getPosition(), ref.getIndex(), emitterComponent.getSoundEventId());
+            commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
+         }
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+   }
+}

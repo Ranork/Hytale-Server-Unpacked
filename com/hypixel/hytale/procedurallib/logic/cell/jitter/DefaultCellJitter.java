@@ -1,61 +1,54 @@
-/*    */ package com.hypixel.hytale.procedurallib.logic.cell.jitter;
-/*    */ 
-/*    */ import com.hypixel.hytale.procedurallib.logic.DoubleArray;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class DefaultCellJitter
-/*    */   implements CellJitter {
-/*  8 */   public static final CellJitter DEFAULT_ONE = new DefaultCellJitter();
-/*    */ 
-/*    */   
-/*    */   public double getMaxX() {
-/* 12 */     return 1.0D;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getMaxY() {
-/* 17 */     return 1.0D;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getMaxZ() {
-/* 22 */     return 1.0D;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getPointX(int cx, @Nonnull DoubleArray.Double2 vec) {
-/* 27 */     return cx + vec.x;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getPointY(int cy, @Nonnull DoubleArray.Double2 vec) {
-/* 32 */     return cy + vec.y;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getPointX(int cx, @Nonnull DoubleArray.Double3 vec) {
-/* 37 */     return cx + vec.x;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getPointY(int cy, @Nonnull DoubleArray.Double3 vec) {
-/* 42 */     return cy + vec.y;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double getPointZ(int cz, @Nonnull DoubleArray.Double3 vec) {
-/* 47 */     return cz + vec.z;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 53 */     return "DefaultCellJitter{}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.logic.cell.jitter;
 
+import com.hypixel.hytale.procedurallib.logic.DoubleArray;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\logic\cell\jitter\DefaultCellJitter.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class DefaultCellJitter implements CellJitter {
+   public static final CellJitter DEFAULT_ONE = new DefaultCellJitter();
+
+   @Override
+   public double getMaxX() {
+      return 1.0;
+   }
+
+   @Override
+   public double getMaxY() {
+      return 1.0;
+   }
+
+   @Override
+   public double getMaxZ() {
+      return 1.0;
+   }
+
+   @Override
+   public double getPointX(int cx, @Nonnull DoubleArray.Double2 vec) {
+      return cx + vec.x;
+   }
+
+   @Override
+   public double getPointY(int cy, @Nonnull DoubleArray.Double2 vec) {
+      return cy + vec.y;
+   }
+
+   @Override
+   public double getPointX(int cx, @Nonnull DoubleArray.Double3 vec) {
+      return cx + vec.x;
+   }
+
+   @Override
+   public double getPointY(int cy, @Nonnull DoubleArray.Double3 vec) {
+      return cy + vec.y;
+   }
+
+   @Override
+   public double getPointZ(int cz, @Nonnull DoubleArray.Double3 vec) {
+      return cz + vec.z;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "DefaultCellJitter{}";
+   }
+}

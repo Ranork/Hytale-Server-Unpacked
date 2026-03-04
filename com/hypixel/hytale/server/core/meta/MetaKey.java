@@ -1,43 +1,39 @@
-/*    */ package com.hypixel.hytale.server.core.meta;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class MetaKey<T> {
-/*    */   private final int id;
-/*    */   
-/*    */   MetaKey(int id) {
-/* 10 */     this.id = id;
-/*    */   }
-/*    */   
-/*    */   public int getId() {
-/* 14 */     return this.id;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean equals(@Nullable Object o) {
-/* 19 */     if (this == o) return true; 
-/* 20 */     if (o == null || getClass() != o.getClass()) return false;
-/*    */     
-/* 22 */     MetaKey<?> metaKey = (MetaKey)o;
-/*    */     
-/* 24 */     return (this.id == metaKey.id);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int hashCode() {
-/* 29 */     return this.id;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 35 */     return "MetaKey{id=" + this.id + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.meta;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\meta\MetaKey.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class MetaKey<T> {
+   private final int id;
+
+   MetaKey(int id) {
+      this.id = id;
+   }
+
+   public int getId() {
+      return this.id;
+   }
+
+   @Override
+   public boolean equals(@Nullable Object o) {
+      if (this == o) {
+         return true;
+      } else if (o != null && this.getClass() == o.getClass()) {
+         MetaKey<?> metaKey = (MetaKey<?>)o;
+         return this.id == metaKey.id;
+      } else {
+         return false;
+      }
+   }
+
+   @Override
+   public int hashCode() {
+      return this.id;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "MetaKey{id=" + this.id + "}";
+   }
+}

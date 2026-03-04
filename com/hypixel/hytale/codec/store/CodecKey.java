@@ -1,48 +1,39 @@
-/*    */ package com.hypixel.hytale.codec.store;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class CodecKey<T>
-/*    */ {
-/*    */   private final String id;
-/*    */   
-/*    */   public CodecKey(String id) {
-/* 15 */     this.id = id;
-/*    */   }
-/*    */   
-/*    */   public String getId() {
-/* 19 */     return this.id;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean equals(@Nullable Object o) {
-/* 24 */     if (this == o) return true; 
-/* 25 */     if (o == null || getClass() != o.getClass()) return false;
-/*    */     
-/* 27 */     CodecKey<?> codecKey = (CodecKey)o;
-/*    */     
-/* 29 */     return (this.id != null) ? this.id.equals(codecKey.id) : ((codecKey.id == null));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int hashCode() {
-/* 34 */     return (this.id != null) ? this.id.hashCode() : 0;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 40 */     return "CodecKey{id='" + this.id + "'}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.codec.store;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\codec\store\CodecKey.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class CodecKey<T> {
+   private final String id;
+
+   public CodecKey(String id) {
+      this.id = id;
+   }
+
+   public String getId() {
+      return this.id;
+   }
+
+   @Override
+   public boolean equals(@Nullable Object o) {
+      if (this == o) {
+         return true;
+      } else if (o != null && this.getClass() == o.getClass()) {
+         CodecKey<?> codecKey = (CodecKey<?>)o;
+         return this.id != null ? this.id.equals(codecKey.id) : codecKey.id == null;
+      } else {
+         return false;
+      }
+   }
+
+   @Override
+   public int hashCode() {
+      return this.id != null ? this.id.hashCode() : 0;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "CodecKey{id='" + this.id + "'}";
+   }
+}

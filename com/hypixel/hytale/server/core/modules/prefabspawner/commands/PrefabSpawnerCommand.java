@@ -1,27 +1,13 @@
-/*    */ package com.hypixel.hytale.server.core.modules.prefabspawner.commands;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class PrefabSpawnerCommand
-/*    */   extends AbstractCommandCollection
-/*    */ {
-/*    */   public PrefabSpawnerCommand() {
-/* 14 */     super("prefabspawner", "server.commands.prefabspawner.desc");
-/* 15 */     addAliases(new String[] { "pspawner" });
-/*    */     
-/* 17 */     addSubCommand((AbstractCommand)new PrefabSpawnerGetCommand());
-/* 18 */     addSubCommand((AbstractCommand)new PrefabSpawnerSetCommand());
-/* 19 */     addSubCommand((AbstractCommand)new PrefabSpawnerWeightCommand());
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.prefabspawner.commands;
 
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\prefabspawner\commands\PrefabSpawnerCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PrefabSpawnerCommand extends AbstractCommandCollection {
+   public PrefabSpawnerCommand() {
+      super("prefabspawner", "server.commands.prefabspawner.desc");
+      this.addAliases("pspawner");
+      this.addSubCommand(new PrefabSpawnerGetCommand());
+      this.addSubCommand(new PrefabSpawnerSetCommand());
+      this.addSubCommand(new PrefabSpawnerWeightCommand());
+   }
+}

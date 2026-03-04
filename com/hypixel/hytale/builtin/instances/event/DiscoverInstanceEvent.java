@@ -1,117 +1,57 @@
-/*     */ package com.hypixel.hytale.builtin.instances.event;
-/*     */ 
-/*     */ import com.hypixel.hytale.builtin.instances.config.InstanceDiscoveryConfig;
-/*     */ import com.hypixel.hytale.component.system.EcsEvent;
-/*     */ import com.hypixel.hytale.component.system.ICancellableEcsEvent;
-/*     */ import java.util.UUID;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public abstract class DiscoverInstanceEvent
-/*     */   extends EcsEvent
-/*     */ {
-/*     */   @Nonnull
-/*     */   private final UUID instanceWorldUuid;
-/*     */   @Nonnull
-/*     */   private final InstanceDiscoveryConfig discoveryConfig;
-/*     */   
-/*     */   public DiscoverInstanceEvent(@Nonnull UUID instanceWorldUuid, @Nonnull InstanceDiscoveryConfig discoveryConfig) {
-/*  35 */     this.instanceWorldUuid = instanceWorldUuid;
-/*  36 */     this.discoveryConfig = discoveryConfig;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public UUID getInstanceWorldUuid() {
-/*  44 */     return this.instanceWorldUuid;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public InstanceDiscoveryConfig getDiscoveryConfig() {
-/*  52 */     return this.discoveryConfig;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public static class Display
-/*     */     extends DiscoverInstanceEvent
-/*     */     implements ICancellableEcsEvent
-/*     */   {
-/*     */     private boolean cancelled = false;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     private boolean display;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public Display(@Nonnull UUID instanceWorldUuid, @Nonnull InstanceDiscoveryConfig discoveryConfig) {
-/*  81 */       super(instanceWorldUuid, discoveryConfig);
-/*  82 */       this.display = discoveryConfig.isDisplay();
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public boolean isCancelled() {
-/*  87 */       return this.cancelled;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public void setCancelled(boolean cancelled) {
-/*  92 */       this.cancelled = cancelled;
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public boolean shouldDisplay() {
-/*  99 */       return this.display;
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public void setDisplay(boolean display) {
-/* 108 */       this.display = display;
-/*     */     }
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.builtin.instances.event;
 
+import com.hypixel.hytale.builtin.instances.config.InstanceDiscoveryConfig;
+import com.hypixel.hytale.component.system.EcsEvent;
+import com.hypixel.hytale.component.system.ICancellableEcsEvent;
+import java.util.UUID;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\instances\event\DiscoverInstanceEvent.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class DiscoverInstanceEvent extends EcsEvent {
+   @Nonnull
+   private final UUID instanceWorldUuid;
+   @Nonnull
+   private final InstanceDiscoveryConfig discoveryConfig;
+
+   public DiscoverInstanceEvent(@Nonnull UUID instanceWorldUuid, @Nonnull InstanceDiscoveryConfig discoveryConfig) {
+      this.instanceWorldUuid = instanceWorldUuid;
+      this.discoveryConfig = discoveryConfig;
+   }
+
+   @Nonnull
+   public UUID getInstanceWorldUuid() {
+      return this.instanceWorldUuid;
+   }
+
+   @Nonnull
+   public InstanceDiscoveryConfig getDiscoveryConfig() {
+      return this.discoveryConfig;
+   }
+
+   public static class Display extends DiscoverInstanceEvent implements ICancellableEcsEvent {
+      private boolean cancelled = false;
+      private boolean display;
+
+      public Display(@Nonnull UUID instanceWorldUuid, @Nonnull InstanceDiscoveryConfig discoveryConfig) {
+         super(instanceWorldUuid, discoveryConfig);
+         this.display = discoveryConfig.isDisplay();
+      }
+
+      @Override
+      public boolean isCancelled() {
+         return this.cancelled;
+      }
+
+      @Override
+      public void setCancelled(boolean cancelled) {
+         this.cancelled = cancelled;
+      }
+
+      public boolean shouldDisplay() {
+         return this.display;
+      }
+
+      public void setDisplay(boolean display) {
+         this.display = display;
+      }
+   }
+}

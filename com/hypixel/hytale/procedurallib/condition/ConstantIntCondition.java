@@ -1,39 +1,28 @@
-/*    */ package com.hypixel.hytale.procedurallib.condition;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class ConstantIntCondition
-/*    */   implements IIntCondition
-/*    */ {
-/* 10 */   public static final ConstantIntCondition DEFAULT_TRUE = new ConstantIntCondition(true);
-/* 11 */   public static final ConstantIntCondition DEFAULT_FALSE = new ConstantIntCondition(false);
-/*    */   
-/*    */   protected final boolean result;
-/*    */   
-/*    */   public ConstantIntCondition(boolean result) {
-/* 16 */     this.result = result;
-/*    */   }
-/*    */   
-/*    */   public boolean getResult() {
-/* 20 */     return this.result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean eval(int value) {
-/* 25 */     return this.result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 31 */     return "ConstantIntCondition{result=" + this.result + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.condition;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\condition\ConstantIntCondition.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ConstantIntCondition implements IIntCondition {
+   public static final ConstantIntCondition DEFAULT_TRUE = new ConstantIntCondition(true);
+   public static final ConstantIntCondition DEFAULT_FALSE = new ConstantIntCondition(false);
+   protected final boolean result;
+
+   public ConstantIntCondition(boolean result) {
+      this.result = result;
+   }
+
+   public boolean getResult() {
+      return this.result;
+   }
+
+   @Override
+   public boolean eval(int value) {
+      return this.result;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ConstantIntCondition{result=" + this.result + "}";
+   }
+}

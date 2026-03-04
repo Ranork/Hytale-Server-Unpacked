@@ -1,83 +1,103 @@
-/*    */ package com.hypixel.hytale.builtin.beds.sleep.systems.world;
-/*    */ import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSleep;
-/*    */ import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSomnolence;
-/*    */ import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSleep;
-/*    */ import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSlumber;
-/*    */ import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSomnolence;
-/*    */ import com.hypixel.hytale.component.ArchetypeChunk;
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
-/*    */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*    */ import com.hypixel.hytale.server.core.universe.world.World;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import java.time.Instant;
-/*    */ import java.util.Collection;
-/*    */ import java.util.Iterator;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
-/*    */   public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
-/*    */     WorldSlumber slumber;
-/* 23 */     World world = ((EntityStore)store.getExternalData()).getWorld();
-/*    */     
-/* 25 */     WorldSomnolence worldSomnolence = (WorldSomnolence)store.getResource(WorldSomnolence.getResourceType());
-/* 26 */     WorldSleep worldSleep = worldSomnolence.getState();
-/*    */     
-/* 28 */     if (worldSleep instanceof WorldSlumber) { slumber = (WorldSlumber)worldSleep; }
-/*    */     else
-/*    */     { return; }
-/*    */     
-/* 32 */     slumber.incProgressSeconds(dt);
-/* 33 */     boolean sleepingIsOver = (slumber.getProgressSeconds() >= slumber.getIrlDurationSeconds() || isSomeoneAwake((ComponentAccessor<EntityStore>)store));
-/* 34 */     if (!sleepingIsOver) {
-/*    */       return;
-/*    */     }
-/*    */     
-/* 38 */     worldSomnolence.setState((WorldSleep)WorldSleep.Awake.INSTANCE);
-/*    */     
-/* 40 */     WorldTimeResource timeResource = (WorldTimeResource)store.getResource(WorldTimeResource.getResourceType());
-/* 41 */     Instant wakeUpTime = computeWakeupTime(slumber);
-/* 42 */     timeResource.setGameTime(wakeUpTime, world, store);
-/*    */     
-/* 44 */     store.forEachEntityParallel((Query)PlayerSomnolence.getComponentType(), (index, archetypeChunk, commandBuffer) -> {
-/*    */           PlayerSomnolence somnolenceComponent = (PlayerSomnolence)archetypeChunk.getComponent(index, PlayerSomnolence.getComponentType());
-/*    */           assert somnolenceComponent != null;
-/*    */           if (somnolenceComponent.getSleepState() instanceof PlayerSleep.Slumber) {
-/*    */             Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-/*    */             commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), (Component)PlayerSleep.MorningWakeUp.createComponent(timeResource));
-/*    */           } 
-/*    */         });
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   private static Instant computeWakeupTime(@Nonnull WorldSlumber slumber) {
-/* 56 */     float progress = slumber.getProgressSeconds() / slumber.getIrlDurationSeconds();
-/* 57 */     long totalNanos = Duration.between(slumber.getStartInstant(), slumber.getTargetInstant()).toNanos();
-/* 58 */     long progressNanos = (long)((float)totalNanos * progress);
-/*    */     
-/* 60 */     return slumber.getStartInstant().plusNanos(progressNanos);
-/*    */   }
-/*    */   
-/*    */   private static boolean isSomeoneAwake(@Nonnull ComponentAccessor<EntityStore> store) {
-/* 64 */     World world = ((EntityStore)store.getExternalData()).getWorld();
-/* 65 */     Collection<PlayerRef> playerRefs = world.getPlayerRefs();
-/* 66 */     if (playerRefs.isEmpty()) return false;
-/*    */     
-/* 68 */     Iterator<PlayerRef> iterator = playerRefs.iterator(); if (iterator.hasNext()) { PlayerRef playerRef = iterator.next();
-/* 69 */       PlayerSomnolence somnolenceComponent = (PlayerSomnolence)store.getComponent(playerRef.getReference(), PlayerSomnolence.getComponentType());
-/* 70 */       if (somnolenceComponent == null) return true;
-/*    */       
-/* 72 */       PlayerSleep sleepState = somnolenceComponent.getSleepState();
-/* 73 */       return sleepState instanceof PlayerSleep.FullyAwake; }
-/*    */     
-/* 75 */     return false;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.beds.sleep.systems.world;
 
+import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSleep;
+import com.hypixel.hytale.builtin.beds.sleep.components.PlayerSomnolence;
+import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSleep;
+import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSlumber;
+import com.hypixel.hytale.builtin.beds.sleep.resources.WorldSomnolence;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.ResourceType;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.system.tick.TickingSystem;
+import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collection;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\beds\sleep\systems\world\UpdateWorldSlumberSystem.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class UpdateWorldSlumberSystem extends TickingSystem<EntityStore> {
+   @Nonnull
+   private final ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType;
+   @Nonnull
+   private final ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType;
+   @Nonnull
+   private final ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType;
+
+   public UpdateWorldSlumberSystem(
+      @Nonnull ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType,
+      @Nonnull ResourceType<EntityStore, WorldSomnolence> worldSomnolenceResourceType,
+      @Nonnull ResourceType<EntityStore, WorldTimeResource> worldTimeResourceType
+   ) {
+      this.playerSomnolenceComponentType = playerSomnolenceComponentType;
+      this.worldSomnolenceResourceType = worldSomnolenceResourceType;
+      this.worldTimeResourceType = worldTimeResourceType;
+   }
+
+   @Override
+   public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
+      World world = store.getExternalData().getWorld();
+      WorldSomnolence worldSomnolenceResource = store.getResource(this.worldSomnolenceResourceType);
+      if (worldSomnolenceResource.getState() instanceof WorldSlumber slumber) {
+         slumber.incrementProgressSeconds(dt);
+         boolean itsMorningTimeToWAKEUP = slumber.getProgressSeconds() >= slumber.getIrlDurationSeconds();
+         boolean someoneIsAwake = isSomeoneAwake(store, this.playerSomnolenceComponentType);
+         boolean sleepingIsOver = itsMorningTimeToWAKEUP || someoneIsAwake;
+         if (sleepingIsOver) {
+            worldSomnolenceResource.setState(WorldSleep.Awake.INSTANCE);
+            WorldTimeResource timeResource = store.getResource(this.worldTimeResourceType);
+            Instant now = timeResource.getGameTime();
+            Instant wakeUpTime = computeWakeupTime(slumber);
+            timeResource.setGameTime(wakeUpTime, world, store);
+            store.forEachEntityParallel(this.playerSomnolenceComponentType, (index, archetypeChunk, commandBuffer) -> {
+               PlayerSomnolence somnolenceComponent = archetypeChunk.getComponent(index, this.playerSomnolenceComponentType);
+
+               assert somnolenceComponent != null;
+
+               if (somnolenceComponent.getSleepState() instanceof PlayerSleep.Slumber) {
+                  Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+                  PlayerSomnolence sleepComponent = PlayerSleep.MorningWakeUp.createComponent(itsMorningTimeToWAKEUP ? now : null);
+                  commandBuffer.putComponent(ref, this.playerSomnolenceComponentType, sleepComponent);
+               }
+            });
+         }
+      }
+   }
+
+   @Nonnull
+   private static Instant computeWakeupTime(@Nonnull WorldSlumber slumber) {
+      float progress = slumber.getProgressSeconds() / slumber.getIrlDurationSeconds();
+      long totalNanos = Duration.between(slumber.getStartInstant(), slumber.getTargetInstant()).toNanos();
+      long progressNanos = (long)((float)totalNanos * progress);
+      return slumber.getStartInstant().plusNanos(progressNanos);
+   }
+
+   private static boolean isSomeoneAwake(
+      @Nonnull ComponentAccessor<EntityStore> store, @Nonnull ComponentType<EntityStore, PlayerSomnolence> playerSomnolenceComponentType
+   ) {
+      World world = store.getExternalData().getWorld();
+      Collection<PlayerRef> playerRefs = world.getPlayerRefs();
+      if (playerRefs.isEmpty()) {
+         return false;
+      } else {
+         for (PlayerRef playerRef : playerRefs) {
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref != null && ref.isValid()) {
+               PlayerSomnolence somnolenceComponent = store.getComponent(ref, playerSomnolenceComponentType);
+               if (somnolenceComponent == null) {
+                  return true;
+               }
+
+               PlayerSleep sleepState = somnolenceComponent.getSleepState();
+               return sleepState instanceof PlayerSleep.FullyAwake;
+            }
+         }
+
+         return false;
+      }
+   }
+}

@@ -1,54 +1,43 @@
-/*    */ package com.hypixel.hytale.server.npc.corecomponents;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import com.hypixel.hytale.server.npc.instructions.RoleStateChange;
-/*    */ import com.hypixel.hytale.server.npc.role.Role;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public interface ISensorEntityCollector
-/*    */   extends RoleStateChange
-/*    */ {
-/* 18 */   public static final ISensorEntityCollector DEFAULT = new ISensorEntityCollector()
-/*    */     {
-/*    */       public void init(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {}
-/*    */ 
-/*    */ 
-/*    */       
-/*    */       public void collectMatching(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {}
-/*    */ 
-/*    */ 
-/*    */       
-/*    */       public void collectNonMatching(@Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {}
-/*    */ 
-/*    */ 
-/*    */       
-/*    */       public boolean terminateOnFirstMatch() {
-/* 33 */         return true;
-/*    */       }
-/*    */       
-/*    */       public void cleanup() {}
-/*    */     };
-/*    */   
-/*    */   void init(@Nonnull Ref<EntityStore> paramRef, @Nonnull Role paramRole, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
-/*    */   
-/*    */   void collectMatching(@Nonnull Ref<EntityStore> paramRef1, @Nonnull Ref<EntityStore> paramRef2, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
-/*    */   
-/*    */   void collectNonMatching(@Nonnull Ref<EntityStore> paramRef, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
-/*    */   
-/*    */   boolean terminateOnFirstMatch();
-/*    */   
-/*    */   void cleanup();
-/*    */ }
+package com.hypixel.hytale.server.npc.corecomponents;
 
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.instructions.RoleStateChange;
+import com.hypixel.hytale.server.npc.role.Role;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\corecomponents\ISensorEntityCollector.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface ISensorEntityCollector extends RoleStateChange {
+   ISensorEntityCollector DEFAULT = new ISensorEntityCollector() {
+      @Override
+      public void init(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      }
+
+      @Override
+      public void collectMatching(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      }
+
+      @Override
+      public void collectNonMatching(@Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      }
+
+      @Override
+      public boolean terminateOnFirstMatch() {
+         return true;
+      }
+
+      @Override
+      public void cleanup() {
+      }
+   };
+
+   void init(@Nonnull Ref<EntityStore> var1, @Nonnull Role var2, @Nonnull ComponentAccessor<EntityStore> var3);
+
+   void collectMatching(@Nonnull Ref<EntityStore> var1, @Nonnull Ref<EntityStore> var2, @Nonnull ComponentAccessor<EntityStore> var3);
+
+   void collectNonMatching(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+
+   boolean terminateOnFirstMatch();
+
+   void cleanup();
+}

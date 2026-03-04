@@ -1,47 +1,33 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.datastructures.voxelspace;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class VoxelCoordinate
-/*    */ {
-/*    */   int x;
-/*    */   int y;
-/*    */   int z;
-/*    */   
-/*    */   public VoxelCoordinate(int x, int y, int z) {
-/* 15 */     this.x = x;
-/* 16 */     this.y = y;
-/* 17 */     this.z = z;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean equals(Object other) {
-/*    */     VoxelCoordinate otherVoxelCoordinate;
-/* 23 */     if (other instanceof VoxelCoordinate) { otherVoxelCoordinate = (VoxelCoordinate)other; }
-/* 24 */     else { return false; }
-/* 25 */      return (this == otherVoxelCoordinate || (this.x == otherVoxelCoordinate.x && this.y == otherVoxelCoordinate.y && this.z == otherVoxelCoordinate.z));
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public VoxelCoordinate clone() {
-/* 33 */     return new VoxelCoordinate(this.x, this.y, this.z);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 39 */     return "VoxelCoordinate{x=" + this.x + ", y=" + this.y + ", z=" + this.z + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.datastructures.voxelspace;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\datastructures\voxelspace\VoxelCoordinate.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class VoxelCoordinate {
+   int x;
+   int y;
+   int z;
+
+   public VoxelCoordinate(int x, int y, int z) {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+   }
+
+   @Override
+   public boolean equals(Object other) {
+      return !(other instanceof VoxelCoordinate otherVoxelCoordinate)
+         ? false
+         : this == otherVoxelCoordinate || this.x == otherVoxelCoordinate.x && this.y == otherVoxelCoordinate.y && this.z == otherVoxelCoordinate.z;
+   }
+
+   @Nonnull
+   public VoxelCoordinate clone() {
+      return new VoxelCoordinate(this.x, this.y, this.z);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "VoxelCoordinate{x=" + this.x + ", y=" + this.y + ", z=" + this.z + "}";
+   }
+}

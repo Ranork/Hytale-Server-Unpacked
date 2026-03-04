@@ -1,22 +1,15 @@
-/*    */ package com.hypixel.hytale.server.core.io.handlers;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.io.PacketHandler;
-/*    */ import com.hypixel.hytale.server.core.io.ProtocolVersion;
-/*    */ import io.netty.channel.Channel;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public abstract class GenericConnectionPacketHandler
-/*    */   extends PacketHandler {
-/*    */   protected final String language;
-/*    */   
-/*    */   public GenericConnectionPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language) {
-/* 13 */     super(channel, protocolVersion);
-/* 14 */     this.language = language;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.io.handlers;
 
+import com.hypixel.hytale.server.core.io.PacketHandler;
+import com.hypixel.hytale.server.core.io.ProtocolVersion;
+import io.netty.channel.Channel;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\io\handlers\GenericConnectionPacketHandler.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class GenericConnectionPacketHandler extends PacketHandler {
+   protected final String language;
+
+   public GenericConnectionPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language) {
+      super(channel, protocolVersion);
+      this.language = language;
+   }
+}

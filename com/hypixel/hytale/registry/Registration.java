@@ -1,69 +1,35 @@
-/*    */ package com.hypixel.hytale.registry;
-/*    */ 
-/*    */ import java.util.function.BooleanSupplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class Registration
-/*    */ {
-/*    */   @Nonnull
-/*    */   protected final BooleanSupplier isEnabled;
-/*    */   @Nonnull
-/*    */   protected final Runnable unregister;
-/*    */   private boolean registered = true;
-/*    */   
-/*    */   public Registration(@Nonnull BooleanSupplier isEnabled, @Nonnull Runnable unregister) {
-/* 35 */     this.isEnabled = isEnabled;
-/* 36 */     this.unregister = unregister;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void unregister() {
-/* 43 */     if (this.registered && this.isEnabled.getAsBoolean()) {
-/* 44 */       this.unregister.run();
-/*    */     }
-/* 46 */     this.registered = false;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public boolean isRegistered() {
-/* 55 */     return (this.registered && this.isEnabled.getAsBoolean());
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 61 */     return "Registration{isEnabled=" + String.valueOf(this.isEnabled) + ", unregister=" + String.valueOf(this.unregister) + ", registered=" + this.registered + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.registry;
 
+import java.util.function.BooleanSupplier;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\registry\Registration.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Registration {
+   @Nonnull
+   protected final BooleanSupplier isEnabled;
+   @Nonnull
+   protected final Runnable unregister;
+   private boolean registered = true;
+
+   public Registration(@Nonnull BooleanSupplier isEnabled, @Nonnull Runnable unregister) {
+      this.isEnabled = isEnabled;
+      this.unregister = unregister;
+   }
+
+   public void unregister() {
+      if (this.registered && this.isEnabled.getAsBoolean()) {
+         this.unregister.run();
+      }
+
+      this.registered = false;
+   }
+
+   public boolean isRegistered() {
+      return this.registered && this.isEnabled.getAsBoolean();
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "Registration{isEnabled=" + this.isEnabled + ", unregister=" + this.unregister + ", registered=" + this.registered + "}";
+   }
+}

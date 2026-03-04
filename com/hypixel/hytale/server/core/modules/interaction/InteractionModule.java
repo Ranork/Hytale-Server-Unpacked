@@ -1,460 +1,465 @@
-/*     */ package com.hypixel.hytale.server.core.modules.interaction;
-/*     */ import com.hypixel.hytale.assetstore.AssetMap;
-/*     */ import com.hypixel.hytale.assetstore.AssetRegistry;
-/*     */ import com.hypixel.hytale.assetstore.AssetStore;
-/*     */ import com.hypixel.hytale.assetstore.codec.AssetCodec;
-/*     */ import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
-/*     */ import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.codecs.EnumCodec;
-/*     */ import com.hypixel.hytale.codec.codecs.set.SetCodec;
-/*     */ import com.hypixel.hytale.common.plugin.PluginManifest;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.ComponentRegistryProxy;
-/*     */ import com.hypixel.hytale.component.ComponentType;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.ResourceType;
-/*     */ import com.hypixel.hytale.component.system.ISystem;
-/*     */ import com.hypixel.hytale.event.EventRegistry;
-/*     */ import com.hypixel.hytale.event.IBaseEvent;
-/*     */ import com.hypixel.hytale.event.IEventDispatcher;
-/*     */ import com.hypixel.hytale.math.vector.Vector3i;
-/*     */ import com.hypixel.hytale.protocol.BlockPosition;
-/*     */ import com.hypixel.hytale.protocol.InteractionType;
-/*     */ import com.hypixel.hytale.protocol.MouseButtonType;
-/*     */ import com.hypixel.hytale.protocol.WorldInteraction;
-/*     */ import com.hypixel.hytale.protocol.packets.player.MouseInteraction;
-/*     */ import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
-/*     */ import com.hypixel.hytale.server.core.asset.packet.AssetPacketGenerator;
-/*     */ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-/*     */ import com.hypixel.hytale.server.core.entity.Entity;
-/*     */ import com.hypixel.hytale.server.core.entity.InteractionManager;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.player.pages.CustomUIPage;
-/*     */ import com.hypixel.hytale.server.core.event.events.player.PlayerMouseButtonEvent;
-/*     */ import com.hypixel.hytale.server.core.event.events.player.PlayerMouseMotionEvent;
-/*     */ import com.hypixel.hytale.server.core.inventory.Inventory;
-/*     */ import com.hypixel.hytale.server.core.inventory.ItemStack;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.blocktrack.BlockCounter;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.blocktrack.TrackedPlacement;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.components.PlacedByInteractionComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.UnarmedInteractions;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.AddItemInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ApplyForceInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.BlockConditionInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ChainingInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ChangeBlockInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.CooldownConditionInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.FirstClickInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.PlaceBlockInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.UseEntityInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ChainFlagInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ChangeActiveSlotInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ConditionInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.EffectConditionInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.RunRootInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.SelectInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.RemoveEntityInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.SendMessageInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.AOECircleSelector;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.AOECylinderSelector;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.SelectorType;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.ChangeStatWithModifierInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DestroyConditionInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DoorInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.ModifyInventoryInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.PlacementCountConditionInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.RefillContainerInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.SpawnPrefabInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DirectionalKnockback;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.ForceKnockback;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.Knockback;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.system.InteractionSystems;
-/*     */ import com.hypixel.hytale.server.core.universe.PlayerRef;
-/*     */ import com.hypixel.hytale.server.core.universe.world.meta.state.LaunchPad;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import java.util.EnumSet;
-/*     */ import java.util.Map;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ public class InteractionModule extends JavaPlugin {
-/*     */   @Nonnull
-/*  87 */   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(InteractionModule.class)
-/*  88 */     .depends(new Class[] { EntityModule.class
-/*  89 */       }).build();
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  93 */   public static final EnumCodec<InteractionType> INTERACTION_TYPE_CODEC = new EnumCodec(InteractionType.class);
-/*     */   
-/*     */   @Nonnull
-/*  96 */   public static final SetCodec<InteractionType, EnumSet<InteractionType>> INTERACTION_TYPE_SET_CODEC = new SetCodec((Codec)INTERACTION_TYPE_CODEC, () -> EnumSet.noneOf(InteractionType.class), true);
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static InteractionModule instance;
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private ComponentType<EntityStore, InteractionManager> interactionManagerComponent;
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private ComponentType<EntityStore, ChainingInteraction.Data> chainingDataComponent;
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private ComponentType<EntityStore, Interactions> interactionsComponentType;
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private ComponentType<ChunkStore, PlacedByInteractionComponent> placedByComponentType;
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private ResourceType<ChunkStore, BlockCounter> blockCounterResourceType;
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private ComponentType<ChunkStore, TrackedPlacement> trackedPlacementComponentType;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public static InteractionModule get() {
-/* 131 */     return instance;
-/*     */   }
-/*     */   
-/*     */   public InteractionModule(@Nonnull JavaPluginInit init) {
-/* 135 */     super(init);
-/* 136 */     instance = this;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void setup() {
-/* 141 */     EventRegistry eventRegistry = getEventRegistry();
-/* 142 */     ComponentRegistryProxy<EntityStore> entityStoreRegistry = getEntityStoreRegistry();
-/*     */     
-/* 144 */     getCommandRegistry().registerCommand((AbstractCommand)new InteractionCommand());
-/*     */     
-/* 146 */     AssetRegistry.register((AssetStore)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(UnarmedInteractions.class, (AssetMap)new DefaultAssetMap())
-/* 147 */         .setPath("Item/Unarmed/Interactions"))
-/* 148 */         .setCodec((AssetCodec)UnarmedInteractions.CODEC))
-/* 149 */         .setKeyFunction(UnarmedInteractions::getId))
-/* 150 */         .loadsAfter(new Class[] { RootInteraction.class
-/* 151 */           })).setPacketGenerator((AssetPacketGenerator)new UnarmedInteractionsPacketGenerator())
-/* 152 */         .build());
-/*     */     
-/* 154 */     AssetRegistry.register((AssetStore)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(Interaction.class, (AssetMap)new IndexedLookupTableAssetMap(x$0 -> new Interaction[x$0]))
-/* 155 */         .setPath("Item/Interactions"))
-/* 156 */         .setCodec((AssetCodec)Interaction.CODEC))
-/* 157 */         .setKeyFunction(Interaction::getId))
-/* 158 */         .setReplaceOnRemove(id -> new SendMessageInteraction(id, "Missing interaction: " + id)))
-/* 159 */         .setIsUnknown(Interaction::isUnknown))
-/* 160 */         .setPacketGenerator((AssetPacketGenerator)new InteractionPacketGenerator())
-/* 161 */         .loadsAfter(new Class[] { EntityStatType.class, EntityEffect.class, Trail.class, ItemPlayerAnimations.class, SoundEvent.class, ParticleSystem.class, ModelAsset.class, HitboxCollisionConfig.class
-/*     */           
-/* 163 */           })).preLoadAssets(List.of(ChangeActiveSlotInteraction.DEFAULT_INTERACTION)))
-/* 164 */         .build());
-/*     */     
-/* 166 */     AssetRegistry.register((AssetStore)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(RootInteraction.class, (AssetMap)new IndexedLookupTableAssetMap(x$0 -> new RootInteraction[x$0]))
-/* 167 */         .setPath("Item/RootInteractions"))
-/* 168 */         .setCodec((AssetCodec)RootInteraction.CODEC))
-/* 169 */         .setKeyFunction(RootInteraction::getId))
-/* 170 */         .setReplaceOnRemove(x$0 -> new RootInteraction(x$0, new String[0])))
-/* 171 */         .setPacketGenerator((AssetPacketGenerator)new RootInteractionPacketGenerator())
-/* 172 */         .loadsAfter(new Class[] { Interaction.class
-/* 173 */           })).loadsBefore(new Class[] { BlockType.class, Item.class
-/* 174 */           })).preLoadAssets(List.of(ChangeActiveSlotInteraction.DEFAULT_ROOT)))
-/* 175 */         .build());
-/*     */     
-/* 177 */     this.interactionManagerComponent = getEntityStoreRegistry().registerComponent(InteractionManager.class, () -> {
-/*     */           throw new UnsupportedOperationException();
-/*     */         });
-/* 180 */     this.interactionsComponentType = getEntityStoreRegistry().registerComponent(Interactions.class, "Interactions", Interactions.CODEC);
-/* 181 */     this.placedByComponentType = getChunkStoreRegistry().registerComponent(PlacedByInteractionComponent.class, "PlacedByInteraction", PlacedByInteractionComponent.CODEC);
-/* 182 */     Interaction.CODEC.register("Simple", SimpleInteraction.class, SimpleInteraction.CODEC);
-/* 183 */     Interaction.CODEC.register("PlaceBlock", PlaceBlockInteraction.class, PlaceBlockInteraction.CODEC);
-/* 184 */     Interaction.CODEC.register("PlaceFluid", PlaceFluidInteraction.class, PlaceFluidInteraction.CODEC);
-/* 185 */     Interaction.CODEC.register("BreakBlock", BreakBlockInteraction.class, BreakBlockInteraction.CODEC);
-/* 186 */     Interaction.CODEC.register("PickBlock", PickBlockInteraction.class, PickBlockInteraction.CODEC);
-/* 187 */     Interaction.CODEC.register("UseBlock", UseBlockInteraction.class, UseBlockInteraction.CODEC);
-/* 188 */     Interaction.CODEC.register("BlockCondition", BlockConditionInteraction.class, BlockConditionInteraction.CODEC);
-/* 189 */     Interaction.CODEC.register("ChangeBlock", ChangeBlockInteraction.class, ChangeBlockInteraction.CODEC);
-/* 190 */     Interaction.CODEC.register("ChangeState", ChangeStateInteraction.class, ChangeStateInteraction.CODEC);
-/* 191 */     Interaction.CODEC.register("UseEntity", UseEntityInteraction.class, UseEntityInteraction.CODEC);
-/* 192 */     Interaction.CODEC.register("BuilderTool", BuilderToolInteraction.class, BuilderToolInteraction.CODEC);
-/* 193 */     Interaction.CODEC.register("ModifyInventory", ModifyInventoryInteraction.class, ModifyInventoryInteraction.CODEC);
-/* 194 */     Interaction.CODEC.register("Charging", ChargingInteraction.class, ChargingInteraction.CODEC);
-/* 195 */     Interaction.CODEC.register("DestroyBlock", DestroyBlockInteraction.class, DestroyBlockInteraction.CODEC);
-/* 196 */     Interaction.CODEC.register("CycleBlockGroup", CycleBlockGroupInteraction.class, CycleBlockGroupInteraction.CODEC);
-/*     */     
-/* 198 */     Interaction.CODEC.register("Explode", ExplodeInteraction.class, ExplodeInteraction.CODEC);
-/*     */     
-/* 200 */     Interaction.CODEC.register("Chaining", ChainingInteraction.class, ChainingInteraction.CODEC);
-/* 201 */     Interaction.CODEC.register("ChainFlag", ChainFlagInteraction.class, ChainFlagInteraction.CODEC);
-/* 202 */     Interaction.CODEC.register("CancelChain", CancelChainInteraction.class, CancelChainInteraction.CODEC);
-/* 203 */     this.chainingDataComponent = getEntityStoreRegistry().registerComponent(ChainingInteraction.Data.class, com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ChainingInteraction.Data::new);
-/*     */     
-/* 205 */     Interaction.CODEC.register("Condition", ConditionInteraction.class, ConditionInteraction.CODEC);
-/* 206 */     Interaction.CODEC.register("FirstClick", FirstClickInteraction.class, FirstClickInteraction.CODEC);
-/* 207 */     Interaction.CODEC.register("Repeat", RepeatInteraction.class, RepeatInteraction.CODEC);
-/* 208 */     Interaction.CODEC.register("Parallel", ParallelInteraction.class, ParallelInteraction.CODEC);
-/* 209 */     Interaction.CODEC.register("Serial", SerialInteraction.class, SerialInteraction.CODEC);
-/* 210 */     Interaction.CODEC.register("ChangeActiveSlot", ChangeActiveSlotInteraction.class, ChangeActiveSlotInteraction.CODEC);
-/*     */     
-/* 212 */     Interaction.CODEC.register("Selector", SelectInteraction.class, SelectInteraction.CODEC);
-/* 213 */     Interaction.CODEC.register("DamageEntity", DamageEntityInteraction.class, DamageEntityInteraction.CODEC);
-/* 214 */     Interaction.CODEC.register("LaunchProjectile", LaunchProjectileInteraction.class, LaunchProjectileInteraction.CODEC);
-/* 215 */     Interaction.CODEC.register("Wielding", WieldingInteraction.class, WieldingInteraction.CODEC);
-/* 216 */     Interaction.CODEC.register("Replace", ReplaceInteraction.class, ReplaceInteraction.CODEC);
-/* 217 */     Interaction.CODEC.register("StatsCondition", StatsConditionInteraction.class, StatsConditionInteraction.CODEC);
-/* 218 */     Interaction.CODEC.register("StatsConditionWithModifier", StatsConditionWithModifierInteraction.class, StatsConditionWithModifierInteraction.CODEC);
-/* 219 */     Interaction.CODEC.register("SpawnPrefab", SpawnPrefabInteraction.class, SpawnPrefabInteraction.CODEC);
-/*     */     
-/* 221 */     Interaction.CODEC.register("SendMessage", SendMessageInteraction.class, SendMessageInteraction.CODEC);
-/* 222 */     Interaction.CODEC.register("EquipItem", EquipItemInteraction.class, EquipItemInteraction.CODEC);
-/* 223 */     Interaction.CODEC.register("RefillContainer", RefillContainerInteraction.class, RefillContainerInteraction.CODEC);
-/* 224 */     Interaction.CODEC.register("Door", DoorInteraction.class, DoorInteraction.CODEC);
-/* 225 */     Interaction.CODEC.register("IncreaseBackpackCapacity", IncreaseBackpackCapacityInteraction.class, IncreaseBackpackCapacityInteraction.CODEC);
-/* 226 */     Interaction.CODEC.register("CheckUniqueItemUsage", CheckUniqueItemUsageInteraction.class, CheckUniqueItemUsageInteraction.CODEC);
-/*     */     
-/* 228 */     Interaction.CODEC.register("LaunchPad", LaunchPadInteraction.class, LaunchPadInteraction.CODEC);
-/*     */     
-/* 230 */     Interaction.CODEC.register("OpenContainer", OpenContainerInteraction.class, OpenContainerInteraction.CODEC);
-/* 231 */     Interaction.CODEC.register("OpenItemStackContainer", OpenItemStackContainerInteraction.class, OpenItemStackContainerInteraction.CODEC);
-/* 232 */     Interaction.CODEC.register("DestroyCondition", DestroyConditionInteraction.class, DestroyConditionInteraction.CODEC);
-/* 233 */     Interaction.CODEC.register("OpenCustomUI", OpenCustomUIInteraction.class, OpenCustomUIInteraction.CODEC);
-/* 234 */     Interaction.CODEC.register("OpenPage", OpenPageInteraction.class, OpenPageInteraction.CODEC);
-/*     */     
-/* 236 */     Interaction.CODEC.register("ApplyEffect", ApplyEffectInteraction.class, ApplyEffectInteraction.CODEC);
-/* 237 */     Interaction.CODEC.register("ClearEntityEffect", ClearEntityEffectInteraction.class, ClearEntityEffectInteraction.CODEC);
-/*     */     
-/* 239 */     Interaction.CODEC.register("RemoveEntity", RemoveEntityInteraction.class, RemoveEntityInteraction.CODEC);
-/* 240 */     Interaction.CODEC.register("EffectCondition", EffectConditionInteraction.class, EffectConditionInteraction.CODEC);
-/* 241 */     Interaction.CODEC.register("ApplyForce", ApplyForceInteraction.class, ApplyForceInteraction.CODEC);
-/* 242 */     Interaction.CODEC.register("ChangeStat", ChangeStatInteraction.class, ChangeStatInteraction.CODEC);
-/* 243 */     Interaction.CODEC.register("ChangeStatWithModifier", ChangeStatWithModifierInteraction.class, ChangeStatWithModifierInteraction.CODEC);
-/* 244 */     Interaction.CODEC.register("MovementCondition", MovementConditionInteraction.class, MovementConditionInteraction.CODEC);
-/* 245 */     Interaction.CODEC.register("ResetCooldown", ResetCooldownInteraction.class, ResetCooldownInteraction.CODEC);
-/* 246 */     Interaction.CODEC.register("TriggerCooldown", TriggerCooldownInteraction.class, TriggerCooldownInteraction.CODEC);
-/* 247 */     Interaction.CODEC.register("CooldownCondition", CooldownConditionInteraction.class, CooldownConditionInteraction.CODEC);
-/* 248 */     Interaction.CODEC.register("IncrementCooldown", IncrementCooldownInteraction.class, IncrementCooldownInteraction.CODEC);
-/*     */     
-/* 250 */     Interaction.CODEC.register("AddItem", AddItemInteraction.class, AddItemInteraction.CODEC);
-/* 251 */     Interaction.CODEC.register("Interrupt", InterruptInteraction.class, InterruptInteraction.CODEC);
-/*     */     
-/* 253 */     Interaction.CODEC.register("RunRootInteraction", RunRootInteraction.class, RunRootInteraction.CODEC);
-/* 254 */     Interaction.CODEC.register("RunOnBlockTypes", RunOnBlockTypesInteraction.class, RunOnBlockTypesInteraction.CODEC);
-/*     */     
-/* 256 */     Interaction.CODEC.register("Camera", CameraInteraction.class, CameraInteraction.CODEC);
-/*     */     
-/* 258 */     Interaction.CODEC.register("ToggleGlider", ToggleGliderInteraction.class, ToggleGliderInteraction.CODEC);
-/*     */     
-/* 260 */     OpenCustomUIInteraction.registerBlockEntityCustomPage((PluginBase)this, LaunchPad.LaunchPadSettingsPage.class, "LaunchPad", (playerRef, ref) -> ref.getStore().getArchetype(ref).contains(LaunchPad.getComponentType()) ? new LaunchPad.LaunchPadSettingsPage(playerRef, ref, CustomPageLifetime.CanDismissOrCloseThroughInteraction) : null);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/* 268 */     OpenCustomUIInteraction.PAGE_CODEC.register("ItemRepair", ItemRepairPageSupplier.class, (Codec)ItemRepairPageSupplier.CODEC);
-/*     */     
-/* 270 */     SelectorType.CODEC.register("Horizontal", HorizontalSelector.class, (Codec)HorizontalSelector.CODEC);
-/* 271 */     SelectorType.CODEC.register("Stab", StabSelector.class, (Codec)StabSelector.CODEC);
-/* 272 */     SelectorType.CODEC.register("AOECircle", AOECircleSelector.class, (Codec)AOECircleSelector.CODEC);
-/* 273 */     SelectorType.CODEC.register("AOECylinder", AOECylinderSelector.class, (Codec)AOECylinderSelector.CODEC);
-/* 274 */     SelectorType.CODEC.register("Raycast", RaycastSelector.class, (Codec)RaycastSelector.CODEC);
-/*     */     
-/* 276 */     Knockback.CODEC.register("Directional", DirectionalKnockback.class, (Codec)DirectionalKnockback.CODEC);
-/* 277 */     Knockback.CODEC.register("Point", PointKnockback.class, (Codec)PointKnockback.CODEC);
-/* 278 */     Knockback.CODEC.register("Force", ForceKnockback.class, (Codec)ForceKnockback.CODEC);
-/*     */     
-/* 280 */     eventRegistry.register(LoadedAssetsEvent.class, RootInteraction.class, InteractionModule::handledLoadedRootInteractions);
-/* 281 */     eventRegistry.register(LoadedAssetsEvent.class, Interaction.class, InteractionModule::handledLoadedInteractions);
-/* 282 */     eventRegistry.register(RemovedAssetsEvent.class, Interaction.class, InteractionModule::handledRemovedInteractions);
-/*     */     
-/* 284 */     entityStoreRegistry.registerSystem((ISystem)new InteractionSystems.PlayerAddManagerSystem());
-/* 285 */     entityStoreRegistry.registerSystem((ISystem)new InteractionSystems.CleanUpSystem());
-/* 286 */     entityStoreRegistry.registerSystem((ISystem)new InteractionSystems.TickInteractionManagerSystem());
-/* 287 */     entityStoreRegistry.registerSystem((ISystem)new InteractionSystems.TrackerTickSystem());
-/* 288 */     entityStoreRegistry.registerSystem((ISystem)new InteractionSystems.EntityTrackerRemove(EntityTrackerSystems.Visible.getComponentType()));
-/*     */     
-/* 290 */     getCodecRegistry((StringCodecMapCodec)SelectInteraction.EntityMatcher.CODEC).register("Vulnerable", VulnerableMatcher.class, (Codec)VulnerableMatcher.CODEC);
-/* 291 */     getCodecRegistry((StringCodecMapCodec)SelectInteraction.EntityMatcher.CODEC).register("Player", PlayerMatcher.class, (Codec)PlayerMatcher.CODEC);
-/*     */     
-/* 293 */     this.blockCounterResourceType = getChunkStoreRegistry().registerResource(BlockCounter.class, "BlockCounter", BlockCounter.CODEC);
-/* 294 */     this.trackedPlacementComponentType = getChunkStoreRegistry().registerComponent(TrackedPlacement.class, "TrackedPlacement", TrackedPlacement.CODEC);
-/* 295 */     getChunkStoreRegistry().registerSystem((ISystem)new TrackedPlacement.OnAddRemove());
-/* 296 */     getCodecRegistry(Interaction.CODEC).register("PlacementCountCondition", PlacementCountConditionInteraction.class, PlacementCountConditionInteraction.CODEC);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static void handledLoadedRootInteractions(@Nonnull LoadedAssetsEvent<String, RootInteraction, ?> event) {
-/* 305 */     for (RootInteraction rootInteraction : event.getLoadedAssets().values()) {
-/* 306 */       rootInteraction.build();
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static void handledLoadedInteractions(@Nonnull LoadedAssetsEvent<String, Interaction, ?> event) {
-/* 316 */     for (Map.Entry<String, RootInteraction> entry : (Iterable<Map.Entry<String, RootInteraction>>)RootInteraction.getAssetMap().getAssetMap().entrySet()) {
-/* 317 */       ((RootInteraction)entry.getValue()).build(event.getLoadedAssets().keySet());
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static void handledRemovedInteractions(@Nonnull RemovedAssetsEvent<String, Interaction, ?> event) {
-/* 327 */     for (Map.Entry<String, RootInteraction> entry : (Iterable<Map.Entry<String, RootInteraction>>)RootInteraction.getAssetMap().getAssetMap().entrySet()) {
-/* 328 */       ((RootInteraction)entry.getValue()).build(event.getRemovedAssets());
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public void doMouseInteraction(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull MouseInteraction packet, @Nonnull Player playerComponent, @Nonnull PlayerRef playerRefComponent) {
-/*     */     Item item;
-/*     */     Entity targetEntity;
-/* 346 */     if (isDisabled()) {
-/*     */       return;
-/*     */     }
-/*     */     
-/* 350 */     byte activeHotbarSlot = playerComponent.getInventory().getActiveHotbarSlot();
-/* 351 */     if (activeHotbarSlot != packet.activeSlot) {
-/* 352 */       playerComponent.sendMessage(Message.translation("server.modules.interaction.failedGetActiveSlot").param("server", activeHotbarSlot).param("packet", packet.activeSlot));
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */       
-/*     */       return;
-/*     */     } 
-/*     */ 
-/*     */ 
-/*     */     
-/* 362 */     MouseButtonType mouseButtonType = (packet.mouseButton != null) ? packet.mouseButton.mouseButtonType : MouseButtonType.Left;
-/*     */     
-/* 364 */     Inventory inventory = playerComponent.getInventory();
-/* 365 */     ItemStack itemInHand = inventory.getItemInHand();
-/* 366 */     ItemStack itemInOffHand = inventory.getUtilityItem();
-/* 367 */     Item primaryItem = (itemInHand == null || itemInHand.isEmpty()) ? null : itemInHand.getItem();
-/* 368 */     Item secondaryItem = (itemInOffHand == null || itemInOffHand.isEmpty()) ? null : itemInOffHand.getItem();
-/*     */ 
-/*     */     
-/* 371 */     if (mouseButtonType == MouseButtonType.Left) {
-/* 372 */       item = primaryItem;
-/* 373 */     } else if (mouseButtonType == MouseButtonType.Right && secondaryItem != null) {
-/* 374 */       item = secondaryItem;
-/*     */     } else {
-/* 376 */       item = primaryItem;
-/*     */     } 
-/*     */     
-/* 379 */     WorldInteraction worldInteraction_ = packet.worldInteraction;
-/* 380 */     BlockPosition blockPositionPacket = worldInteraction_.blockPosition;
-/*     */     
-/* 382 */     if (!ref.isValid())
-/*     */       return; 
-/* 384 */     EntityStore entityComponentStore = (EntityStore)componentAccessor.getExternalData();
-/*     */     
-/* 386 */     Vector3i targetBlock = (blockPositionPacket == null) ? null : new Vector3i(blockPositionPacket.x, blockPositionPacket.y, blockPositionPacket.z);
-/*     */     
-/* 388 */     if (worldInteraction_.entityId < 0) {
-/* 389 */       targetEntity = null;
-/*     */     } else {
-/* 391 */       Ref<EntityStore> entityReference = entityComponentStore.getRefFromNetworkId(worldInteraction_.entityId);
-/* 392 */       targetEntity = EntityUtils.getEntity(entityReference, componentAccessor);
-/*     */     } 
-/*     */     
-/* 395 */     CameraManager cameraManagerComponent = (CameraManager)componentAccessor.getComponent(ref, CameraManager.getComponentType());
-/* 396 */     assert cameraManagerComponent != null;
-/*     */     
-/* 398 */     if (packet.mouseButton != null) {
-/* 399 */       IEventDispatcher<PlayerMouseButtonEvent, PlayerMouseButtonEvent> dispatcher = HytaleServer.get().getEventBus().dispatchFor(PlayerMouseButtonEvent.class);
-/* 400 */       if (dispatcher.hasListener()) {
-/* 401 */         dispatcher.dispatch((IBaseEvent)new PlayerMouseButtonEvent(ref, playerComponent, playerRefComponent, packet.clientTimestamp, item, targetBlock, targetEntity, packet.screenPoint, packet.mouseButton));
-/*     */       }
-/* 403 */       cameraManagerComponent.handleMouseButtonState(packet.mouseButton.mouseButtonType, packet.mouseButton.state, targetBlock);
-/*     */     } else {
-/* 405 */       IEventDispatcher<PlayerMouseMotionEvent, PlayerMouseMotionEvent> dispatcher = HytaleServer.get().getEventBus().dispatchFor(PlayerMouseMotionEvent.class);
-/* 406 */       if (dispatcher.hasListener()) {
-/* 407 */         dispatcher.dispatch((IBaseEvent)new PlayerMouseMotionEvent(ref, playerComponent, packet.clientTimestamp, item, targetBlock, targetEntity, packet.screenPoint, packet.mouseMotion));
-/*     */       }
-/*     */     } 
-/*     */     
-/* 411 */     cameraManagerComponent.setLastScreenPoint(new Vector2d(packet.screenPoint.x, packet.screenPoint.y));
-/* 412 */     cameraManagerComponent.setLastBlockPosition(targetBlock);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public ComponentType<EntityStore, ChainingInteraction.Data> getChainingDataComponent() {
-/* 420 */     return this.chainingDataComponent;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public ComponentType<EntityStore, Interactions> getInteractionsComponentType() {
-/* 428 */     return this.interactionsComponentType;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public ComponentType<EntityStore, InteractionManager> getInteractionManagerComponent() {
-/* 436 */     return this.interactionManagerComponent;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public ComponentType<ChunkStore, PlacedByInteractionComponent> getPlacedByComponentType() {
-/* 444 */     return this.placedByComponentType;
-/*     */   }
-/*     */   
-/*     */   public ResourceType<ChunkStore, BlockCounter> getBlockCounterResourceType() {
-/* 448 */     return this.blockCounterResourceType;
-/*     */   }
-/*     */   
-/*     */   public ComponentType<ChunkStore, TrackedPlacement> getTrackedPlacementComponentType() {
-/* 452 */     return this.trackedPlacementComponentType;
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.modules.interaction;
 
+import com.hypixel.hytale.assetstore.AssetRegistry;
+import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
+import com.hypixel.hytale.codec.codecs.set.SetCodec;
+import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.ComponentRegistryProxy;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.ResourceType;
+import com.hypixel.hytale.event.EventRegistry;
+import com.hypixel.hytale.event.IEventDispatcher;
+import com.hypixel.hytale.math.vector.Vector2d;
+import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.protocol.BlockPosition;
+import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.protocol.MouseButtonType;
+import com.hypixel.hytale.protocol.WorldInteraction;
+import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
+import com.hypixel.hytale.protocol.packets.player.MouseInteraction;
+import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.itemanimation.config.ItemPlayerAnimations;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
+import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
+import com.hypixel.hytale.server.core.asset.type.trail.config.Trail;
+import com.hypixel.hytale.server.core.entity.Entity;
+import com.hypixel.hytale.server.core.entity.EntityUtils;
+import com.hypixel.hytale.server.core.entity.InteractionManager;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
+import com.hypixel.hytale.server.core.event.events.player.PlayerMouseButtonEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerMouseMotionEvent;
+import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
+import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
+import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
+import com.hypixel.hytale.server.core.modules.interaction.blocktrack.BlockCounter;
+import com.hypixel.hytale.server.core.modules.interaction.blocktrack.TrackedPlacement;
+import com.hypixel.hytale.server.core.modules.interaction.commands.InteractionCommand;
+import com.hypixel.hytale.server.core.modules.interaction.components.PlacedByInteractionComponent;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.InteractionPacketGenerator;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.RootInteractionPacketGenerator;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.UnarmedInteractions;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.UnarmedInteractionsPacketGenerator;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.AddItemInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ApplyForceInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.BlockConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.BreakBlockInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ChainingInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ChangeBlockInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ChangeStateInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ChargingInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.CooldownConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.CycleBlockGroupInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.DestroyBlockInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ExplodeInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.FirstClickInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.IncrementCooldownInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.MovementConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.PickBlockInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.PlaceBlockInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.PlaceFluidInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ResetCooldownInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.ToggleGliderInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.TriggerCooldownInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.UseBlockInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.UseEntityInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.WieldingInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.BuilderToolInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.CameraInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.CancelChainInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ChainFlagInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ChangeActiveSlotInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.EffectConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ParallelInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.RepeatInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ReplaceInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.RunRootInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.SelectInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.SerialInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.StatsConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.StatsConditionWithModifierInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.ApplyEffectInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.RemoveEntityInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.SendMessageInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.AOECircleSelector;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.AOECylinderSelector;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.HorizontalSelector;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.PlayerMatcher;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.RaycastSelector;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.SelectorType;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.StabSelector;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.VulnerableMatcher;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.ChangeStatInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.ChangeStatWithModifierInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.CheckUniqueItemUsageInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.ClearEntityEffectInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DestroyConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DoorInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.EquipItemInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.IncreaseBackpackCapacityInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.InterruptInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.LaunchPadInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.LaunchProjectileInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.ModifyInventoryInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenContainerInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenItemStackContainerInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenPageInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.PlacementCountConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.RefillContainerInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.RunOnBlockTypesInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.SpawnPrefabInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DirectionalKnockback;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.ForceKnockback;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.Knockback;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.PointKnockback;
+import com.hypixel.hytale.server.core.modules.interaction.suppliers.ItemRepairPageSupplier;
+import com.hypixel.hytale.server.core.modules.interaction.system.InteractionSystems;
+import com.hypixel.hytale.server.core.plugin.JavaPlugin;
+import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.meta.state.LaunchPad;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Map.Entry;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\interaction\InteractionModule.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class InteractionModule extends JavaPlugin {
+   @Nonnull
+   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(InteractionModule.class).depends(EntityModule.class).build();
+   @Nonnull
+   public static final EnumCodec<InteractionType> INTERACTION_TYPE_CODEC = new EnumCodec<>(InteractionType.class);
+   @Nonnull
+   public static final SetCodec<InteractionType, EnumSet<InteractionType>> INTERACTION_TYPE_SET_CODEC = new SetCodec<>(
+      INTERACTION_TYPE_CODEC, () -> EnumSet.noneOf(InteractionType.class), true
+   );
+   private static InteractionModule instance;
+   private ComponentType<EntityStore, InteractionManager> interactionManagerComponent;
+   private ComponentType<EntityStore, ChainingInteraction.Data> chainingDataComponent;
+   private ComponentType<EntityStore, Interactions> interactionsComponentType;
+   private ComponentType<ChunkStore, PlacedByInteractionComponent> placedByComponentType;
+   private ResourceType<ChunkStore, BlockCounter> blockCounterResourceType;
+   private ComponentType<ChunkStore, TrackedPlacement> trackedPlacementComponentType;
+
+   @Nonnull
+   public static InteractionModule get() {
+      return instance;
+   }
+
+   public InteractionModule(@Nonnull JavaPluginInit init) {
+      super(init);
+      instance = this;
+   }
+
+   @Override
+   protected void setup() {
+      EventRegistry eventRegistry = this.getEventRegistry();
+      ComponentRegistryProxy<EntityStore> entityStoreRegistry = this.getEntityStoreRegistry();
+      this.getCommandRegistry().registerCommand(new InteractionCommand());
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                           UnarmedInteractions.class, new DefaultAssetMap()
+                        )
+                        .setPath("Item/Unarmed/Interactions"))
+                     .setCodec(UnarmedInteractions.CODEC))
+                  .setKeyFunction(UnarmedInteractions::getId))
+               .loadsAfter(RootInteraction.class))
+            .setPacketGenerator(new UnarmedInteractionsPacketGenerator())
+            .build()
+      );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                                    Interaction.class, new IndexedLookupTableAssetMap<>(Interaction[]::new)
+                                 )
+                                 .setPath("Item/Interactions"))
+                              .setCodec(Interaction.CODEC))
+                           .setKeyFunction(Interaction::getId))
+                        .setReplaceOnRemove(id -> new SendMessageInteraction(id, "Missing interaction: " + id)))
+                     .setIsUnknown(Interaction::isUnknown))
+                  .setPacketGenerator(new InteractionPacketGenerator())
+                  .loadsAfter(
+                     EntityStatType.class,
+                     EntityEffect.class,
+                     Trail.class,
+                     ItemPlayerAnimations.class,
+                     SoundEvent.class,
+                     ParticleSystem.class,
+                     ModelAsset.class,
+                     HitboxCollisionConfig.class
+                  ))
+               .preLoadAssets(List.of(ChangeActiveSlotInteraction.DEFAULT_INTERACTION)))
+            .build()
+      );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                                    RootInteraction.class, new IndexedLookupTableAssetMap<>(RootInteraction[]::new)
+                                 )
+                                 .setPath("Item/RootInteractions"))
+                              .setCodec(RootInteraction.CODEC))
+                           .setKeyFunction(RootInteraction::getId))
+                        .setReplaceOnRemove(x$0 -> new RootInteraction(x$0)))
+                     .setPacketGenerator(new RootInteractionPacketGenerator())
+                     .loadsAfter(Interaction.class))
+                  .loadsBefore(BlockType.class, Item.class))
+               .preLoadAssets(List.of(ChangeActiveSlotInteraction.DEFAULT_ROOT)))
+            .build()
+      );
+      this.interactionManagerComponent = this.getEntityStoreRegistry().registerComponent(InteractionManager.class, () -> {
+         throw new UnsupportedOperationException();
+      });
+      this.interactionsComponentType = this.getEntityStoreRegistry().registerComponent(Interactions.class, "Interactions", Interactions.CODEC);
+      this.placedByComponentType = this.getChunkStoreRegistry()
+         .registerComponent(PlacedByInteractionComponent.class, "PlacedByInteraction", PlacedByInteractionComponent.CODEC);
+      Interaction.CODEC.register("Simple", SimpleInteraction.class, SimpleInteraction.CODEC);
+      Interaction.CODEC.register("PlaceBlock", PlaceBlockInteraction.class, PlaceBlockInteraction.CODEC);
+      Interaction.CODEC.register("PlaceFluid", PlaceFluidInteraction.class, PlaceFluidInteraction.CODEC);
+      Interaction.CODEC.register("BreakBlock", BreakBlockInteraction.class, BreakBlockInteraction.CODEC);
+      Interaction.CODEC.register("PickBlock", PickBlockInteraction.class, PickBlockInteraction.CODEC);
+      Interaction.CODEC.register("UseBlock", UseBlockInteraction.class, UseBlockInteraction.CODEC);
+      Interaction.CODEC.register("BlockCondition", BlockConditionInteraction.class, BlockConditionInteraction.CODEC);
+      Interaction.CODEC.register("ChangeBlock", ChangeBlockInteraction.class, ChangeBlockInteraction.CODEC);
+      Interaction.CODEC.register("ChangeState", ChangeStateInteraction.class, ChangeStateInteraction.CODEC);
+      Interaction.CODEC.register("UseEntity", UseEntityInteraction.class, UseEntityInteraction.CODEC);
+      Interaction.CODEC.register("BuilderTool", BuilderToolInteraction.class, BuilderToolInteraction.CODEC);
+      Interaction.CODEC.register("ModifyInventory", ModifyInventoryInteraction.class, ModifyInventoryInteraction.CODEC);
+      Interaction.CODEC.register("Charging", ChargingInteraction.class, ChargingInteraction.CODEC);
+      Interaction.CODEC.register("DestroyBlock", DestroyBlockInteraction.class, DestroyBlockInteraction.CODEC);
+      Interaction.CODEC.register("CycleBlockGroup", CycleBlockGroupInteraction.class, CycleBlockGroupInteraction.CODEC);
+      Interaction.CODEC.register("Explode", ExplodeInteraction.class, ExplodeInteraction.CODEC);
+      Interaction.CODEC.register("Chaining", ChainingInteraction.class, ChainingInteraction.CODEC);
+      Interaction.CODEC.register("ChainFlag", ChainFlagInteraction.class, ChainFlagInteraction.CODEC);
+      Interaction.CODEC.register("CancelChain", CancelChainInteraction.class, CancelChainInteraction.CODEC);
+      this.chainingDataComponent = this.getEntityStoreRegistry().registerComponent(ChainingInteraction.Data.class, ChainingInteraction.Data::new);
+      Interaction.CODEC.register("Condition", ConditionInteraction.class, ConditionInteraction.CODEC);
+      Interaction.CODEC.register("FirstClick", FirstClickInteraction.class, FirstClickInteraction.CODEC);
+      Interaction.CODEC.register("Repeat", RepeatInteraction.class, RepeatInteraction.CODEC);
+      Interaction.CODEC.register("Parallel", ParallelInteraction.class, ParallelInteraction.CODEC);
+      Interaction.CODEC.register("Serial", SerialInteraction.class, SerialInteraction.CODEC);
+      Interaction.CODEC.register("ChangeActiveSlot", ChangeActiveSlotInteraction.class, ChangeActiveSlotInteraction.CODEC);
+      Interaction.CODEC.register("Selector", SelectInteraction.class, SelectInteraction.CODEC);
+      Interaction.CODEC.register("DamageEntity", DamageEntityInteraction.class, DamageEntityInteraction.CODEC);
+      Interaction.CODEC.register("LaunchProjectile", LaunchProjectileInteraction.class, LaunchProjectileInteraction.CODEC);
+      Interaction.CODEC.register("Wielding", WieldingInteraction.class, WieldingInteraction.CODEC);
+      Interaction.CODEC.register("Replace", ReplaceInteraction.class, ReplaceInteraction.CODEC);
+      Interaction.CODEC.register("StatsCondition", StatsConditionInteraction.class, StatsConditionInteraction.CODEC);
+      Interaction.CODEC.register("StatsConditionWithModifier", StatsConditionWithModifierInteraction.class, StatsConditionWithModifierInteraction.CODEC);
+      Interaction.CODEC.register("SpawnPrefab", SpawnPrefabInteraction.class, SpawnPrefabInteraction.CODEC);
+      Interaction.CODEC.register("SendMessage", SendMessageInteraction.class, SendMessageInteraction.CODEC);
+      Interaction.CODEC.register("EquipItem", EquipItemInteraction.class, EquipItemInteraction.CODEC);
+      Interaction.CODEC.register("RefillContainer", RefillContainerInteraction.class, RefillContainerInteraction.CODEC);
+      Interaction.CODEC.register("Door", DoorInteraction.class, DoorInteraction.CODEC);
+      Interaction.CODEC.register("IncreaseBackpackCapacity", IncreaseBackpackCapacityInteraction.class, IncreaseBackpackCapacityInteraction.CODEC);
+      Interaction.CODEC.register("CheckUniqueItemUsage", CheckUniqueItemUsageInteraction.class, CheckUniqueItemUsageInteraction.CODEC);
+      Interaction.CODEC.register("LaunchPad", LaunchPadInteraction.class, LaunchPadInteraction.CODEC);
+      Interaction.CODEC.register("OpenContainer", OpenContainerInteraction.class, OpenContainerInteraction.CODEC);
+      Interaction.CODEC.register("OpenItemStackContainer", OpenItemStackContainerInteraction.class, OpenItemStackContainerInteraction.CODEC);
+      Interaction.CODEC.register("DestroyCondition", DestroyConditionInteraction.class, DestroyConditionInteraction.CODEC);
+      Interaction.CODEC.register("OpenCustomUI", OpenCustomUIInteraction.class, OpenCustomUIInteraction.CODEC);
+      Interaction.CODEC.register("OpenPage", OpenPageInteraction.class, OpenPageInteraction.CODEC);
+      Interaction.CODEC.register("ApplyEffect", ApplyEffectInteraction.class, ApplyEffectInteraction.CODEC);
+      Interaction.CODEC.register("ClearEntityEffect", ClearEntityEffectInteraction.class, ClearEntityEffectInteraction.CODEC);
+      Interaction.CODEC.register("RemoveEntity", RemoveEntityInteraction.class, RemoveEntityInteraction.CODEC);
+      Interaction.CODEC.register("EffectCondition", EffectConditionInteraction.class, EffectConditionInteraction.CODEC);
+      Interaction.CODEC.register("ApplyForce", ApplyForceInteraction.class, ApplyForceInteraction.CODEC);
+      Interaction.CODEC.register("ChangeStat", ChangeStatInteraction.class, ChangeStatInteraction.CODEC);
+      Interaction.CODEC.register("ChangeStatWithModifier", ChangeStatWithModifierInteraction.class, ChangeStatWithModifierInteraction.CODEC);
+      Interaction.CODEC.register("MovementCondition", MovementConditionInteraction.class, MovementConditionInteraction.CODEC);
+      Interaction.CODEC.register("ResetCooldown", ResetCooldownInteraction.class, ResetCooldownInteraction.CODEC);
+      Interaction.CODEC.register("TriggerCooldown", TriggerCooldownInteraction.class, TriggerCooldownInteraction.CODEC);
+      Interaction.CODEC.register("CooldownCondition", CooldownConditionInteraction.class, CooldownConditionInteraction.CODEC);
+      Interaction.CODEC.register("IncrementCooldown", IncrementCooldownInteraction.class, IncrementCooldownInteraction.CODEC);
+      Interaction.CODEC.register("AddItem", AddItemInteraction.class, AddItemInteraction.CODEC);
+      Interaction.CODEC.register("Interrupt", InterruptInteraction.class, InterruptInteraction.CODEC);
+      Interaction.CODEC.register("RunRootInteraction", RunRootInteraction.class, RunRootInteraction.CODEC);
+      Interaction.CODEC.register("RunOnBlockTypes", RunOnBlockTypesInteraction.class, RunOnBlockTypesInteraction.CODEC);
+      Interaction.CODEC.register("Camera", CameraInteraction.class, CameraInteraction.CODEC);
+      Interaction.CODEC.register("ToggleGlider", ToggleGliderInteraction.class, ToggleGliderInteraction.CODEC);
+      OpenCustomUIInteraction.registerBlockEntityCustomPage(
+         this,
+         LaunchPad.LaunchPadSettingsPage.class,
+         "LaunchPad",
+         (playerRef, ref) -> ref.getStore().getArchetype(ref).contains(LaunchPad.getComponentType())
+            ? new LaunchPad.LaunchPadSettingsPage(playerRef, ref, CustomPageLifetime.CanDismissOrCloseThroughInteraction)
+            : null
+      );
+      OpenCustomUIInteraction.PAGE_CODEC.register("ItemRepair", ItemRepairPageSupplier.class, ItemRepairPageSupplier.CODEC);
+      SelectorType.CODEC.register("Horizontal", HorizontalSelector.class, HorizontalSelector.CODEC);
+      SelectorType.CODEC.register("Stab", StabSelector.class, StabSelector.CODEC);
+      SelectorType.CODEC.register("AOECircle", AOECircleSelector.class, AOECircleSelector.CODEC);
+      SelectorType.CODEC.register("AOECylinder", AOECylinderSelector.class, AOECylinderSelector.CODEC);
+      SelectorType.CODEC.register("Raycast", RaycastSelector.class, RaycastSelector.CODEC);
+      Knockback.CODEC.register("Directional", DirectionalKnockback.class, DirectionalKnockback.CODEC);
+      Knockback.CODEC.register("Point", PointKnockback.class, PointKnockback.CODEC);
+      Knockback.CODEC.register("Force", ForceKnockback.class, ForceKnockback.CODEC);
+      eventRegistry.register(LoadedAssetsEvent.class, RootInteraction.class, InteractionModule::handledLoadedRootInteractions);
+      eventRegistry.register(LoadedAssetsEvent.class, Interaction.class, InteractionModule::handledLoadedInteractions);
+      eventRegistry.register(RemovedAssetsEvent.class, Interaction.class, InteractionModule::handledRemovedInteractions);
+      entityStoreRegistry.registerSystem(new InteractionSystems.PlayerAddManagerSystem());
+      entityStoreRegistry.registerSystem(new InteractionSystems.CleanUpSystem());
+      entityStoreRegistry.registerSystem(new InteractionSystems.TickInteractionManagerSystem());
+      entityStoreRegistry.registerSystem(new InteractionSystems.TrackerTickSystem());
+      entityStoreRegistry.registerSystem(new InteractionSystems.EntityTrackerRemove(EntityTrackerSystems.Visible.getComponentType()));
+      this.getCodecRegistry(SelectInteraction.EntityMatcher.CODEC).register("Vulnerable", VulnerableMatcher.class, VulnerableMatcher.CODEC);
+      this.getCodecRegistry(SelectInteraction.EntityMatcher.CODEC).register("Player", PlayerMatcher.class, PlayerMatcher.CODEC);
+      this.blockCounterResourceType = this.getChunkStoreRegistry().registerResource(BlockCounter.class, "BlockCounter", BlockCounter.CODEC);
+      this.trackedPlacementComponentType = this.getChunkStoreRegistry().registerComponent(TrackedPlacement.class, "TrackedPlacement", TrackedPlacement.CODEC);
+      this.getChunkStoreRegistry().registerSystem(new TrackedPlacement.OnAddRemove());
+      this.getCodecRegistry(Interaction.CODEC)
+         .register("PlacementCountCondition", PlacementCountConditionInteraction.class, PlacementCountConditionInteraction.CODEC);
+   }
+
+   private static void handledLoadedRootInteractions(@Nonnull LoadedAssetsEvent<String, RootInteraction, ?> event) {
+      for (RootInteraction rootInteraction : event.getLoadedAssets().values()) {
+         rootInteraction.build();
+      }
+   }
+
+   private static void handledLoadedInteractions(@Nonnull LoadedAssetsEvent<String, Interaction, ?> event) {
+      for (Entry<String, RootInteraction> entry : RootInteraction.getAssetMap().getAssetMap().entrySet()) {
+         entry.getValue().build(event.getLoadedAssets().keySet());
+      }
+   }
+
+   private static void handledRemovedInteractions(@Nonnull RemovedAssetsEvent<String, Interaction, ?> event) {
+      for (Entry<String, RootInteraction> entry : RootInteraction.getAssetMap().getAssetMap().entrySet()) {
+         entry.getValue().build(event.getRemovedAssets());
+      }
+   }
+
+   public void doMouseInteraction(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
+      @Nonnull MouseInteraction packet,
+      @Nonnull Player playerComponent,
+      @Nonnull PlayerRef playerRefComponent
+   ) {
+      if (!this.isDisabled()) {
+         byte activeHotbarSlot = playerComponent.getInventory().getActiveHotbarSlot();
+         if (activeHotbarSlot != packet.activeSlot) {
+            playerComponent.sendMessage(
+               Message.translation("server.modules.interaction.failedGetActiveSlot").param("server", (int)activeHotbarSlot).param("packet", packet.activeSlot)
+            );
+         } else {
+            MouseButtonType mouseButtonType = packet.mouseButton != null ? packet.mouseButton.mouseButtonType : MouseButtonType.Left;
+            Inventory inventory = playerComponent.getInventory();
+            ItemStack itemInHand = inventory.getItemInHand();
+            ItemStack itemInOffHand = inventory.getUtilityItem();
+            Item primaryItem = itemInHand != null && !itemInHand.isEmpty() ? itemInHand.getItem() : null;
+            Item secondaryItem = itemInOffHand != null && !itemInOffHand.isEmpty() ? itemInOffHand.getItem() : null;
+            Item item;
+            if (mouseButtonType == MouseButtonType.Left) {
+               item = primaryItem;
+            } else if (mouseButtonType == MouseButtonType.Right && secondaryItem != null) {
+               item = secondaryItem;
+            } else {
+               item = primaryItem;
+            }
+
+            WorldInteraction worldInteraction_ = packet.worldInteraction;
+            BlockPosition blockPositionPacket = worldInteraction_.blockPosition;
+            if (ref.isValid()) {
+               EntityStore entityComponentStore = componentAccessor.getExternalData();
+               Vector3i targetBlock = blockPositionPacket == null ? null : new Vector3i(blockPositionPacket.x, blockPositionPacket.y, blockPositionPacket.z);
+               Entity targetEntity;
+               if (worldInteraction_.entityId < 0) {
+                  targetEntity = null;
+               } else {
+                  Ref<EntityStore> entityReference = entityComponentStore.getRefFromNetworkId(worldInteraction_.entityId);
+                  targetEntity = EntityUtils.getEntity(entityReference, componentAccessor);
+               }
+
+               CameraManager cameraManagerComponent = componentAccessor.getComponent(ref, CameraManager.getComponentType());
+
+               assert cameraManagerComponent != null;
+
+               if (packet.mouseButton != null) {
+                  IEventDispatcher<PlayerMouseButtonEvent, PlayerMouseButtonEvent> dispatcher = HytaleServer.get()
+                     .getEventBus()
+                     .dispatchFor(PlayerMouseButtonEvent.class);
+                  if (dispatcher.hasListener()) {
+                     dispatcher.dispatch(
+                        new PlayerMouseButtonEvent(
+                           ref,
+                           playerComponent,
+                           playerRefComponent,
+                           packet.clientTimestamp,
+                           item,
+                           targetBlock,
+                           targetEntity,
+                           packet.screenPoint,
+                           packet.mouseButton
+                        )
+                     );
+                  }
+
+                  cameraManagerComponent.handleMouseButtonState(packet.mouseButton.mouseButtonType, packet.mouseButton.state, targetBlock);
+               } else {
+                  IEventDispatcher<PlayerMouseMotionEvent, PlayerMouseMotionEvent> dispatcher = HytaleServer.get()
+                     .getEventBus()
+                     .dispatchFor(PlayerMouseMotionEvent.class);
+                  if (dispatcher.hasListener()) {
+                     dispatcher.dispatch(
+                        new PlayerMouseMotionEvent(
+                           ref, playerComponent, packet.clientTimestamp, item, targetBlock, targetEntity, packet.screenPoint, packet.mouseMotion
+                        )
+                     );
+                  }
+               }
+
+               cameraManagerComponent.setLastScreenPoint(new Vector2d(packet.screenPoint.x, packet.screenPoint.y));
+               cameraManagerComponent.setLastBlockPosition(targetBlock);
+            }
+         }
+      }
+   }
+
+   @Nonnull
+   public ComponentType<EntityStore, ChainingInteraction.Data> getChainingDataComponent() {
+      return this.chainingDataComponent;
+   }
+
+   @Nonnull
+   public ComponentType<EntityStore, Interactions> getInteractionsComponentType() {
+      return this.interactionsComponentType;
+   }
+
+   @Nonnull
+   public ComponentType<EntityStore, InteractionManager> getInteractionManagerComponent() {
+      return this.interactionManagerComponent;
+   }
+
+   @Nonnull
+   public ComponentType<ChunkStore, PlacedByInteractionComponent> getPlacedByComponentType() {
+      return this.placedByComponentType;
+   }
+
+   public ResourceType<ChunkStore, BlockCounter> getBlockCounterResourceType() {
+      return this.blockCounterResourceType;
+   }
+
+   public ComponentType<ChunkStore, TrackedPlacement> getTrackedPlacementComponentType() {
+      return this.trackedPlacementComponentType;
+   }
+}

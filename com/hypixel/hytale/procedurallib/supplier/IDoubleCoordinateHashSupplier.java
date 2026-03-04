@@ -1,11 +1,5 @@
 package com.hypixel.hytale.procedurallib.supplier;
 
 public interface IDoubleCoordinateHashSupplier {
-  double get(int paramInt1, int paramInt2, int paramInt3, long paramLong);
+   double get(int var1, int var2, int var3, long var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\supplier\IDoubleCoordinateHashSupplier.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

@@ -1,47 +1,39 @@
-/*    */ package com.hypixel.hytale.server.npc.corecomponents.lifecycle;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.component.RemoveReason;
-/*    */ import com.hypixel.hytale.component.Store;
-/*    */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
-/*    */ import com.hypixel.hytale.server.npc.corecomponents.lifecycle.builders.BuilderActionRemove;
-/*    */ import com.hypixel.hytale.server.npc.role.Role;
-/*    */ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class ActionRemove extends ActionBase {
-/*    */   protected final boolean useTarget;
-/*    */   
-/*    */   public ActionRemove(@Nonnull BuilderActionRemove builder, @Nonnull BuilderSupport builderSupport) {
-/* 21 */     super((BuilderActionBase)builder);
-/* 22 */     this.useTarget = builder.getUseTarget(builderSupport);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-/* 27 */     return (super.canExecute(ref, role, sensorInfo, dt, store) && (!this.useTarget || (sensorInfo != null && sensorInfo.hasPosition())));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
-/* 32 */     super.execute(ref, role, sensorInfo, dt, store);
-/*    */     
-/* 34 */     Ref<EntityStore> targetRef = this.useTarget ? sensorInfo.getPositionProvider().getTarget() : ref;
-/* 35 */     if (!store.getArchetype(targetRef).contains(Player.getComponentType()))
-/*    */     {
-/* 37 */       store.removeEntity(targetRef, RemoveReason.REMOVE);
-/*    */     }
-/* 39 */     return true;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.corecomponents.lifecycle;
 
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
+import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
+import com.hypixel.hytale.server.npc.corecomponents.lifecycle.builders.BuilderActionRemove;
+import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\corecomponents\lifecycle\ActionRemove.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ActionRemove extends ActionBase {
+   protected final boolean useTarget;
+
+   public ActionRemove(@Nonnull BuilderActionRemove builder, @Nonnull BuilderSupport builderSupport) {
+      super(builder);
+      this.useTarget = builder.getUseTarget(builderSupport);
+   }
+
+   @Override
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+      return super.canExecute(ref, role, sensorInfo, dt, store) && (!this.useTarget || sensorInfo != null && sensorInfo.hasPosition());
+   }
+
+   @Override
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+      super.execute(ref, role, sensorInfo, dt, store);
+      Ref<EntityStore> targetRef = this.useTarget ? sensorInfo.getPositionProvider().getTarget() : ref;
+      if (!store.getArchetype(targetRef).contains(Player.getComponentType())) {
+         store.removeEntity(targetRef, RemoveReason.REMOVE);
+      }
+
+      return true;
+   }
+}

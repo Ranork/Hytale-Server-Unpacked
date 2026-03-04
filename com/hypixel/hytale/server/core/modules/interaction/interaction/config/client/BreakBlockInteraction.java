@@ -1,455 +1,299 @@
-/*     */ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.client;
-/*     */ 
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.KeyedCodec;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.component.CommandBuffer;
-/*     */ import com.hypixel.hytale.math.vector.Vector3i;
-/*     */ import com.hypixel.hytale.protocol.Interaction;
-/*     */ import com.hypixel.hytale.protocol.InteractionType;
-/*     */ import com.hypixel.hytale.server.core.entity.InteractionContext;
-/*     */ import com.hypixel.hytale.server.core.inventory.ItemStack;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
-/*     */ import com.hypixel.hytale.server.core.universe.world.World;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import java.util.function.Supplier;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class BreakBlockInteraction
-/*     */   extends SimpleBlockInteraction
-/*     */ {
-/*     */   @Nonnull
-/*     */   public static final BuilderCodec<BreakBlockInteraction> CODEC;
-/*     */   protected boolean harvest;
-/*     */   @Nullable
-/*     */   protected String toolId;
-/*     */   protected boolean matchTool;
-/*     */   
-/*     */   static {
-/*  64 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(BreakBlockInteraction.class, BreakBlockInteraction::new, SimpleBlockInteraction.CODEC).documentation("Attempts to break the target block.")).appendInherited(new KeyedCodec("Harvest", (Codec)Codec.BOOLEAN), (interaction, v) -> interaction.harvest = v.booleanValue(), interaction -> Boolean.valueOf(interaction.harvest), (o, p) -> o.harvest = p.harvest).documentation("Whether this should trigger as a harvest gather vs a break gather.").add()).appendInherited(new KeyedCodec("Tool", (Codec)Codec.STRING), (interaction, v) -> interaction.toolId = v, interaction -> interaction.toolId, (o, p) -> o.toolId = p.toolId).documentation("Tool to break as.").add()).appendInherited(new KeyedCodec("MatchTool", (Codec)Codec.BOOLEAN), (interaction, v) -> interaction.matchTool = v.booleanValue(), interaction -> Boolean.valueOf(interaction.matchTool), (o, p) -> o.matchTool = p.matchTool).documentation("Whether to require an match to `Tool` to work.").add()).build();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-/*  81 */     super.tick0(firstRun, time, type, context, cooldownHandler);
-/*  82 */     computeCurrentBlockSyncData(context);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack heldItemStack, @Nonnull Vector3i targetBlock, @Nonnull CooldownHandler cooldownHandler) {
-/*     */     // Byte code:
-/*     */     //   0: aload #4
-/*     */     //   2: invokevirtual getEntity : ()Lcom/hypixel/hytale/component/Ref;
-/*     */     //   5: astore #8
-/*     */     //   7: aload_2
-/*     */     //   8: aload #8
-/*     */     //   10: invokestatic getComponentType : ()Lcom/hypixel/hytale/component/ComponentType;
-/*     */     //   13: invokevirtual getComponent : (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentType;)Lcom/hypixel/hytale/component/Component;
-/*     */     //   16: checkcast com/hypixel/hytale/server/core/entity/entities/Player
-/*     */     //   19: astore #9
-/*     */     //   21: aload #9
-/*     */     //   23: ifnonnull -> 57
-/*     */     //   26: invokestatic getLogger : ()Lcom/hypixel/hytale/logger/HytaleLogger;
-/*     */     //   29: getstatic java/util/logging/Level.INFO : Ljava/util/logging/Level;
-/*     */     //   32: invokevirtual at : (Ljava/util/logging/Level;)Lcom/hypixel/hytale/logger/HytaleLogger$Api;
-/*     */     //   35: iconst_5
-/*     */     //   36: getstatic java/util/concurrent/TimeUnit.MINUTES : Ljava/util/concurrent/TimeUnit;
-/*     */     //   39: invokeinterface atMostEvery : (ILjava/util/concurrent/TimeUnit;)Lcom/google/common/flogger/LoggingApi;
-/*     */     //   44: checkcast com/hypixel/hytale/logger/HytaleLogger$Api
-/*     */     //   47: ldc 'BreakBlockInteraction requires a Player but was used for: %s'
-/*     */     //   49: aload #8
-/*     */     //   51: invokeinterface log : (Ljava/lang/String;Ljava/lang/Object;)V
-/*     */     //   56: return
-/*     */     //   57: aload_1
-/*     */     //   58: invokevirtual getChunkStore : ()Lcom/hypixel/hytale/server/core/universe/world/storage/ChunkStore;
-/*     */     //   61: astore #10
-/*     */     //   63: aload #10
-/*     */     //   65: invokevirtual getStore : ()Lcom/hypixel/hytale/component/Store;
-/*     */     //   68: astore #11
-/*     */     //   70: aload #6
-/*     */     //   72: getfield x : I
-/*     */     //   75: aload #6
-/*     */     //   77: getfield z : I
-/*     */     //   80: invokestatic indexChunkFromBlock : (II)J
-/*     */     //   83: lstore #12
-/*     */     //   85: aload #10
-/*     */     //   87: lload #12
-/*     */     //   89: invokevirtual getChunkReference : (J)Lcom/hypixel/hytale/component/Ref;
-/*     */     //   92: astore #14
-/*     */     //   94: aload #14
-/*     */     //   96: ifnull -> 107
-/*     */     //   99: aload #14
-/*     */     //   101: invokevirtual isValid : ()Z
-/*     */     //   104: ifne -> 108
-/*     */     //   107: return
-/*     */     //   108: aload #11
-/*     */     //   110: aload #14
-/*     */     //   112: invokestatic getComponentType : ()Lcom/hypixel/hytale/component/ComponentType;
-/*     */     //   115: invokevirtual getComponent : (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentType;)Lcom/hypixel/hytale/component/Component;
-/*     */     //   118: checkcast com/hypixel/hytale/server/core/universe/world/chunk/WorldChunk
-/*     */     //   121: astore #15
-/*     */     //   123: getstatic com/hypixel/hytale/server/core/modules/interaction/interaction/config/client/BreakBlockInteraction.$assertionsDisabled : Z
-/*     */     //   126: ifne -> 142
-/*     */     //   129: aload #15
-/*     */     //   131: ifnonnull -> 142
-/*     */     //   134: new java/lang/AssertionError
-/*     */     //   137: dup
-/*     */     //   138: invokespecial <init> : ()V
-/*     */     //   141: athrow
-/*     */     //   142: aload #11
-/*     */     //   144: aload #14
-/*     */     //   146: invokestatic getComponentType : ()Lcom/hypixel/hytale/component/ComponentType;
-/*     */     //   149: invokevirtual getComponent : (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentType;)Lcom/hypixel/hytale/component/Component;
-/*     */     //   152: checkcast com/hypixel/hytale/server/core/universe/world/chunk/BlockChunk
-/*     */     //   155: astore #16
-/*     */     //   157: getstatic com/hypixel/hytale/server/core/modules/interaction/interaction/config/client/BreakBlockInteraction.$assertionsDisabled : Z
-/*     */     //   160: ifne -> 176
-/*     */     //   163: aload #16
-/*     */     //   165: ifnonnull -> 176
-/*     */     //   168: new java/lang/AssertionError
-/*     */     //   171: dup
-/*     */     //   172: invokespecial <init> : ()V
-/*     */     //   175: athrow
-/*     */     //   176: aload #16
-/*     */     //   178: aload #6
-/*     */     //   180: invokevirtual getY : ()I
-/*     */     //   183: invokevirtual getSectionAtBlockY : (I)Lcom/hypixel/hytale/server/core/universe/world/chunk/section/BlockSection;
-/*     */     //   186: astore #17
-/*     */     //   188: aload_1
-/*     */     //   189: invokevirtual getGameplayConfig : ()Lcom/hypixel/hytale/server/core/asset/type/gameplay/GameplayConfig;
-/*     */     //   192: astore #18
-/*     */     //   194: aload #18
-/*     */     //   196: invokevirtual getWorldConfig : ()Lcom/hypixel/hytale/server/core/asset/type/gameplay/WorldConfig;
-/*     */     //   199: astore #19
-/*     */     //   201: aload_0
-/*     */     //   202: getfield harvest : Z
-/*     */     //   205: ifeq -> 331
-/*     */     //   208: aload #6
-/*     */     //   210: invokevirtual getX : ()I
-/*     */     //   213: istore #20
-/*     */     //   215: aload #6
-/*     */     //   217: invokevirtual getY : ()I
-/*     */     //   220: istore #21
-/*     */     //   222: aload #6
-/*     */     //   224: invokevirtual getZ : ()I
-/*     */     //   227: istore #22
-/*     */     //   229: aload #15
-/*     */     //   231: iload #20
-/*     */     //   233: iload #21
-/*     */     //   235: iload #22
-/*     */     //   237: invokevirtual getBlockType : (III)Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;
-/*     */     //   240: astore #23
-/*     */     //   242: aload #23
-/*     */     //   244: ifnonnull -> 259
-/*     */     //   247: aload #4
-/*     */     //   249: invokevirtual getState : ()Lcom/hypixel/hytale/protocol/InteractionSyncData;
-/*     */     //   252: getstatic com/hypixel/hytale/protocol/InteractionState.Failed : Lcom/hypixel/hytale/protocol/InteractionState;
-/*     */     //   255: putfield state : Lcom/hypixel/hytale/protocol/InteractionState;
-/*     */     //   258: return
-/*     */     //   259: aload #19
-/*     */     //   261: invokevirtual isBlockGatheringAllowed : ()Z
-/*     */     //   264: ifne -> 279
-/*     */     //   267: aload #4
-/*     */     //   269: invokevirtual getState : ()Lcom/hypixel/hytale/protocol/InteractionSyncData;
-/*     */     //   272: getstatic com/hypixel/hytale/protocol/InteractionState.Failed : Lcom/hypixel/hytale/protocol/InteractionState;
-/*     */     //   275: putfield state : Lcom/hypixel/hytale/protocol/InteractionState;
-/*     */     //   278: return
-/*     */     //   279: aload #23
-/*     */     //   281: invokestatic shouldPickupByInteraction : (Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;)Z
-/*     */     //   284: ifne -> 299
-/*     */     //   287: aload #4
-/*     */     //   289: invokevirtual getState : ()Lcom/hypixel/hytale/protocol/InteractionSyncData;
-/*     */     //   292: getstatic com/hypixel/hytale/protocol/InteractionState.Failed : Lcom/hypixel/hytale/protocol/InteractionState;
-/*     */     //   295: putfield state : Lcom/hypixel/hytale/protocol/InteractionState;
-/*     */     //   298: return
-/*     */     //   299: aload #17
-/*     */     //   301: iload #20
-/*     */     //   303: iload #21
-/*     */     //   305: iload #22
-/*     */     //   307: invokevirtual getFiller : (III)I
-/*     */     //   310: istore #24
-/*     */     //   312: aload #8
-/*     */     //   314: aload #6
-/*     */     //   316: aload #23
-/*     */     //   318: iload #24
-/*     */     //   320: aload #14
-/*     */     //   322: aload_2
-/*     */     //   323: aload #11
-/*     */     //   325: invokestatic performPickupByInteraction : (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;ILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)V
-/*     */     //   328: goto -> 458
-/*     */     //   331: aload #19
-/*     */     //   333: invokevirtual isBlockBreakingAllowed : ()Z
-/*     */     //   336: istore #20
-/*     */     //   338: iload #20
-/*     */     //   340: ifne -> 355
-/*     */     //   343: aload #4
-/*     */     //   345: invokevirtual getState : ()Lcom/hypixel/hytale/protocol/InteractionSyncData;
-/*     */     //   348: getstatic com/hypixel/hytale/protocol/InteractionState.Failed : Lcom/hypixel/hytale/protocol/InteractionState;
-/*     */     //   351: putfield state : Lcom/hypixel/hytale/protocol/InteractionState;
-/*     */     //   354: return
-/*     */     //   355: aload #9
-/*     */     //   357: invokevirtual getGameMode : ()Lcom/hypixel/hytale/protocol/GameMode;
-/*     */     //   360: astore #21
-/*     */     //   362: iconst_0
-/*     */     //   363: istore #22
-/*     */     //   365: aload #21
-/*     */     //   367: iload #22
-/*     */     //   369: <illegal opcode> typeSwitch : (Ljava/lang/Object;I)I
-/*     */     //   374: tableswitch default -> 448, -1 -> 448, 0 -> 400, 1 -> 431
-/*     */     //   400: aload #9
-/*     */     //   402: aload #8
-/*     */     //   404: aload #6
-/*     */     //   406: aload #5
-/*     */     //   408: aconst_null
-/*     */     //   409: aload_0
-/*     */     //   410: getfield toolId : Ljava/lang/String;
-/*     */     //   413: aload_0
-/*     */     //   414: getfield matchTool : Z
-/*     */     //   417: fconst_1
-/*     */     //   418: iconst_0
-/*     */     //   419: aload #14
-/*     */     //   421: aload_2
-/*     */     //   422: aload #11
-/*     */     //   424: invokestatic performBlockDamage : (Lcom/hypixel/hytale/server/core/entity/LivingEntity;Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/server/core/asset/type/item/config/ItemTool;Ljava/lang/String;ZFILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)Z
-/*     */     //   427: pop
-/*     */     //   428: goto -> 458
-/*     */     //   431: aload #8
-/*     */     //   433: aload #5
-/*     */     //   435: aload #6
-/*     */     //   437: aload #14
-/*     */     //   439: aload_2
-/*     */     //   440: aload #11
-/*     */     //   442: invokestatic performBlockBreak : (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)V
-/*     */     //   445: goto -> 458
-/*     */     //   448: new java/lang/UnsupportedOperationException
-/*     */     //   451: dup
-/*     */     //   452: ldc 'GameMode is not supported'
-/*     */     //   454: invokespecial <init> : (Ljava/lang/String;)V
-/*     */     //   457: athrow
-/*     */     //   458: return
-/*     */     // Line number table:
-/*     */     //   Java source line number -> byte code offset
-/*     */     //   #87	-> 0
-/*     */     //   #88	-> 7
-/*     */     //   #90	-> 21
-/*     */     //   #91	-> 26
-/*     */     //   #92	-> 39
-/*     */     //   #93	-> 51
-/*     */     //   #94	-> 56
-/*     */     //   #97	-> 57
-/*     */     //   #98	-> 63
-/*     */     //   #100	-> 70
-/*     */     //   #101	-> 85
-/*     */     //   #102	-> 94
-/*     */     //   #104	-> 108
-/*     */     //   #105	-> 123
-/*     */     //   #107	-> 142
-/*     */     //   #108	-> 157
-/*     */     //   #110	-> 176
-/*     */     //   #111	-> 188
-/*     */     //   #112	-> 194
-/*     */     //   #114	-> 201
-/*     */     //   #116	-> 208
-/*     */     //   #117	-> 215
-/*     */     //   #118	-> 222
-/*     */     //   #120	-> 229
-/*     */     //   #121	-> 242
-/*     */     //   #122	-> 247
-/*     */     //   #123	-> 258
-/*     */     //   #126	-> 259
-/*     */     //   #127	-> 267
-/*     */     //   #128	-> 278
-/*     */     //   #131	-> 279
-/*     */     //   #132	-> 287
-/*     */     //   #133	-> 298
-/*     */     //   #136	-> 299
-/*     */     //   #137	-> 312
-/*     */     //   #138	-> 328
-/*     */     //   #140	-> 331
-/*     */     //   #141	-> 338
-/*     */     //   #142	-> 343
-/*     */     //   #143	-> 354
-/*     */     //   #146	-> 355
-/*     */     //   #148	-> 400
-/*     */     //   #149	-> 431
-/*     */     //   #150	-> 448
-/*     */     //   #153	-> 458
-/*     */     // Local variable table:
-/*     */     //   start	length	slot	name	descriptor
-/*     */     //   215	113	20	x	I
-/*     */     //   222	106	21	y	I
-/*     */     //   229	99	22	z	I
-/*     */     //   242	86	23	blockType	Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;
-/*     */     //   312	16	24	filler	I
-/*     */     //   338	120	20	blockBreakingAllowed	Z
-/*     */     //   0	459	0	this	Lcom/hypixel/hytale/server/core/modules/interaction/interaction/config/client/BreakBlockInteraction;
-/*     */     //   0	459	1	world	Lcom/hypixel/hytale/server/core/universe/world/World;
-/*     */     //   0	459	2	commandBuffer	Lcom/hypixel/hytale/component/CommandBuffer;
-/*     */     //   0	459	3	type	Lcom/hypixel/hytale/protocol/InteractionType;
-/*     */     //   0	459	4	context	Lcom/hypixel/hytale/server/core/entity/InteractionContext;
-/*     */     //   0	459	5	heldItemStack	Lcom/hypixel/hytale/server/core/inventory/ItemStack;
-/*     */     //   0	459	6	targetBlock	Lcom/hypixel/hytale/math/vector/Vector3i;
-/*     */     //   0	459	7	cooldownHandler	Lcom/hypixel/hytale/server/core/modules/interaction/interaction/CooldownHandler;
-/*     */     //   7	452	8	ref	Lcom/hypixel/hytale/component/Ref;
-/*     */     //   21	438	9	playerComponent	Lcom/hypixel/hytale/server/core/entity/entities/Player;
-/*     */     //   63	396	10	chunkStore	Lcom/hypixel/hytale/server/core/universe/world/storage/ChunkStore;
-/*     */     //   70	389	11	chunkStoreStore	Lcom/hypixel/hytale/component/Store;
-/*     */     //   85	374	12	chunkIndex	J
-/*     */     //   94	365	14	chunkReference	Lcom/hypixel/hytale/component/Ref;
-/*     */     //   123	336	15	worldChunkComponent	Lcom/hypixel/hytale/server/core/universe/world/chunk/WorldChunk;
-/*     */     //   157	302	16	blockChunkComponent	Lcom/hypixel/hytale/server/core/universe/world/chunk/BlockChunk;
-/*     */     //   188	271	17	blockSection	Lcom/hypixel/hytale/server/core/universe/world/chunk/section/BlockSection;
-/*     */     //   194	265	18	gameplayConfig	Lcom/hypixel/hytale/server/core/asset/type/gameplay/GameplayConfig;
-/*     */     //   201	258	19	worldConfig	Lcom/hypixel/hytale/server/core/asset/type/gameplay/WorldConfig;
-/*     */     // Local variable type table:
-/*     */     //   start	length	slot	name	signature
-/*     */     //   0	459	2	commandBuffer	Lcom/hypixel/hytale/component/CommandBuffer<Lcom/hypixel/hytale/server/core/universe/world/storage/EntityStore;>;
-/*     */     //   7	452	8	ref	Lcom/hypixel/hytale/component/Ref<Lcom/hypixel/hytale/server/core/universe/world/storage/EntityStore;>;
-/*     */     //   70	389	11	chunkStoreStore	Lcom/hypixel/hytale/component/Store<Lcom/hypixel/hytale/server/core/universe/world/storage/ChunkStore;>;
-/*     */     //   94	365	14	chunkReference	Lcom/hypixel/hytale/component/Ref<Lcom/hypixel/hytale/server/core/universe/world/storage/ChunkStore;>;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   protected void simulateInteractWithBlock(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull World world, @Nonnull Vector3i targetBlock) {}
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   protected Interaction generatePacket() {
-/* 163 */     return (Interaction)new com.hypixel.hytale.protocol.BreakBlockInteraction();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void configurePacket(Interaction packet) {
-/* 168 */     super.configurePacket(packet);
-/* 169 */     com.hypixel.hytale.protocol.BreakBlockInteraction p = (com.hypixel.hytale.protocol.BreakBlockInteraction)packet;
-/* 170 */     p.harvest = this.harvest;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String toString() {
-/* 176 */     return "BreakBlockInteraction{harvest=" + this.harvest + "} " + super
-/*     */       
-/* 178 */       .toString();
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.modules.interaction.interaction.config.client;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.protocol.Interaction;
+import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
+import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\interaction\interaction\config\client\BreakBlockInteraction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BreakBlockInteraction extends SimpleBlockInteraction {
+   @Nonnull
+   public static final BuilderCodec<BreakBlockInteraction> CODEC = BuilderCodec.builder(
+         BreakBlockInteraction.class, BreakBlockInteraction::new, SimpleBlockInteraction.CODEC
+      )
+      .documentation("Attempts to break the target block.")
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("Harvest", Codec.BOOLEAN),
+         (interaction, v) -> interaction.harvest = v,
+         interaction -> interaction.harvest,
+         (o, p) -> o.harvest = p.harvest
+      )
+      .documentation("Whether this should trigger as a harvest gather vs a break gather.")
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("Tool", Codec.STRING), (interaction, v) -> interaction.toolId = v, interaction -> interaction.toolId, (o, p) -> o.toolId = p.toolId
+      )
+      .documentation("Tool to break as.")
+      .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("MatchTool", Codec.BOOLEAN),
+         (interaction, v) -> interaction.matchTool = v,
+         interaction -> interaction.matchTool,
+         (o, p) -> o.matchTool = p.matchTool
+      )
+      .documentation("Whether to require an match to `Tool` to work.")
+      .add()
+      .build();
+   protected boolean harvest;
+   @Nullable
+   protected String toolId;
+   protected boolean matchTool;
+
+   @Override
+   protected void tick0(
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
+   ) {
+      super.tick0(firstRun, time, type, context, cooldownHandler);
+      this.computeCurrentBlockSyncData(context);
+   }
+
+   @Override
+   protected void interactWithBlock(
+      @Nonnull World param1,
+      @Nonnull CommandBuffer<EntityStore> param2,
+      @Nonnull InteractionType param3,
+      @Nonnull InteractionContext param4,
+      @Nullable ItemStack param5,
+      @Nonnull Vector3i param6,
+      @Nonnull CooldownHandler param7
+   ) {
+      // $VF: Couldn't be decompiled
+      // Please report this to the Vineflower issue tracker, at https://github.com/Vineflower/vineflower/issues with a copy of the class file (if you have the rights to distribute it!)
+      // java.lang.IllegalStateException: Invalid switch case set: [[const(0)], [const(1)], [const(null), null]] for selector of type Lcom/hypixel/hytale/protocol/GameMode;
+      //   at org.jetbrains.java.decompiler.modules.decompiler.exps.SwitchHeadExprent.checkExprTypeBounds(SwitchHeadExprent.java:66)
+      //   at org.jetbrains.java.decompiler.modules.decompiler.vars.VarTypeProcessor.checkTypeExpr(VarTypeProcessor.java:140)
+      //   at org.jetbrains.java.decompiler.modules.decompiler.vars.VarTypeProcessor.checkTypeExprent(VarTypeProcessor.java:126)
+      //   at org.jetbrains.java.decompiler.modules.decompiler.vars.VarTypeProcessor.lambda$processVarTypes$2(VarTypeProcessor.java:114)
+      //   at org.jetbrains.java.decompiler.modules.decompiler.flow.DirectGraph.iterateExprents(DirectGraph.java:107)
+      //   at org.jetbrains.java.decompiler.modules.decompiler.vars.VarTypeProcessor.processVarTypes(VarTypeProcessor.java:114)
+      //   at org.jetbrains.java.decompiler.modules.decompiler.vars.VarTypeProcessor.calculateVarTypes(VarTypeProcessor.java:44)
+      //   at org.jetbrains.java.decompiler.modules.decompiler.vars.VarVersionsProcessor.setVarVersions(VarVersionsProcessor.java:68)
+      //   at org.jetbrains.java.decompiler.modules.decompiler.vars.VarProcessor.setVarVersions(VarProcessor.java:47)
+      //   at org.jetbrains.java.decompiler.main.rels.MethodProcessor.codeToJava(MethodProcessor.java:302)
+      //
+      // Bytecode:
+      // 000: aload 4
+      // 002: invokevirtual com/hypixel/hytale/server/core/entity/InteractionContext.getEntity ()Lcom/hypixel/hytale/component/Ref;
+      // 005: astore 8
+      // 007: aload 2
+      // 008: aload 8
+      // 00a: invokestatic com/hypixel/hytale/server/core/entity/entities/Player.getComponentType ()Lcom/hypixel/hytale/component/ComponentType;
+      // 00d: invokevirtual com/hypixel/hytale/component/CommandBuffer.getComponent (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentType;)Lcom/hypixel/hytale/component/Component;
+      // 010: checkcast com/hypixel/hytale/server/core/entity/entities/Player
+      // 013: astore 9
+      // 015: aload 9
+      // 017: ifnonnull 039
+      // 01a: invokestatic com/hypixel/hytale/logger/HytaleLogger.getLogger ()Lcom/hypixel/hytale/logger/HytaleLogger;
+      // 01d: getstatic java/util/logging/Level.INFO Ljava/util/logging/Level;
+      // 020: invokevirtual com/hypixel/hytale/logger/HytaleLogger.at (Ljava/util/logging/Level;)Lcom/hypixel/hytale/logger/HytaleLogger$Api;
+      // 023: bipush 5
+      // 024: getstatic java/util/concurrent/TimeUnit.MINUTES Ljava/util/concurrent/TimeUnit;
+      // 027: invokeinterface com/hypixel/hytale/logger/HytaleLogger$Api.atMostEvery (ILjava/util/concurrent/TimeUnit;)Lcom/google/common/flogger/LoggingApi; 3
+      // 02c: checkcast com/hypixel/hytale/logger/HytaleLogger$Api
+      // 02f: ldc "BreakBlockInteraction requires a Player but was used for: %s"
+      // 031: aload 8
+      // 033: invokeinterface com/hypixel/hytale/logger/HytaleLogger$Api.log (Ljava/lang/String;Ljava/lang/Object;)V 3
+      // 038: return
+      // 039: aload 1
+      // 03a: invokevirtual com/hypixel/hytale/server/core/universe/world/World.getChunkStore ()Lcom/hypixel/hytale/server/core/universe/world/storage/ChunkStore;
+      // 03d: astore 10
+      // 03f: aload 10
+      // 041: invokevirtual com/hypixel/hytale/server/core/universe/world/storage/ChunkStore.getStore ()Lcom/hypixel/hytale/component/Store;
+      // 044: astore 11
+      // 046: aload 6
+      // 048: getfield com/hypixel/hytale/math/vector/Vector3i.x I
+      // 04b: aload 6
+      // 04d: getfield com/hypixel/hytale/math/vector/Vector3i.z I
+      // 050: invokestatic com/hypixel/hytale/math/util/ChunkUtil.indexChunkFromBlock (II)J
+      // 053: lstore 12
+      // 055: aload 10
+      // 057: lload 12
+      // 059: invokevirtual com/hypixel/hytale/server/core/universe/world/storage/ChunkStore.getChunkReference (J)Lcom/hypixel/hytale/component/Ref;
+      // 05c: astore 14
+      // 05e: aload 14
+      // 060: ifnull 06b
+      // 063: aload 14
+      // 065: invokevirtual com/hypixel/hytale/component/Ref.isValid ()Z
+      // 068: ifne 06c
+      // 06b: return
+      // 06c: aload 11
+      // 06e: aload 14
+      // 070: invokestatic com/hypixel/hytale/server/core/universe/world/chunk/WorldChunk.getComponentType ()Lcom/hypixel/hytale/component/ComponentType;
+      // 073: invokevirtual com/hypixel/hytale/component/Store.getComponent (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentType;)Lcom/hypixel/hytale/component/Component;
+      // 076: checkcast com/hypixel/hytale/server/core/universe/world/chunk/WorldChunk
+      // 079: astore 15
+      // 07b: getstatic com/hypixel/hytale/server/core/modules/interaction/interaction/config/client/BreakBlockInteraction.$assertionsDisabled Z
+      // 07e: ifne 08e
+      // 081: aload 15
+      // 083: ifnonnull 08e
+      // 086: new java/lang/AssertionError
+      // 089: dup
+      // 08a: invokespecial java/lang/AssertionError.<init> ()V
+      // 08d: athrow
+      // 08e: aload 11
+      // 090: aload 14
+      // 092: invokestatic com/hypixel/hytale/server/core/universe/world/chunk/BlockChunk.getComponentType ()Lcom/hypixel/hytale/component/ComponentType;
+      // 095: invokevirtual com/hypixel/hytale/component/Store.getComponent (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentType;)Lcom/hypixel/hytale/component/Component;
+      // 098: checkcast com/hypixel/hytale/server/core/universe/world/chunk/BlockChunk
+      // 09b: astore 16
+      // 09d: getstatic com/hypixel/hytale/server/core/modules/interaction/interaction/config/client/BreakBlockInteraction.$assertionsDisabled Z
+      // 0a0: ifne 0b0
+      // 0a3: aload 16
+      // 0a5: ifnonnull 0b0
+      // 0a8: new java/lang/AssertionError
+      // 0ab: dup
+      // 0ac: invokespecial java/lang/AssertionError.<init> ()V
+      // 0af: athrow
+      // 0b0: aload 16
+      // 0b2: aload 6
+      // 0b4: invokevirtual com/hypixel/hytale/math/vector/Vector3i.getY ()I
+      // 0b7: invokevirtual com/hypixel/hytale/server/core/universe/world/chunk/BlockChunk.getSectionAtBlockY (I)Lcom/hypixel/hytale/server/core/universe/world/chunk/section/BlockSection;
+      // 0ba: astore 17
+      // 0bc: aload 1
+      // 0bd: invokevirtual com/hypixel/hytale/server/core/universe/world/World.getGameplayConfig ()Lcom/hypixel/hytale/server/core/asset/type/gameplay/GameplayConfig;
+      // 0c0: astore 18
+      // 0c2: aload 18
+      // 0c4: invokevirtual com/hypixel/hytale/server/core/asset/type/gameplay/GameplayConfig.getWorldConfig ()Lcom/hypixel/hytale/server/core/asset/type/gameplay/WorldConfig;
+      // 0c7: astore 19
+      // 0c9: aload 0
+      // 0ca: getfield com/hypixel/hytale/server/core/modules/interaction/interaction/config/client/BreakBlockInteraction.harvest Z
+      // 0cd: ifeq 14b
+      // 0d0: aload 6
+      // 0d2: invokevirtual com/hypixel/hytale/math/vector/Vector3i.getX ()I
+      // 0d5: istore 20
+      // 0d7: aload 6
+      // 0d9: invokevirtual com/hypixel/hytale/math/vector/Vector3i.getY ()I
+      // 0dc: istore 21
+      // 0de: aload 6
+      // 0e0: invokevirtual com/hypixel/hytale/math/vector/Vector3i.getZ ()I
+      // 0e3: istore 22
+      // 0e5: aload 15
+      // 0e7: iload 20
+      // 0e9: iload 21
+      // 0eb: iload 22
+      // 0ed: invokevirtual com/hypixel/hytale/server/core/universe/world/chunk/WorldChunk.getBlockType (III)Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;
+      // 0f0: astore 23
+      // 0f2: aload 23
+      // 0f4: ifnonnull 103
+      // 0f7: aload 4
+      // 0f9: invokevirtual com/hypixel/hytale/server/core/entity/InteractionContext.getState ()Lcom/hypixel/hytale/protocol/InteractionSyncData;
+      // 0fc: getstatic com/hypixel/hytale/protocol/InteractionState.Failed Lcom/hypixel/hytale/protocol/InteractionState;
+      // 0ff: putfield com/hypixel/hytale/protocol/InteractionSyncData.state Lcom/hypixel/hytale/protocol/InteractionState;
+      // 102: return
+      // 103: aload 19
+      // 105: invokevirtual com/hypixel/hytale/server/core/asset/type/gameplay/WorldConfig.isBlockGatheringAllowed ()Z
+      // 108: ifne 117
+      // 10b: aload 4
+      // 10d: invokevirtual com/hypixel/hytale/server/core/entity/InteractionContext.getState ()Lcom/hypixel/hytale/protocol/InteractionSyncData;
+      // 110: getstatic com/hypixel/hytale/protocol/InteractionState.Failed Lcom/hypixel/hytale/protocol/InteractionState;
+      // 113: putfield com/hypixel/hytale/protocol/InteractionSyncData.state Lcom/hypixel/hytale/protocol/InteractionState;
+      // 116: return
+      // 117: aload 23
+      // 119: invokestatic com/hypixel/hytale/server/core/modules/interaction/BlockHarvestUtils.shouldPickupByInteraction (Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;)Z
+      // 11c: ifne 12b
+      // 11f: aload 4
+      // 121: invokevirtual com/hypixel/hytale/server/core/entity/InteractionContext.getState ()Lcom/hypixel/hytale/protocol/InteractionSyncData;
+      // 124: getstatic com/hypixel/hytale/protocol/InteractionState.Failed Lcom/hypixel/hytale/protocol/InteractionState;
+      // 127: putfield com/hypixel/hytale/protocol/InteractionSyncData.state Lcom/hypixel/hytale/protocol/InteractionState;
+      // 12a: return
+      // 12b: aload 17
+      // 12d: iload 20
+      // 12f: iload 21
+      // 131: iload 22
+      // 133: invokevirtual com/hypixel/hytale/server/core/universe/world/chunk/section/BlockSection.getFiller (III)I
+      // 136: istore 24
+      // 138: aload 8
+      // 13a: aload 6
+      // 13c: aload 23
+      // 13e: iload 24
+      // 140: aload 14
+      // 142: aload 2
+      // 143: aload 11
+      // 145: invokestatic com/hypixel/hytale/server/core/modules/interaction/BlockHarvestUtils.performPickupByInteraction (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/server/core/asset/type/blocktype/config/BlockType;ILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)V
+      // 148: goto 1ca
+      // 14b: aload 19
+      // 14d: invokevirtual com/hypixel/hytale/server/core/asset/type/gameplay/WorldConfig.isBlockBreakingAllowed ()Z
+      // 150: istore 20
+      // 152: iload 20
+      // 154: ifne 163
+      // 157: aload 4
+      // 159: invokevirtual com/hypixel/hytale/server/core/entity/InteractionContext.getState ()Lcom/hypixel/hytale/protocol/InteractionSyncData;
+      // 15c: getstatic com/hypixel/hytale/protocol/InteractionState.Failed Lcom/hypixel/hytale/protocol/InteractionState;
+      // 15f: putfield com/hypixel/hytale/protocol/InteractionSyncData.state Lcom/hypixel/hytale/protocol/InteractionState;
+      // 162: return
+      // 163: aload 9
+      // 165: invokevirtual com/hypixel/hytale/server/core/entity/entities/Player.getGameMode ()Lcom/hypixel/hytale/protocol/GameMode;
+      // 168: astore 21
+      // 16a: bipush 0
+      // 16b: istore 22
+      // 16d: aload 21
+      // 16f: iload 22
+      // 171: invokedynamic typeSwitch (Ljava/lang/Object;I)I bsm=java/lang/runtime/SwitchBootstraps.typeSwitch (Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite; args=[ null.invoke Ljava/lang/Enum$EnumDesc;, null.invoke Ljava/lang/Enum$EnumDesc; ]
+      // 176: tableswitch 74 -1 1 74 26 57
+      // 190: aload 9
+      // 192: aload 8
+      // 194: aload 6
+      // 196: aload 5
+      // 198: aconst_null
+      // 199: aload 0
+      // 19a: getfield com/hypixel/hytale/server/core/modules/interaction/interaction/config/client/BreakBlockInteraction.toolId Ljava/lang/String;
+      // 19d: aload 0
+      // 19e: getfield com/hypixel/hytale/server/core/modules/interaction/interaction/config/client/BreakBlockInteraction.matchTool Z
+      // 1a1: fconst_1
+      // 1a2: bipush 0
+      // 1a3: aload 14
+      // 1a5: aload 2
+      // 1a6: aload 11
+      // 1a8: invokestatic com/hypixel/hytale/server/core/modules/interaction/BlockHarvestUtils.performBlockDamage (Lcom/hypixel/hytale/server/core/entity/LivingEntity;Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/server/core/asset/type/item/config/ItemTool;Ljava/lang/String;ZFILcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)Z
+      // 1ab: pop
+      // 1ac: goto 1ca
+      // 1af: aload 8
+      // 1b1: aload 5
+      // 1b3: aload 6
+      // 1b5: aload 14
+      // 1b7: aload 2
+      // 1b8: aload 11
+      // 1ba: invokestatic com/hypixel/hytale/server/core/modules/interaction/BlockHarvestUtils.performBlockBreak (Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/server/core/inventory/ItemStack;Lcom/hypixel/hytale/math/vector/Vector3i;Lcom/hypixel/hytale/component/Ref;Lcom/hypixel/hytale/component/ComponentAccessor;Lcom/hypixel/hytale/component/ComponentAccessor;)V
+      // 1bd: goto 1ca
+      // 1c0: new java/lang/UnsupportedOperationException
+      // 1c3: dup
+      // 1c4: ldc "GameMode is not supported"
+      // 1c6: invokespecial java/lang/UnsupportedOperationException.<init> (Ljava/lang/String;)V
+      // 1c9: athrow
+      // 1ca: return
+   }
+
+   @Override
+   protected void simulateInteractWithBlock(
+      @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nullable ItemStack itemInHand, @Nonnull World world, @Nonnull Vector3i targetBlock
+   ) {
+   }
+
+   @Nonnull
+   @Override
+   protected Interaction generatePacket() {
+      return new com.hypixel.hytale.protocol.BreakBlockInteraction();
+   }
+
+   @Override
+   protected void configurePacket(Interaction packet) {
+      super.configurePacket(packet);
+      com.hypixel.hytale.protocol.BreakBlockInteraction p = (com.hypixel.hytale.protocol.BreakBlockInteraction)packet;
+      p.harvest = this.harvest;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "BreakBlockInteraction{harvest=" + this.harvest + "} " + super.toString();
+   }
+}

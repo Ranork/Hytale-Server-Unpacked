@@ -1,65 +1,28 @@
-/*    */ package com.hypixel.hytale.server.core.universe.world.events.ecs;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.system.CancellableEcsEvent;
-/*    */ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class ChunkUnloadEvent
-/*    */   extends CancellableEcsEvent
-/*    */ {
-/*    */   @Nonnull
-/*    */   private final WorldChunk chunk;
-/*    */   private boolean resetKeepAlive = true;
-/*    */   
-/*    */   public ChunkUnloadEvent(@Nonnull WorldChunk chunk) {
-/* 33 */     this.chunk = chunk;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public WorldChunk getChunk() {
-/* 41 */     return this.chunk;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public void setResetKeepAlive(boolean willResetKeepAlive) {
-/* 50 */     this.resetKeepAlive = willResetKeepAlive;
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public boolean willResetKeepAlive() {
-/* 57 */     return this.resetKeepAlive;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.universe.world.events.ecs;
 
+import com.hypixel.hytale.component.system.CancellableEcsEvent;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\events\ecs\ChunkUnloadEvent.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ChunkUnloadEvent extends CancellableEcsEvent {
+   @Nonnull
+   private final WorldChunk chunk;
+   private boolean resetKeepAlive = true;
+
+   public ChunkUnloadEvent(@Nonnull WorldChunk chunk) {
+      this.chunk = chunk;
+   }
+
+   @Nonnull
+   public WorldChunk getChunk() {
+      return this.chunk;
+   }
+
+   public void setResetKeepAlive(boolean willResetKeepAlive) {
+      this.resetKeepAlive = willResetKeepAlive;
+   }
+
+   public boolean willResetKeepAlive() {
+      return this.resetKeepAlive;
+   }
+}

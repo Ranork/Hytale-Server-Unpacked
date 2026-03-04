@@ -8,13 +8,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import javax.annotation.Nonnull;
 
 public interface IAttitudeProvider {
-  public static final int OVERRIDE_PRIORITY = 0;
-  
-  Attitude getAttitude(@Nonnull Ref<EntityStore> paramRef1, @Nonnull Role paramRole, @Nonnull Ref<EntityStore> paramRef2, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor);
+   int OVERRIDE_PRIORITY = 0;
+
+   Attitude getAttitude(@Nonnull Ref<EntityStore> var1, @Nonnull Role var2, @Nonnull Ref<EntityStore> var3, @Nonnull ComponentAccessor<EntityStore> var4);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\blackboard\view\attitude\IAttitudeProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

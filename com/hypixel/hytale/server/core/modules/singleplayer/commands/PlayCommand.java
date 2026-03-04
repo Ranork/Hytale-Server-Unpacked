@@ -1,30 +1,14 @@
-/*    */ package com.hypixel.hytale.server.core.modules.singleplayer.commands;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
-/*    */ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
-/*    */ import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class PlayCommand
-/*    */   extends AbstractCommandCollection
-/*    */ {
-/*    */   public PlayCommand(@Nonnull SingleplayerModule singleplayerModule) {
-/* 19 */     super("play", "server.commands.play.desc");
-/* 20 */     addSubCommand((AbstractCommand)new PlayLanCommand(singleplayerModule));
-/* 21 */     addSubCommand((AbstractCommand)new PlayFriendCommand(singleplayerModule));
-/* 22 */     addSubCommand((AbstractCommand)new PlayOnlineCommand(singleplayerModule));
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.singleplayer.commands;
 
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
+import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\singleplayer\commands\PlayCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PlayCommand extends AbstractCommandCollection {
+   public PlayCommand(@Nonnull SingleplayerModule singleplayerModule) {
+      super("play", "server.commands.play.desc");
+      this.addSubCommand(new PlayLanCommand(singleplayerModule));
+      this.addSubCommand(new PlayFriendCommand(singleplayerModule));
+      this.addSubCommand(new PlayOnlineCommand(singleplayerModule));
+   }
+}

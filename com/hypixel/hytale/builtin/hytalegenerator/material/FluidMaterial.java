@@ -1,48 +1,44 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.material;
-/*    */ 
-/*    */ import java.util.Objects;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class FluidMaterial
-/*    */ {
-/*    */   private final MaterialCache materialCache;
-/*    */   public final int fluidId;
-/*    */   public final byte fluidLevel;
-/*    */   
-/*    */   FluidMaterial(@Nonnull MaterialCache materialCache, int fluidId, byte fluidLevel) {
-/* 13 */     this.materialCache = materialCache;
-/* 14 */     this.fluidId = fluidId;
-/* 15 */     this.fluidLevel = fluidLevel;
-/*    */   }
-/*    */   
-/*    */   public MaterialCache getVoxelCache() {
-/* 19 */     return this.materialCache;
-/*    */   }
-/*    */   
-/*    */   public final boolean equals(Object o) {
-/*    */     FluidMaterial that;
-/* 24 */     if (o instanceof FluidMaterial) { that = (FluidMaterial)o; } else { return false; }
-/*    */     
-/* 26 */     return (this.fluidId == that.fluidId && this.fluidLevel == that.fluidLevel && this.materialCache.equals(that.materialCache));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public int hashCode() {
-/* 31 */     return contentHash(this.fluidId, this.fluidLevel);
-/*    */   }
-/*    */   
-/*    */   public static int contentHash(int blockId, byte fluidLevel) {
-/* 35 */     return Objects.hash(new Object[] { Integer.valueOf(blockId), Byte.valueOf(fluidLevel) });
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public String toString() {
-/* 40 */     return "FluidMaterial{materialCache=" + String.valueOf(this.materialCache) + ", fluidId=" + this.fluidId + ", fluidLevel=" + this.fluidLevel + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.material;
 
+import java.util.Objects;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\material\FluidMaterial.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class FluidMaterial {
+   @Nonnull
+   private final MaterialCache materialCache;
+   public final int fluidId;
+   public final byte fluidLevel;
+
+   FluidMaterial(@Nonnull MaterialCache materialCache, int fluidId, byte fluidLevel) {
+      this.materialCache = materialCache;
+      this.fluidId = fluidId;
+      this.fluidLevel = fluidLevel;
+   }
+
+   @Nonnull
+   public MaterialCache getVoxelCache() {
+      return this.materialCache;
+   }
+
+   @Override
+   public final boolean equals(Object o) {
+      return !(o instanceof FluidMaterial that)
+         ? false
+         : this.fluidId == that.fluidId && this.fluidLevel == that.fluidLevel && this.materialCache.equals(that.materialCache);
+   }
+
+   @Override
+   public int hashCode() {
+      return contentHash(this.fluidId, this.fluidLevel);
+   }
+
+   public static int contentHash(int blockId, byte fluidLevel) {
+      return Objects.hash(blockId, fluidLevel);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "FluidMaterial{materialCache=" + this.materialCache + ", fluidId=" + this.fluidId + ", fluidLevel=" + this.fluidLevel + "}";
+   }
+}

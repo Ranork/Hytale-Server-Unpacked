@@ -1,234 +1,250 @@
-/*     */ package com.hypixel.hytale.server.worldgen.loader.cave;
-/*     */ 
-/*     */ import com.google.gson.JsonArray;
-/*     */ import com.google.gson.JsonElement;
-/*     */ import com.google.gson.JsonObject;
-/*     */ import com.hypixel.hytale.common.map.IWeightedMap;
-/*     */ import com.hypixel.hytale.common.map.WeightedMap;
-/*     */ import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
-/*     */ import com.hypixel.hytale.procedurallib.condition.HeightThresholdCoordinateCondition;
-/*     */ import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
-/*     */ import com.hypixel.hytale.procedurallib.condition.IHeightThresholdInterpreter;
-/*     */ import com.hypixel.hytale.procedurallib.json.DoubleRangeJsonLoader;
-/*     */ import com.hypixel.hytale.procedurallib.json.HeightThresholdInterpreterJsonLoader;
-/*     */ import com.hypixel.hytale.procedurallib.json.JsonLoader;
-/*     */ import com.hypixel.hytale.procedurallib.json.SeedString;
-/*     */ import com.hypixel.hytale.procedurallib.supplier.IDoubleRange;
-/*     */ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-/*     */ import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
-/*     */ import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
-/*     */ import com.hypixel.hytale.server.worldgen.SeedStringResource;
-/*     */ import com.hypixel.hytale.server.worldgen.cave.CaveNodeType;
-/*     */ import com.hypixel.hytale.server.worldgen.cave.prefab.CavePrefabContainer;
-/*     */ import com.hypixel.hytale.server.worldgen.cave.shape.CaveNodeShapeEnum;
-/*     */ import com.hypixel.hytale.server.worldgen.loader.cave.shape.DistortedCaveNodeShapeGeneratorJsonLoader;
-/*     */ import com.hypixel.hytale.server.worldgen.loader.cave.shape.PipeCaveNodeShapeGeneratorJsonLoader;
-/*     */ import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
-/*     */ import com.hypixel.hytale.server.worldgen.loader.util.ResolvedBlockArrayJsonLoader;
-/*     */ import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
-/*     */ import com.hypixel.hytale.server.worldgen.util.ResolvedBlockArray;
-/*     */ import java.nio.file.Path;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class CaveNodeTypeJsonLoader
-/*     */   extends JsonLoader<SeedStringResource, CaveNodeType>
-/*     */ {
-/*     */   protected final String name;
-/*     */   protected final CaveNodeTypeStorage storage;
-/*     */   protected final ZoneFileContext zoneContext;
-/*     */   
-/*     */   public CaveNodeTypeJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json, String name, CaveNodeTypeStorage storage, ZoneFileContext zoneContext) {
-/*  50 */     super(seed.append(".CaveNodeType-" + name), dataFolder, json);
-/*  51 */     this.name = name;
-/*  52 */     this.storage = storage;
-/*  53 */     this.zoneContext = zoneContext;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public CaveNodeType load() {
-/*  68 */     CaveNodeType caveNodeType = new CaveNodeType(this.name, loadPrefabs(), loadFillings(), loadShapeGenerator(), loadHeightCondition(), loadChildCountBounds(), loadCovers(), loadPriority(), loadEnvironment());
-/*     */     
-/*  70 */     this.storage.add(this.name, caveNodeType);
-/*  71 */     caveNodeType.setChildren(loadChildren());
-/*  72 */     return caveNodeType;
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   protected CaveNodeType.CaveNodeChildEntry[] loadChildren() {
-/*  77 */     if (has("Children")) {
-/*  78 */       JsonElement childrenElement = get("Children");
-/*  79 */       if (childrenElement.isJsonArray()) {
-/*  80 */         JsonArray childrenArray = childrenElement.getAsJsonArray();
-/*  81 */         CaveNodeType.CaveNodeChildEntry[] children = new CaveNodeType.CaveNodeChildEntry[childrenArray.size()];
-/*  82 */         for (int i = 0; i < childrenArray.size(); i++) {
-/*  83 */           children[i] = (new CaveNodeChildEntryJsonLoader(this.seed
-/*  84 */               .append(String.format(".Child-%s", new Object[] { Integer.valueOf(i) })), this.dataFolder, getOrLoad(childrenArray.get(i)), this.storage))
-/*  85 */             .load();
-/*     */         } 
-/*  87 */         return children;
-/*  88 */       }  if (childrenElement.isJsonObject()) {
-/*  89 */         CaveNodeType.CaveNodeChildEntry[] children = new CaveNodeType.CaveNodeChildEntry[1];
-/*  90 */         children[0] = (new CaveNodeChildEntryJsonLoader(this.seed
-/*  91 */             .append(String.format(".Child-%s", new Object[] { Integer.valueOf(0) })), this.dataFolder, getOrLoad(childrenElement), this.storage))
-/*  92 */           .load();
-/*  93 */         return children;
-/*     */       } 
-/*     */     } 
-/*  96 */     return CaveNodeType.CaveNodeChildEntry.EMPTY_ARRAY;
-/*     */   }
-/*     */   
-/*     */   @Nullable
-/*     */   protected CavePrefabContainer loadPrefabs() {
-/* 101 */     CavePrefabContainer container = null;
-/* 102 */     if (has("Prefabs")) {
-/*     */       
-/* 104 */       ZoneFileContext context = this.zoneContext.matchContext(this.json, "Prefabs");
-/*     */ 
-/*     */       
-/* 107 */       container = (new CavePrefabContainerJsonLoader(this.seed, this.dataFolder, get("Prefabs"), context)).load();
-/*     */     } 
-/* 109 */     return container;
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   protected IWeightedMap<BlockFluidEntry> loadFillings() {
-/* 114 */     WeightedMap.Builder<BlockFluidEntry> builder = WeightedMap.builder((Object[])BlockFluidEntry.EMPTY_ARRAY);
-/* 115 */     JsonElement fillingElement = get("Filling");
-/*     */     
-/* 117 */     if (fillingElement == null || fillingElement.isJsonNull()) {
-/* 118 */       builder.put(new BlockFluidEntry(0, 0, 0), 1.0D);
-/* 119 */     } else if (fillingElement.isJsonObject()) {
-/* 120 */       JsonObject fillingObject = fillingElement.getAsJsonObject();
-/* 121 */       JsonArray blockArray = fillingObject.getAsJsonArray("Types");
-/* 122 */       JsonArray weightArray = fillingObject.getAsJsonArray("Weight");
-/*     */       
-/* 124 */       ResolvedBlockArray blocks = (new ResolvedBlockArrayJsonLoader(this.seed, this.dataFolder, (JsonElement)blockArray)).load();
-/*     */       
-/* 126 */       for (int i = 0; i < blockArray.size(); i++) {
-/* 127 */         builder.put(blocks.getEntries()[i], weightArray.get(i).getAsDouble());
-/*     */       }
-/* 129 */     } else if (fillingElement.isJsonArray()) {
-/* 130 */       JsonArray blockArray = fillingElement.getAsJsonArray();
-/*     */       
-/* 132 */       ResolvedBlockArray blocks = (new ResolvedBlockArrayJsonLoader(this.seed, this.dataFolder, (JsonElement)blockArray)).load();
-/* 133 */       for (int i = 0; i < blockArray.size(); i++) {
-/* 134 */         builder.put(blocks.getEntries()[i], 1.0D);
-/*     */       }
-/*     */     } else {
-/* 137 */       BlockPattern.BlockEntry key = BlockPattern.BlockEntry.decode(fillingElement.getAsString());
-/* 138 */       int index = BlockType.getAssetMap().getIndex(key.blockTypeKey());
-/* 139 */       if (index == Integer.MIN_VALUE) throw new IllegalArgumentException("Unknown key! " + String.valueOf(key)); 
-/* 140 */       builder.put(new BlockFluidEntry(index, key.rotation(), 0), 1.0D);
-/*     */     } 
-/* 142 */     return builder.build();
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   protected CaveNodeShapeEnum.CaveNodeShapeGenerator loadShapeGenerator() {
-/* 147 */     if (has("Type")) {
-/* 148 */       JsonElement typeElement = get("Type");
-/* 149 */       String typeString = typeElement.getAsString();
-/*     */       try {
-/* 151 */         switch (CaveNodeShapeEnum.valueOf(typeString.toUpperCase())) { default: throw new MatchException(null, null);case PIPE: case CYLINDER: case PREFAB: case ELLIPSOID: case EMPTY_LINE: case DISTORTED: break; }  return (
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */           
-/* 157 */           new DistortedCaveNodeShapeGeneratorJsonLoader(this.seed, this.dataFolder, this.json)).load();
-/*     */       }
-/* 159 */       catch (Throwable e) {
-/* 160 */         throw new Error(String.format("Could not find Shape by the name %s in Json: %s", new Object[] { typeString, typeElement }), e);
-/*     */       } 
-/*     */     } 
-/* 163 */     return (CaveNodeShapeEnum.CaveNodeShapeGenerator)(new PipeCaveNodeShapeGeneratorJsonLoader(this.seed, this.dataFolder, this.json))
-/* 164 */       .load();
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   protected ICoordinateCondition loadHeightCondition() {
-/*     */     HeightThresholdCoordinateCondition heightThresholdCoordinateCondition;
-/* 170 */     DefaultCoordinateCondition defaultCoordinateCondition = DefaultCoordinateCondition.DEFAULT_TRUE;
-/* 171 */     if (has("HeightThreshold")) {
-/*     */       
-/* 173 */       IHeightThresholdInterpreter interpreter = (new HeightThresholdInterpreterJsonLoader(this.seed, this.dataFolder, get("HeightThreshold"), 320)).load();
-/* 174 */       heightThresholdCoordinateCondition = new HeightThresholdCoordinateCondition(interpreter);
-/*     */     } 
-/* 176 */     return (ICoordinateCondition)heightThresholdCoordinateCondition;
-/*     */   } public static interface Constants {
-/*     */     public static final String KEY_CHILDREN = "Children"; public static final String KEY_PREFABS = "Prefabs"; public static final String KEY_FILLING = "Filling"; public static final String KEY_FILLING_TYPES = "Types"; public static final String KEY_FILLING_WEIGHT = "Weight"; public static final String KEY_TYPE = "Type"; public static final String KEY_HEIGHT_THRESHOLDS = "HeightThreshold"; public static final String KEY_CHILD_COUNT_BOUNDS = "ChildCountBounds"; public static final String KEY_COVER = "Cover"; public static final String KEY_PRIORITY = "Priority"; public static final String KEY_ENVIRONMENT = "Environment"; public static final String SEED_COVER_SUFFIX = "-cover#%s"; public static final String SEED_CHILD_ENTRY_SUFFIX = ".Child-%s"; public static final String ERROR_UNKNOWN_SHAPE_NAME = "Could not find Shape by the name %s in Json: %s"; public static final String ERROR_UNKOWN_CONSTRUCTOR_NODE_SHAPE = "Could not find Constructor for %s CaveNodeShape"; public static final String ERROR_LOADING_ENVIRONMENT = "Error while looking up environment \"%s\"!"; }
-/*     */   @Nullable
-/*     */   protected IDoubleRange loadChildCountBounds() {
-/* 181 */     IDoubleRange bounds = null;
-/* 182 */     if (has("ChildCountBounds"))
-/*     */     {
-/* 184 */       bounds = (new DoubleRangeJsonLoader(this.seed, this.dataFolder, get("ChildCountBounds"))).load();
-/*     */     }
-/* 186 */     return bounds;
-/*     */   }
-/*     */   
-/*     */   @Nonnull
-/*     */   protected CaveNodeType.CaveNodeCoverEntry[] loadCovers() {
-/* 191 */     CaveNodeType.CaveNodeCoverEntry[] entries = CaveNodeType.CaveNodeCoverEntry.EMPTY_ARRAY;
-/* 192 */     if (has("Cover")) {
-/* 193 */       JsonElement coverElement = get("Cover");
-/* 194 */       if (coverElement.isJsonArray()) {
-/* 195 */         JsonArray coverArray = coverElement.getAsJsonArray();
-/* 196 */         entries = new CaveNodeType.CaveNodeCoverEntry[coverArray.size()];
-/* 197 */         for (int i = 0; i < entries.length; i++) {
-/* 198 */           entries[i] = (new CaveNodeCoverEntryJsonLoader(this.seed
-/* 199 */               .append(String.format("-cover#%s", new Object[] { Integer.valueOf(i) })), this.dataFolder, coverArray.get(i)))
-/* 200 */             .load();
-/*     */         } 
-/*     */       } else {
-/* 203 */         entries = new CaveNodeType.CaveNodeCoverEntry[1];
-/* 204 */         entries[0] = (new CaveNodeCoverEntryJsonLoader(this.seed, this.dataFolder, coverElement))
-/* 205 */           .load();
-/*     */       } 
-/*     */     } 
-/* 208 */     return entries;
-/*     */   }
-/*     */   
-/*     */   protected int loadPriority() {
-/* 212 */     int priority = 0;
-/* 213 */     if (has("Priority")) {
-/* 214 */       priority = get("Priority").getAsInt();
-/*     */     }
-/* 216 */     return priority;
-/*     */   }
-/*     */   
-/*     */   protected int loadEnvironment() {
-/* 220 */     int environment = Integer.MIN_VALUE;
-/* 221 */     if (has("Environment")) {
-/* 222 */       String environmentId = get("Environment").getAsString();
-/* 223 */       environment = Environment.getAssetMap().getIndex(environmentId);
-/* 224 */       if (environment == Integer.MIN_VALUE) throw new Error(String.format("Error while looking up environment \"%s\"!", new Object[] { environmentId })); 
-/*     */     } 
-/* 226 */     return environment;
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.worldgen.loader.cave;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.hypixel.hytale.common.map.IWeightedMap;
+import com.hypixel.hytale.common.map.WeightedMap;
+import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
+import com.hypixel.hytale.procedurallib.condition.HeightThresholdCoordinateCondition;
+import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
+import com.hypixel.hytale.procedurallib.condition.IHeightThresholdInterpreter;
+import com.hypixel.hytale.procedurallib.json.DoubleRangeJsonLoader;
+import com.hypixel.hytale.procedurallib.json.HeightThresholdInterpreterJsonLoader;
+import com.hypixel.hytale.procedurallib.json.JsonLoader;
+import com.hypixel.hytale.procedurallib.json.SeedString;
+import com.hypixel.hytale.procedurallib.supplier.IDoubleRange;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
+import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
+import com.hypixel.hytale.server.worldgen.SeedStringResource;
+import com.hypixel.hytale.server.worldgen.cave.CaveNodeType;
+import com.hypixel.hytale.server.worldgen.cave.prefab.CavePrefabContainer;
+import com.hypixel.hytale.server.worldgen.cave.shape.CaveNodeShapeEnum;
+import com.hypixel.hytale.server.worldgen.loader.cave.shape.CylinderCaveNodeShapeGeneratorJsonLoader;
+import com.hypixel.hytale.server.worldgen.loader.cave.shape.DistortedCaveNodeShapeGeneratorJsonLoader;
+import com.hypixel.hytale.server.worldgen.loader.cave.shape.EllipsoidCaveNodeShapeGeneratorJsonLoader;
+import com.hypixel.hytale.server.worldgen.loader.cave.shape.EmptyLineCaveNodeShapeGeneratorJsonLoader;
+import com.hypixel.hytale.server.worldgen.loader.cave.shape.PipeCaveNodeShapeGeneratorJsonLoader;
+import com.hypixel.hytale.server.worldgen.loader.cave.shape.PrefabCaveNodeShapeGeneratorJsonLoader;
+import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
+import com.hypixel.hytale.server.worldgen.loader.util.ResolvedBlockArrayJsonLoader;
+import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
+import com.hypixel.hytale.server.worldgen.util.ResolvedBlockArray;
+import java.nio.file.Path;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldgen\loader\cave\CaveNodeTypeJsonLoader.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class CaveNodeTypeJsonLoader extends JsonLoader<SeedStringResource, CaveNodeType> {
+   protected final String name;
+   protected final CaveNodeTypeStorage storage;
+   protected final ZoneFileContext zoneContext;
+
+   public CaveNodeTypeJsonLoader(
+      @Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json, String name, CaveNodeTypeStorage storage, ZoneFileContext zoneContext
+   ) {
+      super(seed.append(".CaveNodeType-" + name), dataFolder, json);
+      this.name = name;
+      this.storage = storage;
+      this.zoneContext = zoneContext;
+   }
+
+   @Nonnull
+   public CaveNodeType load() {
+      CaveNodeType caveNodeType = new CaveNodeType(
+         this.name,
+         this.loadPrefabs(),
+         this.loadFillings(),
+         this.loadShapeGenerator(),
+         this.loadHeightCondition(),
+         this.loadChildCountBounds(),
+         this.loadCovers(),
+         this.loadPriority(),
+         this.loadEnvironment()
+      );
+      this.storage.add(this.name, caveNodeType);
+      caveNodeType.setChildren(this.loadChildren());
+      return caveNodeType;
+   }
+
+   @Nonnull
+   protected CaveNodeType.CaveNodeChildEntry[] loadChildren() {
+      if (this.has("Children")) {
+         JsonElement childrenElement = this.get("Children");
+         if (childrenElement.isJsonArray()) {
+            JsonArray childrenArray = childrenElement.getAsJsonArray();
+            CaveNodeType.CaveNodeChildEntry[] children = new CaveNodeType.CaveNodeChildEntry[childrenArray.size()];
+
+            for (int i = 0; i < childrenArray.size(); i++) {
+               children[i] = new CaveNodeChildEntryJsonLoader(
+                     this.seed.append(String.format(".Child-%s", i)), this.dataFolder, this.getOrLoad(childrenArray.get(i)), this.storage
+                  )
+                  .load();
+            }
+
+            return children;
+         }
+
+         if (childrenElement.isJsonObject()) {
+            return new CaveNodeType.CaveNodeChildEntry[]{
+               new CaveNodeChildEntryJsonLoader(this.seed.append(String.format(".Child-%s", 0)), this.dataFolder, this.getOrLoad(childrenElement), this.storage)
+                  .load()
+            };
+         }
+      }
+
+      return CaveNodeType.CaveNodeChildEntry.EMPTY_ARRAY;
+   }
+
+   @Nullable
+   protected CavePrefabContainer loadPrefabs() {
+      CavePrefabContainer container = null;
+      if (this.has("Prefabs")) {
+         ZoneFileContext context = this.zoneContext.matchContext(this.json, "Prefabs");
+         container = new CavePrefabContainerJsonLoader(this.seed, this.dataFolder, this.get("Prefabs"), context).load();
+      }
+
+      return container;
+   }
+
+   @Nonnull
+   protected IWeightedMap<BlockFluidEntry> loadFillings() {
+      WeightedMap.Builder<BlockFluidEntry> builder = WeightedMap.builder(BlockFluidEntry.EMPTY_ARRAY);
+      JsonElement fillingElement = this.get("Filling");
+      if (fillingElement == null || fillingElement.isJsonNull()) {
+         builder.put(new BlockFluidEntry(0, 0, 0), 1.0);
+      } else if (fillingElement.isJsonObject()) {
+         JsonObject fillingObject = fillingElement.getAsJsonObject();
+         JsonArray blockArray = fillingObject.getAsJsonArray("Types");
+         JsonArray weightArray = fillingObject.getAsJsonArray("Weight");
+         ResolvedBlockArray blocks = new ResolvedBlockArrayJsonLoader(this.seed, this.dataFolder, blockArray).load();
+
+         for (int i = 0; i < blockArray.size(); i++) {
+            builder.put(blocks.getEntries()[i], weightArray.get(i).getAsDouble());
+         }
+      } else if (fillingElement.isJsonArray()) {
+         JsonArray blockArray = fillingElement.getAsJsonArray();
+         ResolvedBlockArray blocks = new ResolvedBlockArrayJsonLoader(this.seed, this.dataFolder, blockArray).load();
+
+         for (int i = 0; i < blockArray.size(); i++) {
+            builder.put(blocks.getEntries()[i], 1.0);
+         }
+      } else {
+         BlockPattern.BlockEntry key = BlockPattern.BlockEntry.decode(fillingElement.getAsString());
+         int index = BlockType.getAssetMap().getIndex(key.blockTypeKey());
+         if (index == Integer.MIN_VALUE) {
+            throw new IllegalArgumentException("Unknown key! " + key);
+         }
+
+         builder.put(new BlockFluidEntry(index, key.rotation(), 0), 1.0);
+      }
+
+      return builder.build();
+   }
+
+   @Nonnull
+   protected CaveNodeShapeEnum.CaveNodeShapeGenerator loadShapeGenerator() {
+      if (this.has("Type")) {
+         JsonElement typeElement = this.get("Type");
+         String typeString = typeElement.getAsString();
+
+         try {
+            return (CaveNodeShapeEnum.CaveNodeShapeGenerator)(switch (CaveNodeShapeEnum.valueOf(typeString.toUpperCase())) {
+               case PIPE -> new PipeCaveNodeShapeGeneratorJsonLoader(this.seed, this.dataFolder, this.json).load();
+               case CYLINDER -> new CylinderCaveNodeShapeGeneratorJsonLoader(this.seed, this.dataFolder, this.json).load();
+               case PREFAB -> new PrefabCaveNodeShapeGeneratorJsonLoader(this.seed, this.dataFolder, this.json).load();
+               case ELLIPSOID -> new EllipsoidCaveNodeShapeGeneratorJsonLoader(this.seed, this.dataFolder, this.json).load();
+               case EMPTY_LINE -> new EmptyLineCaveNodeShapeGeneratorJsonLoader(this.seed, this.dataFolder, this.json).load();
+               case DISTORTED -> new DistortedCaveNodeShapeGeneratorJsonLoader(this.seed, this.dataFolder, this.json).load();
+            });
+         } catch (Throwable var4) {
+            throw new Error(String.format("Could not find Shape by the name %s in Json: %s", typeString, typeElement), var4);
+         }
+      } else {
+         return new PipeCaveNodeShapeGeneratorJsonLoader(this.seed, this.dataFolder, this.json).load();
+      }
+   }
+
+   @Nonnull
+   protected ICoordinateCondition loadHeightCondition() {
+      ICoordinateCondition heightCondition = DefaultCoordinateCondition.DEFAULT_TRUE;
+      if (this.has("HeightThreshold")) {
+         IHeightThresholdInterpreter interpreter = new HeightThresholdInterpreterJsonLoader<>(this.seed, this.dataFolder, this.get("HeightThreshold"), 320)
+            .load();
+         heightCondition = new HeightThresholdCoordinateCondition(interpreter);
+      }
+
+      return heightCondition;
+   }
+
+   @Nullable
+   protected IDoubleRange loadChildCountBounds() {
+      IDoubleRange bounds = null;
+      if (this.has("ChildCountBounds")) {
+         bounds = new DoubleRangeJsonLoader<>(this.seed, this.dataFolder, this.get("ChildCountBounds")).load();
+      }
+
+      return bounds;
+   }
+
+   @Nonnull
+   protected CaveNodeType.CaveNodeCoverEntry[] loadCovers() {
+      CaveNodeType.CaveNodeCoverEntry[] entries = CaveNodeType.CaveNodeCoverEntry.EMPTY_ARRAY;
+      if (this.has("Cover")) {
+         JsonElement coverElement = this.get("Cover");
+         if (coverElement.isJsonArray()) {
+            JsonArray coverArray = coverElement.getAsJsonArray();
+            entries = new CaveNodeType.CaveNodeCoverEntry[coverArray.size()];
+
+            for (int i = 0; i < entries.length; i++) {
+               entries[i] = new CaveNodeCoverEntryJsonLoader(this.seed.append(String.format("-cover#%s", i)), this.dataFolder, coverArray.get(i)).load();
+            }
+         } else {
+            entries = new CaveNodeType.CaveNodeCoverEntry[]{new CaveNodeCoverEntryJsonLoader(this.seed, this.dataFolder, coverElement).load()};
+         }
+      }
+
+      return entries;
+   }
+
+   protected int loadPriority() {
+      int priority = 0;
+      if (this.has("Priority")) {
+         priority = this.get("Priority").getAsInt();
+      }
+
+      return priority;
+   }
+
+   protected int loadEnvironment() {
+      int environment = Integer.MIN_VALUE;
+      if (this.has("Environment")) {
+         String environmentId = this.get("Environment").getAsString();
+         environment = Environment.getAssetMap().getIndex(environmentId);
+         if (environment == Integer.MIN_VALUE) {
+            throw new Error(String.format("Error while looking up environment \"%s\"!", environmentId));
+         }
+      }
+
+      return environment;
+   }
+
+   public interface Constants {
+      String KEY_CHILDREN = "Children";
+      String KEY_PREFABS = "Prefabs";
+      String KEY_FILLING = "Filling";
+      String KEY_FILLING_TYPES = "Types";
+      String KEY_FILLING_WEIGHT = "Weight";
+      String KEY_TYPE = "Type";
+      String KEY_HEIGHT_THRESHOLDS = "HeightThreshold";
+      String KEY_CHILD_COUNT_BOUNDS = "ChildCountBounds";
+      String KEY_COVER = "Cover";
+      String KEY_PRIORITY = "Priority";
+      String KEY_ENVIRONMENT = "Environment";
+      String SEED_COVER_SUFFIX = "-cover#%s";
+      String SEED_CHILD_ENTRY_SUFFIX = ".Child-%s";
+      String ERROR_UNKNOWN_SHAPE_NAME = "Could not find Shape by the name %s in Json: %s";
+      String ERROR_UNKOWN_CONSTRUCTOR_NODE_SHAPE = "Could not find Constructor for %s CaveNodeShape";
+      String ERROR_LOADING_ENVIRONMENT = "Error while looking up environment \"%s\"!";
+   }
+}

@@ -1,54 +1,46 @@
-/*    */ package com.hypixel.hytale.server.npc.util.expression.compile.ast;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
-/*    */ import com.hypixel.hytale.server.npc.util.expression.Scope;
-/*    */ import com.hypixel.hytale.server.npc.util.expression.ValueType;
-/*    */ import com.hypixel.hytale.server.npc.util.expression.compile.Token;
-/*    */ import java.util.Stack;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class ASTOperandBooleanArray
-/*    */   extends ASTOperand
-/*    */ {
-/*    */   private final boolean[] constantBoolArray;
-/*    */   
-/*    */   public ASTOperandBooleanArray(@Nonnull Token token, int tokenPosition, boolean[] constantBoolArray) {
-/* 19 */     super(ValueType.BOOLEAN_ARRAY, token, tokenPosition);
-/* 20 */     this.constantBoolArray = constantBoolArray;
-/* 21 */     this.codeGen = (scope -> ExecutionContext.genPUSH(this.constantBoolArray));
-/*    */   }
-/*    */   
-/*    */   public ASTOperandBooleanArray(@Nonnull Token token, int tokenPosition, @Nonnull Scope scope, String identifier) {
-/* 25 */     this(token, tokenPosition, scope.getBooleanArray(identifier));
-/* 26 */     if (!scope.isConstant(identifier)) throw new IllegalArgumentException("Value must be constant: " + identifier); 
-/*    */   }
-/*    */   
-/*    */   public ASTOperandBooleanArray(@Nonnull Token token, int tokenPosition, @Nonnull Stack<AST> operandStack, int firstArgument, int argumentCount) {
-/* 30 */     this(token, tokenPosition, new boolean[argumentCount]);
-/* 31 */     for (int i = 0; i < argumentCount; i++) {
-/* 32 */       this.constantBoolArray[i] = ((AST)operandStack.get(firstArgument + i)).getBoolean();
-/*    */     }
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean isConstant() {
-/* 38 */     return true;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public ExecutionContext.Operand asOperand() {
-/* 44 */     ExecutionContext.Operand op = new ExecutionContext.Operand();
-/* 45 */     op.set(this.constantBoolArray);
-/* 46 */     return op;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.util.expression.compile.ast;
 
+import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
+import com.hypixel.hytale.server.npc.util.expression.Scope;
+import com.hypixel.hytale.server.npc.util.expression.ValueType;
+import com.hypixel.hytale.server.npc.util.expression.compile.Token;
+import java.util.Stack;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\np\\util\expression\compile\ast\ASTOperandBooleanArray.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ASTOperandBooleanArray extends ASTOperand {
+   private final boolean[] constantBoolArray;
+
+   public ASTOperandBooleanArray(@Nonnull Token token, int tokenPosition, boolean[] constantBoolArray) {
+      super(ValueType.BOOLEAN_ARRAY, token, tokenPosition);
+      this.constantBoolArray = constantBoolArray;
+      this.codeGen = scope -> ExecutionContext.genPUSH(this.constantBoolArray);
+   }
+
+   public ASTOperandBooleanArray(@Nonnull Token token, int tokenPosition, @Nonnull Scope scope, String identifier) {
+      this(token, tokenPosition, scope.getBooleanArray(identifier));
+      if (!scope.isConstant(identifier)) {
+         throw new IllegalArgumentException("Value must be constant: " + identifier);
+      }
+   }
+
+   public ASTOperandBooleanArray(@Nonnull Token token, int tokenPosition, @Nonnull Stack<AST> operandStack, int firstArgument, int argumentCount) {
+      this(token, tokenPosition, new boolean[argumentCount]);
+
+      for (int i = 0; i < argumentCount; i++) {
+         this.constantBoolArray[i] = operandStack.get(firstArgument + i).getBoolean();
+      }
+   }
+
+   @Override
+   public boolean isConstant() {
+      return true;
+   }
+
+   @Nonnull
+   @Override
+   public ExecutionContext.Operand asOperand() {
+      ExecutionContext.Operand op = new ExecutionContext.Operand();
+      op.set(this.constantBoolArray);
+      return op;
+   }
+}

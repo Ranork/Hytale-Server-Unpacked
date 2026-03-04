@@ -1,55 +1,24 @@
-/*    */ package com.hypixel.hytale.server.core.modules.projectile.config;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.lookup.CodecMapCodec;
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.Holder;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.math.vector.Vector3d;
-/*    */ import com.hypixel.hytale.protocol.PhysicsConfig;
-/*    */ import com.hypixel.hytale.server.core.io.NetworkSerializable;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public interface PhysicsConfig
-/*    */   extends NetworkSerializable<PhysicsConfig>
-/*    */ {
-/*    */   @Nonnull
-/* 23 */   public static final CodecMapCodec<PhysicsConfig> CODEC = new CodecMapCodec("Type");
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   void apply(@Nonnull Holder<EntityStore> paramHolder, @Nullable Ref<EntityStore> paramRef, @Nonnull Vector3d paramVector3d, @Nonnull ComponentAccessor<EntityStore> paramComponentAccessor, boolean paramBoolean);
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   default double getGravity() {
-/* 47 */     return 0.0D;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.projectile.config;
 
+import com.hypixel.hytale.codec.lookup.CodecMapCodec;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.io.NetworkSerializable;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\projectile\config\PhysicsConfig.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface PhysicsConfig extends NetworkSerializable<com.hypixel.hytale.protocol.PhysicsConfig> {
+   @Nonnull
+   CodecMapCodec<PhysicsConfig> CODEC = new CodecMapCodec<>("Type");
+
+   void apply(
+      @Nonnull Holder<EntityStore> var1, @Nullable Ref<EntityStore> var2, @Nonnull Vector3d var3, @Nonnull ComponentAccessor<EntityStore> var4, boolean var5
+   );
+
+   default double getGravity() {
+      return 0.0;
+   }
+}

@@ -1,45 +1,33 @@
-/*    */ package com.hypixel.hytale.server.npc.sensorinfo;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.universe.world.path.IPath;
-/*    */ import com.hypixel.hytale.server.core.universe.world.path.IPathWaypoint;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class PathProvider
-/*    */   implements IPathProvider
-/*    */ {
-/*    */   @Nullable
-/*    */   private IPath<? extends IPathWaypoint> path;
-/*    */   private boolean isValid;
-/*    */   
-/*    */   public void setPath(IPath<? extends IPathWaypoint> path) {
-/* 19 */     this.path = path;
-/* 20 */     this.isValid = true;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void clear() {
-/* 25 */     this.path = null;
-/* 26 */     this.isValid = false;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean hasPath() {
-/* 31 */     return this.isValid;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public IPath<? extends IPathWaypoint> getPath() {
-/* 37 */     return this.path;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.sensorinfo;
 
+import com.hypixel.hytale.server.core.universe.world.path.IPath;
+import com.hypixel.hytale.server.core.universe.world.path.IPathWaypoint;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\sensorinfo\PathProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PathProvider implements IPathProvider {
+   @Nullable
+   private IPath<? extends IPathWaypoint> path;
+   private boolean isValid;
+
+   public void setPath(IPath<? extends IPathWaypoint> path) {
+      this.path = path;
+      this.isValid = true;
+   }
+
+   @Override
+   public void clear() {
+      this.path = null;
+      this.isValid = false;
+   }
+
+   @Override
+   public boolean hasPath() {
+      return this.isValid;
+   }
+
+   @Nullable
+   @Override
+   public IPath<? extends IPathWaypoint> getPath() {
+      return this.path;
+   }
+}

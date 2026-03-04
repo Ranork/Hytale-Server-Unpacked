@@ -1,46 +1,23 @@
-/*    */ package com.hypixel.hytale.server.npc.storage;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.ComponentAccessor;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public abstract class PersistentParameter<Type>
-/*    */ {
-/*    */   public void set(@Nonnull Ref<EntityStore> ownerRef, @Nullable Type value, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-/* 32 */     set0(value);
-/*    */     
-/* 34 */     TransformComponent transformComponent = (TransformComponent)componentAccessor.getComponent(ownerRef, TransformComponent.getComponentType());
-/* 35 */     if (transformComponent != null)
-/* 36 */       transformComponent.markChunkDirty(componentAccessor); 
-/*    */   }
-/*    */   
-/*    */   protected abstract void set0(@Nullable Type paramType);
-/*    */ }
+package com.hypixel.hytale.server.npc.storage;
 
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\storage\PersistentParameter.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class PersistentParameter<Type> {
+   protected PersistentParameter() {
+   }
+
+   public void set(@Nonnull Ref<EntityStore> ownerRef, @Nullable Type value, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      this.set0(value);
+      TransformComponent transformComponent = componentAccessor.getComponent(ownerRef, TransformComponent.getComponentType());
+      if (transformComponent != null) {
+         transformComponent.markChunkDirty(componentAccessor);
+      }
+   }
+
+   protected abstract void set0(@Nullable Type var1);
+}

@@ -1,40 +1,31 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.FloorDensity;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class FloorDensityAsset
-/*    */   extends DensityAsset
-/*    */ {
-/*    */   public static final BuilderCodec<FloorDensityAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 20 */     CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(FloorDensityAsset.class, FloorDensityAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Limit", (Codec)Codec.DOUBLE, true), (t, k) -> t.limit = k.doubleValue(), k -> Double.valueOf(k.limit)).add()).build();
-/*    */   }
-/* 22 */   private double limit = 0.0D;
-/*    */   
-/*    */   @Nonnull
-/*    */   public Density build(@Nonnull DensityAsset.Argument argument) {
-/* 26 */     if (isSkipped()) return (Density)new ConstantValueDensity(0.0D); 
-/* 27 */     return (Density)new FloorDensity(this.limit, buildFirstInput(argument));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 32 */     cleanUpInputs();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.FloorDensity;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\density\FloorDensityAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class FloorDensityAsset extends DensityAsset {
+   @Nonnull
+   public static final BuilderCodec<FloorDensityAsset> CODEC = BuilderCodec.builder(
+         FloorDensityAsset.class, FloorDensityAsset::new, DensityAsset.ABSTRACT_CODEC
+      )
+      .append(new KeyedCodec<>("Limit", Codec.DOUBLE, true), (t, k) -> t.limit = k, k -> k.limit)
+      .add()
+      .build();
+   private double limit = 0.0;
+
+   @Nonnull
+   @Override
+   public Density build(@Nonnull DensityAsset.Argument argument) {
+      return (Density)(this.isSkipped() ? new ConstantValueDensity(0.0) : new FloorDensity(this.limit, this.buildFirstInput(argument)));
+   }
+
+   @Override
+   public void cleanUp() {
+      this.cleanUpInputs();
+   }
+}

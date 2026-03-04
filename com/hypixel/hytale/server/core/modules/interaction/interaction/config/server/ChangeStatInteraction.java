@@ -1,55 +1,52 @@
-/*    */ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.server;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.component.CommandBuffer;
-/*    */ import com.hypixel.hytale.component.Ref;
-/*    */ import com.hypixel.hytale.protocol.Interaction;
-/*    */ import com.hypixel.hytale.server.core.entity.InteractionContext;
-/*    */ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class ChangeStatInteraction extends ChangeStatBaseInteraction {
-/* 13 */   public static final BuilderCodec<ChangeStatInteraction> CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(ChangeStatInteraction.class, ChangeStatInteraction::new, ChangeStatBaseInteraction.CODEC)
-/* 14 */     .documentation("Changes the given stats."))
-/* 15 */     .build();
-/*    */ 
-/*    */   
-/*    */   protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-/* 19 */     CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
-/* 20 */     Ref<EntityStore> ref = context.getEntity();
-/*    */     
-/* 22 */     EntityStatMap entityStatMapComponent = (EntityStatMap)commandBuffer.getComponent(ref, EntityStatMap.getComponentType());
-/* 23 */     if (entityStatMapComponent == null)
-/*    */       return; 
-/* 25 */     entityStatMapComponent.processStatChanges(EntityStatMap.Predictable.SELF, this.entityStats, this.valueType, this.changeStatBehaviour);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   protected Interaction generatePacket() {
-/* 31 */     return (Interaction)new com.hypixel.hytale.protocol.ChangeStatInteraction();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   protected void configurePacket(Interaction packet) {
-/* 36 */     super.configurePacket(packet);
-/* 37 */     com.hypixel.hytale.protocol.ChangeStatInteraction p = (com.hypixel.hytale.protocol.ChangeStatInteraction)packet;
-/* 38 */     p.statModifiers = (Map)this.entityStats;
-/* 39 */     p.valueType = this.valueType;
-/* 40 */     p.changeStatBehaviour = this.changeStatBehaviour;
-/* 41 */     p.entityTarget = this.entityTarget.toProtocol();
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 47 */     return "ChangeStatInteraction{}" + super.toString();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.interaction.interaction.config.server;
 
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.protocol.Interaction;
+import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\interaction\interaction\config\server\ChangeStatInteraction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ChangeStatInteraction extends ChangeStatBaseInteraction {
+   public static final BuilderCodec<ChangeStatInteraction> CODEC = BuilderCodec.builder(
+         ChangeStatInteraction.class, ChangeStatInteraction::new, ChangeStatBaseInteraction.CODEC
+      )
+      .documentation("Changes the given stats.")
+      .build();
+
+   @Override
+   protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
+      CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+      Ref<EntityStore> ref = context.getEntity();
+      EntityStatMap entityStatMapComponent = commandBuffer.getComponent(ref, EntityStatMap.getComponentType());
+      if (entityStatMapComponent != null) {
+         entityStatMapComponent.processStatChanges(EntityStatMap.Predictable.SELF, this.entityStats, this.valueType, this.changeStatBehaviour);
+      }
+   }
+
+   @Nonnull
+   @Override
+   protected Interaction generatePacket() {
+      return new com.hypixel.hytale.protocol.ChangeStatInteraction();
+   }
+
+   @Override
+   protected void configurePacket(Interaction packet) {
+      super.configurePacket(packet);
+      com.hypixel.hytale.protocol.ChangeStatInteraction p = (com.hypixel.hytale.protocol.ChangeStatInteraction)packet;
+      p.statModifiers = this.entityStats;
+      p.valueType = this.valueType;
+      p.changeStatBehaviour = this.changeStatBehaviour;
+      p.entityTarget = this.entityTarget.toProtocol();
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ChangeStatInteraction{}" + super.toString();
+   }
+}

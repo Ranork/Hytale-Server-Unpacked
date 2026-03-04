@@ -1,40 +1,39 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.math.vector.Vector3d;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class ZOverrideDensity
-/*    */   extends Density
-/*    */ {
-/*    */   @Nonnull
-/*    */   private Density input;
-/*    */   private final double value;
-/*    */   
-/*    */   public ZOverrideDensity(@Nonnull Density input, double value) {
-/* 15 */     this.input = input;
-/* 16 */     this.value = value;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double process(@Nonnull Density.Context context) {
-/* 21 */     Vector3d childPosition = new Vector3d(context.position.x, context.position.y, this.value);
-/* 22 */     Density.Context childContext = new Density.Context(context);
-/* 23 */     childContext.position = childPosition;
-/*    */     
-/* 25 */     return this.input.process(childContext);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void setInputs(@Nonnull Density[] inputs) {
-/* 30 */     assert inputs.length == 1;
-/* 31 */     assert inputs[0] != null;
-/* 32 */     this.input = inputs[0];
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.math.vector.Vector3d;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\density\nodes\ZOverrideDensity.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ZOverrideDensity extends Density {
+   @Nonnull
+   private Density input;
+   private final double value;
+   @Nonnull
+   private final Density.Context rChildContext;
+   @Nonnull
+   private final Vector3d rChildPosition;
+
+   public ZOverrideDensity(@Nonnull Density input, double value) {
+      this.input = input;
+      this.value = value;
+      this.rChildContext = new Density.Context();
+      this.rChildPosition = new Vector3d();
+   }
+
+   @Override
+   public double process(@Nonnull Density.Context context) {
+      this.rChildPosition.assign(context.position.x, context.position.y, this.value);
+      this.rChildContext.assign(context);
+      this.rChildContext.position = this.rChildPosition;
+      return this.input.process(this.rChildContext);
+   }
+
+   @Override
+   public void setInputs(@Nonnull Density[] inputs) {
+      assert inputs.length == 1;
+
+      assert inputs[0] != null;
+
+      this.input = inputs[0];
+   }
+}

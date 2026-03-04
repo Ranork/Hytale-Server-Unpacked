@@ -1,29 +1,22 @@
-/*    */ package com.hypixel.hytale.server.core.modules.migrations;
-/*    */ 
-/*    */ import com.hypixel.hytale.codec.ExtraInfo;
-/*    */ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-/*    */ import java.util.function.IntFunction;
-/*    */ 
-/*    */ public abstract class EntityMigration<T>
-/*    */   implements Migration {
-/*    */   private Class<T> tClass;
-/*    */   private IntFunction<ExtraInfo> extraInfoSupplier;
-/*    */   
-/*    */   public EntityMigration(Class<T> tClass, IntFunction<ExtraInfo> extraInfoSupplier) {
-/* 13 */     this.tClass = tClass;
-/* 14 */     this.extraInfoSupplier = extraInfoSupplier;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public final void run(WorldChunk chunk) {
-/* 19 */     throw new UnsupportedOperationException("Not implemented!");
-/*    */   }
-/*    */   
-/*    */   protected abstract boolean migrate(T paramT);
-/*    */ }
+package com.hypixel.hytale.server.core.modules.migrations;
 
+import com.hypixel.hytale.codec.ExtraInfo;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import java.util.function.IntFunction;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\migrations\EntityMigration.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class EntityMigration<T> implements Migration {
+   private Class<T> tClass;
+   private IntFunction<ExtraInfo> extraInfoSupplier;
+
+   public EntityMigration(Class<T> tClass, IntFunction<ExtraInfo> extraInfoSupplier) {
+      this.tClass = tClass;
+      this.extraInfoSupplier = extraInfoSupplier;
+   }
+
+   @Override
+   public final void run(WorldChunk chunk) {
+      throw new UnsupportedOperationException("Not implemented!");
+   }
+
+   protected abstract boolean migrate(T var1);
+}

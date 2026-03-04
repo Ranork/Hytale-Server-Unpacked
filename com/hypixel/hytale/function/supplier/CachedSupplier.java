@@ -1,52 +1,48 @@
-/*    */ package com.hypixel.hytale.function.supplier;
-/*    */ 
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class CachedSupplier<T> implements Supplier<T> {
-/*    */   private final Supplier<T> delegate;
-/*    */   private volatile transient boolean initialized;
-/*    */   @Nullable
-/*    */   private transient T value;
-/*    */   
-/*    */   public CachedSupplier(Supplier<T> delegate) {
-/* 13 */     this.delegate = delegate;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public T get() {
-/* 19 */     if (!this.initialized) {
-/* 20 */       synchronized (this) {
-/* 21 */         if (!this.initialized) {
-/* 22 */           T t = this.delegate.get();
-/* 23 */           this.value = t;
-/* 24 */           this.initialized = true;
-/* 25 */           return t;
-/*    */         } 
-/*    */       } 
-/*    */     }
-/* 29 */     return this.value;
-/*    */   }
-/*    */   
-/*    */   @Nullable
-/*    */   public T getValue() {
-/* 34 */     return this.value;
-/*    */   }
-/*    */   
-/*    */   public void invalidate() {
-/* 38 */     if (this.initialized)
-/* 39 */       synchronized (this) {
-/* 40 */         if (this.initialized) {
-/* 41 */           this.value = null;
-/* 42 */           this.initialized = false;
-/*    */         } 
-/*    */       }  
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.function.supplier;
 
+import java.util.function.Supplier;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\function\supplier\CachedSupplier.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class CachedSupplier<T> implements Supplier<T> {
+   private final Supplier<T> delegate;
+   private transient volatile boolean initialized;
+   @Nullable
+   private transient T value;
+
+   public CachedSupplier(Supplier<T> delegate) {
+      this.delegate = delegate;
+   }
+
+   @Nullable
+   @Override
+   public T get() {
+      if (!this.initialized) {
+         synchronized (this) {
+            if (!this.initialized) {
+               T t = this.delegate.get();
+               this.value = t;
+               this.initialized = true;
+               return t;
+            }
+         }
+      }
+
+      return this.value;
+   }
+
+   @Nullable
+   public T getValue() {
+      return this.value;
+   }
+
+   public void invalidate() {
+      if (this.initialized) {
+         synchronized (this) {
+            if (this.initialized) {
+               this.value = null;
+               this.initialized = false;
+            }
+         }
+      }
+   }
+}

@@ -1,28 +1,13 @@
-/*    */ package com.hypixel.hytale.server.npc.sensorinfo;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class CachedPositionProvider
-/*    */   extends PositionProvider
-/*    */ {
-/*    */   private boolean fromCache;
-/*    */   
-/*    */   public void setIsFromCache(boolean status) {
-/* 16 */     this.fromCache = status;
-/*    */   }
-/*    */   
-/*    */   public boolean isFromCache() {
-/* 20 */     return this.fromCache;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.sensorinfo;
 
+public class CachedPositionProvider extends PositionProvider {
+   private boolean fromCache;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\sensorinfo\CachedPositionProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+   public void setIsFromCache(boolean status) {
+      this.fromCache = status;
+   }
+
+   public boolean isFromCache() {
+      return this.fromCache;
+   }
+}

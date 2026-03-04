@@ -1,109 +1,58 @@
-/*     */ package com.hypixel.hytale.component.metric;
-/*     */ 
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.KeyedCodec;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.metrics.MetricResults;
-/*     */ import com.hypixel.hytale.metrics.metric.HistoricMetric;
-/*     */ import java.util.function.Supplier;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class SystemMetricData
-/*     */ {
-/*     */   @Nonnull
-/*     */   public static final Codec<SystemMetricData> CODEC;
-/*     */   private String name;
-/*     */   private int archetypeChunkCount;
-/*     */   private int entityCount;
-/*     */   @Nullable
-/*     */   private HistoricMetric historicMetric;
-/*     */   private MetricResults metrics;
-/*     */   
-/*     */   static {
-/*  47 */     CODEC = (Codec<SystemMetricData>)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(SystemMetricData.class, SystemMetricData::new).append(new KeyedCodec("Name", (Codec)Codec.STRING), (systemMetricData, o) -> systemMetricData.name = o, systemMetricData -> systemMetricData.name).add()).append(new KeyedCodec("ArchetypeChunkCount", (Codec)Codec.INTEGER), (systemMetricData, o) -> systemMetricData.archetypeChunkCount = o.intValue(), systemMetricData -> Integer.valueOf(systemMetricData.archetypeChunkCount)).add()).append(new KeyedCodec("EntityCount", (Codec)Codec.INTEGER), (systemMetricData, o) -> systemMetricData.entityCount = o.intValue(), systemMetricData -> Integer.valueOf(systemMetricData.entityCount)).add()).append(new KeyedCodec("HistoricMetric", HistoricMetric.METRICS_CODEC), (systemMetricData, o) -> systemMetricData.historicMetric = o, systemMetricData -> systemMetricData.historicMetric).add()).append(new KeyedCodec("Metrics", MetricResults.CODEC), (systemMetricData, o) -> systemMetricData.metrics = o, systemMetricData -> systemMetricData.metrics).add()).build();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public SystemMetricData() {}
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public SystemMetricData(@Nonnull String name, int archetypeChunkCount, int entityCount, @Nullable HistoricMetric historicMetric, @Nonnull MetricResults metrics) {
-/*  97 */     this.name = name;
-/*  98 */     this.archetypeChunkCount = archetypeChunkCount;
-/*  99 */     this.entityCount = entityCount;
-/* 100 */     this.historicMetric = historicMetric;
-/* 101 */     this.metrics = metrics;
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.component.metric;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.metrics.MetricResults;
+import com.hypixel.hytale.metrics.metric.HistoricMetric;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\component\metric\SystemMetricData.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SystemMetricData {
+   @Nonnull
+   public static final Codec<SystemMetricData> CODEC = BuilderCodec.builder(SystemMetricData.class, SystemMetricData::new)
+      .append(new KeyedCodec<>("Name", Codec.STRING), (systemMetricData, o) -> systemMetricData.name = o, systemMetricData -> systemMetricData.name)
+      .add()
+      .append(
+         new KeyedCodec<>("ArchetypeChunkCount", Codec.INTEGER),
+         (systemMetricData, o) -> systemMetricData.archetypeChunkCount = o,
+         systemMetricData -> systemMetricData.archetypeChunkCount
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("EntityCount", Codec.INTEGER),
+         (systemMetricData, o) -> systemMetricData.entityCount = o,
+         systemMetricData -> systemMetricData.entityCount
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("HistoricMetric", HistoricMetric.METRICS_CODEC),
+         (systemMetricData, o) -> systemMetricData.historicMetric = o,
+         systemMetricData -> systemMetricData.historicMetric
+      )
+      .add()
+      .append(
+         new KeyedCodec<>("Metrics", MetricResults.CODEC), (systemMetricData, o) -> systemMetricData.metrics = o, systemMetricData -> systemMetricData.metrics
+      )
+      .add()
+      .build();
+   private String name;
+   private int archetypeChunkCount;
+   private int entityCount;
+   @Nullable
+   private HistoricMetric historicMetric;
+   private MetricResults metrics;
+
+   public SystemMetricData() {
+   }
+
+   public SystemMetricData(
+      @Nonnull String name, int archetypeChunkCount, int entityCount, @Nullable HistoricMetric historicMetric, @Nonnull MetricResults metrics
+   ) {
+      this.name = name;
+      this.archetypeChunkCount = archetypeChunkCount;
+      this.entityCount = entityCount;
+      this.historicMetric = historicMetric;
+      this.metrics = metrics;
+   }
+}

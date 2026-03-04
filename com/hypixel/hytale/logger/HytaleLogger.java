@@ -19,138 +19,140 @@ import java.util.logging.Level;
 import java.util.logging.LogManager;
 import javax.annotation.Nonnull;
 
-public class HytaleLogger extends AbstractLogger<Api> {
-    private static final Map<String, HytaleLogger> CACHE;
-    private static final HytaleLogger LOGGER;
-    static final NoOp NO_OP;
-    @Nonnull
-    private final HytaleLoggerBackend backend;
+public class HytaleLogger extends AbstractLogger<HytaleLogger.Api> {
+   private static final Map<String, HytaleLogger> CACHE;
+   private static final HytaleLogger LOGGER;
+   static final HytaleLogger.NoOp NO_OP;
+   @Nonnull
+   private final HytaleLoggerBackend backend;
 
-    public static void init() {
-        HytaleFileHandler fileHandler = HytaleFileHandler.INSTANCE;
-        HytaleConsole console = HytaleConsole.INSTANCE;
-        LOGGER.at(Level.INFO).log("Logger Initialized");
-    }
+   public static void init() {
+      HytaleFileHandler fileHandler = HytaleFileHandler.INSTANCE;
+      HytaleConsole console = HytaleConsole.INSTANCE;
+      LOGGER.at(Level.INFO).log("Logger Initialized");
+   }
 
-    public static void replaceStd() {
-        if (!HytaleLoggerBackend.isJunitTest()) {
-            System.setOut(new LoggerPrintStream(get("SOUT"), Level.INFO));
-            System.setErr(new LoggerPrintStream(get("SERR"), Level.SEVERE));
-        }
+   public static void replaceStd() {
+      if (!HytaleLoggerBackend.isJunitTest()) {
+         System.setOut(new LoggerPrintStream(get("SOUT"), Level.INFO));
+         System.setErr(new LoggerPrintStream(get("SERR"), Level.SEVERE));
+      }
+   }
 
-    }
+   public static HytaleLogger getLogger() {
+      return LOGGER;
+   }
 
-    public static HytaleLogger getLogger() {
-        return LOGGER;
-    }
+   @Nonnull
+   public static HytaleLogger forEnclosingClass() {
+      String className = Platform.getCallerFinder().findLoggingClass(HytaleLogger.class);
+      String loggerName = classToLoggerName(className);
+      return get(loggerName);
+   }
 
-    @Nonnull
-    public static HytaleLogger forEnclosingClass() {
-        String className = Platform.getCallerFinder().findLoggingClass(HytaleLogger.class);
-        String loggerName = classToLoggerName(className);
-        return get(loggerName);
-    }
+   @Nonnull
+   public static HytaleLogger forEnclosingClassFull() {
+      String loggingClass = Platform.getCallerFinder().findLoggingClass(HytaleLogger.class);
+      return get(loggingClass);
+   }
 
-    @Nonnull
-    public static HytaleLogger forEnclosingClassFull() {
-        String loggingClass = Platform.getCallerFinder().findLoggingClass(HytaleLogger.class);
-        return get(loggingClass);
-    }
+   @Nonnull
+   public static HytaleLogger get(String loggerName) {
+      return CACHE.computeIfAbsent(loggerName, key -> new HytaleLogger(HytaleLoggerBackend.getLogger(key)));
+   }
 
-    @Nonnull
-    public static HytaleLogger get(String loggerName) {
-        return (HytaleLogger)CACHE.computeIfAbsent(loggerName, (key) -> new HytaleLogger(HytaleLoggerBackend.getLogger(key)));
-    }
+   private HytaleLogger(@Nonnull HytaleLoggerBackend backend) {
+      super(backend);
+      this.backend = backend;
+   }
 
-    private HytaleLogger(@Nonnull HytaleLoggerBackend backend) {
-        super(backend);
-        this.backend = backend;
-    }
+   public HytaleLogger.Api at(@Nonnull Level level) {
+      return (HytaleLogger.Api)(this.isLoggable(level) ? new HytaleLogger.Context(level) : NO_OP);
+   }
 
-    public Api at(@Nonnull Level level) {
-        return (Api)(this.isLoggable(level) ? new Context(level) : NO_OP);
-    }
+   public String getName() {
+      return super.getName();
+   }
 
-    public String getName() {
-        return super.getName();
-    }
+   @Nonnull
+   public Level getLevel() {
+      return this.backend.getLevel();
+   }
 
-    @Nonnull
-    public Level getLevel() {
-        return this.backend.getLevel();
-    }
+   public void setLevel(@Nonnull Level level) {
+      this.backend.setLevel(level);
+   }
 
-    public void setLevel(@Nonnull Level level) {
-        this.backend.setLevel(level);
-    }
+   @Nonnull
+   public HytaleLogger getSubLogger(String name) {
+      return new HytaleLogger(this.backend.getSubLogger(name));
+   }
 
-    @Nonnull
-    public HytaleLogger getSubLogger(String name) {
-        return new HytaleLogger(this.backend.getSubLogger(name));
-    }
+   public void setSentryClient(@Nonnull IScopes scope) {
+      this.backend.setSentryClient(scope);
+   }
 
-    public void setSentryClient(@Nonnull IScopes scope) {
-        this.backend.setSentryClient(scope);
-    }
+   public void setPropagatesSentryToParent(boolean propagate) {
+      this.backend.setPropagatesSentryToParent(propagate);
+   }
 
-    public void setPropagatesSentryToParent(boolean propagate) {
-        this.backend.setPropagatesSentryToParent(propagate);
-    }
+   @Nonnull
+   private static String classToLoggerName(@Nonnull String className) {
+      int lastIndexOf = className.lastIndexOf(46);
+      String loggerName;
+      if (lastIndexOf >= 0 && className.length() > lastIndexOf + 1) {
+         loggerName = className.substring(lastIndexOf + 1);
+      } else {
+         loggerName = className;
+      }
 
-    @Nonnull
-    private static String classToLoggerName(@Nonnull String className) {
-        int lastIndexOf = className.lastIndexOf(46);
-        String loggerName;
-        if (lastIndexOf >= 0 && className.length() > lastIndexOf + 1) {
-            loggerName = className.substring(lastIndexOf + 1);
-        } else {
-            loggerName = className;
-        }
+      return loggerName;
+   }
 
-        return loggerName;
-    }
+   static {
+      System.setProperty("java.util.logging.manager", HytaleLogManager.class.getName());
+      HytaleUncaughtExceptionHandler.setup();
+      LogManager logManager = LogManager.getLogManager();
+      if (!logManager.getClass().getName().equals(HytaleLogManager.class.getName())) {
+         throw new IllegalStateException(
+            "Log manager wasn't set! Please ensure HytaleLogger is the first logger to be initialized or\nuse `System.setProperty(\"java.util.logging.manager\", HytaleLogManager.class.getName());` at the start of your application.\nLog manager is: "
+               + logManager
+         );
+      } else {
+         CACHE = new ConcurrentHashMap<>();
+         LOGGER = new HytaleLogger(HytaleLoggerBackend.getLogger());
+         NO_OP = new HytaleLogger.NoOp();
+      }
+   }
 
-    static {
-        System.setProperty("java.util.logging.manager", HytaleLogManager.class.getName());
-        HytaleUncaughtExceptionHandler.setup();
-        LogManager logManager = LogManager.getLogManager();
-        if (!logManager.getClass().getName().equals(HytaleLogManager.class.getName())) {
-            throw new IllegalStateException("Log manager wasn't set! Please ensure HytaleLogger is the first logger to be initialized or\nuse `System.setProperty(\"java.util.logging.manager\", HytaleLogManager.class.getName());` at the start of your application.\nLog manager is: " + String.valueOf(logManager));
-        } else {
-            CACHE = new ConcurrentHashMap();
-            LOGGER = new HytaleLogger(HytaleLoggerBackend.getLogger());
-            NO_OP = new NoOp();
-        }
-    }
+   public interface Api extends LoggingApi<HytaleLogger.Api> {
+   }
 
-    private static final class NoOp extends LoggingApi.NoOp<Api> implements Api {
-    }
+   final class Context extends LogContext<HytaleLogger, HytaleLogger.Api> implements HytaleLogger.Api {
+      private Context(@Nonnull Level level) {
+         super(level, false);
+      }
 
-    final class Context extends LogContext<HytaleLogger, Api> implements Api {
-        private Context(@Nonnull Level level) {
-            super(level, false);
-        }
+      @Nonnull
+      protected HytaleLogger getLogger() {
+         return HytaleLogger.this;
+      }
 
-        @Nonnull
-        protected HytaleLogger getLogger() {
-            return HytaleLogger.this;
-        }
+      @Nonnull
+      protected HytaleLogger.Api api() {
+         return this;
+      }
 
-        @Nonnull
-        protected Api api() {
-            return this;
-        }
+      @Nonnull
+      protected HytaleLogger.Api noOp() {
+         return HytaleLogger.NO_OP;
+      }
 
-        @Nonnull
-        protected Api noOp() {
-            return HytaleLogger.NO_OP;
-        }
+      protected MessageParser getMessageParser() {
+         return DefaultPrintfMessageParser.getInstance();
+      }
+   }
 
-        protected MessageParser getMessageParser() {
-            return DefaultPrintfMessageParser.getInstance();
-        }
-    }
-
-    public interface Api extends LoggingApi<Api> {
-    }
-}// INTERNAL ERROR //
+   private static final class NoOp extends com.google.common.flogger.LoggingApi.NoOp<HytaleLogger.Api> implements HytaleLogger.Api {
+   }
+}

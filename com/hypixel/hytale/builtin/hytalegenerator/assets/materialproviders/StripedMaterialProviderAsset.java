@@ -1,101 +1,87 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders;
-/*    */ 
-/*    */ import com.hypixel.hytale.assetstore.AssetExtraInfo;
-/*    */ import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
-/*    */ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
-/*    */ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.StripedMaterialProvider;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*    */ import java.util.ArrayList;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class StripedMaterialProviderAsset
-/*    */   extends MaterialProviderAsset
-/*    */ {
-/*    */   public static final BuilderCodec<StripedMaterialProviderAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 33 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(StripedMaterialProviderAsset.class, StripedMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC).append(new KeyedCodec("Stripes", (Codec)new ArrayCodec((Codec)StripeAsset.CODEC, x$0 -> new StripeAsset[x$0]), true), (t, k) -> t.stripeAssets = k, k -> k.stripeAssets).add()).append(new KeyedCodec("Material", (Codec)MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset).add()).build();
-/*    */   }
-/* 35 */   private StripeAsset[] stripeAssets = new StripeAsset[0];
-/* 36 */   private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public MaterialProvider<Material> build(@Nonnull MaterialProviderAsset.Argument argument) {
-/* 41 */     if (skip()) return MaterialProvider.noMaterialProvider();
-/*    */     
-/* 43 */     ArrayList<StripedMaterialProvider.Stripe> stripes = new ArrayList<>();
-/* 44 */     for (StripeAsset asset : this.stripeAssets) {
-/* 45 */       if (asset == null) {
-/* 46 */         LoggerUtil.getLogger().warning("Couldn't load a strip asset, will skip it.");
-/*    */       } else {
-/*    */         
-/* 49 */         StripedMaterialProvider.Stripe stripe = new StripedMaterialProvider.Stripe(asset.topY, asset.bottomY);
-/* 50 */         stripes.add(stripe);
-/*    */       } 
-/* 52 */     }  MaterialProvider<Material> materialProvider = this.materialProviderAsset.build(argument);
-/*    */     
-/* 54 */     return (MaterialProvider<Material>)new StripedMaterialProvider(materialProvider, stripes);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 59 */     this.materialProviderAsset.cleanUp();
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static class StripeAsset
-/*    */     implements JsonAssetWithMap<String, DefaultAssetMap<String, StripeAsset>>
-/*    */   {
-/*    */     public static final AssetBuilderCodec<String, StripeAsset> CODEC;
-/*    */ 
-/*    */     
-/*    */     private String id;
-/*    */ 
-/*    */     
-/*    */     private AssetExtraInfo.Data data;
-/*    */ 
-/*    */     
-/*    */     private int topY;
-/*    */     
-/*    */     private int bottomY;
-/*    */ 
-/*    */     
-/*    */     static {
-/* 82 */       CODEC = ((AssetBuilderCodec.Builder)((AssetBuilderCodec.Builder)AssetBuilderCodec.builder(StripeAsset.class, StripeAsset::new, (Codec)Codec.STRING, (asset, id) -> asset.id = id, config -> config.id, (config, data) -> config.data = data, config -> config.data).append(new KeyedCodec("TopY", (Codec)Codec.INTEGER, true), (t, y) -> t.topY = y.intValue(), t -> Integer.valueOf(t.bottomY)).add()).append(new KeyedCodec("BottomY", (Codec)Codec.INTEGER, true), (t, y) -> t.bottomY = y.intValue(), t -> Integer.valueOf(t.bottomY)).add()).build();
-/*    */     }
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */     
-/*    */     public String getId() {
-/* 92 */       return this.id;
-/*    */     }
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders;
 
+import com.hypixel.hytale.assetstore.AssetExtraInfo;
+import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.StripedMaterialProvider;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import java.util.ArrayList;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\materialproviders\StripedMaterialProviderAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class StripedMaterialProviderAsset extends MaterialProviderAsset {
+   @Nonnull
+   public static final BuilderCodec<StripedMaterialProviderAsset> CODEC = BuilderCodec.builder(
+         StripedMaterialProviderAsset.class, StripedMaterialProviderAsset::new, MaterialProviderAsset.ABSTRACT_CODEC
+      )
+      .append(
+         new KeyedCodec<>("Stripes", new ArrayCodec<>(StripedMaterialProviderAsset.StripeAsset.CODEC, StripedMaterialProviderAsset.StripeAsset[]::new), true),
+         (t, k) -> t.stripeAssets = k,
+         k -> k.stripeAssets
+      )
+      .add()
+      .append(new KeyedCodec<>("Material", MaterialProviderAsset.CODEC, true), (t, k) -> t.materialProviderAsset = k, k -> k.materialProviderAsset)
+      .add()
+      .build();
+   private StripedMaterialProviderAsset.StripeAsset[] stripeAssets = new StripedMaterialProviderAsset.StripeAsset[0];
+   private MaterialProviderAsset materialProviderAsset = new ConstantMaterialProviderAsset();
+
+   @Nonnull
+   @Override
+   public MaterialProvider<Material> build(@Nonnull MaterialProviderAsset.Argument argument) {
+      if (super.skip()) {
+         return MaterialProvider.noMaterialProvider();
+      } else {
+         ArrayList<StripedMaterialProvider.Stripe> stripes = new ArrayList<>();
+
+         for (StripedMaterialProviderAsset.StripeAsset asset : this.stripeAssets) {
+            if (asset == null) {
+               LoggerUtil.getLogger().warning("Couldn't load a strip asset, will skip it.");
+            } else {
+               StripedMaterialProvider.Stripe stripe = new StripedMaterialProvider.Stripe(asset.topY, asset.bottomY);
+               stripes.add(stripe);
+            }
+         }
+
+         MaterialProvider<Material> materialProvider = this.materialProviderAsset.build(argument);
+         return new StripedMaterialProvider<>(materialProvider, stripes);
+      }
+   }
+
+   @Override
+   public void cleanUp() {
+      this.materialProviderAsset.cleanUp();
+   }
+
+   public static class StripeAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, StripedMaterialProviderAsset.StripeAsset>> {
+      @Nonnull
+      public static final AssetBuilderCodec<String, StripedMaterialProviderAsset.StripeAsset> CODEC = AssetBuilderCodec.builder(
+            StripedMaterialProviderAsset.StripeAsset.class,
+            StripedMaterialProviderAsset.StripeAsset::new,
+            Codec.STRING,
+            (asset, id) -> asset.id = id,
+            config -> config.id,
+            (config, data) -> config.data = data,
+            config -> config.data
+         )
+         .append(new KeyedCodec<>("TopY", Codec.INTEGER, true), (t, y) -> t.topY = y, t -> t.bottomY)
+         .add()
+         .append(new KeyedCodec<>("BottomY", Codec.INTEGER, true), (t, y) -> t.bottomY = y, t -> t.bottomY)
+         .add()
+         .build();
+      private String id;
+      private AssetExtraInfo.Data data;
+      private int topY;
+      private int bottomY;
+
+      public String getId() {
+         return this.id;
+      }
+   }
+}

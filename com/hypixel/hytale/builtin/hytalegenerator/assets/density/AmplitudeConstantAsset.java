@@ -1,40 +1,31 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.AmplitudeConstantDensity;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
-/*    */ import com.hypixel.hytale.codec.Codec;
-/*    */ import com.hypixel.hytale.codec.KeyedCodec;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class AmplitudeConstantAsset
-/*    */   extends DensityAsset
-/*    */ {
-/*    */   public static final BuilderCodec<AmplitudeConstantAsset> CODEC;
-/*    */   
-/*    */   static {
-/* 20 */     CODEC = ((BuilderCodec.Builder)BuilderCodec.builder(AmplitudeConstantAsset.class, AmplitudeConstantAsset::new, DensityAsset.ABSTRACT_CODEC).append(new KeyedCodec("Value", (Codec)Codec.DOUBLE, true), (t, k) -> t.value = k.doubleValue(), t -> Double.valueOf(t.value)).add()).build();
-/*    */   }
-/* 22 */   private double value = 0.0D;
-/*    */   
-/*    */   @Nonnull
-/*    */   public Density build(@Nonnull DensityAsset.Argument argument) {
-/* 26 */     if (isSkipped()) return (Density)new ConstantValueDensity(0.0D); 
-/* 27 */     return (Density)new AmplitudeConstantDensity(this.value, buildFirstInput(argument));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 32 */     cleanUpInputs();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.AmplitudeConstantDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\density\AmplitudeConstantAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class AmplitudeConstantAsset extends DensityAsset {
+   @Nonnull
+   public static final BuilderCodec<AmplitudeConstantAsset> CODEC = BuilderCodec.builder(
+         AmplitudeConstantAsset.class, AmplitudeConstantAsset::new, DensityAsset.ABSTRACT_CODEC
+      )
+      .append(new KeyedCodec<>("Value", Codec.DOUBLE, true), (t, k) -> t.value = k, t -> t.value)
+      .add()
+      .build();
+   private double value = 0.0;
+
+   @Nonnull
+   @Override
+   public Density build(@Nonnull DensityAsset.Argument argument) {
+      return (Density)(this.isSkipped() ? new ConstantValueDensity(0.0) : new AmplitudeConstantDensity(this.value, this.buildFirstInput(argument)));
+   }
+
+   @Override
+   public void cleanUp() {
+      this.cleanUpInputs();
+   }
+}

@@ -8,16 +8,10 @@ import com.hypixel.hytale.server.npc.role.Role;
 import javax.annotation.Nullable;
 
 public interface IEntityByPriorityFilter extends TriPredicate<Ref<EntityStore>, Ref<EntityStore>, ComponentAccessor<EntityStore>> {
-  void init(Role paramRole);
-  
-  @Nullable
-  Ref<EntityStore> getHighestPriorityTarget();
-  
-  void cleanup();
+   void init(Role var1);
+
+   @Nullable
+   Ref<EntityStore> getHighestPriorityTarget();
+
+   void cleanup();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\np\\util\IEntityByPriorityFilter.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

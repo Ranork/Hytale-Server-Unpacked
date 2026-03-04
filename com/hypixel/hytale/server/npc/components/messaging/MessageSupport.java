@@ -1,30 +1,19 @@
-/*    */ package com.hypixel.hytale.server.npc.components.messaging;
-/*    */ 
-/*    */ import com.hypixel.hytale.component.Component;
-/*    */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*    */ 
-/*    */ public abstract class MessageSupport
-/*    */   implements Component<EntityStore>
-/*    */ {
-/*    */   public boolean isMessageQueued(int messageIndex) {
-/* 10 */     if (getMessageSlots() == null) return false;
-/*    */     
-/* 12 */     return getMessageSlots()[messageIndex].isActivated();
-/*    */   }
-/*    */   
-/*    */   public boolean isMessageEnabled(int messageIndex) {
-/* 16 */     if (getMessageSlots() == null) return false;
-/*    */     
-/* 18 */     return getMessageSlots()[messageIndex].isEnabled();
-/*    */   }
-/*    */   
-/*    */   public abstract NPCMessage[] getMessageSlots();
-/*    */   
-/*    */   public abstract Component<EntityStore> clone();
-/*    */ }
+package com.hypixel.hytale.server.npc.components.messaging;
 
+import com.hypixel.hytale.component.Component;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\components\messaging\MessageSupport.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public abstract class MessageSupport implements Component<EntityStore> {
+   public abstract NPCMessage[] getMessageSlots();
+
+   public boolean isMessageQueued(int messageIndex) {
+      return this.getMessageSlots() == null ? false : this.getMessageSlots()[messageIndex].isActivated();
+   }
+
+   public boolean isMessageEnabled(int messageIndex) {
+      return this.getMessageSlots() == null ? false : this.getMessageSlots()[messageIndex].isEnabled();
+   }
+
+   @Override
+   public abstract Component<EntityStore> clone();
+}

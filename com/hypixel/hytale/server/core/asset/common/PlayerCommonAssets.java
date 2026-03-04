@@ -1,54 +1,51 @@
-/*    */ package com.hypixel.hytale.server.core.asset.common;
-/*    */ 
-/*    */ import com.hypixel.hytale.protocol.Asset;
-/*    */ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-/*    */ import java.util.HashSet;
-/*    */ import java.util.Iterator;
-/*    */ import java.util.Map;
-/*    */ import java.util.Set;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class PlayerCommonAssets
-/*    */ {
-/*    */   @Nonnull
-/* 20 */   private final Map<String, String> assetMissing = (Map<String, String>)new Object2ObjectOpenHashMap(); public PlayerCommonAssets(@Nonnull Asset[] requiredAssets) {
-/* 21 */     for (Asset requiredAsset : requiredAssets) {
-/* 22 */       this.assetMissing.put(requiredAsset.hash, requiredAsset.name);
-/*    */     }
-/* 24 */     this.assetSent = (Map<String, String>)new Object2ObjectOpenHashMap();
-/*    */   } @Nonnull
-/*    */   private final Map<String, String> assetSent;
-/*    */   public void sent(@Nullable Asset[] hashes) {
-/* 28 */     Set<String> set = new HashSet<>();
-/* 29 */     if (hashes != null) {
-/* 30 */       for (Asset hash : hashes) {
-/* 31 */         set.add(hash.hash);
-/*    */       }
-/*    */     }
-/*    */     
-/* 35 */     Iterator<String> iterator = this.assetMissing.keySet().iterator();
-/* 36 */     while (iterator.hasNext()) {
-/* 37 */       String hash = iterator.next();
-/* 38 */       if (set.contains(hash)) {
-/* 39 */         iterator.remove();
-/* 40 */         set.remove(hash);
-/*    */       } 
-/*    */     } 
-/*    */     
-/* 44 */     if (!set.isEmpty()) throw new RuntimeException("Still had hashes: " + String.valueOf(set)); 
-/* 45 */     this.assetSent.putAll(this.assetMissing);
-/* 46 */     this.assetMissing.clear();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.asset.common;
 
+import com.hypixel.hytale.protocol.Asset;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\common\PlayerCommonAssets.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PlayerCommonAssets {
+   @Nonnull
+   private final Map<String, String> assetMissing = new Object2ObjectOpenHashMap();
+   @Nonnull
+   private final Map<String, String> assetSent;
+
+   public PlayerCommonAssets(@Nonnull Asset[] requiredAssets) {
+      for (Asset requiredAsset : requiredAssets) {
+         this.assetMissing.put(requiredAsset.hash, requiredAsset.name);
+      }
+
+      this.assetSent = new Object2ObjectOpenHashMap();
+   }
+
+   public void sent(@Nullable Asset[] hashes) {
+      Set<String> set = new HashSet<>();
+      if (hashes != null) {
+         for (Asset hash : hashes) {
+            set.add(hash.hash);
+         }
+      }
+
+      Iterator<String> iterator = this.assetMissing.keySet().iterator();
+
+      while (iterator.hasNext()) {
+         String hash = iterator.next();
+         if (set.contains(hash)) {
+            iterator.remove();
+            set.remove(hash);
+         }
+      }
+
+      if (!set.isEmpty()) {
+         throw new RuntimeException("Still had hashes: " + set);
+      } else {
+         this.assetSent.putAll(this.assetMissing);
+         this.assetMissing.clear();
+      }
+   }
+}

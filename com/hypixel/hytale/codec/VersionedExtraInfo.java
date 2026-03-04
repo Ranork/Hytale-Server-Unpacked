@@ -1,142 +1,124 @@
-/*     */ package com.hypixel.hytale.codec;
-/*     */ 
-/*     */ import com.hypixel.hytale.codec.store.CodecStore;
-/*     */ import com.hypixel.hytale.codec.util.RawJsonReader;
-/*     */ import com.hypixel.hytale.codec.validation.ValidationResults;
-/*     */ import java.io.IOException;
-/*     */ import java.util.List;
-/*     */ import java.util.Map;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class VersionedExtraInfo
-/*     */   extends ExtraInfo
-/*     */ {
-/*     */   private final int version;
-/*     */   private final ExtraInfo delegate;
-/*     */   
-/*     */   public VersionedExtraInfo(int version, ExtraInfo delegate) {
-/*  26 */     this.version = version;
-/*  27 */     this.delegate = delegate;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public int getVersion() {
-/*  32 */     return this.version;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public int getKeysSize() {
-/*  39 */     return this.delegate.getKeysSize();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public CodecStore getCodecStore() {
-/*  44 */     return this.delegate.getCodecStore();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void pushKey(String key) {
-/*  49 */     this.delegate.pushKey(key);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void pushIntKey(int key) {
-/*  54 */     this.delegate.pushIntKey(key);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void pushKey(String key, RawJsonReader reader) {
-/*  59 */     this.delegate.pushKey(key, reader);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void pushIntKey(int key, RawJsonReader reader) {
-/*  64 */     this.delegate.pushIntKey(key, reader);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void popKey() {
-/*  69 */     this.delegate.popKey();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void ignoreUnusedKey(String key) {
-/*  74 */     this.delegate.ignoreUnusedKey(key);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void popIgnoredUnusedKey() {
-/*  79 */     this.delegate.popIgnoredUnusedKey();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean consumeIgnoredUnknownKey(@Nonnull RawJsonReader reader) throws IOException {
-/*  84 */     return this.delegate.consumeIgnoredUnknownKey(reader);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean consumeIgnoredUnknownKey(@Nonnull String key) {
-/*  89 */     return this.delegate.consumeIgnoredUnknownKey(key);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void readUnknownKey(@Nonnull RawJsonReader reader) throws IOException {
-/*  94 */     this.delegate.readUnknownKey(reader);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void addUnknownKey(@Nonnull String key) {
-/*  99 */     this.delegate.addUnknownKey(key);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public String peekKey() {
-/* 104 */     return this.delegate.peekKey();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public String peekKey(char separator) {
-/* 109 */     return this.delegate.peekKey(separator);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public List<String> getUnknownKeys() {
-/* 114 */     return this.delegate.getUnknownKeys();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public ValidationResults getValidationResults() {
-/* 119 */     return this.delegate.getValidationResults();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public Map<String, Object> getMetadata() {
-/* 124 */     return this.delegate.getMetadata();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void appendDetailsTo(@Nonnull StringBuilder sb) {
-/* 129 */     this.delegate.appendDetailsTo(sb);
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public int getLegacyVersion() {
-/* 134 */     return this.delegate.getLegacyVersion();
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.codec;
 
+import com.hypixel.hytale.codec.store.CodecStore;
+import com.hypixel.hytale.codec.util.RawJsonReader;
+import com.hypixel.hytale.codec.validation.ValidationResults;
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\codec\VersionedExtraInfo.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class VersionedExtraInfo extends ExtraInfo {
+   private final int version;
+   private final ExtraInfo delegate;
+
+   public VersionedExtraInfo(int version, ExtraInfo delegate) {
+      this.version = version;
+      this.delegate = delegate;
+   }
+
+   @Override
+   public int getVersion() {
+      return this.version;
+   }
+
+   @Override
+   public int getKeysSize() {
+      return this.delegate.getKeysSize();
+   }
+
+   @Override
+   public CodecStore getCodecStore() {
+      return this.delegate.getCodecStore();
+   }
+
+   @Override
+   public void pushKey(String key) {
+      this.delegate.pushKey(key);
+   }
+
+   @Override
+   public void pushIntKey(int key) {
+      this.delegate.pushIntKey(key);
+   }
+
+   @Override
+   public void pushKey(String key, RawJsonReader reader) {
+      this.delegate.pushKey(key, reader);
+   }
+
+   @Override
+   public void pushIntKey(int key, RawJsonReader reader) {
+      this.delegate.pushIntKey(key, reader);
+   }
+
+   @Override
+   public void popKey() {
+      this.delegate.popKey();
+   }
+
+   @Override
+   public void ignoreUnusedKey(String key) {
+      this.delegate.ignoreUnusedKey(key);
+   }
+
+   @Override
+   public void popIgnoredUnusedKey() {
+      this.delegate.popIgnoredUnusedKey();
+   }
+
+   @Override
+   public boolean consumeIgnoredUnknownKey(@Nonnull RawJsonReader reader) throws IOException {
+      return this.delegate.consumeIgnoredUnknownKey(reader);
+   }
+
+   @Override
+   public boolean consumeIgnoredUnknownKey(@Nonnull String key) {
+      return this.delegate.consumeIgnoredUnknownKey(key);
+   }
+
+   @Override
+   public void readUnknownKey(@Nonnull RawJsonReader reader) throws IOException {
+      this.delegate.readUnknownKey(reader);
+   }
+
+   @Override
+   public void addUnknownKey(@Nonnull String key) {
+      this.delegate.addUnknownKey(key);
+   }
+
+   @Override
+   public String peekKey() {
+      return this.delegate.peekKey();
+   }
+
+   @Override
+   public String peekKey(char separator) {
+      return this.delegate.peekKey(separator);
+   }
+
+   @Override
+   public List<String> getUnknownKeys() {
+      return this.delegate.getUnknownKeys();
+   }
+
+   @Override
+   public ValidationResults getValidationResults() {
+      return this.delegate.getValidationResults();
+   }
+
+   @Override
+   public Map<String, Object> getMetadata() {
+      return this.delegate.getMetadata();
+   }
+
+   @Override
+   public void appendDetailsTo(@Nonnull StringBuilder sb) {
+      this.delegate.appendDetailsTo(sb);
+   }
+
+   @Override
+   public int getLegacyVersion() {
+      return this.delegate.getLegacyVersion();
+   }
+}

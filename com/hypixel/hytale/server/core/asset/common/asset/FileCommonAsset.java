@@ -1,47 +1,38 @@
-/*    */ package com.hypixel.hytale.server.core.asset.common.asset;
-/*    */ 
-/*    */ import com.hypixel.hytale.server.core.asset.common.CommonAsset;
-/*    */ import com.hypixel.hytale.sneakythrow.SneakyThrow;
-/*    */ import java.io.IOException;
-/*    */ import java.nio.file.Files;
-/*    */ import java.nio.file.Path;
-/*    */ import java.util.concurrent.CompletableFuture;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class FileCommonAsset extends CommonAsset {
-/*    */   private final Path file;
-/*    */   
-/*    */   public FileCommonAsset(Path file, @Nonnull String name, byte[] bytes) {
-/* 15 */     super(name, bytes);
-/* 16 */     this.file = file;
-/*    */   }
-/*    */   
-/*    */   public FileCommonAsset(Path file, @Nonnull String name, @Nonnull String hash, byte[] bytes) {
-/* 20 */     super(name, hash, bytes);
-/* 21 */     this.file = file;
-/*    */   }
-/*    */   
-/*    */   public Path getFile() {
-/* 25 */     return this.file;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public CompletableFuture<byte[]> getBlob0() {
-/* 31 */     return (CompletableFuture)CompletableFuture.supplyAsync(SneakyThrow.sneakySupplier(() -> Files.readAllBytes(this.file)));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 37 */     return "FileCommonAsset{file=" + String.valueOf(this.file) + ", " + super
-/*    */       
-/* 39 */       .toString() + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.asset.common.asset;
 
+import com.hypixel.hytale.server.core.asset.common.CommonAsset;
+import com.hypixel.hytale.sneakythrow.SneakyThrow;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.concurrent.CompletableFuture;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\common\asset\FileCommonAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class FileCommonAsset extends CommonAsset {
+   private final Path file;
+
+   public FileCommonAsset(Path file, @Nonnull String name, byte[] bytes) {
+      super(name, bytes);
+      this.file = file;
+   }
+
+   public FileCommonAsset(Path file, @Nonnull String name, @Nonnull String hash, byte[] bytes) {
+      super(name, hash, bytes);
+      this.file = file;
+   }
+
+   public Path getFile() {
+      return this.file;
+   }
+
+   @Nonnull
+   @Override
+   public CompletableFuture<byte[]> getBlob0() {
+      return CompletableFuture.supplyAsync(SneakyThrow.sneakySupplier(() -> Files.readAllBytes(this.file)));
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "FileCommonAsset{file=" + this.file + ", " + super.toString() + "}";
+   }
+}

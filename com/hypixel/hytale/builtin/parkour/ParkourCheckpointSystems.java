@@ -1,184 +1,197 @@
-/*     */ package com.hypixel.hytale.builtin.parkour;
-/*     */ import com.hypixel.hytale.component.AddReason;
-/*     */ import com.hypixel.hytale.component.ArchetypeChunk;
-/*     */ import com.hypixel.hytale.component.CommandBuffer;
-/*     */ import com.hypixel.hytale.component.ComponentType;
-/*     */ import com.hypixel.hytale.component.Holder;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.RemoveReason;
-/*     */ import com.hypixel.hytale.component.ResourceType;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.component.dependency.Dependency;
-/*     */ import com.hypixel.hytale.component.dependency.Order;
-/*     */ import com.hypixel.hytale.component.dependency.SystemDependency;
-/*     */ import com.hypixel.hytale.component.query.Query;
-/*     */ import com.hypixel.hytale.component.spatial.SpatialResource;
-/*     */ import com.hypixel.hytale.component.system.RefSystem;
-/*     */ import com.hypixel.hytale.math.vector.Vector3d;
-/*     */ import com.hypixel.hytale.server.core.Message;
-/*     */ import com.hypixel.hytale.server.core.entity.UUIDComponent;
-/*     */ import com.hypixel.hytale.server.core.entity.entities.Player;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.system.PlayerSpatialSystem;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import it.unimi.dsi.fastutil.objects.Object2IntMap;
-/*     */ import it.unimi.dsi.fastutil.objects.Object2LongMap;
-/*     */ import it.unimi.dsi.fastutil.objects.ObjectList;
-/*     */ import java.util.Set;
-/*     */ import java.util.UUID;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ public class ParkourCheckpointSystems {
-/*     */   public static class Init extends RefSystem<EntityStore> {
-/*     */     private final ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType;
-/*     */     
-/*     */     public Init(ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType) {
-/*  37 */       this.parkourCheckpointComponentType = parkourCheckpointComponentType;
-/*  38 */       this.uuidComponentComponentType = UUIDComponent.getComponentType();
-/*     */       
-/*  40 */       ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
-/*     */       
-/*  42 */       this.query = (Query<EntityStore>)Query.and(new Query[] { (Query)parkourCheckpointComponentType, (Query)transformComponentType });
-/*     */     } @Nonnull
-/*     */     private final ComponentType<EntityStore, UUIDComponent> uuidComponentComponentType; @Nonnull
-/*     */     private final Query<EntityStore> query;
-/*     */     @Nonnull
-/*     */     public Query<EntityStore> getQuery() {
-/*  48 */       return this.query;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public void onEntityAdded(@Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/*  53 */       ParkourCheckpoint entity = (ParkourCheckpoint)store.getComponent(ref, this.parkourCheckpointComponentType);
-/*  54 */       ParkourPlugin.get().updateLastIndex(entity.getIndex());
-/*  55 */       ParkourPlugin.get().getCheckpointUUIDMap().put(entity.getIndex(), ((UUIDComponent)store.getComponent(ref, this.uuidComponentComponentType)).getUuid());
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {}
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public static class Ticking
-/*     */     extends EntityTickingSystem<EntityStore>
-/*     */   {
-/*     */     private final ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType;
-/*     */     private final ComponentType<EntityStore, Player> playerComponentType;
-/*     */     private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent;
-/*     */     private final ComponentType<EntityStore, TransformComponent> transformComponentType;
-/*     */     @Nonnull
-/*     */     private final ComponentType<EntityStore, UUIDComponent> uuidComponentType;
-/*     */     @Nonnull
-/*     */     private final Query<EntityStore> query;
-/*     */     @Nonnull
-/*     */     private final Set<Dependency<EntityStore>> dependencies;
-/*     */     
-/*     */     public Ticking(ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType, ComponentType<EntityStore, Player> playerComponentType, ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent) {
-/*  78 */       this.parkourCheckpointComponentType = parkourCheckpointComponentType;
-/*  79 */       this.playerComponentType = playerComponentType;
-/*  80 */       this.playerSpatialComponent = playerSpatialComponent;
-/*     */       
-/*  82 */       this.transformComponentType = TransformComponent.getComponentType();
-/*  83 */       this.uuidComponentType = UUIDComponent.getComponentType();
-/*     */       
-/*  85 */       this.query = (Query<EntityStore>)Query.and(new Query[] { (Query)parkourCheckpointComponentType, (Query)this.transformComponentType });
-/*  86 */       this.dependencies = Set.of(new SystemDependency(Order.AFTER, PlayerSpatialSystem.class, OrderPriority.CLOSEST));
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public Query<EntityStore> getQuery() {
-/*  92 */       return this.query;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public Set<Dependency<EntityStore>> getDependencies() {
-/*  98 */       return this.dependencies;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/* 103 */       int lastIndex = ParkourPlugin.get().getLastIndex();
-/* 104 */       if (lastIndex == 0)
-/*     */         return; 
-/* 106 */       int parkourCheckpointIndex = ((ParkourCheckpoint)archetypeChunk.getComponent(index, this.parkourCheckpointComponentType)).getIndex();
-/*     */       
-/* 108 */       SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = (SpatialResource<Ref<EntityStore>, EntityStore>)store.getResource(this.playerSpatialComponent);
-/* 109 */       ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
-/* 110 */       Vector3d position = ((TransformComponent)archetypeChunk.getComponent(index, this.transformComponentType)).getPosition();
-/* 111 */       spatialResource.getSpatialStructure().ordered(position, 1.0D, (List)results);
-/*     */       
-/* 113 */       ParkourPlugin parkourPlugin = ParkourPlugin.get();
-/* 114 */       Object2IntMap<UUID> currentCheckpointByPlayerMap = parkourPlugin.getCurrentCheckpointByPlayerMap();
-/* 115 */       Object2LongMap<UUID> startTimeByPlayerMap = parkourPlugin.getStartTimeByPlayerMap();
-/*     */       
-/* 117 */       for (int i = 0; i < results.size(); i++) {
-/* 118 */         Ref<EntityStore> otherReference = (Ref<EntityStore>)results.get(i);
-/* 119 */         UUIDComponent uuidComponent = (UUIDComponent)commandBuffer.getComponent(otherReference, this.uuidComponentType);
-/* 120 */         UUID playerUuid = uuidComponent.getUuid();
-/* 121 */         Player player = (Player)commandBuffer.getComponent(otherReference, this.playerComponentType);
-/*     */         
-/* 123 */         handleCheckpointUpdate(currentCheckpointByPlayerMap, startTimeByPlayerMap, player, playerUuid, parkourCheckpointIndex, lastIndex);
-/*     */       } 
-/*     */     }
-/*     */     
-/*     */     private static void handleCheckpointUpdate(@Nonnull Object2IntMap<UUID> currentCheckpointByPlayerMap, @Nonnull Object2LongMap<UUID> startTimeByPlayerMap, @Nonnull Player player, UUID playerUuid, int checkpointIndex, int lastIndex) {
-/* 128 */       int currentCheckpoint = currentCheckpointByPlayerMap.getOrDefault(playerUuid, -1);
-/*     */       
-/* 130 */       if (currentCheckpoint == -1) {
-/*     */         
-/* 132 */         if (checkpointIndex != 0) {
-/*     */           return;
-/*     */         }
-/* 135 */         currentCheckpointByPlayerMap.put(playerUuid, 0);
-/* 136 */         startTimeByPlayerMap.put(playerUuid, System.nanoTime());
-/* 137 */         player.sendMessage(Message.translation("server.general.parkourRun.started"));
-/*     */       }
-/*     */       else {
-/*     */         
-/* 141 */         if (currentCheckpoint + 1 != checkpointIndex) {
-/*     */           return;
-/*     */         }
-/* 144 */         if (lastIndex == checkpointIndex) {
-/* 145 */           long completionTimeNano = System.nanoTime() - startTimeByPlayerMap.getLong(playerUuid);
-/* 146 */           long completionTimeMillis = TimeUnit.NANOSECONDS.toMillis(completionTimeNano);
-/*     */           
-/* 148 */           player.sendMessage(Message.translation("server.general.parkourRun.completed").param("seconds", completionTimeMillis / 1000.0D));
-/* 149 */           currentCheckpointByPlayerMap.remove(playerUuid, currentCheckpoint);
-/*     */           
-/*     */           return;
-/*     */         } 
-/*     */         
-/* 154 */         currentCheckpointByPlayerMap.put(playerUuid, checkpointIndex);
-/* 155 */         player.sendMessage(Message.translation("server.general.parkourRun.checkpointReached").param("checkpoint", checkpointIndex).param("checkpoints", lastIndex));
-/*     */       } 
-/*     */     }
-/*     */   }
-/*     */   
-/*     */   public static class EnsureNetworkSendable extends HolderSystem<EntityStore> {
-/* 161 */     private final Query<EntityStore> query = (Query<EntityStore>)Query.and(new Query[] { (Query)ParkourCheckpoint.getComponentType(), (Query)Query.not((Query)NetworkId.getComponentType()) });
-/*     */ 
-/*     */     
-/*     */     public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-/* 165 */       holder.addComponent(NetworkId.getComponentType(), (Component)new NetworkId(((EntityStore)store.getExternalData()).takeNextNetworkId()));
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {}
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public Query<EntityStore> getQuery() {
-/* 175 */       return this.query;
-/*     */     }
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.builtin.parkour;
 
+import com.hypixel.hytale.component.AddReason;
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.ResourceType;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.dependency.Dependency;
+import com.hypixel.hytale.component.dependency.Order;
+import com.hypixel.hytale.component.dependency.OrderPriority;
+import com.hypixel.hytale.component.dependency.SystemDependency;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.spatial.SpatialResource;
+import com.hypixel.hytale.component.system.HolderSystem;
+import com.hypixel.hytale.component.system.RefSystem;
+import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.system.PlayerSpatialSystem;
+import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\parkour\ParkourCheckpointSystems.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ParkourCheckpointSystems {
+   public static class EnsureNetworkSendable extends HolderSystem<EntityStore> {
+      private final Query<EntityStore> query = Query.and(ParkourCheckpoint.getComponentType(), Query.not(NetworkId.getComponentType()));
+
+      @Override
+      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
+         holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
+      }
+
+      @Override
+      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+   }
+
+   public static class Init extends RefSystem<EntityStore> {
+      private final ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, UUIDComponent> uuidComponentComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public Init(ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType) {
+         this.parkourCheckpointComponentType = parkourCheckpointComponentType;
+         this.uuidComponentComponentType = UUIDComponent.getComponentType();
+         ComponentType<EntityStore, TransformComponent> transformComponentType = TransformComponent.getComponentType();
+         this.query = Query.and(parkourCheckpointComponentType, transformComponentType);
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+
+      @Override
+      public void onEntityAdded(
+         @Nonnull Ref<EntityStore> ref, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         ParkourCheckpoint entity = store.getComponent(ref, this.parkourCheckpointComponentType);
+         ParkourPlugin.get().updateLastIndex(entity.getIndex());
+         ParkourPlugin.get().getCheckpointUUIDMap().put(entity.getIndex(), store.getComponent(ref, this.uuidComponentComponentType).getUuid());
+      }
+
+      @Override
+      public void onEntityRemove(
+         @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+      }
+   }
+
+   public static class Ticking extends EntityTickingSystem<EntityStore> {
+      private final ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType;
+      private final ComponentType<EntityStore, Player> playerComponentType;
+      private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent;
+      private final ComponentType<EntityStore, TransformComponent> transformComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, UUIDComponent> uuidComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies;
+
+      public Ticking(
+         ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType,
+         ComponentType<EntityStore, Player> playerComponentType,
+         ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent
+      ) {
+         this.parkourCheckpointComponentType = parkourCheckpointComponentType;
+         this.playerComponentType = playerComponentType;
+         this.playerSpatialComponent = playerSpatialComponent;
+         this.transformComponentType = TransformComponent.getComponentType();
+         this.uuidComponentType = UUIDComponent.getComponentType();
+         this.query = Query.and(parkourCheckpointComponentType, this.transformComponentType);
+         this.dependencies = Set.of(new SystemDependency<>(Order.AFTER, PlayerSpatialSystem.class, OrderPriority.CLOSEST));
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         int lastIndex = ParkourPlugin.get().getLastIndex();
+         if (lastIndex != 0) {
+            int parkourCheckpointIndex = archetypeChunk.getComponent(index, this.parkourCheckpointComponentType).getIndex();
+            SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.playerSpatialComponent);
+            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            Vector3d position = archetypeChunk.getComponent(index, this.transformComponentType).getPosition();
+            spatialResource.getSpatialStructure().ordered(position, 1.0, results);
+            ParkourPlugin parkourPlugin = ParkourPlugin.get();
+            Object2IntMap<UUID> currentCheckpointByPlayerMap = parkourPlugin.getCurrentCheckpointByPlayerMap();
+            Object2LongMap<UUID> startTimeByPlayerMap = parkourPlugin.getStartTimeByPlayerMap();
+
+            for (int i = 0; i < results.size(); i++) {
+               Ref<EntityStore> otherReference = (Ref<EntityStore>)results.get(i);
+               UUIDComponent uuidComponent = commandBuffer.getComponent(otherReference, this.uuidComponentType);
+               UUID playerUuid = uuidComponent.getUuid();
+               Player player = commandBuffer.getComponent(otherReference, this.playerComponentType);
+               handleCheckpointUpdate(currentCheckpointByPlayerMap, startTimeByPlayerMap, player, playerUuid, parkourCheckpointIndex, lastIndex);
+            }
+         }
+      }
+
+      private static void handleCheckpointUpdate(
+         @Nonnull Object2IntMap<UUID> currentCheckpointByPlayerMap,
+         @Nonnull Object2LongMap<UUID> startTimeByPlayerMap,
+         @Nonnull Player player,
+         UUID playerUuid,
+         int checkpointIndex,
+         int lastIndex
+      ) {
+         int currentCheckpoint = currentCheckpointByPlayerMap.getOrDefault(playerUuid, -1);
+         if (currentCheckpoint == -1) {
+            if (checkpointIndex != 0) {
+               return;
+            }
+
+            currentCheckpointByPlayerMap.put(playerUuid, 0);
+            startTimeByPlayerMap.put(playerUuid, System.nanoTime());
+            player.sendMessage(Message.translation("server.general.parkourRun.started"));
+         } else {
+            if (currentCheckpoint + 1 != checkpointIndex) {
+               return;
+            }
+
+            if (lastIndex == checkpointIndex) {
+               long completionTimeNano = System.nanoTime() - startTimeByPlayerMap.getLong(playerUuid);
+               long completionTimeMillis = TimeUnit.NANOSECONDS.toMillis(completionTimeNano);
+               player.sendMessage(Message.translation("server.general.parkourRun.completed").param("seconds", completionTimeMillis / 1000.0));
+               currentCheckpointByPlayerMap.remove(playerUuid, currentCheckpoint);
+               return;
+            }
+
+            currentCheckpointByPlayerMap.put(playerUuid, checkpointIndex);
+            player.sendMessage(
+               Message.translation("server.general.parkourRun.checkpointReached").param("checkpoint", checkpointIndex).param("checkpoints", lastIndex)
+            );
+         }
+      }
+   }
+}

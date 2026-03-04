@@ -1,32 +1,33 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator;
-/*    */ 
-/*    */ import java.util.logging.Logger;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ public class LoggerUtil
-/*    */ {
-/*    */   public static final String HYTALE_GENERATOR_NAME = "HytaleGenerator";
-/*    */   
-/*    */   public static Logger getLogger() {
-/* 12 */     return Logger.getLogger("HytaleGenerator");
-/*    */   }
-/*    */   
-/*    */   public static void logException(@Nonnull String contextDescription, @Nonnull Throwable e) {
-/* 16 */     logException(contextDescription, e, getLogger());
-/*    */   }
-/*    */   
-/*    */   public static void logException(@Nonnull String contextDescription, @Nonnull Throwable e, @Nonnull Logger logger) {
-/* 20 */     String msg = "Exception occurred during ";
-/* 21 */     msg = msg + msg;
-/* 22 */     msg = msg + " \n";
-/* 23 */     msg = msg + msg;
-/* 24 */     logger.severe(msg);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator;
 
+import com.hypixel.hytale.common.util.ExceptionUtil;
+import java.util.logging.Logger;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\LoggerUtil.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class LoggerUtil {
+   @Nonnull
+   public static final String HYTALE_GENERATOR_NAME = "HytaleGenerator";
+
+   public static Logger getLogger() {
+      return Logger.getLogger("HytaleGenerator");
+   }
+
+   public static void logException(@Nonnull String contextDescription, @Nonnull Throwable e) {
+      logException(contextDescription, e, getLogger());
+   }
+
+   public static void logException(@Nonnull String contextDescription, @Nonnull Throwable e, @Nonnull Logger logger) {
+      String msg = "Exception occurred during ";
+      msg = msg + contextDescription;
+      msg = msg + " \n";
+      msg = msg + ExceptionUtil.toStringWithStack(e);
+      logger.severe(msg);
+   }
+
+   @Nonnull
+   public static String nsToMsDecimal(long ns) {
+      long ms = ns / 1000000L;
+      long decimal = (ns - ms * 1000000L) / 1000L;
+      return ms + "." + decimal;
+   }
+}

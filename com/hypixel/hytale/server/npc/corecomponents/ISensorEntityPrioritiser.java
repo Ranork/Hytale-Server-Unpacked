@@ -10,19 +10,15 @@ import com.hypixel.hytale.server.npc.util.IEntityByPriorityFilter;
 import java.util.List;
 
 public interface ISensorEntityPrioritiser extends RoleStateChange {
-  IEntityByPriorityFilter getNPCPrioritiser();
-  
-  IEntityByPriorityFilter getPlayerPrioritiser();
-  
-  Ref<EntityStore> pickTarget(Ref<EntityStore> paramRef1, Role paramRole, Vector3d paramVector3d, Ref<EntityStore> paramRef2, Ref<EntityStore> paramRef3, boolean paramBoolean, Store<EntityStore> paramStore);
-  
-  boolean providesFilters();
-  
-  void buildProvidedFilters(List<IEntityFilter> paramList);
+   IEntityByPriorityFilter getNPCPrioritiser();
+
+   IEntityByPriorityFilter getPlayerPrioritiser();
+
+   Ref<EntityStore> pickTarget(
+      Ref<EntityStore> var1, Role var2, Vector3d var3, Ref<EntityStore> var4, Ref<EntityStore> var5, boolean var6, Store<EntityStore> var7
+   );
+
+   boolean providesFilters();
+
+   void buildProvidedFilters(List<IEntityFilter> var1);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\corecomponents\ISensorEntityPrioritiser.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

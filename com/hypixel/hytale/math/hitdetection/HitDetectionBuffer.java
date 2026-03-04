@@ -1,49 +1,28 @@
-/*    */ package com.hypixel.hytale.math.hitdetection;
-/*    */ 
-/*    */ import com.hypixel.hytale.math.shape.Quad4d;
-/*    */ import com.hypixel.hytale.math.shape.Triangle4d;
-/*    */ import com.hypixel.hytale.math.util.FastRandom;
-/*    */ import com.hypixel.hytale.math.vector.Vector4d;
-/*    */ import java.util.Random;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class HitDetectionBuffer
-/*    */ {
-/* 33 */   public Random random = (Random)new FastRandom();
-/* 34 */   public Vector4d hitPosition = new Vector4d();
-/* 35 */   public Vector4d tempHitPosition = new Vector4d();
-/* 36 */   public Vector4d transformedPoint = new Vector4d();
-/* 37 */   public Quad4d transformedQuad = new Quad4d();
-/* 38 */   public Triangle4d visibleTriangle = new Triangle4d();
-/* 39 */   public Vector4dBufferList vertexList1 = new Vector4dBufferList(16);
-/* 40 */   public Vector4dBufferList vertexList2 = new Vector4dBufferList(16);
-/*    */   public boolean containsFully = false;
-/*    */   private static final int VECTOR_BUFFER_SIZE = 16;
-/*    */ }
+package com.hypixel.hytale.math.hitdetection;
 
+import com.hypixel.hytale.math.shape.Quad4d;
+import com.hypixel.hytale.math.shape.Triangle4d;
+import com.hypixel.hytale.math.util.FastRandom;
+import com.hypixel.hytale.math.vector.Vector4d;
+import java.util.Random;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\math\hitdetection\HitDetectionBuffer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class HitDetectionBuffer {
+   private static final int VECTOR_BUFFER_SIZE = 16;
+   public Random random = new FastRandom();
+   public Vector4d hitPosition = new Vector4d();
+   public Vector4d tempHitPosition = new Vector4d();
+   public Quad4d transformedQuad;
+   public Vector4d transformedPoint = new Vector4d();
+   public Triangle4d visibleTriangle;
+   public Vector4dBufferList vertexList1;
+   public Vector4dBufferList vertexList2;
+   public boolean containsFully;
+
+   public HitDetectionBuffer() {
+      this.transformedQuad = new Quad4d();
+      this.visibleTriangle = new Triangle4d();
+      this.vertexList1 = new Vector4dBufferList(16);
+      this.vertexList2 = new Vector4dBufferList(16);
+      this.containsFully = false;
+   }
+}

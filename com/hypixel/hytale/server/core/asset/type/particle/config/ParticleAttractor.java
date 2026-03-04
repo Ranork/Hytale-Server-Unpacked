@@ -1,177 +1,212 @@
-/*     */ package com.hypixel.hytale.server.core.asset.type.particle.config;
-/*     */ 
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.KeyedCodec;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.codec.validation.Validators;
-/*     */ import com.hypixel.hytale.protocol.ParticleAttractor;
-/*     */ import com.hypixel.hytale.protocol.Vector3f;
-/*     */ import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
-/*     */ import com.hypixel.hytale.server.core.io.NetworkSerializable;
-/*     */ import java.util.function.Supplier;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class ParticleAttractor
-/*     */   implements NetworkSerializable<ParticleAttractor>
-/*     */ {
-/*     */   public static final BuilderCodec<ParticleAttractor> CODEC;
-/*     */   protected Vector3f position;
-/*     */   protected Vector3f radialAxis;
-/*     */   protected float trailPositionMultiplier;
-/*     */   protected float radius;
-/*     */   protected float radialAcceleration;
-/*     */   protected float radialTangentAcceleration;
-/*     */   protected Vector3f linearAcceleration;
-/*     */   protected float radialImpulse;
-/*     */   protected float radialTangentImpulse;
-/*     */   protected Vector3f linearImpulse;
-/*     */   protected Vector3f dampingMultiplier;
-/*     */   
-/*     */   static {
-/*  73 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ParticleAttractor.class, ParticleAttractor::new).addField(new KeyedCodec("Position", (Codec)ProtocolCodecs.VECTOR3F), (particleAttractor, o) -> particleAttractor.position = o, particleAttractor -> particleAttractor.position)).addField(new KeyedCodec("RadialAxis", (Codec)ProtocolCodecs.VECTOR3F), (particleAttractor, o) -> particleAttractor.radialAxis = o, particleAttractor -> particleAttractor.radialAxis)).append(new KeyedCodec("TrailPositionMultiplier", (Codec)Codec.FLOAT), (particleAttractor, f) -> particleAttractor.trailPositionMultiplier = f.floatValue(), particleAttractor -> Float.valueOf(particleAttractor.trailPositionMultiplier)).addValidator(Validators.range(Float.valueOf(0.0F), Float.valueOf(1.0F))).add()).addField(new KeyedCodec("Radius", (Codec)Codec.FLOAT), (particleAttractor, f) -> particleAttractor.radius = f.floatValue(), particleAttractor -> Float.valueOf(particleAttractor.radius))).addField(new KeyedCodec("RadialAcceleration", (Codec)Codec.FLOAT), (particleAttractor, f) -> particleAttractor.radialAcceleration = f.floatValue(), particleAttractor -> Float.valueOf(particleAttractor.radialAcceleration))).addField(new KeyedCodec("RadialTangentAcceleration", (Codec)Codec.FLOAT), (particleAttractor, f) -> particleAttractor.radialTangentAcceleration = f.floatValue(), particleAttractor -> Float.valueOf(particleAttractor.radialTangentAcceleration))).addField(new KeyedCodec("LinearAcceleration", (Codec)ProtocolCodecs.VECTOR3F), (particleAttractor, o) -> particleAttractor.linearAcceleration = o, particleAttractor -> particleAttractor.linearAcceleration)).addField(new KeyedCodec("RadialImpulse", (Codec)Codec.FLOAT), (particleAttractor, f) -> particleAttractor.radialImpulse = f.floatValue(), particleAttractor -> Float.valueOf(particleAttractor.radialImpulse))).addField(new KeyedCodec("RadialTangentImpulse", (Codec)Codec.FLOAT), (particleAttractor, f) -> particleAttractor.radialTangentImpulse = f.floatValue(), particleAttractor -> Float.valueOf(particleAttractor.radialTangentImpulse))).addField(new KeyedCodec("LinearImpulse", (Codec)ProtocolCodecs.VECTOR3F), (particleAttractor, o) -> particleAttractor.linearImpulse = o, particleAttractor -> particleAttractor.linearImpulse)).addField(new KeyedCodec("DampingMultiplier", (Codec)ProtocolCodecs.VECTOR3F), (particleAttractor, o) -> particleAttractor.dampingMultiplier = o, particleAttractor -> particleAttractor.dampingMultiplier)).build();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public ParticleAttractor(Vector3f position, Vector3f radialAxis, float trailPositionMultiplier, float radius, float radialAcceleration, float radialTangentAcceleration, Vector3f linearAcceleration, float radialImpulse, float radialTangentImpulse, Vector3f linearImpulse, Vector3f dampingMultiplier) {
-/*  88 */     this.position = position;
-/*  89 */     this.radialAxis = radialAxis;
-/*  90 */     this.trailPositionMultiplier = trailPositionMultiplier;
-/*  91 */     this.radius = radius;
-/*  92 */     this.radialAcceleration = radialAcceleration;
-/*  93 */     this.radialTangentAcceleration = radialTangentAcceleration;
-/*  94 */     this.linearAcceleration = linearAcceleration;
-/*  95 */     this.radialImpulse = radialImpulse;
-/*  96 */     this.radialTangentImpulse = radialTangentImpulse;
-/*  97 */     this.linearImpulse = linearImpulse;
-/*  98 */     this.dampingMultiplier = dampingMultiplier;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected ParticleAttractor() {}
-/*     */   
-/*     */   public Vector3f getPosition() {
-/* 105 */     return this.position;
-/*     */   }
-/*     */   
-/*     */   public Vector3f getRadialAxis() {
-/* 109 */     return this.radialAxis;
-/*     */   }
-/*     */   
-/*     */   public float getTrailPositionMultiplier() {
-/* 113 */     return this.trailPositionMultiplier;
-/*     */   }
-/*     */   
-/*     */   public float getRadius() {
-/* 117 */     return this.radius;
-/*     */   }
-/*     */   
-/*     */   public float getRadialAcceleration() {
-/* 121 */     return this.radialAcceleration;
-/*     */   }
-/*     */   
-/*     */   public float getRadialTangentAcceleration() {
-/* 125 */     return this.radialTangentAcceleration;
-/*     */   }
-/*     */   
-/*     */   public Vector3f getLinearAcceleration() {
-/* 129 */     return this.linearAcceleration;
-/*     */   }
-/*     */   
-/*     */   public float getRadialImpulse() {
-/* 133 */     return this.radialImpulse;
-/*     */   }
-/*     */   
-/*     */   public float getRadialTangentImpulse() {
-/* 137 */     return this.radialTangentImpulse;
-/*     */   }
-/*     */   
-/*     */   public Vector3f getLinearImpulse() {
-/* 141 */     return this.linearImpulse;
-/*     */   }
-/*     */   
-/*     */   public Vector3f getDampingMultiplier() {
-/* 145 */     return this.dampingMultiplier;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public ParticleAttractor toPacket() {
-/* 151 */     ParticleAttractor packet = new ParticleAttractor();
-/* 152 */     if (this.position != null) packet.position = this.position; 
-/* 153 */     if (this.radialAxis != null) packet.radialAxis = this.radialAxis; 
-/* 154 */     packet.trailPositionMultiplier = this.trailPositionMultiplier;
-/* 155 */     packet.radius = this.radius;
-/* 156 */     packet.radialAcceleration = this.radialAcceleration;
-/* 157 */     packet.radialTangentAcceleration = this.radialTangentAcceleration;
-/* 158 */     if (this.linearAcceleration != null) packet.linearAcceleration = this.linearAcceleration; 
-/* 159 */     packet.radialImpulse = this.radialImpulse;
-/* 160 */     packet.radialTangentImpulse = this.radialTangentImpulse;
-/* 161 */     if (this.linearImpulse != null) packet.linearImpulse = this.linearImpulse; 
-/* 162 */     if (this.dampingMultiplier != null) packet.dampingMultiplier = this.dampingMultiplier; 
-/* 163 */     return packet;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String toString() {
-/* 169 */     return "ParticleAttractor{position=" + String.valueOf(this.position) + ", radialAxis=" + String.valueOf(this.radialAxis) + ", trailPositionMultiplier=" + this.trailPositionMultiplier + ", radius=" + this.radius + ", radialAcceleration=" + this.radialAcceleration + ", radialTangentAcceleration=" + this.radialTangentAcceleration + ", linearAcceleration=" + String.valueOf(this.linearAcceleration) + ", radialImpulse=" + this.radialImpulse + ", radialTangentImpulse=" + this.radialTangentImpulse + ", linearImpulse=" + String.valueOf(this.linearImpulse) + ", dampingMultiplier=" + String.valueOf(this.dampingMultiplier) + "}";
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.asset.type.particle.config;
 
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.protocol.Vector3f;
+import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
+import com.hypixel.hytale.server.core.io.NetworkSerializable;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\type\particle\config\ParticleAttractor.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ParticleAttractor implements NetworkSerializable<com.hypixel.hytale.protocol.ParticleAttractor> {
+   public static final BuilderCodec<ParticleAttractor> CODEC = BuilderCodec.builder(ParticleAttractor.class, ParticleAttractor::new)
+      .addField(
+         new KeyedCodec<>("Position", ProtocolCodecs.VECTOR3F),
+         (particleAttractor, o) -> particleAttractor.position = o,
+         particleAttractor -> particleAttractor.position
+      )
+      .addField(
+         new KeyedCodec<>("RadialAxis", ProtocolCodecs.VECTOR3F),
+         (particleAttractor, o) -> particleAttractor.radialAxis = o,
+         particleAttractor -> particleAttractor.radialAxis
+      )
+      .<Float>append(
+         new KeyedCodec<>("TrailPositionMultiplier", Codec.FLOAT),
+         (particleAttractor, f) -> particleAttractor.trailPositionMultiplier = f,
+         particleAttractor -> particleAttractor.trailPositionMultiplier
+      )
+      .addValidator(Validators.range(0.0F, 1.0F))
+      .add()
+      .addField(new KeyedCodec<>("Radius", Codec.FLOAT), (particleAttractor, f) -> particleAttractor.radius = f, particleAttractor -> particleAttractor.radius)
+      .addField(
+         new KeyedCodec<>("RadialAcceleration", Codec.FLOAT),
+         (particleAttractor, f) -> particleAttractor.radialAcceleration = f,
+         particleAttractor -> particleAttractor.radialAcceleration
+      )
+      .addField(
+         new KeyedCodec<>("RadialTangentAcceleration", Codec.FLOAT),
+         (particleAttractor, f) -> particleAttractor.radialTangentAcceleration = f,
+         particleAttractor -> particleAttractor.radialTangentAcceleration
+      )
+      .addField(
+         new KeyedCodec<>("LinearAcceleration", ProtocolCodecs.VECTOR3F),
+         (particleAttractor, o) -> particleAttractor.linearAcceleration = o,
+         particleAttractor -> particleAttractor.linearAcceleration
+      )
+      .addField(
+         new KeyedCodec<>("RadialImpulse", Codec.FLOAT),
+         (particleAttractor, f) -> particleAttractor.radialImpulse = f,
+         particleAttractor -> particleAttractor.radialImpulse
+      )
+      .addField(
+         new KeyedCodec<>("RadialTangentImpulse", Codec.FLOAT),
+         (particleAttractor, f) -> particleAttractor.radialTangentImpulse = f,
+         particleAttractor -> particleAttractor.radialTangentImpulse
+      )
+      .addField(
+         new KeyedCodec<>("LinearImpulse", ProtocolCodecs.VECTOR3F),
+         (particleAttractor, o) -> particleAttractor.linearImpulse = o,
+         particleAttractor -> particleAttractor.linearImpulse
+      )
+      .addField(
+         new KeyedCodec<>("DampingMultiplier", ProtocolCodecs.VECTOR3F),
+         (particleAttractor, o) -> particleAttractor.dampingMultiplier = o,
+         particleAttractor -> particleAttractor.dampingMultiplier
+      )
+      .build();
+   protected Vector3f position;
+   protected Vector3f radialAxis;
+   protected float trailPositionMultiplier;
+   protected float radius;
+   protected float radialAcceleration;
+   protected float radialTangentAcceleration;
+   protected Vector3f linearAcceleration;
+   protected float radialImpulse;
+   protected float radialTangentImpulse;
+   protected Vector3f linearImpulse;
+   protected Vector3f dampingMultiplier;
+
+   public ParticleAttractor(
+      Vector3f position,
+      Vector3f radialAxis,
+      float trailPositionMultiplier,
+      float radius,
+      float radialAcceleration,
+      float radialTangentAcceleration,
+      Vector3f linearAcceleration,
+      float radialImpulse,
+      float radialTangentImpulse,
+      Vector3f linearImpulse,
+      Vector3f dampingMultiplier
+   ) {
+      this.position = position;
+      this.radialAxis = radialAxis;
+      this.trailPositionMultiplier = trailPositionMultiplier;
+      this.radius = radius;
+      this.radialAcceleration = radialAcceleration;
+      this.radialTangentAcceleration = radialTangentAcceleration;
+      this.linearAcceleration = linearAcceleration;
+      this.radialImpulse = radialImpulse;
+      this.radialTangentImpulse = radialTangentImpulse;
+      this.linearImpulse = linearImpulse;
+      this.dampingMultiplier = dampingMultiplier;
+   }
+
+   protected ParticleAttractor() {
+   }
+
+   public Vector3f getPosition() {
+      return this.position;
+   }
+
+   public Vector3f getRadialAxis() {
+      return this.radialAxis;
+   }
+
+   public float getTrailPositionMultiplier() {
+      return this.trailPositionMultiplier;
+   }
+
+   public float getRadius() {
+      return this.radius;
+   }
+
+   public float getRadialAcceleration() {
+      return this.radialAcceleration;
+   }
+
+   public float getRadialTangentAcceleration() {
+      return this.radialTangentAcceleration;
+   }
+
+   public Vector3f getLinearAcceleration() {
+      return this.linearAcceleration;
+   }
+
+   public float getRadialImpulse() {
+      return this.radialImpulse;
+   }
+
+   public float getRadialTangentImpulse() {
+      return this.radialTangentImpulse;
+   }
+
+   public Vector3f getLinearImpulse() {
+      return this.linearImpulse;
+   }
+
+   public Vector3f getDampingMultiplier() {
+      return this.dampingMultiplier;
+   }
+
+   @Nonnull
+   public com.hypixel.hytale.protocol.ParticleAttractor toPacket() {
+      com.hypixel.hytale.protocol.ParticleAttractor packet = new com.hypixel.hytale.protocol.ParticleAttractor();
+      if (this.position != null) {
+         packet.position = this.position;
+      }
+
+      if (this.radialAxis != null) {
+         packet.radialAxis = this.radialAxis;
+      }
+
+      packet.trailPositionMultiplier = this.trailPositionMultiplier;
+      packet.radius = this.radius;
+      packet.radialAcceleration = this.radialAcceleration;
+      packet.radialTangentAcceleration = this.radialTangentAcceleration;
+      if (this.linearAcceleration != null) {
+         packet.linearAcceleration = this.linearAcceleration;
+      }
+
+      packet.radialImpulse = this.radialImpulse;
+      packet.radialTangentImpulse = this.radialTangentImpulse;
+      if (this.linearImpulse != null) {
+         packet.linearImpulse = this.linearImpulse;
+      }
+
+      if (this.dampingMultiplier != null) {
+         packet.dampingMultiplier = this.dampingMultiplier;
+      }
+
+      return packet;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ParticleAttractor{position="
+         + this.position
+         + ", radialAxis="
+         + this.radialAxis
+         + ", trailPositionMultiplier="
+         + this.trailPositionMultiplier
+         + ", radius="
+         + this.radius
+         + ", radialAcceleration="
+         + this.radialAcceleration
+         + ", radialTangentAcceleration="
+         + this.radialTangentAcceleration
+         + ", linearAcceleration="
+         + this.linearAcceleration
+         + ", radialImpulse="
+         + this.radialImpulse
+         + ", radialTangentImpulse="
+         + this.radialTangentImpulse
+         + ", linearImpulse="
+         + this.linearImpulse
+         + ", dampingMultiplier="
+         + this.dampingMultiplier
+         + "}";
+   }
+}

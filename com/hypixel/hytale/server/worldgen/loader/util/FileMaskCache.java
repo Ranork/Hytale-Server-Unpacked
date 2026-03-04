@@ -1,38 +1,26 @@
-/*    */ package com.hypixel.hytale.server.worldgen.loader.util;
-/*    */ 
-/*    */ import com.google.gson.JsonElement;
-/*    */ import java.util.HashMap;
-/*    */ import java.util.Map;
-/*    */ import java.util.function.Function;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class FileMaskCache<T>
-/*    */ {
-/*    */   @Nonnull
-/* 17 */   private final Map<String, T> fileCache = new HashMap<>(); @Nonnull
-/* 18 */   private final Map<String, JsonElement> fileElements = new HashMap<>();
-/*    */ 
-/*    */   
-/*    */   public T getIfPresentFileMask(String filename) {
-/* 22 */     return this.fileCache.get(filename);
-/*    */   }
-/*    */   
-/*    */   public void putFileMask(String filename, T value) {
-/* 26 */     this.fileCache.put(filename, value);
-/*    */   }
-/*    */   
-/*    */   public JsonElement cachedFile(String filename, @Nonnull Function<String, JsonElement> function) {
-/* 30 */     return this.fileElements.computeIfAbsent(filename, function);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.worldgen.loader.util;
 
+import com.google.gson.JsonElement;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldgen\loade\\util\FileMaskCache.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class FileMaskCache<T> {
+   @Nonnull
+   private final Map<String, T> fileCache = new HashMap<>();
+   @Nonnull
+   private final Map<String, JsonElement> fileElements = new HashMap<>();
+
+   public T getIfPresentFileMask(String filename) {
+      return this.fileCache.get(filename);
+   }
+
+   public void putFileMask(String filename, T value) {
+      this.fileCache.put(filename, value);
+   }
+
+   public JsonElement cachedFile(String filename, @Nonnull Function<String, JsonElement> function) {
+      return this.fileElements.computeIfAbsent(filename, function);
+   }
+}

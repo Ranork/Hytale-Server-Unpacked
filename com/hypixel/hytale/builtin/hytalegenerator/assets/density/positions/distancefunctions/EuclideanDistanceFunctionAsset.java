@@ -1,30 +1,25 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.density.positions.distancefunctions;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.distancefunctions.DistanceFunction;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.distancefunctions.EuclideanDistanceFunction;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class EuclideanDistanceFunctionAsset
-/*    */   extends DistanceFunctionAsset {
-/* 12 */   public static final BuilderCodec<EuclideanDistanceFunctionAsset> CODEC = BuilderCodec.builder(EuclideanDistanceFunctionAsset.class, EuclideanDistanceFunctionAsset::new, DistanceFunctionAsset.ABSTRACT_CODEC)
-/* 13 */     .build();
-/*    */   
-/*    */   static {
-/* 16 */     DistanceFunctionAsset.CODEC.register("Euclidean", EuclideanDistanceFunctionAsset.class, CODEC);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public DistanceFunction build(@Nonnull SeedBox parentSeed, double maxDistance) {
-/* 22 */     return (DistanceFunction)new EuclideanDistanceFunction();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.density.positions.distancefunctions;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.distancefunctions.DistanceFunction;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.distancefunctions.EuclideanDistanceFunction;
+import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\density\positions\distancefunctions\EuclideanDistanceFunctionAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class EuclideanDistanceFunctionAsset extends DistanceFunctionAsset {
+   @Nonnull
+   public static final BuilderCodec<EuclideanDistanceFunctionAsset> CODEC = BuilderCodec.builder(
+         EuclideanDistanceFunctionAsset.class, EuclideanDistanceFunctionAsset::new, DistanceFunctionAsset.ABSTRACT_CODEC
+      )
+      .build();
+
+   @Nonnull
+   @Override
+   public DistanceFunction build(@Nonnull SeedBox parentSeed, double maxDistance) {
+      return new EuclideanDistanceFunction();
+   }
+
+   static {
+      DistanceFunctionAsset.CODEC.register("Euclidean", EuclideanDistanceFunctionAsset.class, CODEC);
+   }
+}

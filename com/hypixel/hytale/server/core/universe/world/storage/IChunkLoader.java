@@ -8,15 +8,9 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 public interface IChunkLoader extends Closeable {
-  @Nonnull
-  CompletableFuture<Holder<ChunkStore>> loadHolder(int paramInt1, int paramInt2);
-  
-  @Nonnull
-  LongSet getIndexes() throws IOException;
+   @Nonnull
+   CompletableFuture<Holder<ChunkStore>> loadHolder(int var1, int var2);
+
+   @Nonnull
+   LongSet getIndexes() throws IOException;
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\storage\IChunkLoader.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

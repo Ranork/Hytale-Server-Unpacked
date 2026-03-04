@@ -1,87 +1,72 @@
-/*    */ package com.hypixel.hytale.server.worldgen.container;
-/*    */ 
-/*    */ import com.hypixel.hytale.common.map.IWeightedMap;
-/*    */ import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
-/*    */ import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
-/*    */ import com.hypixel.hytale.procedurallib.property.NoiseProperty;
-/*    */ import java.util.List;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class TintContainer
-/*    */ {
-/*    */   private final DefaultTintContainerEntry defaultEntry;
-/*    */   private final List<TintContainerEntry> entries;
-/*    */   
-/*    */   public TintContainer(DefaultTintContainerEntry defaultEntry, List<TintContainerEntry> entries) {
-/* 21 */     this.defaultEntry = defaultEntry;
-/* 22 */     this.entries = entries;
-/*    */   }
-/*    */   
-/*    */   public int getTintColorAt(int seed, int x, int z) {
-/* 26 */     for (int i = 0; i < this.entries.size(); i++) {
-/* 27 */       if (((TintContainerEntry)this.entries.get(i)).shouldGenerate(seed, x, z)) {
-/* 28 */         return ((TintContainerEntry)this.entries.get(i)).getTintColorAt(seed, x, z);
-/*    */       }
-/*    */     } 
-/* 31 */     return this.defaultEntry.getTintColorAt(seed, x, z);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 37 */     return "TintContainer{defaultEntry=" + String.valueOf(this.defaultEntry) + ", entries=" + String.valueOf(this.entries) + "}";
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static class DefaultTintContainerEntry
-/*    */     extends TintContainerEntry
-/*    */   {
-/*    */     public DefaultTintContainerEntry(IWeightedMap<Integer> colorMapping, NoiseProperty valueNoise) {
-/* 46 */       super(colorMapping, valueNoise, (ICoordinateCondition)DefaultCoordinateCondition.DEFAULT_TRUE);
-/*    */     }
-/*    */ 
-/*    */     
-/*    */     @Nonnull
-/*    */     public String toString() {
-/* 52 */       return "DefaultTintContainerEntry{}";
-/*    */     }
-/*    */   }
-/*    */   
-/*    */   public static class TintContainerEntry {
-/*    */     private final IWeightedMap<Integer> colorMapping;
-/*    */     private final NoiseProperty valueNoise;
-/*    */     private final ICoordinateCondition mapCondition;
-/*    */     
-/*    */     public TintContainerEntry(IWeightedMap<Integer> colorMapping, NoiseProperty valueNoise, ICoordinateCondition mapCondition) {
-/* 62 */       this.colorMapping = colorMapping;
-/* 63 */       this.valueNoise = valueNoise;
-/* 64 */       this.mapCondition = mapCondition;
-/*    */     }
-/*    */     
-/*    */     public boolean shouldGenerate(int seed, int x, int z) {
-/* 68 */       return this.mapCondition.eval(seed, x, z);
-/*    */     }
-/*    */     
-/*    */     public int getTintColorAt(int seed, int x, int z) {
-/* 72 */       return ((Integer)this.colorMapping.get(seed, x, z, (iSeed, ix, iz, entry) -> entry.valueNoise.get(iSeed, ix, iz), this)).intValue();
-/*    */     }
-/*    */ 
-/*    */     
-/*    */     @Nonnull
-/*    */     public String toString() {
-/* 78 */       return "TintContainerEntry{colorMapping=" + String.valueOf(this.colorMapping) + ", valueNoise=" + String.valueOf(this.valueNoise) + ", mapCondition=" + String.valueOf(this.mapCondition) + "}";
-/*    */     }
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.worldgen.container;
 
+import com.hypixel.hytale.common.map.IWeightedMap;
+import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
+import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
+import com.hypixel.hytale.procedurallib.property.NoiseProperty;
+import java.util.List;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldgen\container\TintContainer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class TintContainer {
+   private final TintContainer.DefaultTintContainerEntry defaultEntry;
+   private final List<TintContainer.TintContainerEntry> entries;
+
+   public TintContainer(TintContainer.DefaultTintContainerEntry defaultEntry, List<TintContainer.TintContainerEntry> entries) {
+      this.defaultEntry = defaultEntry;
+      this.entries = entries;
+   }
+
+   public int getTintColorAt(int seed, int x, int z) {
+      for (int i = 0; i < this.entries.size(); i++) {
+         if (this.entries.get(i).shouldGenerate(seed, x, z)) {
+            return this.entries.get(i).getTintColorAt(seed, x, z);
+         }
+      }
+
+      return this.defaultEntry.getTintColorAt(seed, x, z);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "TintContainer{defaultEntry=" + this.defaultEntry + ", entries=" + this.entries + "}";
+   }
+
+   public static class DefaultTintContainerEntry extends TintContainer.TintContainerEntry {
+      public DefaultTintContainerEntry(IWeightedMap<Integer> colorMapping, NoiseProperty valueNoise) {
+         super(colorMapping, valueNoise, DefaultCoordinateCondition.DEFAULT_TRUE);
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "DefaultTintContainerEntry{}";
+      }
+   }
+
+   public static class TintContainerEntry {
+      private final IWeightedMap<Integer> colorMapping;
+      private final NoiseProperty valueNoise;
+      private final ICoordinateCondition mapCondition;
+
+      public TintContainerEntry(IWeightedMap<Integer> colorMapping, NoiseProperty valueNoise, ICoordinateCondition mapCondition) {
+         this.colorMapping = colorMapping;
+         this.valueNoise = valueNoise;
+         this.mapCondition = mapCondition;
+      }
+
+      public boolean shouldGenerate(int seed, int x, int z) {
+         return this.mapCondition.eval(seed, x, z);
+      }
+
+      public int getTintColorAt(int seed, int x, int z) {
+         return this.colorMapping.get(seed, x, z, (iSeed, ix, iz, entry) -> entry.valueNoise.get(iSeed, ix, iz), this);
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "TintContainerEntry{colorMapping=" + this.colorMapping + ", valueNoise=" + this.valueNoise + ", mapCondition=" + this.mapCondition + "}";
+      }
+   }
+}

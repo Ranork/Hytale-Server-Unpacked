@@ -1,31 +1,24 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.SumDensity;
-/*    */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*    */ import java.util.function.Supplier;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class SumDensityAsset
-/*    */   extends DensityAsset {
-/* 12 */   public static final BuilderCodec<SumDensityAsset> CODEC = BuilderCodec.builder(SumDensityAsset.class, SumDensityAsset::new, DensityAsset.ABSTRACT_CODEC)
-/* 13 */     .build();
-/*    */   
-/*    */   @Nonnull
-/*    */   public Density build(@Nonnull DensityAsset.Argument argument) {
-/* 17 */     if (isSkipped()) return (Density)new ConstantValueDensity(0.0D); 
-/* 18 */     return (Density)new SumDensity(buildInputs(argument, true));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void cleanUp() {
-/* 23 */     cleanUpInputs();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.SumDensity;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\assets\density\SumDensityAsset.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class SumDensityAsset extends DensityAsset {
+   @Nonnull
+   public static final BuilderCodec<SumDensityAsset> CODEC = BuilderCodec.builder(SumDensityAsset.class, SumDensityAsset::new, DensityAsset.ABSTRACT_CODEC)
+      .build();
+
+   @Nonnull
+   @Override
+   public Density build(@Nonnull DensityAsset.Argument argument) {
+      return (Density)(this.isSkipped() ? new ConstantValueDensity(0.0) : new SumDensity(this.buildInputs(argument, true)));
+   }
+
+   @Override
+   public void cleanUp() {
+      this.cleanUpInputs();
+   }
+}

@@ -1,15 +1,8 @@
-/*   */ package com.hypixel.hytale.codec.schema.config;
-/*   */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*   */ import java.util.function.Supplier;
-/*   */ 
-/*   */ public class NullSchema extends Schema {
-/* 6 */   public static final BuilderCodec<NullSchema> CODEC = BuilderCodec.builder(NullSchema.class, NullSchema::new, Schema.BASE_CODEC)
-/* 7 */     .build();
-/* 8 */   public static final NullSchema INSTANCE = new NullSchema();
-/*   */ }
+package com.hypixel.hytale.codec.schema.config;
 
+import com.hypixel.hytale.codec.builder.BuilderCodec;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\codec\schema\config\NullSchema.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class NullSchema extends Schema {
+   public static final BuilderCodec<NullSchema> CODEC = BuilderCodec.builder(NullSchema.class, NullSchema::new, Schema.BASE_CODEC).build();
+   public static final NullSchema INSTANCE = new NullSchema();
+}

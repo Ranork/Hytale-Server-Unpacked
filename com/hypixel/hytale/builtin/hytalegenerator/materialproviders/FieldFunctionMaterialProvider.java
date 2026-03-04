@@ -1,64 +1,63 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.materialproviders;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import java.util.List;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class FieldFunctionMaterialProvider<V>
-/*    */   extends MaterialProvider<V>
-/*    */ {
-/*    */   @Nonnull
-/*    */   private final Density density;
-/*    */   @Nonnull
-/*    */   private final FieldDelimiter<V>[] fieldDelimiters;
-/*    */   
-/*    */   public FieldFunctionMaterialProvider(@Nonnull Density density, @Nonnull List<FieldDelimiter<V>> delimiters) {
-/* 17 */     this.density = density;
-/* 18 */     this.fieldDelimiters = (FieldDelimiter<V>[])new FieldDelimiter[delimiters.size()];
-/*    */     
-/* 20 */     for (FieldDelimiter<V> field : delimiters) {
-/* 21 */       if (field == null) throw new IllegalArgumentException("delimiters contain null value"); 
-/*    */     } 
-/* 23 */     for (int i = 0; i < delimiters.size(); i++) {
-/* 24 */       this.fieldDelimiters[i] = delimiters.get(i);
-/*    */     }
-/*    */   }
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public V getVoxelTypeAt(@Nonnull MaterialProvider.Context context) {
-/* 32 */     Density.Context childContext = new Density.Context(context);
-/* 33 */     double densityValue = this.density.process(childContext);
-/*    */     
-/* 35 */     for (FieldDelimiter<V> delimiter : this.fieldDelimiters) {
-/* 36 */       if (delimiter.isInside(densityValue)) {
-/* 37 */         return delimiter.materialProvider.getVoxelTypeAt(context);
-/*    */       }
-/*    */     } 
-/* 40 */     return null;
-/*    */   }
-/*    */   
-/*    */   public static class FieldDelimiter<V> {
-/*    */     double top;
-/*    */     double bottom;
-/*    */     MaterialProvider<V> materialProvider;
-/*    */     
-/*    */     public FieldDelimiter(@Nonnull MaterialProvider<V> materialProvider, double bottom, double top) {
-/* 49 */       this.bottom = bottom;
-/* 50 */       this.top = top;
-/* 51 */       this.materialProvider = materialProvider;
-/*    */     }
-/*    */     
-/*    */     boolean isInside(double fieldValue) {
-/* 55 */       return (fieldValue < this.top && fieldValue >= this.bottom);
-/*    */     }
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.materialproviders;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import java.util.List;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\materialproviders\FieldFunctionMaterialProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class FieldFunctionMaterialProvider<V> extends MaterialProvider<V> {
+   @Nonnull
+   private final Density density;
+   @Nonnull
+   private final FieldFunctionMaterialProvider.FieldDelimiter<V>[] fieldDelimiters;
+   @Nonnull
+   private final Density.Context rDensityContext;
+
+   public FieldFunctionMaterialProvider(@Nonnull Density density, @Nonnull List<FieldFunctionMaterialProvider.FieldDelimiter<V>> delimiters) {
+      this.density = density;
+      this.fieldDelimiters = new FieldFunctionMaterialProvider.FieldDelimiter[delimiters.size()];
+
+      for (FieldFunctionMaterialProvider.FieldDelimiter<V> field : delimiters) {
+         if (field == null) {
+            throw new IllegalArgumentException("delimiters contain null value");
+         }
+      }
+
+      for (int i = 0; i < delimiters.size(); i++) {
+         this.fieldDelimiters[i] = delimiters.get(i);
+      }
+
+      this.rDensityContext = new Density.Context();
+   }
+
+   @Nullable
+   @Override
+   public V getVoxelTypeAt(@Nonnull MaterialProvider.Context context) {
+      this.rDensityContext.assign(context);
+      double densityValue = this.density.process(this.rDensityContext);
+
+      for (FieldFunctionMaterialProvider.FieldDelimiter<V> delimiter : this.fieldDelimiters) {
+         if (delimiter.isInside(densityValue)) {
+            return delimiter.materialProvider.getVoxelTypeAt(context);
+         }
+      }
+
+      return null;
+   }
+
+   public static class FieldDelimiter<V> {
+      double top;
+      double bottom;
+      MaterialProvider<V> materialProvider;
+
+      public FieldDelimiter(@Nonnull MaterialProvider<V> materialProvider, double bottom, double top) {
+         this.bottom = bottom;
+         this.top = top;
+         this.materialProvider = materialProvider;
+      }
+
+      boolean isInside(double fieldValue) {
+         return fieldValue < this.top && fieldValue >= this.bottom;
+      }
+   }
+}

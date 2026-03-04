@@ -1,130 +1,95 @@
-/*     */ package com.hypixel.hytale.server.core.modules.entity.item;
-/*     */ 
-/*     */ import com.hypixel.hytale.component.ArchetypeChunk;
-/*     */ import com.hypixel.hytale.component.CommandBuffer;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.ComponentType;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.RemoveReason;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.component.query.Query;
-/*     */ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-/*     */ import com.hypixel.hytale.math.vector.Vector3d;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class PickupItemSystem
-/*     */   extends EntityTickingSystem<EntityStore>
-/*     */ {
-/*     */   private static final float EYE_HEIGHT_SCALE = 5.0F;
-/*     */   @Nonnull
-/*     */   private final ComponentType<EntityStore, PickupItemComponent> pickupItemComponentType;
-/*     */   @Nonnull
-/*     */   private final ComponentType<EntityStore, TransformComponent> transformComponentType;
-/*     */   @Nonnull
-/*     */   private final Query<EntityStore> query;
-/*     */   
-/*     */   public PickupItemSystem(@Nonnull ComponentType<EntityStore, PickupItemComponent> pickupItemComponentType, @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType) {
-/*  51 */     this.pickupItemComponentType = pickupItemComponentType;
-/*  52 */     this.transformComponentType = transformComponentType;
-/*  53 */     this.query = (Query<EntityStore>)Query.and(new Query[] { (Query)pickupItemComponentType, (Query)transformComponentType });
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/*  58 */     PickupItemComponent pickupItemComponent = (PickupItemComponent)archetypeChunk.getComponent(index, this.pickupItemComponentType);
-/*  59 */     assert pickupItemComponent != null;
-/*     */ 
-/*     */     
-/*  62 */     if (pickupItemComponent.hasFinished()) {
-/*  63 */       commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
-/*     */       
-/*     */       return;
-/*     */     } 
-/*     */     
-/*  68 */     Ref<EntityStore> targetRef = pickupItemComponent.getTargetRef();
-/*  69 */     if (targetRef == null || !targetRef.isValid()) {
-/*  70 */       commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
-/*     */       
-/*     */       return;
-/*     */     } 
-/*  74 */     TransformComponent transformComponent = (TransformComponent)archetypeChunk.getComponent(index, this.transformComponentType);
-/*  75 */     assert transformComponent != null;
-/*  76 */     Vector3d position = transformComponent.getPosition();
-/*     */     
-/*  78 */     TransformComponent targetTransformComponent = (TransformComponent)commandBuffer.getComponent(targetRef, this.transformComponentType);
-/*  79 */     if (targetTransformComponent == null) {
-/*     */       return;
-/*     */     }
-/*  82 */     Vector3d targetPosition = targetTransformComponent.getPosition().clone();
-/*     */     
-/*  84 */     ModelComponent targetModelComponent = (ModelComponent)commandBuffer.getComponent(targetRef, ModelComponent.getComponentType());
-/*  85 */     if (targetModelComponent != null) {
-/*  86 */       float targetModelEyeHeight = targetModelComponent.getModel().getEyeHeight(targetRef, (ComponentAccessor)commandBuffer);
-/*  87 */       targetPosition.add(0.0D, (targetModelEyeHeight / 5.0F), 0.0D);
-/*     */     } 
-/*     */     
-/*  90 */     if (updateMovement(pickupItemComponent, position, targetPosition, dt)) {
-/*  91 */       pickupItemComponent.setFinished(true);
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   private static boolean updateMovement(@Nonnull PickupItemComponent pickupItemComponent, @Nonnull Vector3d current, @Nonnull Vector3d target, float dt) {
-/* 105 */     float remainingTime = pickupItemComponent.getLifeTime();
-/* 106 */     float originalLifeTime = pickupItemComponent.getOriginalLifeTime();
-/*     */     
-/* 108 */     float progress = 1.0F - remainingTime / originalLifeTime;
-/* 109 */     if (progress >= 1.0F) {
-/* 110 */       current.assign(target);
-/* 111 */       return true;
-/*     */     } 
-/*     */     
-/* 114 */     current.assign(Vector3d.lerp(pickupItemComponent.getStartPosition(), target, progress));
-/* 115 */     pickupItemComponent.decreaseLifetime(dt);
-/* 116 */     return false;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public Query<EntityStore> getQuery() {
-/* 122 */     return this.query;
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.modules.entity.item;
 
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\entity\item\PickupItemSystem.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PickupItemSystem extends EntityTickingSystem<EntityStore> {
+   private static final float EYE_HEIGHT_SCALE = 5.0F;
+   @Nonnull
+   private final ComponentType<EntityStore, PickupItemComponent> pickupItemComponentType;
+   @Nonnull
+   private final ComponentType<EntityStore, TransformComponent> transformComponentType;
+   @Nonnull
+   private final Query<EntityStore> query;
+
+   public PickupItemSystem(
+      @Nonnull ComponentType<EntityStore, PickupItemComponent> pickupItemComponentType,
+      @Nonnull ComponentType<EntityStore, TransformComponent> transformComponentType
+   ) {
+      this.pickupItemComponentType = pickupItemComponentType;
+      this.transformComponentType = transformComponentType;
+      this.query = Query.and(pickupItemComponentType, transformComponentType);
+   }
+
+   @Override
+   public void tick(
+      float dt,
+      int index,
+      @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer
+   ) {
+      PickupItemComponent pickupItemComponent = archetypeChunk.getComponent(index, this.pickupItemComponentType);
+
+      assert pickupItemComponent != null;
+
+      if (pickupItemComponent.hasFinished()) {
+         commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
+      } else {
+         Ref<EntityStore> targetRef = pickupItemComponent.getTargetRef();
+         if (targetRef != null && targetRef.isValid()) {
+            TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
+
+            assert transformComponent != null;
+
+            Vector3d position = transformComponent.getPosition();
+            TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, this.transformComponentType);
+            if (targetTransformComponent != null) {
+               Vector3d targetPosition = targetTransformComponent.getPosition().clone();
+               ModelComponent targetModelComponent = commandBuffer.getComponent(targetRef, ModelComponent.getComponentType());
+               if (targetModelComponent != null) {
+                  float targetModelEyeHeight = targetModelComponent.getModel().getEyeHeight(targetRef, commandBuffer);
+                  targetPosition.add(0.0, targetModelEyeHeight / 5.0F, 0.0);
+               }
+
+               if (updateMovement(pickupItemComponent, position, targetPosition, dt)) {
+                  pickupItemComponent.setFinished(true);
+               }
+            }
+         } else {
+            commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
+         }
+      }
+   }
+
+   private static boolean updateMovement(@Nonnull PickupItemComponent pickupItemComponent, @Nonnull Vector3d current, @Nonnull Vector3d target, float dt) {
+      float remainingTime = pickupItemComponent.getLifeTime();
+      float originalLifeTime = pickupItemComponent.getOriginalLifeTime();
+      float progress = 1.0F - remainingTime / originalLifeTime;
+      if (progress >= 1.0F) {
+         current.assign(target);
+         return true;
+      } else {
+         current.assign(Vector3d.lerp(pickupItemComponent.getStartPosition(), target, progress));
+         pickupItemComponent.decreaseLifetime(dt);
+         return false;
+      }
+   }
+
+   @Nonnull
+   @Override
+   public Query<EntityStore> getQuery() {
+      return this.query;
+   }
+}

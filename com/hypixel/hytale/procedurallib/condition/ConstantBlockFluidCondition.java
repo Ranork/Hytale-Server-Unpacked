@@ -1,32 +1,24 @@
-/*    */ package com.hypixel.hytale.procedurallib.condition;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class ConstantBlockFluidCondition
-/*    */   implements IBlockFluidCondition {
-/*  7 */   public static final ConstantBlockFluidCondition DEFAULT_TRUE = new ConstantBlockFluidCondition(true);
-/*  8 */   public static final ConstantBlockFluidCondition DEFAULT_FALSE = new ConstantBlockFluidCondition(false);
-/*    */   
-/*    */   protected final boolean result;
-/*    */   
-/*    */   public ConstantBlockFluidCondition(boolean result) {
-/* 13 */     this.result = result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean eval(int block, int fluid) {
-/* 18 */     return this.result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 24 */     return "ConstantBlockFluidCondition{result=" + this.result + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.condition;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\condition\ConstantBlockFluidCondition.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ConstantBlockFluidCondition implements IBlockFluidCondition {
+   public static final ConstantBlockFluidCondition DEFAULT_TRUE = new ConstantBlockFluidCondition(true);
+   public static final ConstantBlockFluidCondition DEFAULT_FALSE = new ConstantBlockFluidCondition(false);
+   protected final boolean result;
+
+   public ConstantBlockFluidCondition(boolean result) {
+      this.result = result;
+   }
+
+   @Override
+   public boolean eval(int block, int fluid) {
+      return this.result;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ConstantBlockFluidCondition{result=" + this.result + "}";
+   }
+}

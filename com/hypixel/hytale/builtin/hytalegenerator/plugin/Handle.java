@@ -1,62 +1,76 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.plugin;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkRequest;
-/*    */ import com.hypixel.hytale.math.vector.Transform;
-/*    */ import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
-/*    */ import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
-/*    */ import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
-/*    */ import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenTimingsCollector;
-/*    */ import java.util.concurrent.CompletableFuture;
-/*    */ import java.util.function.LongPredicate;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class Handle
-/*    */   implements IWorldGen {
-/*    */   @Nonnull
-/*    */   private final HytaleGenerator plugin;
-/*    */   @Nonnull
-/*    */   private final ChunkRequest.GeneratorProfile profile;
-/*    */   
-/*    */   public Handle(@Nonnull HytaleGenerator plugin, @Nonnull ChunkRequest.GeneratorProfile profile) {
-/* 22 */     this.plugin = plugin;
-/* 23 */     this.profile = profile;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public CompletableFuture<GeneratedChunk> generate(int seed, long index, int x, int z, LongPredicate stillNeeded) {
-/* 28 */     ChunkRequest.Arguments arguments = new ChunkRequest.Arguments(seed, index, x, z, stillNeeded);
-/* 29 */     this.profile.setSeed(seed);
-/* 30 */     ChunkRequest request = new ChunkRequest(this.profile, arguments);
-/*    */     
-/* 32 */     return this.plugin.submitChunkRequest(request);
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public ChunkRequest.GeneratorProfile getProfile() {
-/* 37 */     return this.profile;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public Transform[] getSpawnPoints(int seed) {
-/* 42 */     return new Transform[] { new Transform(0.0D, 140.0D, 0.0D) };
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public ISpawnProvider getDefaultSpawnProvider(int seed) {
-/* 48 */     return super.getDefaultSpawnProvider(seed);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nullable
-/*    */   public WorldGenTimingsCollector getTimings() {
-/* 54 */     return null;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.plugin;
 
+import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkRequest;
+import com.hypixel.hytale.math.vector.Transform;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
+import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
+import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
+import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenTimingsCollector;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.LongPredicate;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\plugin\Handle.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class Handle implements IWorldGen {
+   @Nonnull
+   private final HytaleGenerator plugin;
+   @Nonnull
+   private final ChunkRequest.GeneratorProfile profile;
+   @Nullable
+   private final String seedOverride;
+
+   public Handle(@Nonnull HytaleGenerator plugin, @Nonnull ChunkRequest.GeneratorProfile profile, @Nullable String seedOverride) {
+      this.plugin = plugin;
+      this.profile = profile;
+      this.seedOverride = seedOverride;
+   }
+
+   @Nonnull
+   @Override
+   public CompletableFuture<GeneratedChunk> generate(int seed, long index, int x, int z, LongPredicate stillNeeded) {
+      ChunkRequest.Arguments arguments = new ChunkRequest.Arguments(seed, index, x, z, stillNeeded);
+      if (this.seedOverride != null) {
+         seed = Objects.hash(this.seedOverride);
+      }
+
+      this.profile.setSeed(seed);
+      ChunkRequest request = new ChunkRequest(this.profile, arguments);
+      return this.plugin.submitChunkRequest(request);
+   }
+
+   @Nonnull
+   public ChunkRequest.GeneratorProfile getProfile() {
+      return this.profile;
+   }
+
+   @Nonnull
+   @Override
+   public Transform[] getSpawnPoints(int seed) {
+      ChunkRequest.GeneratorProfile seededProfile = this.profile.clone();
+      seededProfile.setSeed(seed);
+      int MAX_SPAWN_POINTS = 1000000;
+      List<Vector3d> positions = this.plugin.getSpawnPositions(seededProfile, 1000000);
+      Transform[] positionsArray = new Transform[positions.size()];
+
+      for (int i = 0; i < positions.size(); i++) {
+         positionsArray[i] = new Transform(positions.get(i));
+      }
+
+      return positions.isEmpty() ? new Transform[]{new Transform(0.0, 140.0, 0.0)} : positionsArray;
+   }
+
+   @Nonnull
+   @Override
+   public ISpawnProvider getDefaultSpawnProvider(int seed) {
+      return IWorldGen.super.getDefaultSpawnProvider(seed);
+   }
+
+   @Nullable
+   @Override
+   public WorldGenTimingsCollector getTimings() {
+      return null;
+   }
+}

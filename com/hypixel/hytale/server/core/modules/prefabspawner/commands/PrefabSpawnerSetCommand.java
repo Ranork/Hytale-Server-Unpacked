@@ -1,115 +1,81 @@
-/*     */ package com.hypixel.hytale.server.core.modules.prefabspawner.commands;
-/*     */ 
-/*     */ import com.hypixel.hytale.server.core.Message;
-/*     */ import com.hypixel.hytale.server.core.command.system.CommandContext;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-/*     */ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
-/*     */ import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerState;
-/*     */ import com.hypixel.hytale.server.core.prefab.PrefabWeights;
-/*     */ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class PrefabSpawnerSetCommand
-/*     */   extends TargetPrefabSpawnerCommand
-/*     */ {
-/*     */   @Nonnull
-/*  22 */   private static final Message MESSAGE_COMMANDS_PREFAB_SPAWNER_SET = Message.translation("server.commands.prefabspawner.set");
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  28 */   protected final RequiredArg<String> prefabPathArg = withRequiredArg("prefab", "server.commands.prefabspawner.set.prefab.desc", (ArgumentType)ArgTypes.STRING);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  34 */   protected final OptionalArg<Boolean> fitHeightmapArg = withOptionalArg("fitHeightmap", "server.commands.prefabspawner.set.fitHeightmap.desc", (ArgumentType)ArgTypes.BOOLEAN);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  40 */   protected final OptionalArg<Boolean> inheritSeedArg = withOptionalArg("inheritSeed", "server.commands.prefabspawner.set.inheritSeed.desc", (ArgumentType)ArgTypes.BOOLEAN);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  46 */   protected final OptionalArg<Boolean> inheritHeightCheckArg = withOptionalArg("inheritHeightCheck", "server.commands.prefabspawner.set.inheritHeightCheck.desc", (ArgumentType)ArgTypes.BOOLEAN);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*  52 */   protected final OptionalArg<Double> defaultWeightArg = withOptionalArg("defaultWeight", "server.commands.prefabspawner.set.defaultWeight.desc", (ArgumentType)ArgTypes.DOUBLE);
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public PrefabSpawnerSetCommand() {
-/*  58 */     super("set", "server.commands.prefabspawner.set.desc");
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void execute(@Nonnull CommandContext context, @Nonnull WorldChunk chunk, @Nonnull PrefabSpawnerState prefabSpawner) {
-/*  63 */     String prefabPath = (String)this.prefabPathArg.get(context);
-/*  64 */     prefabSpawner.setPrefabPath(prefabPath);
-/*     */     
-/*  66 */     if (this.fitHeightmapArg.provided(context)) {
-/*  67 */       boolean fitHeightmap = getOrDefault(this.fitHeightmapArg, context, true);
-/*  68 */       prefabSpawner.setFitHeightmap(fitHeightmap);
-/*     */     } 
-/*     */     
-/*  71 */     if (this.inheritSeedArg.provided(context)) {
-/*  72 */       boolean inheritSeed = getOrDefault(this.inheritSeedArg, context, true);
-/*  73 */       prefabSpawner.setInheritSeed(inheritSeed);
-/*     */     } 
-/*     */     
-/*  76 */     if (this.inheritHeightCheckArg.provided(context)) {
-/*  77 */       boolean inheritHeightCheck = getOrDefault(this.inheritHeightCheckArg, context, true);
-/*  78 */       prefabSpawner.setInheritHeightCondition(inheritHeightCheck);
-/*     */     } 
-/*     */     
-/*  81 */     if (this.defaultWeightArg.provided(context)) {
-/*  82 */       double weight = ((Double)this.defaultWeightArg.get(context)).doubleValue();
-/*  83 */       PrefabWeights prefabWeights = prefabSpawner.getPrefabWeights();
-/*  84 */       if (prefabWeights == PrefabWeights.NONE) prefabWeights = new PrefabWeights(); 
-/*  85 */       prefabWeights.setDefaultWeight(weight);
-/*  86 */       prefabSpawner.setPrefabWeights(prefabWeights);
-/*     */     } 
-/*     */     
-/*  89 */     chunk.markNeedsSaving();
-/*  90 */     context.sendMessage(MESSAGE_COMMANDS_PREFAB_SPAWNER_SET);
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   protected static boolean getOrDefault(@Nonnull OptionalArg<Boolean> arg, @Nonnull CommandContext context, boolean defaultValue) {
-/* 103 */     if (!arg.provided(context)) {
-/* 104 */       return defaultValue;
-/*     */     }
-/* 106 */     Boolean value = (Boolean)arg.get(context);
-/* 107 */     return (value != null) ? value.booleanValue() : defaultValue;
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.modules.prefabspawner.commands;
 
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
+import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
+import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerState;
+import com.hypixel.hytale.server.core.prefab.PrefabWeights;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\prefabspawner\commands\PrefabSpawnerSetCommand.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PrefabSpawnerSetCommand extends TargetPrefabSpawnerCommand {
+   @Nonnull
+   private static final Message MESSAGE_COMMANDS_PREFAB_SPAWNER_SET = Message.translation("server.commands.prefabspawner.set");
+   @Nonnull
+   protected final RequiredArg<String> prefabPathArg = this.withRequiredArg("prefab", "server.commands.prefabspawner.set.prefab.desc", ArgTypes.STRING);
+   @Nonnull
+   protected final OptionalArg<Boolean> fitHeightmapArg = this.withOptionalArg(
+      "fitHeightmap", "server.commands.prefabspawner.set.fitHeightmap.desc", ArgTypes.BOOLEAN
+   );
+   @Nonnull
+   protected final OptionalArg<Boolean> inheritSeedArg = this.withOptionalArg(
+      "inheritSeed", "server.commands.prefabspawner.set.inheritSeed.desc", ArgTypes.BOOLEAN
+   );
+   @Nonnull
+   protected final OptionalArg<Boolean> inheritHeightCheckArg = this.withOptionalArg(
+      "inheritHeightCheck", "server.commands.prefabspawner.set.inheritHeightCheck.desc", ArgTypes.BOOLEAN
+   );
+   @Nonnull
+   protected final OptionalArg<Double> defaultWeightArg = this.withOptionalArg(
+      "defaultWeight", "server.commands.prefabspawner.set.defaultWeight.desc", ArgTypes.DOUBLE
+   );
+
+   public PrefabSpawnerSetCommand() {
+      super("set", "server.commands.prefabspawner.set.desc");
+   }
+
+   @Override
+   protected void execute(@Nonnull CommandContext context, @Nonnull WorldChunk chunk, @Nonnull PrefabSpawnerState prefabSpawner) {
+      String prefabPath = this.prefabPathArg.get(context);
+      prefabSpawner.setPrefabPath(prefabPath);
+      if (this.fitHeightmapArg.provided(context)) {
+         boolean fitHeightmap = getOrDefault(this.fitHeightmapArg, context, true);
+         prefabSpawner.setFitHeightmap(fitHeightmap);
+      }
+
+      if (this.inheritSeedArg.provided(context)) {
+         boolean inheritSeed = getOrDefault(this.inheritSeedArg, context, true);
+         prefabSpawner.setInheritSeed(inheritSeed);
+      }
+
+      if (this.inheritHeightCheckArg.provided(context)) {
+         boolean inheritHeightCheck = getOrDefault(this.inheritHeightCheckArg, context, true);
+         prefabSpawner.setInheritHeightCondition(inheritHeightCheck);
+      }
+
+      if (this.defaultWeightArg.provided(context)) {
+         double weight = this.defaultWeightArg.get(context);
+         PrefabWeights prefabWeights = prefabSpawner.getPrefabWeights();
+         if (prefabWeights == PrefabWeights.NONE) {
+            prefabWeights = new PrefabWeights();
+         }
+
+         prefabWeights.setDefaultWeight(weight);
+         prefabSpawner.setPrefabWeights(prefabWeights);
+      }
+
+      chunk.markNeedsSaving();
+      context.sendMessage(MESSAGE_COMMANDS_PREFAB_SPAWNER_SET);
+   }
+
+   protected static boolean getOrDefault(@Nonnull OptionalArg<Boolean> arg, @Nonnull CommandContext context, boolean defaultValue) {
+      if (!arg.provided(context)) {
+         return defaultValue;
+      } else {
+         Boolean value = arg.get(context);
+         return value != null ? value : defaultValue;
+      }
+   }
+}

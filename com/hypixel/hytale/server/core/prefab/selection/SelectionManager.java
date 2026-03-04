@@ -1,25 +1,20 @@
-/*    */ package com.hypixel.hytale.server.core.prefab.selection;
-/*    */ 
-/*    */ import java.util.concurrent.atomic.AtomicReference;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public final class SelectionManager {
-/*  7 */   private static final AtomicReference<SelectionProvider> SELECTION_PROVIDER = new AtomicReference<>();
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static void setSelectionProvider(SelectionProvider provider) {
-/* 12 */     SELECTION_PROVIDER.set(provider);
-/*    */   }
-/*    */   
-/*    */   @Nullable
-/*    */   public static SelectionProvider getSelectionProvider() {
-/* 17 */     return SELECTION_PROVIDER.get();
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.prefab.selection;
 
+import java.util.concurrent.atomic.AtomicReference;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\prefab\selection\SelectionManager.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public final class SelectionManager {
+   private static final AtomicReference<SelectionProvider> SELECTION_PROVIDER = new AtomicReference<>();
+
+   private SelectionManager() {
+   }
+
+   public static void setSelectionProvider(SelectionProvider provider) {
+      SELECTION_PROVIDER.set(provider);
+   }
+
+   @Nullable
+   public static SelectionProvider getSelectionProvider() {
+      return SELECTION_PROVIDER.get();
+   }
+}

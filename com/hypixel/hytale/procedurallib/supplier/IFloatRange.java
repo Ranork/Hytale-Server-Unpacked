@@ -3,19 +3,13 @@ package com.hypixel.hytale.procedurallib.supplier;
 import java.util.Random;
 
 public interface IFloatRange {
-  float getValue(float paramFloat);
-  
-  float getValue(FloatSupplier paramFloatSupplier);
-  
-  float getValue(Random paramRandom);
-  
-  float getValue(int paramInt, double paramDouble1, double paramDouble2, IDoubleCoordinateSupplier2d paramIDoubleCoordinateSupplier2d);
-  
-  float getValue(int paramInt, double paramDouble1, double paramDouble2, double paramDouble3, IDoubleCoordinateSupplier3d paramIDoubleCoordinateSupplier3d);
+   float getValue(float var1);
+
+   float getValue(FloatSupplier var1);
+
+   float getValue(Random var1);
+
+   float getValue(int var1, double var2, double var4, IDoubleCoordinateSupplier2d var6);
+
+   float getValue(int var1, double var2, double var4, double var6, IDoubleCoordinateSupplier3d var8);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\supplier\IFloatRange.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

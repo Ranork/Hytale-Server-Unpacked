@@ -3,26 +3,20 @@ package com.hypixel.hytale.procedurallib.logic.point;
 import com.hypixel.hytale.procedurallib.logic.ResultBuffer;
 
 public interface IPointGenerator {
-  ResultBuffer.ResultBuffer2d nearest2D(int paramInt, double paramDouble1, double paramDouble2);
-  
-  ResultBuffer.ResultBuffer3d nearest3D(int paramInt, double paramDouble1, double paramDouble2, double paramDouble3);
-  
-  ResultBuffer.ResultBuffer2d transition2D(int paramInt, double paramDouble1, double paramDouble2);
-  
-  ResultBuffer.ResultBuffer3d transition3D(int paramInt, double paramDouble1, double paramDouble2, double paramDouble3);
-  
-  void collect(int paramInt, double paramDouble1, double paramDouble2, double paramDouble3, double paramDouble4, PointConsumer2d paramPointConsumer2d);
-  
-  double getInterval();
-  
-  @FunctionalInterface
-  public static interface PointConsumer2d {
-    void accept(double param1Double1, double param1Double2);
-  }
+   ResultBuffer.ResultBuffer2d nearest2D(int var1, double var2, double var4);
+
+   ResultBuffer.ResultBuffer3d nearest3D(int var1, double var2, double var4, double var6);
+
+   ResultBuffer.ResultBuffer2d transition2D(int var1, double var2, double var4);
+
+   ResultBuffer.ResultBuffer3d transition3D(int var1, double var2, double var4, double var6);
+
+   void collect(int var1, double var2, double var4, double var6, double var8, IPointGenerator.PointConsumer2d var10);
+
+   double getInterval();
+
+   @FunctionalInterface
+   public interface PointConsumer2d {
+      void accept(double var1, double var3);
+   }
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\logic\point\IPointGenerator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

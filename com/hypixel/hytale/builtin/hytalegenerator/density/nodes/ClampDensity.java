@@ -1,38 +1,33 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.framework.math.Calculator;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ public class ClampDensity
-/*    */   extends Density {
-/*    */   private final double wallA;
-/*    */   private final double wallB;
-/*    */   @Nullable
-/*    */   private Density input;
-/*    */   
-/*    */   public ClampDensity(double wallA, double wallB, Density input) {
-/* 16 */     this.wallA = wallA;
-/* 17 */     this.wallB = wallB;
-/* 18 */     this.input = input;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double process(@Nonnull Density.Context context) {
-/* 23 */     if (this.input == null) return 0.0D; 
-/* 24 */     return Calculator.clamp(this.wallA, this.input.process(context), this.wallB);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public void setInputs(@Nonnull Density[] inputs) {
-/* 29 */     if (inputs.length == 0) this.input = null; 
-/* 30 */     this.input = inputs[0];
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.framework.math.Calculator;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\density\nodes\ClampDensity.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ClampDensity extends Density {
+   private final double wallA;
+   private final double wallB;
+   @Nullable
+   private Density input;
+
+   public ClampDensity(double wallA, double wallB, Density input) {
+      this.wallA = wallA;
+      this.wallB = wallB;
+      this.input = input;
+   }
+
+   @Override
+   public double process(@Nonnull Density.Context context) {
+      return this.input == null ? 0.0 : Calculator.clamp(this.wallA, this.input.process(context), this.wallB);
+   }
+
+   @Override
+   public void setInputs(@Nonnull Density[] inputs) {
+      if (inputs.length == 0) {
+         this.input = null;
+      }
+
+      this.input = inputs[0];
+   }
+}

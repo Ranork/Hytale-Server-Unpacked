@@ -12,49 +12,43 @@ import java.util.function.ObjDoubleConsumer;
 import javax.annotation.Nullable;
 
 public interface IWeightedMap<T> {
-  @Nullable
-  T get(double paramDouble);
-  
-  @Nullable
-  T get(DoubleSupplier paramDoubleSupplier);
-  
-  @Nullable
-  T get(Random paramRandom);
-  
-  @Nullable
-  T get(int paramInt1, int paramInt2, BiIntToDoubleFunction paramBiIntToDoubleFunction);
-  
-  @Nullable
-  T get(long paramLong1, long paramLong2, BiLongToDoubleFunction paramBiLongToDoubleFunction);
-  
-  @Nullable
-  T get(double paramDouble1, double paramDouble2, BiDoubleToDoubleFunction paramBiDoubleToDoubleFunction);
-  
-  @Nullable
-  <K> T get(int paramInt1, int paramInt2, int paramInt3, SeedCoordinateFunction<K> paramSeedCoordinateFunction, K paramK);
-  
-  int size();
-  
-  boolean contains(T paramT);
-  
-  void forEach(Consumer<T> paramConsumer);
-  
-  void forEachEntry(ObjDoubleConsumer<T> paramObjDoubleConsumer);
-  
-  T[] internalKeys();
-  
-  T[] toArray();
-  
-  <K> IWeightedMap<K> resolveKeys(Function<T, K> paramFunction, IntFunction<K[]> paramIntFunction);
-  
-  @FunctionalInterface
-  public static interface SeedCoordinateFunction<T> {
-    double apply(int param1Int1, int param1Int2, int param1Int3, T param1T);
-  }
+   @Nullable
+   T get(double var1);
+
+   @Nullable
+   T get(DoubleSupplier var1);
+
+   @Nullable
+   T get(Random var1);
+
+   @Nullable
+   T get(int var1, int var2, BiIntToDoubleFunction var3);
+
+   @Nullable
+   T get(long var1, long var3, BiLongToDoubleFunction var5);
+
+   @Nullable
+   T get(double var1, double var3, BiDoubleToDoubleFunction var5);
+
+   @Nullable
+   <K> T get(int var1, int var2, int var3, IWeightedMap.SeedCoordinateFunction<K> var4, K var5);
+
+   int size();
+
+   boolean contains(T var1);
+
+   void forEach(Consumer<T> var1);
+
+   void forEachEntry(ObjDoubleConsumer<T> var1);
+
+   T[] internalKeys();
+
+   T[] toArray();
+
+   <K> IWeightedMap<K> resolveKeys(Function<T, K> var1, IntFunction<K[]> var2);
+
+   @FunctionalInterface
+   public interface SeedCoordinateFunction<T> {
+      double apply(int var1, int var2, int var3, T var4);
+   }
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\common\map\IWeightedMap.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

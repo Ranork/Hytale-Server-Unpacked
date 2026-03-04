@@ -4,19 +4,13 @@ import java.util.Random;
 import java.util.function.DoubleSupplier;
 
 public interface IDoubleRange {
-  double getValue(double paramDouble);
-  
-  double getValue(DoubleSupplier paramDoubleSupplier);
-  
-  double getValue(Random paramRandom);
-  
-  double getValue(int paramInt, double paramDouble1, double paramDouble2, IDoubleCoordinateSupplier2d paramIDoubleCoordinateSupplier2d);
-  
-  double getValue(int paramInt, double paramDouble1, double paramDouble2, double paramDouble3, IDoubleCoordinateSupplier3d paramIDoubleCoordinateSupplier3d);
+   double getValue(double var1);
+
+   double getValue(DoubleSupplier var1);
+
+   double getValue(Random var1);
+
+   double getValue(int var1, double var2, double var4, IDoubleCoordinateSupplier2d var6);
+
+   double getValue(int var1, double var2, double var4, double var6, IDoubleCoordinateSupplier3d var8);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\supplier\IDoubleRange.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

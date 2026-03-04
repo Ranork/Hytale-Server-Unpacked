@@ -1,39 +1,28 @@
-/*    */ package com.hypixel.hytale.procedurallib.condition;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class DefaultDoubleCondition
-/*    */   implements IDoubleCondition
-/*    */ {
-/* 10 */   public static final DefaultDoubleCondition DEFAULT_TRUE = new DefaultDoubleCondition(true);
-/* 11 */   public static final DefaultDoubleCondition DEFAULT_FALSE = new DefaultDoubleCondition(false);
-/*    */   
-/*    */   protected final boolean result;
-/*    */   
-/*    */   public DefaultDoubleCondition(boolean result) {
-/* 16 */     this.result = result;
-/*    */   }
-/*    */   
-/*    */   public boolean getResult() {
-/* 20 */     return this.result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean eval(double value) {
-/* 25 */     return this.result;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 31 */     return "DefaultDoubleCondition{result=" + this.result + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.condition;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\condition\DefaultDoubleCondition.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class DefaultDoubleCondition implements IDoubleCondition {
+   public static final DefaultDoubleCondition DEFAULT_TRUE = new DefaultDoubleCondition(true);
+   public static final DefaultDoubleCondition DEFAULT_FALSE = new DefaultDoubleCondition(false);
+   protected final boolean result;
+
+   public DefaultDoubleCondition(boolean result) {
+      this.result = result;
+   }
+
+   public boolean getResult() {
+      return this.result;
+   }
+
+   @Override
+   public boolean eval(double value) {
+      return this.result;
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "DefaultDoubleCondition{result=" + this.result + "}";
+   }
+}

@@ -4,14 +4,8 @@ import com.hypixel.hytale.server.npc.asset.builder.FeatureEvaluatorHelper;
 import javax.annotation.Nullable;
 
 public abstract class RequiredFeatureValidator extends Validator {
-  public abstract boolean validate(FeatureEvaluatorHelper paramFeatureEvaluatorHelper);
-  
-  @Nullable
-  public abstract String getErrorMessage(String paramString);
+   public abstract boolean validate(FeatureEvaluatorHelper var1);
+
+   @Nullable
+   public abstract String getErrorMessage(String var1);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\asset\builder\validators\RequiredFeatureValidator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

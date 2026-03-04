@@ -1,35 +1,24 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
-/*    */ 
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-/*    */ import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.BiDouble2DoubleFunction;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ public class BaseHeightDensity
-/*    */   extends Density {
-/*    */   @Nonnull
-/*    */   private final BiDouble2DoubleFunction heightFunction;
-/*    */   private final boolean isDistance;
-/*    */   
-/*    */   public BaseHeightDensity(@Nonnull BiDouble2DoubleFunction heightFunction, boolean isDistance) {
-/* 14 */     this.heightFunction = heightFunction;
-/* 15 */     this.isDistance = isDistance;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public double process(@Nonnull Density.Context context) {
-/* 20 */     if (this.isDistance) {
-/* 21 */       return context.position.y - this.heightFunction.apply(context.position.x, context.position.z);
-/*    */     }
-/* 23 */     return this.heightFunction.apply(context.position.x, context.position.z);
-/*    */   }
-/*    */   
-/*    */   public boolean skipInputs(double y) {
-/* 27 */     return true;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
+import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\density\nodes\BaseHeightDensity.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class BaseHeightDensity extends Density {
+   @Nonnull
+   private final double baseHeight;
+   private final boolean isDistance;
+
+   public BaseHeightDensity(double baseHeight, boolean isDistance) {
+      this.baseHeight = baseHeight;
+      this.isDistance = isDistance;
+   }
+
+   @Override
+   public double process(@Nonnull Density.Context context) {
+      return this.isDistance ? context.position.y - this.baseHeight : this.baseHeight;
+   }
+
+   public boolean skipInputs(double y) {
+      return true;
+   }
+}

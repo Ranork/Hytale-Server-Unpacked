@@ -6,11 +6,5 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 
 public interface AssetMonitorHandler extends BiPredicate<Path, EventKind>, Consumer<Map<Path, EventKind>> {
-  Object getKey();
+   Object getKey();
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\monitor\AssetMonitorHandler.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

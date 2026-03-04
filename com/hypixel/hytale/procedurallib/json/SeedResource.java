@@ -1,54 +1,43 @@
-/*    */ package com.hypixel.hytale.procedurallib.json;
-/*    */ 
-/*    */ import com.hypixel.hytale.procedurallib.logic.ResultBuffer;
-/*    */ import javax.annotation.Nonnull;
-/*    */ import javax.annotation.Nullable;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public interface SeedResource
-/*    */ {
-/*    */   public static final String INFO_SEED_REPORT = "Seed Value: %s for seed %s / %s";
-/*    */   public static final String INFO_SEED_OVERWRITE_REPORT = "Seed Value: %s for seed %s / %s overwritten by %s";
-/*    */   
-/*    */   @Nonnull
-/*    */   default ResultBuffer.Bounds2d localBounds2d() {
-/* 18 */     return ResultBuffer.bounds2d;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   default ResultBuffer.ResultBuffer2d localBuffer2d() {
-/* 23 */     return ResultBuffer.buffer2d;
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   default ResultBuffer.ResultBuffer3d localBuffer3d() {
-/* 28 */     return ResultBuffer.buffer3d;
-/*    */   }
-/*    */   
-/*    */   default boolean shouldReportSeeds() {
-/* 32 */     return false;
-/*    */   }
-/*    */   
-/*    */   default void reportSeeds(int seedVal, String original, String seed, @Nullable String overwritten) {
-/* 36 */     if (shouldReportSeeds()) {
-/* 37 */       if (overwritten == null) {
-/* 38 */         writeSeedReport(String.format("Seed Value: %s for seed %s / %s", new Object[] { Integer.valueOf(seedVal), original, seed }));
-/*    */       } else {
-/* 40 */         writeSeedReport(String.format("Seed Value: %s for seed %s / %s overwritten by %s", new Object[] { Integer.valueOf(seedVal), original, seed, overwritten }));
-/*    */       } 
-/*    */     }
-/*    */   }
-/*    */   
-/*    */   default void writeSeedReport(String seedReport) {
-/* 46 */     System.out.println(seedReport);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.procedurallib.json;
 
+import com.hypixel.hytale.procedurallib.logic.ResultBuffer;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\procedurallib\json\SeedResource.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public interface SeedResource {
+   String INFO_SEED_REPORT = "Seed Value: %s for seed %s / %s";
+   String INFO_SEED_OVERWRITE_REPORT = "Seed Value: %s for seed %s / %s overwritten by %s";
+
+   @Nonnull
+   default ResultBuffer.Bounds2d localBounds2d() {
+      return ResultBuffer.bounds2d;
+   }
+
+   @Nonnull
+   default ResultBuffer.ResultBuffer2d localBuffer2d() {
+      return ResultBuffer.buffer2d;
+   }
+
+   @Nonnull
+   default ResultBuffer.ResultBuffer3d localBuffer3d() {
+      return ResultBuffer.buffer3d;
+   }
+
+   default boolean shouldReportSeeds() {
+      return false;
+   }
+
+   default void reportSeeds(int seedVal, String original, String seed, @Nullable String overwritten) {
+      if (this.shouldReportSeeds()) {
+         if (overwritten == null) {
+            this.writeSeedReport(String.format("Seed Value: %s for seed %s / %s", seedVal, original, seed));
+         } else {
+            this.writeSeedReport(String.format("Seed Value: %s for seed %s / %s overwritten by %s", seedVal, original, seed, overwritten));
+         }
+      }
+   }
+
+   default void writeSeedReport(String seedReport) {
+      System.out.println(seedReport);
+   }
+}

@@ -1,137 +1,115 @@
-/*     */ package com.hypixel.hytale.server.worldgen.container;
-/*     */ 
-/*     */ import com.hypixel.hytale.common.map.IWeightedMap;
-/*     */ import com.hypixel.hytale.procedurallib.condition.IBlockFluidCondition;
-/*     */ import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
-/*     */ import com.hypixel.hytale.procedurallib.condition.ICoordinateRndCondition;
-/*     */ import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
-/*     */ import java.util.Random;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class CoverContainer
-/*     */ {
-/*     */   protected final CoverContainerEntry[] entries;
-/*     */   
-/*     */   public CoverContainer(CoverContainerEntry[] entries) {
-/*  22 */     this.entries = entries;
-/*     */   }
-/*     */   
-/*     */   public CoverContainerEntry[] getEntries() {
-/*  26 */     return this.entries;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public static class CoverContainerEntry
-/*     */   {
-/*     */     protected final IWeightedMap<CoverContainerEntryPart> entries;
-/*     */     
-/*     */     protected final ICoordinateCondition mapCondition;
-/*     */     
-/*     */     protected final ICoordinateRndCondition heightCondition;
-/*     */     
-/*     */     protected final IBlockFluidCondition parentCondition;
-/*     */     protected final double coverDensity;
-/*     */     protected final boolean onWater;
-/*     */     
-/*     */     public CoverContainerEntry(IWeightedMap<CoverContainerEntryPart> entries, ICoordinateCondition mapCondition, ICoordinateRndCondition heightCondition, IBlockFluidCondition parentCondition, double coverDensity, boolean onWater) {
-/*  43 */       this.entries = entries;
-/*  44 */       this.mapCondition = mapCondition;
-/*  45 */       this.heightCondition = heightCondition;
-/*  46 */       this.parentCondition = parentCondition;
-/*  47 */       this.coverDensity = coverDensity;
-/*  48 */       this.onWater = onWater;
-/*     */     }
-/*     */     
-/*     */     @Nullable
-/*     */     public CoverContainerEntryPart get(Random random) {
-/*  53 */       return (CoverContainerEntryPart)this.entries.get(random);
-/*     */     }
-/*     */     
-/*     */     public IBlockFluidCondition getParentCondition() {
-/*  57 */       return this.parentCondition;
-/*     */     }
-/*     */     
-/*     */     public ICoordinateCondition getMapCondition() {
-/*  61 */       return this.mapCondition;
-/*     */     }
-/*     */     
-/*     */     public double getCoverDensity() {
-/*  65 */       return this.coverDensity;
-/*     */     }
-/*     */     
-/*     */     public ICoordinateRndCondition getHeightCondition() {
-/*  69 */       return this.heightCondition;
-/*     */     }
-/*     */     
-/*     */     public boolean isOnWater() {
-/*  73 */       return this.onWater;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public String toString() {
-/*  79 */       return "CoverContainerEntry{entries=" + String.valueOf(this.entries) + ", mapCondition=" + String.valueOf(this.mapCondition) + ", heightCondition=" + String.valueOf(this.heightCondition) + ", parentCondition=" + String.valueOf(this.parentCondition) + ", coverDensity=" + this.coverDensity + ", onWater=" + this.onWater + "}";
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     public static class CoverContainerEntryPart
-/*     */     {
-/*  90 */       public static final CoverContainerEntryPart[] EMPTY_ARRAY = new CoverContainerEntryPart[0];
-/*     */       
-/*     */       protected final BlockFluidEntry entry;
-/*     */       protected final int offset;
-/*     */       
-/*     */       public CoverContainerEntryPart(BlockFluidEntry entry, int offset) {
-/*  96 */         this.entry = entry;
-/*  97 */         this.offset = offset;
-/*     */       }
-/*     */       
-/*     */       public BlockFluidEntry getEntry() {
-/* 101 */         return this.entry;
-/*     */       }
-/*     */       
-/*     */       public int getOffset() {
-/* 105 */         return this.offset;
-/*     */       }
-/*     */       
-/*     */       @Nonnull
-/*     */       public String toString()
-/*     */       {
-/* 111 */         return "CoverContainerEntryPart{entry=" + String.valueOf(this.entry) + ", offset=" + this.offset + "}"; } } } public static class CoverContainerEntryPart { @Nonnull public String toString() { return "CoverContainerEntryPart{entry=" + String.valueOf(this.entry) + ", offset=" + this.offset + "}"; }
-/*     */ 
-/*     */     
-/*     */     public static final CoverContainerEntryPart[] EMPTY_ARRAY = new CoverContainerEntryPart[0];
-/*     */     protected final BlockFluidEntry entry;
-/*     */     protected final int offset;
-/*     */     
-/*     */     public CoverContainerEntryPart(BlockFluidEntry entry, int offset) {
-/*     */       this.entry = entry;
-/*     */       this.offset = offset;
-/*     */     }
-/*     */     
-/*     */     public BlockFluidEntry getEntry() {
-/*     */       return this.entry;
-/*     */     }
-/*     */     
-/*     */     public int getOffset() {
-/*     */       return this.offset;
-/*     */     } }
-/*     */ 
-/*     */ }
+package com.hypixel.hytale.server.worldgen.container;
 
+import com.hypixel.hytale.common.map.IWeightedMap;
+import com.hypixel.hytale.procedurallib.condition.IBlockFluidCondition;
+import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
+import com.hypixel.hytale.procedurallib.condition.ICoordinateRndCondition;
+import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
+import java.util.Random;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldgen\container\CoverContainer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class CoverContainer {
+   protected final CoverContainer.CoverContainerEntry[] entries;
+
+   public CoverContainer(CoverContainer.CoverContainerEntry[] entries) {
+      this.entries = entries;
+   }
+
+   public CoverContainer.CoverContainerEntry[] getEntries() {
+      return this.entries;
+   }
+
+   public static class CoverContainerEntry {
+      protected final IWeightedMap<CoverContainer.CoverContainerEntry.CoverContainerEntryPart> entries;
+      protected final ICoordinateCondition mapCondition;
+      protected final ICoordinateRndCondition heightCondition;
+      protected final IBlockFluidCondition parentCondition;
+      protected final double coverDensity;
+      protected final boolean onWater;
+
+      public CoverContainerEntry(
+         IWeightedMap<CoverContainer.CoverContainerEntry.CoverContainerEntryPart> entries,
+         ICoordinateCondition mapCondition,
+         ICoordinateRndCondition heightCondition,
+         IBlockFluidCondition parentCondition,
+         double coverDensity,
+         boolean onWater
+      ) {
+         this.entries = entries;
+         this.mapCondition = mapCondition;
+         this.heightCondition = heightCondition;
+         this.parentCondition = parentCondition;
+         this.coverDensity = coverDensity;
+         this.onWater = onWater;
+      }
+
+      @Nullable
+      public CoverContainer.CoverContainerEntry.CoverContainerEntryPart get(Random random) {
+         return this.entries.get(random);
+      }
+
+      public IBlockFluidCondition getParentCondition() {
+         return this.parentCondition;
+      }
+
+      public ICoordinateCondition getMapCondition() {
+         return this.mapCondition;
+      }
+
+      public double getCoverDensity() {
+         return this.coverDensity;
+      }
+
+      public ICoordinateRndCondition getHeightCondition() {
+         return this.heightCondition;
+      }
+
+      public boolean isOnWater() {
+         return this.onWater;
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "CoverContainerEntry{entries="
+            + this.entries
+            + ", mapCondition="
+            + this.mapCondition
+            + ", heightCondition="
+            + this.heightCondition
+            + ", parentCondition="
+            + this.parentCondition
+            + ", coverDensity="
+            + this.coverDensity
+            + ", onWater="
+            + this.onWater
+            + "}";
+      }
+
+      public static class CoverContainerEntryPart {
+         public static final CoverContainer.CoverContainerEntry.CoverContainerEntryPart[] EMPTY_ARRAY = new CoverContainer.CoverContainerEntry.CoverContainerEntryPart[0];
+         protected final BlockFluidEntry entry;
+         protected final int offset;
+
+         public CoverContainerEntryPart(BlockFluidEntry entry, int offset) {
+            this.entry = entry;
+            this.offset = offset;
+         }
+
+         public BlockFluidEntry getEntry() {
+            return this.entry;
+         }
+
+         public int getOffset() {
+            return this.offset;
+         }
+
+         @Nonnull
+         @Override
+         public String toString() {
+            return "CoverContainerEntryPart{entry=" + this.entry + ", offset=" + this.offset + "}";
+         }
+      }
+   }
+}

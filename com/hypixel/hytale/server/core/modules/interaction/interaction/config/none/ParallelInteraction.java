@@ -1,152 +1,152 @@
-/*     */ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.none;
-/*     */ 
-/*     */ import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-/*     */ import com.hypixel.hytale.codec.Codec;
-/*     */ import com.hypixel.hytale.codec.KeyedCodec;
-/*     */ import com.hypixel.hytale.codec.builder.BuilderCodec;
-/*     */ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-/*     */ import com.hypixel.hytale.codec.validation.LateValidator;
-/*     */ import com.hypixel.hytale.codec.validation.Validators;
-/*     */ import com.hypixel.hytale.protocol.Interaction;
-/*     */ import com.hypixel.hytale.protocol.InteractionState;
-/*     */ import com.hypixel.hytale.protocol.InteractionType;
-/*     */ import com.hypixel.hytale.protocol.WaitForDataFrom;
-/*     */ import com.hypixel.hytale.server.core.entity.InteractionContext;
-/*     */ import com.hypixel.hytale.server.core.entity.InteractionManager;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.Collector;
-/*     */ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.CollectorTag;
-/*     */ import java.util.Arrays;
-/*     */ import java.util.function.Supplier;
-/*     */ import javax.annotation.Nonnull;
-/*     */ import javax.annotation.Nullable;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class ParallelInteraction
-/*     */   extends Interaction
-/*     */ {
-/*     */   public static final BuilderCodec<ParallelInteraction> CODEC;
-/*     */   protected String[] interactions;
-/*     */   
-/*     */   static {
-/*  36 */     CODEC = ((BuilderCodec.Builder)((BuilderCodec.Builder)BuilderCodec.builder(ParallelInteraction.class, ParallelInteraction::new, Interaction.ABSTRACT_CODEC).documentation("Runs the provided interactions in parallel to this interaction chain.")).appendInherited(new KeyedCodec("Interactions", (Codec)new ArrayCodec((Codec)RootInteraction.CHILD_ASSET_CODEC, x$0 -> new String[x$0])), (i, s) -> i.interactions = s, i -> i.interactions, (i, parent) -> i.interactions = parent.interactions).documentation("The collection of interaction roots to run in parallel via forks.").addValidator(Validators.nonNull()).addValidatorLate(() -> RootInteraction.VALIDATOR_CACHE.getArrayValidator().late()).addValidator(Validators.arraySizeRange(2, 2147483647)).add()).build();
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public WaitForDataFrom getWaitForDataFrom() {
-/*  43 */     return WaitForDataFrom.None;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void tick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-/*  48 */     IndexedLookupTableAssetMap<String, RootInteraction> assetMap = RootInteraction.getAssetMap();
-/*     */ 
-/*     */     
-/*  51 */     context.execute(RootInteraction.getRootInteractionOrUnknown(this.interactions[0]));
-/*  52 */     for (int i = 1; i < this.interactions.length; i++) {
-/*  53 */       String interaction = this.interactions[i];
-/*  54 */       context.fork(context.duplicate(), RootInteraction.getRootInteractionOrUnknown(interaction), true);
-/*     */     } 
-/*  56 */     (context.getState()).state = InteractionState.Finished;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void simulateTick0(boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
-/*  61 */     IndexedLookupTableAssetMap<String, RootInteraction> assetMap = RootInteraction.getAssetMap();
-/*     */     
-/*  63 */     context.execute(RootInteraction.getRootInteractionOrUnknown(this.interactions[0]));
-/*  64 */     (context.getState()).state = InteractionState.Finished;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean walk(@Nonnull Collector collector, @Nonnull InteractionContext context) {
-/*  69 */     for (int i = 0; i < this.interactions.length; i++) {
-/*  70 */       String root = this.interactions[i];
-/*  71 */       if (InteractionManager.walkInteractions(collector, context, ParallelTag.of(i), RootInteraction.getRootInteractionOrUnknown(root).getInteractionIds())) {
-/*  72 */         return true;
-/*     */       }
-/*     */     } 
-/*  75 */     return false;
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   public boolean needsRemoteSync() {
-/*  81 */     return true;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   protected Interaction generatePacket() {
-/*  87 */     return (Interaction)new com.hypixel.hytale.protocol.ParallelInteraction();
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   protected void configurePacket(Interaction packet) {
-/*  92 */     super.configurePacket(packet);
-/*  93 */     com.hypixel.hytale.protocol.ParallelInteraction p = (com.hypixel.hytale.protocol.ParallelInteraction)packet;
-/*  94 */     int[] chainingNext = p.next = new int[this.interactions.length];
-/*  95 */     for (int i = 0; i < this.interactions.length; i++) {
-/*  96 */       chainingNext[i] = RootInteraction.getRootInteractionIdOrUnknown(this.interactions[i]);
-/*     */     }
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public String toString() {
-/* 104 */     return "ParallelInteraction{interactions=" + Arrays.toString((Object[])this.interactions) + "} " + super
-/* 105 */       .toString();
-/*     */   }
-/*     */   
-/*     */   private static class ParallelTag implements CollectorTag {
-/*     */     private final int index;
-/*     */     
-/*     */     private ParallelTag(int index) {
-/* 112 */       this.index = index;
-/*     */     }
-/*     */     
-/*     */     public int getIndex() {
-/* 116 */       return this.index;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public boolean equals(@Nullable Object o) {
-/* 121 */       if (this == o) return true; 
-/* 122 */       if (o == null || getClass() != o.getClass()) return false;
-/*     */       
-/* 124 */       ParallelTag that = (ParallelTag)o;
-/* 125 */       return (this.index == that.index);
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     public int hashCode() {
-/* 130 */       return this.index;
-/*     */     }
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public String toString() {
-/* 136 */       return "ParallelTag{index=" + this.index + "}";
-/*     */     }
-/*     */ 
-/*     */ 
-/*     */     
-/*     */     @Nonnull
-/*     */     public static ParallelTag of(int index) {
-/* 143 */       return new ParallelTag(index);
-/*     */     }
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.modules.interaction.interaction.config.none;
 
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.protocol.InteractionState;
+import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.protocol.WaitForDataFrom;
+import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.InteractionManager;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.Collector;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.data.CollectorTag;
+import java.util.Arrays;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\interaction\interaction\config\none\ParallelInteraction.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ParallelInteraction extends Interaction {
+   public static final BuilderCodec<ParallelInteraction> CODEC = BuilderCodec.builder(
+         ParallelInteraction.class, ParallelInteraction::new, Interaction.ABSTRACT_CODEC
+      )
+      .documentation("Runs the provided interactions in parallel to this interaction chain.")
+      .<String[]>appendInherited(
+         new KeyedCodec<>("Interactions", new ArrayCodec<>(RootInteraction.CHILD_ASSET_CODEC, String[]::new)),
+         (i, s) -> i.interactions = s,
+         i -> i.interactions,
+         (i, parent) -> i.interactions = parent.interactions
+      )
+      .documentation("The collection of interaction roots to run in parallel via forks.")
+      .addValidator(Validators.nonNull())
+      .addValidatorLate(() -> RootInteraction.VALIDATOR_CACHE.getArrayValidator().late())
+      .addValidator(Validators.arraySizeRange(2, Integer.MAX_VALUE))
+      .add()
+      .build();
+   protected String[] interactions;
+
+   @Nonnull
+   @Override
+   public WaitForDataFrom getWaitForDataFrom() {
+      return WaitForDataFrom.None;
+   }
+
+   @Override
+   protected void tick0(
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
+   ) {
+      IndexedLookupTableAssetMap<String, RootInteraction> assetMap = RootInteraction.getAssetMap();
+      context.execute(RootInteraction.getRootInteractionOrUnknown(this.interactions[0]));
+
+      for (int i = 1; i < this.interactions.length; i++) {
+         String interaction = this.interactions[i];
+         context.fork(context.duplicate(), RootInteraction.getRootInteractionOrUnknown(interaction), true);
+      }
+
+      context.getState().state = InteractionState.Finished;
+   }
+
+   @Override
+   protected void simulateTick0(
+      boolean firstRun, float time, @Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler
+   ) {
+      IndexedLookupTableAssetMap<String, RootInteraction> assetMap = RootInteraction.getAssetMap();
+      context.execute(RootInteraction.getRootInteractionOrUnknown(this.interactions[0]));
+      context.getState().state = InteractionState.Finished;
+   }
+
+   @Override
+   public boolean walk(@Nonnull Collector collector, @Nonnull InteractionContext context) {
+      for (int i = 0; i < this.interactions.length; i++) {
+         String root = this.interactions[i];
+         if (InteractionManager.walkInteractions(
+            collector, context, ParallelInteraction.ParallelTag.of(i), RootInteraction.getRootInteractionOrUnknown(root).getInteractionIds()
+         )) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   @Override
+   public boolean needsRemoteSync() {
+      return true;
+   }
+
+   @Nonnull
+   @Override
+   protected com.hypixel.hytale.protocol.Interaction generatePacket() {
+      return new com.hypixel.hytale.protocol.ParallelInteraction();
+   }
+
+   @Override
+   protected void configurePacket(com.hypixel.hytale.protocol.Interaction packet) {
+      super.configurePacket(packet);
+      com.hypixel.hytale.protocol.ParallelInteraction p = (com.hypixel.hytale.protocol.ParallelInteraction)packet;
+      int[] chainingNext = p.next = new int[this.interactions.length];
+
+      for (int i = 0; i < this.interactions.length; i++) {
+         chainingNext[i] = RootInteraction.getRootInteractionIdOrUnknown(this.interactions[i]);
+      }
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ParallelInteraction{interactions=" + Arrays.toString((Object[])this.interactions) + "} " + super.toString();
+   }
+
+   private static class ParallelTag implements CollectorTag {
+      private final int index;
+
+      private ParallelTag(int index) {
+         this.index = index;
+      }
+
+      public int getIndex() {
+         return this.index;
+      }
+
+      @Override
+      public boolean equals(@Nullable Object o) {
+         if (this == o) {
+            return true;
+         } else if (o != null && this.getClass() == o.getClass()) {
+            ParallelInteraction.ParallelTag that = (ParallelInteraction.ParallelTag)o;
+            return this.index == that.index;
+         } else {
+            return false;
+         }
+      }
+
+      @Override
+      public int hashCode() {
+         return this.index;
+      }
+
+      @Nonnull
+      @Override
+      public String toString() {
+         return "ParallelTag{index=" + this.index + "}";
+      }
+
+      @Nonnull
+      public static ParallelInteraction.ParallelTag of(int index) {
+         return new ParallelInteraction.ParallelTag(index);
+      }
+   }
+}

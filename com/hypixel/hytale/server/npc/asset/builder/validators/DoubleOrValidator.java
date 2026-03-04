@@ -1,57 +1,56 @@
-/*    */ package com.hypixel.hytale.server.npc.asset.builder.validators;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class DoubleOrValidator
-/*    */   extends DoubleValidator
-/*    */ {
-/* 12 */   private static final DoubleOrValidator GREATER_EQUAL_0_OR_MINUS_1 = new DoubleOrValidator(RelationalOperator.GreaterEqual, 0.0D, RelationalOperator.Equal, -1.0D);
-/*    */   
-/*    */   private final RelationalOperator relationOne;
-/*    */   private final RelationalOperator relationTwo;
-/*    */   private final double valueOne;
-/*    */   private final double valueTwo;
-/*    */   
-/*    */   private DoubleOrValidator(RelationalOperator relationOne, double valueOne, RelationalOperator relationTwo, double valueTwo) {
-/* 20 */     this.relationOne = relationOne;
-/* 21 */     this.valueOne = valueOne;
-/* 22 */     this.relationTwo = relationTwo;
-/* 23 */     this.valueTwo = valueTwo;
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   public boolean test(double value) {
-/* 28 */     return (compare(value, this.relationOne, this.valueOne) || compare(value, this.relationTwo, this.valueTwo));
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String errorMessage(double value) {
-/* 34 */     return errorMessage0(value, "Value");
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String errorMessage(double value, String name) {
-/* 40 */     return errorMessage0(value, "\"" + name + "\"");
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   private String errorMessage0(double value, String name) {
-/* 45 */     return name + " should be " + name + " " + this.relationOne.asText() + " or " + this.valueOne + " " + this.relationTwo.asText() + ", but is " + this.valueTwo;
-/*    */   }
-/*    */   
-/*    */   public static DoubleOrValidator greaterEqual0OrMinus1() {
-/* 49 */     return GREATER_EQUAL_0_OR_MINUS_1;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.npc.asset.builder.validators;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\asset\builder\validators\DoubleOrValidator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class DoubleOrValidator extends DoubleValidator {
+   private static final DoubleOrValidator GREATER_EQUAL_0_OR_MINUS_1 = new DoubleOrValidator(
+      RelationalOperator.GreaterEqual, 0.0, RelationalOperator.Equal, -1.0
+   );
+   private final RelationalOperator relationOne;
+   private final RelationalOperator relationTwo;
+   private final double valueOne;
+   private final double valueTwo;
+
+   private DoubleOrValidator(RelationalOperator relationOne, double valueOne, RelationalOperator relationTwo, double valueTwo) {
+      this.relationOne = relationOne;
+      this.valueOne = valueOne;
+      this.relationTwo = relationTwo;
+      this.valueTwo = valueTwo;
+   }
+
+   @Override
+   public boolean test(double value) {
+      return compare(value, this.relationOne, this.valueOne) || compare(value, this.relationTwo, this.valueTwo);
+   }
+
+   @Nonnull
+   @Override
+   public String errorMessage(double value) {
+      return this.errorMessage0(value, "Value");
+   }
+
+   @Nonnull
+   @Override
+   public String errorMessage(double value, String name) {
+      return this.errorMessage0(value, "\"" + name + "\"");
+   }
+
+   @Nonnull
+   private String errorMessage0(double value, String name) {
+      return name
+         + " should be "
+         + this.relationOne.asText()
+         + " "
+         + this.valueOne
+         + " or "
+         + this.relationTwo.asText()
+         + " "
+         + this.valueTwo
+         + ", but is "
+         + value;
+   }
+
+   public static DoubleOrValidator greaterEqual0OrMinus1() {
+      return GREATER_EQUAL_0_OR_MINUS_1;
+   }
+}

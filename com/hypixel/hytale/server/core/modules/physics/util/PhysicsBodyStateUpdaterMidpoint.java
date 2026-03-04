@@ -1,39 +1,18 @@
-/*    */ package com.hypixel.hytale.server.core.modules.physics.util;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class PhysicsBodyStateUpdaterMidpoint
-/*    */   extends PhysicsBodyStateUpdater
-/*    */ {
-/*    */   public void update(@Nonnull PhysicsBodyState before, @Nonnull PhysicsBodyState after, double mass, double dt, boolean onGround, @Nonnull ForceProvider[] forceProvider) {
-/* 17 */     double halfTime = 0.5D * dt;
-/*    */ 
-/*    */     
-/* 20 */     computeAcceleration(before, onGround, forceProvider, mass, halfTime);
-/* 21 */     updateVelocity(before, after, halfTime);
-/*    */     
-/* 23 */     updatePositionBeforeVelocity(before, after, halfTime);
-/*    */ 
-/*    */     
-/* 26 */     computeAcceleration(after, onGround, forceProvider, mass, dt);
-/*    */     
-/* 28 */     updateAndClampVelocity(before, after, dt);
-/*    */ 
-/*    */     
-/* 31 */     updatePositionAfterVelocity(before, after, dt);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.modules.physics.util;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\physic\\util\PhysicsBodyStateUpdaterMidpoint.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class PhysicsBodyStateUpdaterMidpoint extends PhysicsBodyStateUpdater {
+   @Override
+   public void update(
+      @Nonnull PhysicsBodyState before, @Nonnull PhysicsBodyState after, double mass, double dt, boolean onGround, @Nonnull ForceProvider[] forceProvider
+   ) {
+      double halfTime = 0.5 * dt;
+      this.computeAcceleration(before, onGround, forceProvider, mass, halfTime);
+      this.updateVelocity(before, after, halfTime);
+      updatePositionBeforeVelocity(before, after, halfTime);
+      this.computeAcceleration(after, onGround, forceProvider, mass, dt);
+      this.updateAndClampVelocity(before, after, dt);
+      updatePositionAfterVelocity(before, after, dt);
+   }
+}

@@ -9,11 +9,7 @@ import javax.annotation.Nullable;
 
 @FunctionalInterface
 public interface ImpactConsumer {
-  void onImpact(@Nonnull Ref<EntityStore> paramRef1, @Nonnull Vector3d paramVector3d, @Nullable Ref<EntityStore> paramRef2, @Nullable String paramString, @Nonnull CommandBuffer<EntityStore> paramCommandBuffer);
+   void onImpact(
+      @Nonnull Ref<EntityStore> var1, @Nonnull Vector3d var2, @Nullable Ref<EntityStore> var3, @Nullable String var4, @Nonnull CommandBuffer<EntityStore> var5
+   );
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\projectile\config\ImpactConsumer.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

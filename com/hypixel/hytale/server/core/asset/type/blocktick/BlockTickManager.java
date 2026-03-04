@@ -1,35 +1,25 @@
-/*    */ package com.hypixel.hytale.server.core.asset.type.blocktick;
-/*    */ 
-/*    */ import java.util.concurrent.atomic.AtomicReference;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ @Deprecated(forRemoval = true)
-/*    */ public final class BlockTickManager
-/*    */ {
-/* 13 */   private static final AtomicReference<IBlockTickProvider> BLOCK_TICK_PROVIDER = new AtomicReference<>(IBlockTickProvider.NONE);
-/*    */ 
-/*    */ 
-/*    */   
-/*    */   public static void setBlockTickProvider(@Nonnull IBlockTickProvider provider) {
-/* 18 */     BLOCK_TICK_PROVIDER.set(provider);
-/*    */   }
-/*    */   
-/*    */   @Nonnull
-/*    */   public static IBlockTickProvider getBlockTickProvider() {
-/* 23 */     return BLOCK_TICK_PROVIDER.get();
-/*    */   }
-/*    */   
-/*    */   public static boolean hasBlockTickProvider() {
-/* 27 */     return (getBlockTickProvider() != IBlockTickProvider.NONE);
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.core.asset.type.blocktick;
 
+import java.util.concurrent.atomic.AtomicReference;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\asset\type\blocktick\BlockTickManager.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+@Deprecated(forRemoval = true)
+public final class BlockTickManager {
+   private static final AtomicReference<IBlockTickProvider> BLOCK_TICK_PROVIDER = new AtomicReference<>(IBlockTickProvider.NONE);
+
+   private BlockTickManager() {
+   }
+
+   public static void setBlockTickProvider(@Nonnull IBlockTickProvider provider) {
+      BLOCK_TICK_PROVIDER.set(provider);
+   }
+
+   @Nonnull
+   public static IBlockTickProvider getBlockTickProvider() {
+      return BLOCK_TICK_PROVIDER.get();
+   }
+
+   public static boolean hasBlockTickProvider() {
+      return getBlockTickProvider() != IBlockTickProvider.NONE;
+   }
+}

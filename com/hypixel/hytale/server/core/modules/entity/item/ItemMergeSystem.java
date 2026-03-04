@@ -1,175 +1,152 @@
-/*     */ package com.hypixel.hytale.server.core.modules.entity.item;
-/*     */ 
-/*     */ import com.hypixel.hytale.component.ArchetypeChunk;
-/*     */ import com.hypixel.hytale.component.CommandBuffer;
-/*     */ import com.hypixel.hytale.component.Component;
-/*     */ import com.hypixel.hytale.component.ComponentAccessor;
-/*     */ import com.hypixel.hytale.component.ComponentType;
-/*     */ import com.hypixel.hytale.component.Ref;
-/*     */ import com.hypixel.hytale.component.RemoveReason;
-/*     */ import com.hypixel.hytale.component.ResourceType;
-/*     */ import com.hypixel.hytale.component.Store;
-/*     */ import com.hypixel.hytale.component.query.Query;
-/*     */ import com.hypixel.hytale.component.spatial.SpatialResource;
-/*     */ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-/*     */ import com.hypixel.hytale.math.vector.Vector3d;
-/*     */ import com.hypixel.hytale.protocol.ColorLight;
-/*     */ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-/*     */ import com.hypixel.hytale.server.core.inventory.ItemStack;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
-/*     */ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-/*     */ import com.hypixel.hytale.server.core.modules.time.TimeResource;
-/*     */ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-/*     */ import it.unimi.dsi.fastutil.objects.ObjectList;
-/*     */ import it.unimi.dsi.fastutil.objects.ObjectListIterator;
-/*     */ import java.util.List;
-/*     */ import javax.annotation.Nonnull;
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ 
-/*     */ public class ItemMergeSystem
-/*     */   extends EntityTickingSystem<EntityStore>
-/*     */ {
-/*     */   public static final float RADIUS = 2.0F;
-/*     */   @Nonnull
-/*     */   private final ComponentType<EntityStore, ItemComponent> itemComponentComponentType;
-/*     */   @Nonnull
-/*     */   private final ComponentType<EntityStore, Interactable> interactableComponentType;
-/*     */   @Nonnull
-/*     */   private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> itemSpatialComponent;
-/*     */   @Nonnull
-/*     */   private final Query<EntityStore> query;
-/*     */   
-/*     */   public ItemMergeSystem(@Nonnull ComponentType<EntityStore, ItemComponent> itemComponentComponentType, @Nonnull ComponentType<EntityStore, Interactable> interactableComponentType, @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> itemSpatialComponent) {
-/*  57 */     this.itemComponentComponentType = itemComponentComponentType;
-/*  58 */     this.itemSpatialComponent = itemSpatialComponent;
-/*  59 */     this.interactableComponentType = interactableComponentType;
-/*     */ 
-/*     */     
-/*  62 */     this.query = (Query<EntityStore>)Query.and(new Query[] { (Query)itemComponentComponentType, 
-/*     */           
-/*  64 */           (Query)TransformComponent.getComponentType(), 
-/*  65 */           (Query)Query.not((Query)interactableComponentType), 
-/*  66 */           (Query)Query.not((Query)PreventItemMerging.getComponentType()) });
-/*     */   }
-/*     */ 
-/*     */ 
-/*     */   
-/*     */   @Nonnull
-/*     */   public Query<EntityStore> getQuery() {
-/*  73 */     return this.query;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public boolean isParallel(int archetypeChunkSize, int taskCount) {
-/*  78 */     return false;
-/*     */   }
-/*     */ 
-/*     */   
-/*     */   public void tick(float dt, int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer) {
-/*  83 */     ItemComponent itemComponent = (ItemComponent)archetypeChunk.getComponent(index, this.itemComponentComponentType);
-/*  84 */     assert itemComponent != null;
-/*  85 */     ItemStack itemStack = itemComponent.getItemStack();
-/*     */ 
-/*     */     
-/*  88 */     if (itemStack == null)
-/*     */       return; 
-/*  90 */     Item itemAsset = itemStack.getItem();
-/*  91 */     int maxStack = itemAsset.getMaxStack();
-/*     */     
-/*  93 */     if (maxStack <= 1 || itemStack.getQuantity() >= maxStack)
-/*     */       return; 
-/*  95 */     if (!itemComponent.pollMergeDelay(dt))
-/*     */       return; 
-/*  97 */     SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = (SpatialResource<Ref<EntityStore>, EntityStore>)store.getResource(this.itemSpatialComponent);
-/*  98 */     TimeResource timeResource = (TimeResource)store.getResource(TimeResource.getResourceType());
-/*     */     
-/* 100 */     TransformComponent transformComponent = (TransformComponent)archetypeChunk.getComponent(index, TransformComponent.getComponentType());
-/* 101 */     assert transformComponent != null;
-/*     */     
-/* 103 */     Vector3d position = transformComponent.getPosition();
-/*     */ 
-/*     */     
-/* 106 */     ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
-/* 107 */     spatialResource.getSpatialStructure().ordered(position, 2.0D, (List)results);
-/*     */     
-/* 109 */     Ref<EntityStore> reference = archetypeChunk.getReferenceTo(index);
-/*     */     
-/* 111 */     for (ObjectListIterator<Ref<EntityStore>> objectListIterator = results.iterator(); objectListIterator.hasNext(); ) { Ref<EntityStore> otherReference = objectListIterator.next();
-/* 112 */       if (!otherReference.isValid() || otherReference.equals(reference))
-/*     */         continue; 
-/* 114 */       ItemComponent otherItemComponent = (ItemComponent)store.getComponent(otherReference, this.itemComponentComponentType);
-/* 115 */       assert otherItemComponent != null;
-/*     */ 
-/*     */       
-/* 118 */       ItemStack otherItemStack = otherItemComponent.getItemStack();
-/* 119 */       if (otherItemStack == null) {
-/*     */         continue;
-/*     */       }
-/* 122 */       if (commandBuffer.getArchetype(otherReference).contains(this.interactableComponentType))
-/*     */         continue; 
-/* 124 */       if (!itemStack.isStackableWith(otherItemStack))
-/*     */         continue; 
-/* 126 */       int otherQuantity = otherItemStack.getQuantity();
-/* 127 */       if (otherQuantity >= maxStack) {
-/*     */         continue;
-/*     */       }
-/*     */ 
-/*     */       
-/* 132 */       int combinedTotal = itemStack.getQuantity() + otherQuantity;
-/* 133 */       if (combinedTotal <= maxStack) {
-/* 134 */         commandBuffer.removeEntity(otherReference, RemoveReason.REMOVE);
-/*     */ 
-/*     */ 
-/*     */         
-/* 138 */         otherItemComponent.setItemStack(null);
-/*     */         
-/* 140 */         itemStack = itemStack.withQuantity(combinedTotal);
-/*     */       } else {
-/* 142 */         otherItemComponent.setItemStack(itemStack.withQuantity(combinedTotal - maxStack));
-/* 143 */         float f = otherItemComponent.computeLifetimeSeconds((ComponentAccessor<EntityStore>)commandBuffer);
-/* 144 */         DespawnComponent.trySetDespawn(commandBuffer, timeResource, otherReference, (DespawnComponent)commandBuffer.getComponent(otherReference, DespawnComponent.getComponentType()), Float.valueOf(f));
-/*     */         
-/* 146 */         ColorLight otherItemDynamicLight = otherItemComponent.computeDynamicLight();
-/* 147 */         if (otherItemDynamicLight != null) {
-/* 148 */           DynamicLight otherDynamicLightComponent = (DynamicLight)commandBuffer.getComponent(otherReference, DynamicLight.getComponentType());
-/* 149 */           if (otherDynamicLightComponent != null) {
-/* 150 */             otherDynamicLightComponent.setColorLight(otherItemDynamicLight);
-/*     */           } else {
-/* 152 */             commandBuffer.putComponent(otherReference, DynamicLight.getComponentType(), (Component)new DynamicLight(otherItemDynamicLight));
-/*     */           } 
-/*     */         } 
-/*     */         
-/* 156 */         itemStack = itemStack.withQuantity(maxStack);
-/*     */       } 
-/*     */       
-/* 159 */       itemComponent.setItemStack(itemStack);
-/*     */       
-/* 161 */       float newLifetime = itemComponent.computeLifetimeSeconds((ComponentAccessor<EntityStore>)commandBuffer);
-/* 162 */       DespawnComponent.trySetDespawn(commandBuffer, timeResource, reference, (DespawnComponent)archetypeChunk.getComponent(index, DespawnComponent.getComponentType()), Float.valueOf(newLifetime));
-/*     */ 
-/*     */       
-/* 165 */       if (itemStack.getQuantity() >= maxStack)
-/*     */         break;  }
-/*     */   
-/*     */   }
-/*     */ }
+package com.hypixel.hytale.server.core.modules.entity.item;
 
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.RemoveReason;
+import com.hypixel.hytale.component.ResourceType;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.spatial.SpatialResource;
+import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.protocol.ColorLight;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
+import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.time.TimeResource;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.objects.ObjectList;
+import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\core\modules\entity\item\ItemMergeSystem.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ItemMergeSystem extends EntityTickingSystem<EntityStore> {
+   public static final float RADIUS = 2.0F;
+   @Nonnull
+   private final ComponentType<EntityStore, ItemComponent> itemComponentComponentType;
+   @Nonnull
+   private final ComponentType<EntityStore, Interactable> interactableComponentType;
+   @Nonnull
+   private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> itemSpatialComponent;
+   @Nonnull
+   private final Query<EntityStore> query;
+
+   public ItemMergeSystem(
+      @Nonnull ComponentType<EntityStore, ItemComponent> itemComponentComponentType,
+      @Nonnull ComponentType<EntityStore, Interactable> interactableComponentType,
+      @Nonnull ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> itemSpatialComponent
+   ) {
+      this.itemComponentComponentType = itemComponentComponentType;
+      this.itemSpatialComponent = itemSpatialComponent;
+      this.interactableComponentType = interactableComponentType;
+      this.query = Query.and(
+         itemComponentComponentType,
+         TransformComponent.getComponentType(),
+         Query.not(interactableComponentType),
+         Query.not(PreventItemMerging.getComponentType())
+      );
+   }
+
+   @Nonnull
+   @Override
+   public Query<EntityStore> getQuery() {
+      return this.query;
+   }
+
+   @Override
+   public boolean isParallel(int archetypeChunkSize, int taskCount) {
+      return false;
+   }
+
+   @Override
+   public void tick(
+      float dt,
+      int index,
+      @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull CommandBuffer<EntityStore> commandBuffer
+   ) {
+      ItemComponent itemComponent = archetypeChunk.getComponent(index, this.itemComponentComponentType);
+
+      assert itemComponent != null;
+
+      ItemStack itemStack = itemComponent.getItemStack();
+      if (itemStack != null) {
+         Item itemAsset = itemStack.getItem();
+         int maxStack = itemAsset.getMaxStack();
+         if (maxStack > 1 && itemStack.getQuantity() < maxStack) {
+            if (itemComponent.pollMergeDelay(dt)) {
+               SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.itemSpatialComponent);
+               TimeResource timeResource = store.getResource(TimeResource.getResourceType());
+               TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+
+               assert transformComponent != null;
+
+               Vector3d position = transformComponent.getPosition();
+               ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+               spatialResource.getSpatialStructure().ordered(position, 2.0, results);
+               Ref<EntityStore> reference = archetypeChunk.getReferenceTo(index);
+               ObjectListIterator var16 = results.iterator();
+
+               while (var16.hasNext()) {
+                  Ref<EntityStore> otherReference = (Ref<EntityStore>)var16.next();
+                  if (otherReference.isValid() && !otherReference.equals(reference)) {
+                     ItemComponent otherItemComponent = store.getComponent(otherReference, this.itemComponentComponentType);
+
+                     assert otherItemComponent != null;
+
+                     ItemStack otherItemStack = otherItemComponent.getItemStack();
+                     if (otherItemStack != null
+                        && !commandBuffer.getArchetype(otherReference).contains(this.interactableComponentType)
+                        && itemStack.isStackableWith(otherItemStack)) {
+                        int otherQuantity = otherItemStack.getQuantity();
+                        if (otherQuantity < maxStack) {
+                           int combinedTotal = itemStack.getQuantity() + otherQuantity;
+                           if (combinedTotal <= maxStack) {
+                              commandBuffer.removeEntity(otherReference, RemoveReason.REMOVE);
+                              otherItemComponent.setItemStack(null);
+                              itemStack = itemStack.withQuantity(combinedTotal);
+                           } else {
+                              otherItemComponent.setItemStack(itemStack.withQuantity(combinedTotal - maxStack));
+                              float newLifetime = otherItemComponent.computeLifetimeSeconds(commandBuffer);
+                              DespawnComponent.trySetDespawn(
+                                 commandBuffer,
+                                 timeResource,
+                                 otherReference,
+                                 commandBuffer.getComponent(otherReference, DespawnComponent.getComponentType()),
+                                 newLifetime
+                              );
+                              ColorLight otherItemDynamicLight = otherItemComponent.computeDynamicLight();
+                              if (otherItemDynamicLight != null) {
+                                 DynamicLight otherDynamicLightComponent = commandBuffer.getComponent(otherReference, DynamicLight.getComponentType());
+                                 if (otherDynamicLightComponent != null) {
+                                    otherDynamicLightComponent.setColorLight(otherItemDynamicLight);
+                                 } else {
+                                    commandBuffer.putComponent(otherReference, DynamicLight.getComponentType(), new DynamicLight(otherItemDynamicLight));
+                                 }
+                              }
+
+                              itemStack = itemStack.withQuantity(maxStack);
+                           }
+
+                           itemComponent.setItemStack(itemStack);
+                           float newLifetime = itemComponent.computeLifetimeSeconds(commandBuffer);
+                           DespawnComponent.trySetDespawn(
+                              commandBuffer, timeResource, reference, archetypeChunk.getComponent(index, DespawnComponent.getComponentType()), newLifetime
+                           );
+                           if (itemStack.getQuantity() >= maxStack) {
+                              break;
+                           }
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+}

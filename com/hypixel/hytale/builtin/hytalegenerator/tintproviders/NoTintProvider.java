@@ -1,21 +1,11 @@
-/*    */ package com.hypixel.hytale.builtin.hytalegenerator.tintproviders;
-/*    */ 
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class NoTintProvider
-/*    */   extends TintProvider
-/*    */ {
-/*    */   @Nonnull
-/*    */   public TintProvider.Result getValue(@Nonnull TintProvider.Context context) {
-/* 13 */     return TintProvider.Result.WITHOUT_VALUE;
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.builtin.hytalegenerator.tintproviders;
 
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\builtin\hytalegenerator\tintproviders\NoTintProvider.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class NoTintProvider extends TintProvider {
+   @Nonnull
+   @Override
+   public TintProvider.Result getValue(@Nonnull TintProvider.Context context) {
+      return TintProvider.Result.WITHOUT_VALUE;
+   }
+}

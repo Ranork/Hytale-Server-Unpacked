@@ -7,13 +7,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 
 public interface AStarEvaluator {
-  boolean isGoalReached(Ref<EntityStore> paramRef, AStarBase paramAStarBase, AStarNode paramAStarNode, MotionController paramMotionController, ComponentAccessor<EntityStore> paramComponentAccessor);
-  
-  float estimateToGoal(AStarBase paramAStarBase, Vector3d paramVector3d, MotionController paramMotionController);
+   boolean isGoalReached(Ref<EntityStore> var1, AStarBase var2, AStarNode var3, MotionController var4, ComponentAccessor<EntityStore> var5);
+
+   float estimateToGoal(AStarBase var1, Vector3d var2, MotionController var3);
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\npc\navigation\AStarEvaluator.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

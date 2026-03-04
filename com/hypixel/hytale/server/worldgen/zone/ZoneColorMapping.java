@@ -1,43 +1,28 @@
-/*    */ package com.hypixel.hytale.server.worldgen.zone;
-/*    */ 
-/*    */ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-/*    */ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-/*    */ import javax.annotation.Nonnull;
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ 
-/*    */ public class ZoneColorMapping
-/*    */ {
-/*    */   @Nonnull
-/* 17 */   protected final Int2ObjectMap<Zone[]> mapping = (Int2ObjectMap<Zone[]>)new Int2ObjectOpenHashMap();
-/*    */ 
-/*    */   
-/*    */   public void add(int rgb, Zone zone) {
-/* 21 */     add(rgb, new Zone[] { zone });
-/*    */   }
-/*    */   
-/*    */   public void add(int rgb, Zone[] zones) {
-/* 25 */     this.mapping.put(rgb, zones);
-/*    */   }
-/*    */   
-/*    */   public Zone[] get(int rgb) {
-/* 29 */     return (Zone[])this.mapping.get(rgb);
-/*    */   }
-/*    */ 
-/*    */   
-/*    */   @Nonnull
-/*    */   public String toString() {
-/* 35 */     return "ZoneColorMapping{mapping=" + String.valueOf(this.mapping) + "}";
-/*    */   }
-/*    */ }
+package com.hypixel.hytale.server.worldgen.zone;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import javax.annotation.Nonnull;
 
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\worldgen\zone\ZoneColorMapping.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */
+public class ZoneColorMapping {
+   @Nonnull
+   protected final Int2ObjectMap<Zone[]> mapping = new Int2ObjectOpenHashMap();
+
+   public void add(int rgb, Zone zone) {
+      this.add(rgb, new Zone[]{zone});
+   }
+
+   public void add(int rgb, Zone[] zones) {
+      this.mapping.put(rgb, zones);
+   }
+
+   public Zone[] get(int rgb) {
+      return (Zone[])this.mapping.get(rgb);
+   }
+
+   @Nonnull
+   @Override
+   public String toString() {
+      return "ZoneColorMapping{mapping=" + this.mapping + "}";
+   }
+}

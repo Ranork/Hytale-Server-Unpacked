@@ -8,17 +8,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 public interface IWorldMap {
-  WorldMapSettings getWorldMapSettings();
-  
-  CompletableFuture<WorldMap> generate(World paramWorld, int paramInt1, int paramInt2, LongSet paramLongSet);
-  
-  CompletableFuture<Map<String, MapMarker>> generatePointsOfInterest(World paramWorld);
-  
-  default void shutdown() {}
+    WorldMapSettings getWorldMapSettings();
+
+    CompletableFuture<WorldMap> generate(World var1, int var2, int var3, LongSet var4);
+
+    CompletableFuture<Map<String, MapMarker>> generatePointsOfInterest(World var1);
+
+    default void shutdown() {
+    }
 }
-
-
-/* Location:              C:\Users\ranor\AppData\Roaming\Hytale\install\release\package\game\latest\Server\HytaleServer.jar!\com\hypixel\hytale\server\cor\\universe\world\worldmap\IWorldMap.class
- * Java compiler version: 21 (65.0)
- * JD-Core Version:       1.1.3
- */

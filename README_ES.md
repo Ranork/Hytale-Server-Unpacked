@@ -1,19 +1,19 @@
-# Hytale Server Plugin API Documentation
+# Documentación de la API Principal de Hytale (ES)
 
-This project is auto-generated from the decompiled source code and shared as a reference only, to allow reading of public methods. It is not intended for build purposes. 
+Este proyecto se genera automáticamente a partir del código fuente descompilado y se comparte solo como referencia, para permitir la lectura de métodos públicos. No está destinado para fines de compilación.
 <br>
 
 For more details you can visit our discord channel:  https://www.akatron.net/hytale-discord
 
 
-## AI Integration
+## Integración con IA
 
-If you intend to use this project as a reference for writing code with artificial intelligence, you can download it and specify the file location com/hypixel/hytale in your prompts so that the agent can receive information about the project.
+Si tienes la intención de utilizar este proyecto como referencia para escribir código con inteligencia artificial, puedes descargarlo y especificar la ubicación del archivo com/hypixel/hytale en tus indicaciones para que el agente pueda recibir información sobre el proyecto.
 
-
-## Languages
-[Türkçe (Turkish)](README_TR.md)
-[Español (Spanish)](README_ES.md)
+## Idiomas disponibles
+- [English](README.md)
+- [Türkçe (Turkish)](README_TR.md)
+- [Español (Spanish)](README_ES.md)
 
 ## Core API Documentation
 - [English](HYTALE_CORE_API.md)
@@ -25,15 +25,15 @@ If you intend to use this project as a reference for writing code with artificia
 - **Version**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.asseteditor.AssetEditorPlugin`
 
-_No public methods found or file parse error._
+_No existen métodos públicos o error al analizar el archivo._
 
 ---
 
 ## BlockSpawner
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.blockspawner.BlockSpawnerPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static BlockSpawnerPlugin get();
 public Query<ChunkStore> getQuery();
@@ -50,7 +50,7 @@ public Query<ChunkStore> getQuery();
 - **Version**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.blocktick.BlockTickPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static BlockTickPlugin get();
 public TickProcedure getTickProcedure(int blockId);
@@ -60,10 +60,10 @@ public int discoverTickingBlocks(@Nonnull Holder<ChunkStore> holder, @Nonnull Wo
 ---
 
 ## BlockPhysics
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.blockphysics.BlockPhysicsPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static void validatePrefabs(@Nonnull LoadAssetEvent event);
 ```
@@ -71,49 +71,49 @@ public static void validatePrefabs(@Nonnull LoadAssetEvent event);
 ---
 
 ## BuilderTools
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin`
 
-_No public methods found or file parse error._
+_No existen métodos públicos o error al analizar el archivo._
 
 ---
 
 ## Crafting
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.crafting.CraftingPlugin`
 
-### Description
-Manages the crafting system, including recipes, crafting benches (stations), and player unlocked recipes.
-It handles checking if a player has the required materials and if a specific recipe is valid for a given bench.
+### Descripción
+Gestiona el sistema de elaboración, incluyendo recetas, bancos de trabajo (estaciones) y recetas desbloqueadas por el jugador.
+Se encarga de verificar si un jugador tiene los materiales requeridos y si una receta específica es válida para un banco dado.
 
-### Public Methods
+### Métodos Públicos
 ```java
-// Returns the singleton instance
+// Devuelve la instancia singleton
 public static CraftingPlugin get();
 
-// Gets all available recipe IDs for a specific bench ID and category.
+// Devuelve todos los IDs de recetas disponibles para un banco específico y categoría.
 public static Set<String> getAvailableRecipesForCategory(String benchId, String benchCategoryId);
 
-// Checks if an item stack can be used as a material in the current state of a bench.
+// Comprueba si un stack de ítems puede usarse como material en el estado actual de un banco.
 public static boolean isValidCraftingMaterialForBench(BenchState benchState, ItemStack itemStack);
 
-// Checks if an item is valid for upgrading a bench.
+// Comprueba si un ítem es válido para mejorar un banco.
 public static boolean isValidUpgradeMaterialForBench(BenchState benchState, ItemStack itemStack);
 
-// Gets a list of all recipes available for a given Bench block.
+// Devuelve una lista de todas las recetas disponibles para un bloque de banco dado.
 public static List<CraftingRecipe> getBenchRecipes(@Nonnull Bench bench);
 
-// Gets recipes for a bench type (e.g. Crafting, Diagram, Structural) and name.
+// Devuelve recetas para un tipo de banco (por ejemplo, Crafting, Diagram, Structural) y nombre.
 public static List<CraftingRecipe> getBenchRecipes(BenchType benchType, String name);
 
-// Unlocks a recipe for a player ("learns" it). Returns true if it was newly learned.
-// Requires the specific player Entity Reference.
+// Desbloquea una receta para un jugador ("la aprende"). Devuelve true si fue aprendida recientemente.
+// Requiere la referencia específica del jugador Entity.
 public static boolean learnRecipe(@Nonnull Ref<EntityStore> ref, @Nonnull String recipeId, @Nonnull ComponentAccessor<EntityStore> componentAccessor);
 
-// Locks a recipe for a player ("forgets" it).
+// Bloquea una receta para un jugador ("la olvida").
 public static boolean forgetRecipe(@Nonnull Ref<EntityStore> ref, @Nonnull String itemId, @Nonnull ComponentAccessor<EntityStore> componentAccessor);
 
-// Sends a packet to the client syncing their list of known recipes.
+// Envía un paquete al cliente sincronizando su lista de recetas conocidas.
 public static void sendKnownRecipes(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor);
 ```
 
@@ -123,7 +123,7 @@ public static void sendKnownRecipes(@Nonnull Ref<EntityStore> ref, @Nonnull Comp
 - **Version**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.commandmacro.MacroCommandPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static MacroCommandPlugin get();
 public void loadCommandMacroAsset(@Nonnull LoadedAssetsEvent<String, MacroCommandBuilder, DefaultAssetMap<String, MacroCommandBuilder>> event);
@@ -132,18 +132,18 @@ public void loadCommandMacroAsset(@Nonnull LoadedAssetsEvent<String, MacroComman
 ---
 
 ## Instances
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.instances.InstancesPlugin`
 
-_No public methods found or file parse error._
+_No existen métodos públicos o error al analizar el archivo._
 
 ---
 
 ## LANDiscovery
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.landiscovery.LANDiscoveryPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static LANDiscoveryPlugin get();
 public void setLANDiscoveryEnabled(boolean enabled);
@@ -157,52 +157,52 @@ public LANDiscoveryThread getLanDiscoveryThread();
 - **Version**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.server.npc.NPCPlugin`
 
-### Description
-The NPC System is one of the most complex systems in Hytale Server. It manages the lifecycle, AI, behavior, and data of all Non-Player Characters.
-It uses a "Builder" pattern to construct NPCs from assets and registers various AI components like Sensors (eyes/ears), Actions (attacks/movements), and Motions.
-It also interacts heavily with the `EntityStore` to manage components like `Blackboard` (memory), `CombatData`, and `Timers`.
+### Descripción
+El sistema de NPC es uno de los sistemas más complejos en Hytale Server. Gestiona el ciclo de vida, IA, comportamiento y datos de todos los personajes no jugadores.
+Utiliza un patrón "Builder" para construir NPCs a partir de assets y registra varios componentes de IA como Sensores (ojos/oídos), Acciones (ataques/movimientos) y Motions.
+También interactúa de forma frecuente con el `EntityStore` para gestionar componentes como `Blackboard` (memoria), `CombatData` y `Timers`.
 
-### Public Methods
+### Métodos Públicos
 ```java
-// Returns the singleton instance of the NPCPlugin
+// Devuelve la instancia singleton del NPCPlugin
 public static NPCPlugin get();
 
-// Spawns an NPC of a specific type (role) at a location.
-// Returns a Pair containing the Entity reference and the NPC component.
+// Genera un NPC de un tipo específico (rol) en una ubicación.
+// Devuelve un Par que contiene la referencia de la Entidad y el componente NPC.
 public Pair<Ref<EntityStore>, INonPlayerCharacter> spawnNPC(@Nonnull Store<EntityStore> store, @Nonnull String npcType, @Nullable String groupType, @Nonnull Vector3d position, @Nonnull Vector3f rotation);
 
-// Reloads all active NPCs that share a specific role index. Useful for live-updating AI behavior.
+// Recarga todos los NPCs activos que comparten un índice de rol específico. Útil para actualizar en vivo el comportamiento de la IA.
 public static void reloadNPCsWithRole(int roleIndex);
 
-// Gets the manager responsible for NPC blueprints/templates.
+// Obtiene el gestor responsable de los planos/plantillas de NPC.
 public BuilderManager getBuilderManager();
 
-// Gets the map of attitudes (Friendly, Hostile, Neutral) between different factions/groups.
+// Obtiene el mapa de actitudes (Friendly, Hostile, Neutral) entre diferentes facciones/grupos.
 public AttitudeMap getAttitudeMap();
 
-// Gets the map determining how NPCs react to specific items (e.g. holding a weapon vs a flower).
+// Obtiene el mapa que determina cómo reaccionan los NPCs a objetos específicos (por ejemplo, sostener un arma vs una flor).
 public ItemAttitudeMap getItemAttitudeMap();
 
-// Determines if a specific role name (e.g. "kweebec_guard") exists.
+// Determina si existe un nombre de rol específico (por ejemplo, "kweebec_guard").
 public boolean hasRoleName(String roleName);
 
-// Registers all the core AI factories (Actions, Sensors, Motions). Internal use mostly but good to know.
+// Registra todas las fábricas principales de IA (Acciones, Sensores, Motions). Uso principalmente interno pero bueno saberlo.
 public void setupNPCLoading();
 
-// Gets the human-readable name of a builder index.
+// Obtiene el nombre legible de un índice de builder.
 public String getName(int builderIndex);
 
-// Benchmarking methods for performance testing AI roles.
+// Métodos de benchmarking para pruebas de rendimiento de roles de IA.
 public boolean startRoleBenchmark(double seconds, @Nonnull Consumer<Int2ObjectMap<TimeDistributionRecorder>> onFinished);
 ```
 
 ---
 
 ## NPCObjectives
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.npcobjectives.NPCObjectivesPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static NPCObjectivesPlugin get();
 public static boolean hasTask(@Nonnull UUID playerUUID, @Nonnull UUID npcId, @Nonnull String taskId);
@@ -213,10 +213,10 @@ public static void startObjective(@Nonnull Ref<EntityStore> playerReference, @No
 ---
 
 ## ObjectiveReputation
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.objectivereputation.ObjectiveReputationPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static ObjectiveReputationPlugin get();
 ```
@@ -227,55 +227,55 @@ public static ObjectiveReputationPlugin get();
 - **Version**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin`
 
-### Description
-Handles the questing and objective system. Requires `Objectives` plugin.
-Manages "Objective Lines" (quest chains) and individual "Objectives".
-Tracks progress for players, handles task completion (e.g. "Gather Wood", "Kill skeletons"), and rewards.
+### Descripción
+Maneja el sistema de misiones y objetivos. Requiere el plugin `Objectives`.
+Gestiona "Objective Lines" (cadenas de misiones) y "Objectives" individuales.
+Realiza un seguimiento del progreso de los jugadores, maneja la finalización de tareas (por ejemplo, "Recolectar madera", "Matar esqueletos") y las recompensas.
 
-### Public Methods
+### Métodos Públicos
 ```java
-// Returns the singleton instance
+// Devuelve la instancia singleton
 public static ObjectivePlugin get();
 
-// Starts a specific objective for one or more players.
-// If markerUUID is provided, it might show a location marker.
+// Inicia un objetivo específico para uno o más jugadores.
+// Si se proporciona markerUUID, podría mostrar un marcador de ubicación.
 public Objective startObjective(@Nonnull String objectiveId, @Nonnull Set<UUID> playerUUIDs, @Nonnull UUID worldUUID, @Nullable UUID markerUUID, @Nonnull Store<EntityStore> store);
 
-// Starts a whole chain of objectives (Objective Line).
+// Inicia toda una cadena de objetivos (Línea de Objetivos).
 public Objective startObjectiveLine(@Nonnull Store<EntityStore> store, @Nonnull String objectiveLineId, @Nonnull Set<UUID> playerUUIDs, @Nonnull UUID worldUUID, @Nullable UUID markerUUID);
 
-// Checks if a player is allowed to start an objective (e.g. if they are not already doing it).
+// Verifica si un jugador tiene permitido iniciar un objetivo (por ejemplo, si no lo está haciendo ya).
 public boolean canPlayerDoObjective(@Nonnull Player player, @Nonnull String objectiveAssetId);
 
-// Checks if a player can start an objective line.
+// Verifica si un jugador puede iniciar una línea de objetivos.
 public boolean canPlayerDoObjectiveLine(@Nonnull Player player, @Nonnull String objectiveLineId);
 
-// Marks an objective as completed for the associated players and handles rewards/next steps.
+// Marca un objetivo como completado para los jugadores asociados y maneja recompensas/pasos siguientes.
 public void objectiveCompleted(@Nonnull Objective objective, @Nonnull Store<EntityStore> store);
 
-// Cancels an active objective.
+// Cancela un objetivo activo.
 public void cancelObjective(@Nonnull UUID objectiveUUID, @Nonnull Store<EntityStore> store);
 
-// Adds a player to an already running objective instance (co-op quests).
+// Añade un jugador a una instancia de objetivo ya en ejecución (misiones cooperativas).
 public void addPlayerToExistingObjective(@Nonnull Store<EntityStore> store, @Nonnull UUID playerUUID, @Nonnull UUID objectiveUUID);
 
-// Removes a player from an objective.
+// Elimina a un jugador de un objetivo.
 public void removePlayerFromExistingObjective(@Nonnull Store<EntityStore> store, @Nonnull UUID playerUUID, @Nonnull UUID objectiveUUID);
 
-// Stops tracking an objective for a specific player (client side update).
+// Deja de rastrear un objetivo para un jugador específico (actualización del lado del cliente).
 public void untrackObjectiveForPlayer(@Nonnull Objective objective, @Nonnull UUID playerUUID);
 
-// Returns a debug dump of current objective data.
+// Devuelve un volcado de depuración de los datos actuales del objetivo.
 public String getObjectiveDataDump();
 ```
 
 ---
 
 ## ObjectiveShop
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.objectiveshop.ObjectiveShopPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static ObjectiveShopPlugin get();
 ```
@@ -283,18 +283,18 @@ public static ObjectiveShopPlugin get();
 ---
 
 ## Path
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.path.PathPlugin`
 
-_No public methods found or file parse error._
+_No se encontraron métodos públicos o error al analizar el archivo._
 
 ---
 
 ## Reputation
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.reputation.ReputationPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static ReputationPlugin get();
 public int changeReputation(@Nonnull Player player, @Nonnull Ref<EntityStore> npcRef, int value, @Nonnull ComponentAccessor<EntityStore> componentAccessor);
@@ -315,18 +315,18 @@ public Attitude getAttitude(@Nonnull Store<EntityStore> store, @Nonnull Ref<Enti
 ---
 
 ## NPCReputation
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.npcreputation.NPCReputationPlugin`
 
-_No public methods found or file parse error._
+_No se encontraron métodos públicos o error al analizar el archivo._
 
 ---
 
 ## Shop
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.shop.ShopPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static ShopPlugin get();
 ```
@@ -334,34 +334,33 @@ public static ShopPlugin get();
 ---
 
 ## ShopReputation
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.shopreputation.ShopReputationPlugin`
 
-_No public methods found or file parse error._
-
+_No se encontraron métodos públicos o error al analizar el archivo._
 ---
 
 ## NPCShop
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.npcshop.NPCShopPlugin`
 
-_No public methods found or file parse error._
+_No se encontraron métodos públicos o error al analizar el archivo._
 
 ---
 
 ## NPCEditor
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.npceditor.NPCEditorPlugin`
 
-_No public methods found or file parse error._
+_No se encontraron métodos públicos o error al analizar el archivo._
 
 ---
 
 ## Stash
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.stash.StashPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static ListTransaction<ItemStackTransaction> stash(@Nonnull ItemContainerState containerState, boolean clearDropList);
 public Query<ChunkStore> getQuery();
@@ -389,42 +388,42 @@ public IntSet getSet(int tagSet);
 - **Version**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.teleport.TeleportPlugin`
 
-### Description
-Manages "Warps" and teleportation logic.
-Allows creating, saving, and loading named Warp points in the world.
-Used by commands like `/warp` and `/tppos`.
+### Descripción
+Gestiona "Warps" y la lógica de teletransporte.
+Permite crear, guardar y cargar puntos Warp nombrados en el mundo.
+Utilizado por comandos como `/warp` y `/tppos`.
 
-### Public Methods
+### Métodos Públicos
 ```java
-// Returns the singleton instance
+// Devuelve la instancia singleton
 public static TeleportPlugin get();
 
-// Checks if warps have been loaded from disk.
+// Comprueba si los warps se han cargado desde el disco.
 public boolean isWarpsLoaded();
 
-// Loads warps from `warps.json` or `warps.bson` in the universe directory.
+// Carga los warps desde `warps.json` o `warps.bson` en el directorio del universo.
 public void loadWarps();
 
-// Saves current warps to `warps.json`.
+// Guarda los warps actuales en `warps.json`.
 public void saveWarps();
 
-// Creates a Warp entity (marker) in the world.
+// Crea una entidad Warp (marcador) en el mundo.
 public Holder<EntityStore> createWarp(@Nonnull Warp warp, @Nonnull Store<EntityStore> store);
 
-// Returns the map of loaded warps. (Note: Inferred from logic, method name generic in decompiled code usually `getWarps()`)
+// Devuelve el mapa de warps cargados. (Nota: Inferido de la lógica, el nombre del método genérico en el código descompilado suele ser `getWarps()`)
 public Map<String, Warp> getWarps();
 
-// Updates markers on the map for players within range.
+// Actualiza los marcadores en el mapa para los jugadores dentro del rango.
 public void update(@Nonnull World world, @Nonnull GameplayConfig gameplayConfig, @Nonnull WorldMapTracker tracker, int chunkViewRadius, int playerChunkX, int playerChunkZ);
 ```
 
 ---
 
 ## Fluid
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.fluid.FluidPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static FluidPlugin get();
 public FluidSection getFluidSection(int cx, int cy, int cz);
@@ -435,10 +434,10 @@ public void setBlock(int x, int y, int z, int blockId);
 ---
 
 ## Weather
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.weather.WeatherPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static WeatherPlugin get();
 ```
@@ -446,10 +445,10 @@ public static WeatherPlugin get();
 ---
 
 ## WorldGen
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.worldgen.WorldGenPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static WorldGenPlugin get();
 ```
@@ -457,10 +456,10 @@ public static WorldGenPlugin get();
 ---
 
 ## Farming
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.farming.FarmingPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static FarmingPlugin get();
 ```
@@ -468,26 +467,25 @@ public static FarmingPlugin get();
 ---
 
 ## Camera
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.camera.CameraPlugin`
 
-_No public methods found or file parse error._
-
+_No se encontraron métodos públicos o error al analizar el archivo._
 ---
 
 ## WorldLocationCondition
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.worldlocationcondition.WorldLocationConditionPlugin`
 
-_No public methods found or file parse error._
+_No se encontraron métodos públicos o error al analizar el archivo._
 
 ---
 
 ## NPCCombatActionEvaluator
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.npccombatactionevaluator.NPCCombatActionEvaluatorPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static NPCCombatActionEvaluatorPlugin get();
 ```
@@ -495,55 +493,52 @@ public static NPCCombatActionEvaluatorPlugin get();
 ---
 
 ## Model
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.model.ModelPlugin`
 
-_No public methods found or file parse error._
-
+_No se encontraron métodos públicos o error al analizar el archivo._
 ---
 
 ## Mantling
-- **Version**: 1.0.0
-- **Description**: Enable mantling
+- **Versión**: 1.0.0
+- **Descripción**: Habilitar mantling
 - **Main Class**: `com.hypixel.hytale.builtin.mantling.MantlingPlugin`
 
-_No public methods found or file parse error._
+_No se encontraron métodos públicos o error al analizar el archivo._
 
 ---
 
 ## SafetyRoll
-- **Version**: 1.0.0
-- **Description**: Enable Safety Roll
+- **Versión**: 1.0.0
+- **Descripción**: Habilitar Safety Roll
 - **Main Class**: `com.hypixel.hytale.builtin.safetyroll.SafetyRollPlugin`
 
-_No public methods found or file parse error._
-
+_No se encontraron métodos públicos o error al analizar el archivo._
 ---
 
 ## SprintForce
-- **Version**: 1.0.0
-- **Description**: Enable sprint acceleration/deceleration
+- **Versión**: 1.0.0
+- **Descripción**: Habilitar aceleración/desaceleración al sprintar
 - **Main Class**: `com.hypixel.hytale.builtin.sprintforce.SprintForcePlugin`
 
-_No public methods found or file parse error._
+_No se encontraron métodos públicos o error al analizar el archivo._
 
 ---
 
 ## CrouchSlide
-- **Version**: 1.0.0
-- **Description**: Enable Crouch Sliding
+- **Versión**: 1.0.0
+- **Descripción**: Habilitar deslizamiento agachado
 - **Main Class**: `com.hypixel.hytale.builtin.crouchslide.CrouchSlidePlugin`
 
-_No public methods found or file parse error._
-
+_No se encontraron métodos públicos o error al analizar el archivo._
 ---
 
 ## Parkour
-- **Version**: 1.0.0
-- **Description**: Module to add a timer with a checkpoint system
+- **Versión**: 1.0.0
+- **Descripción**: Módulo para añadir un temporizador con un sistema de checkpoints
 - **Main Class**: `com.hypixel.hytale.builtin.parkour.ParkourPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static ParkourPlugin get();
 public Model getParkourCheckpointModel();
@@ -559,11 +554,11 @@ public void resetPlayer(UUID playerUuid);
 ---
 
 ## Mounts
-- **Version**: 1.0.0
-- **Description**: Module to add mounts
+- **Versión**: 1.0.0
+- **Descripción**: Módulo para añadir monturas
 - **Main Class**: `com.hypixel.hytale.builtin.mounts.MountPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static MountPlugin getInstance();
 public static void checkDismountNpc(@Nonnull ComponentAccessor<EntityStore> store, @Nonnull Player playerComponent);
@@ -574,10 +569,10 @@ public static void resetOriginalPlayerMovementSettings(@Nonnull PlayerRef player
 ---
 
 ## HytaleGenerator
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.hytalegenerator.plugin.HytaleGenerator`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public CompletableFuture<GeneratedChunk> submitChunkRequest(@Nonnull ChunkRequest request);
 public NStagedChunkGenerator createStagedChunkGenerator(@Nonnull ChunkRequest.GeneratorProfile generatorProfile, @Nonnull WorldStructureAsset worldStructureAsset, @Nonnull SettingsAsset settingsAsset);
@@ -586,18 +581,18 @@ public NStagedChunkGenerator createStagedChunkGenerator(@Nonnull ChunkRequest.Ge
 ---
 
 ## Teleporter
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.teleporter.TeleporterPlugin`
 
-_No public methods found or file parse error._
+_No se encontraron métodos públicos o error al analizar el archivo._
 
 ---
 
 ## Memories
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.adventure.memories.MemoriesPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static MemoriesPlugin get();
 public MemoriesPluginConfig getConfig();
@@ -618,10 +613,10 @@ public void onEntityRemove(@Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason 
 ---
 
 ## Deployables
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.deployables.DeployablesPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static DeployablesPlugin get();
 ```
@@ -629,11 +624,11 @@ public static DeployablesPlugin get();
 ---
 
 ## Portals
-- **Version**: 1.0.0
-- **Description**: Module to add portals
+- **Versión**: 1.0.0
+- **Descripción**: Módulo para añadir portales
 - **Main Class**: `com.hypixel.hytale.builtin.portals.PortalsPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static PortalsPlugin getInstance();
 public int countActiveFragments();
@@ -642,11 +637,11 @@ public int countActiveFragments();
 ---
 
 ## Beds
-- **Version**: 1.0.0
-- **Description**: Module to handle beds and sleeping in them
+- **Versión**: 1.0.0
+- **Descripción**: Módulo para manejar camas y dormir en ellas
 - **Main Class**: `com.hypixel.hytale.builtin.beds.BedsPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static BedsPlugin getInstance();
 ```
@@ -654,10 +649,10 @@ public static BedsPlugin getInstance();
 ---
 
 ## Ambience
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.ambience.AmbiencePlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static AmbiencePlugin get();
 public Model getAmbientEmitterModel();
@@ -666,10 +661,10 @@ public Model getAmbientEmitterModel();
 ---
 
 ## CreativeHub
-- **Version**: 1.0.0
+- **Versión**: 1.0.0
 - **Main Class**: `com.hypixel.hytale.builtin.creativehub.CreativeHubPlugin`
 
-### Public Methods
+### Métodos Públicos
 ```java
 public static CreativeHubPlugin get();
 public World getOrSpawnHubInstance(@Nonnull World parentWorld, @Nonnull CreativeHubWorldConfig hubConfig, @Nonnull Transform returnPoint);

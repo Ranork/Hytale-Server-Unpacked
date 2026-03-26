@@ -1,10 +1,11 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.TerrainDensityProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.environmentproviders.EnvironmentProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.TerrainDensityProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
+import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.tintproviders.TintProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.VectorProvider;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -122,6 +123,16 @@ public abstract class Density {
 
       public void assign(@Nonnull Pattern.Context context) {
          this.position.assign(context.position.x, context.position.y, context.position.z);
+      }
+
+      public void assign(@Nonnull Prop.Context other) {
+         this.position.assign(other.position);
+         this.distanceToBiomeEdge = other.distanceToBiomeEdge;
+         this.densityAnchor = null;
+         this.positionsAnchor = null;
+         this.switchState = 0;
+         this.distanceFromCellWall = Double.MAX_VALUE;
+         this.terrainDensityProvider = null;
       }
    }
 }

@@ -19,11 +19,9 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
-import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.BlockMaterial;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.CachedStatsComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.system.PlayerSpatialSystem;
@@ -247,7 +245,7 @@ public class PositionCacheSystems {
          this.playerSpatialResource = EntityModule.get().getPlayerSpatialResourceType();
          this.npcSpatialResource = npcSpatialResource;
          this.itemSpatialResource = EntityModule.get().getItemSpatialResourceType();
-         this.query = Query.and(npcComponentType, this.transformComponentType, this.modelComponentType);
+         this.query = Query.and(npcComponentType, this.transformComponentType, this.modelComponentType, CachedStatsComponent.getComponentType());
       }
 
       @Nonnull
@@ -283,10 +281,11 @@ public class PositionCacheSystems {
          Role role = npcComponent.getRole();
          PositionCache positionCache = role.getPositionCache();
          positionCache.setBenchmarking(NPCPlugin.get().isBenchmarkingSensorSupport());
-         long packed = LivingEntity.getPackedMaterialAndFluidAtBreathingHeight(ref, commandBuffer);
-         BlockMaterial material = BlockMaterial.VALUES[MathUtil.unpackLeft(packed)];
-         int fluidId = MathUtil.unpackRight(packed);
-         positionCache.setCouldBreathe(role.canBreathe(material, fluidId));
+         CachedStatsComponent cachedStats = archetypeChunk.getComponent(index, CachedStatsComponent.getComponentType());
+
+         assert cachedStats != null;
+
+         positionCache.setCouldBreathe(cachedStats.isCanBreathe());
          if (positionCache.tickPositionCacheNextUpdate(dt)) {
             positionCache.resetPositionCacheNextUpdate();
             TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
@@ -371,7 +370,7 @@ public class PositionCacheSystems {
          @Nonnull SpatialResource<Ref<EntityStore>, EntityStore> spatialResource,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         List<Ref<EntityStore>> results = SpatialResource.<EntityStore>getThreadLocalReferenceList();
+         List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
          spatialResource.getSpatialStructure().collect(position, entityList.getSearchRadius(), results);
 
          for (Ref<EntityStore> result : results) {

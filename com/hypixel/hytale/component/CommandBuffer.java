@@ -1,6 +1,7 @@
 package com.hypixel.hytale.component;
 
 import com.hypixel.hytale.component.event.EntityEventType;
+import com.hypixel.hytale.component.event.EntityHolderEventType;
 import com.hypixel.hytale.component.event.WorldEventType;
 import com.hypixel.hytale.component.system.EcsEvent;
 import java.util.ArrayDeque;
@@ -288,6 +289,22 @@ public class CommandBuffer<ECS_TYPE> implements ComponentAccessor<ECS_TYPE> {
       assert Thread.currentThread() == this.thread;
 
       this.store.internal_invoke(this, systemType, ref, param);
+   }
+
+   @Override
+   public <Event extends EcsEvent> void invoke(@Nonnull Holder<ECS_TYPE> holder, @Nonnull Event param) {
+      assert Thread.currentThread() == this.thread;
+
+      this.store.internal_invoke(this, holder, param);
+   }
+
+   @Override
+   public <Event extends EcsEvent> void invoke(
+      @Nonnull EntityHolderEventType<ECS_TYPE, Event> systemType, @Nonnull Holder<ECS_TYPE> holder, @Nonnull Event param
+   ) {
+      assert Thread.currentThread() == this.thread;
+
+      this.store.internal_invoke(this, systemType, holder, param);
    }
 
    @Override

@@ -54,7 +54,7 @@ public abstract class BiomeJsonLoader extends JsonLoader<SeedStringResource, Bio
    @Nonnull
    protected CoverContainer loadCoverContainer() {
       try {
-         return new CoverContainerJsonLoader(this.seed, this.dataFolder, this.get("Covers")).load();
+         return new CoverContainerJsonLoader(this.seed, this.dataFolder, this.get("Covers"), this.biomeContext).load();
       } catch (Throwable var2) {
          throw new Error("Failed to load cover container", var2);
       }
@@ -75,7 +75,7 @@ public abstract class BiomeJsonLoader extends JsonLoader<SeedStringResource, Bio
          if (!this.has("Layers")) {
             throw new IllegalArgumentException("LayerContainer is not defined in Biome!");
          } else {
-            return new LayerContainerJsonLoader(this.seed, this.dataFolder, this.get("Layers")).load();
+            return new LayerContainerJsonLoader(this.seed, this.dataFolder, this.get("Layers"), this.biomeContext).load();
          }
       } catch (Throwable var2) {
          throw new Error("Failed to load layer container", var2);
@@ -87,7 +87,7 @@ public abstract class BiomeJsonLoader extends JsonLoader<SeedStringResource, Bio
       try {
          PrefabContainer prefabContainer = null;
          if (this.has("Prefabs")) {
-            prefabContainer = new PrefabContainerJsonLoader(this.seed, this.dataFolder, this.get("Prefabs"), this.fileContext).load();
+            prefabContainer = new PrefabContainerJsonLoader(this.seed, this.dataFolder, this.get("Prefabs"), this.biomeContext).load();
          }
 
          return prefabContainer;
@@ -99,7 +99,7 @@ public abstract class BiomeJsonLoader extends JsonLoader<SeedStringResource, Bio
    @Nonnull
    protected TintContainer loadTintContainer() {
       try {
-         return new TintContainerJsonLoader(this.seed, this.dataFolder, this.get("Tint")).load();
+         return new TintContainerJsonLoader(this.seed, this.dataFolder, this.get("Tint"), this.biomeContext).load();
       } catch (Throwable var2) {
          throw new Error("Failed to load tint container", var2);
       }
@@ -108,7 +108,7 @@ public abstract class BiomeJsonLoader extends JsonLoader<SeedStringResource, Bio
    @Nonnull
    protected EnvironmentContainer loadEnvironmentContainer() {
       try {
-         return new EnvironmentContainerJsonLoader(this.seed, this.dataFolder, this.get("Environment")).load();
+         return new EnvironmentContainerJsonLoader(this.seed, this.dataFolder, this.get("Environment"), this.biomeContext).load();
       } catch (Throwable var2) {
          throw new Error("Failed to load environment container", var2);
       }
@@ -117,7 +117,7 @@ public abstract class BiomeJsonLoader extends JsonLoader<SeedStringResource, Bio
    @Nonnull
    protected WaterContainer loadWaterContainer() {
       try {
-         return new WaterContainerJsonLoader(this.seed, this.dataFolder, this.get("Water")).load();
+         return new WaterContainerJsonLoader(this.seed, this.dataFolder, this.get("Water"), this.biomeContext).load();
       } catch (Throwable var2) {
          throw new Error("Failed to load water container", var2);
       }

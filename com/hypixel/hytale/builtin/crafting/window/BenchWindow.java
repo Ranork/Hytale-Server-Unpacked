@@ -2,8 +2,8 @@ package com.hypixel.hytale.builtin.crafting.window;
 
 import com.google.gson.JsonObject;
 import com.hypixel.hytale.builtin.adventure.memories.MemoriesPlugin;
+import com.hypixel.hytale.builtin.crafting.component.BenchBlock;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
-import com.hypixel.hytale.builtin.crafting.state.BenchState;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.BlockWindow;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.MaterialContainerWindow;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.MaterialExtraResourcesSection;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -32,19 +33,19 @@ public abstract class BenchWindow extends BlockWindow implements MaterialContain
    private long lastUpdateTimeMs;
    protected final Bench bench;
    @Nonnull
-   protected final BenchState benchState;
+   protected final BenchBlock benchBlock;
    @Nonnull
    protected final JsonObject windowData = new JsonObject();
    @Nonnull
    private final MaterialExtraResourcesSection extraResourcesSection = new MaterialExtraResourcesSection();
 
-   public BenchWindow(@Nonnull WindowType windowType, @Nonnull BenchState benchState) {
-      super(windowType, benchState.getBlockX(), benchState.getBlockY(), benchState.getBlockZ(), benchState.getRotationIndex(), benchState.getBlockType());
-      this.bench = this.blockType.getBench();
-      this.benchState = benchState;
-      Item item = this.blockType.getItem();
+   public BenchWindow(@Nonnull WindowType windowType, int x, int y, int z, int rotationIndex, @Nonnull BlockType blockType, @Nonnull BenchBlock benchBlock) {
+      super(windowType, x, y, z, rotationIndex, blockType);
+      this.bench = blockType.getBench();
+      this.benchBlock = benchBlock;
+      Item item = blockType.getItem();
       if (item == null) {
-         throw new IllegalStateException("Bench block type " + this.blockType.getId() + " does not have an associated item!");
+         throw new IllegalStateException("Bench block type " + blockType.getId() + " does not have an associated item!");
       } else {
          this.windowData.addProperty("type", this.bench.getType().ordinal());
          this.windowData.addProperty("id", this.bench.getId());
@@ -70,7 +71,9 @@ public abstract class BenchWindow extends BlockWindow implements MaterialContain
          World world = store.getExternalData().getWorld();
          int memoriesLevel = MemoriesPlugin.get().getMemoriesLevel(world.getGameplayConfig());
          this.windowData.addProperty("worldMemoriesLevel", memoriesLevel);
-         int chestCount = CraftingManager.feedExtraResourcesSection(this.benchState, this.extraResourcesSection);
+         int chestCount = CraftingManager.feedExtraResourcesSection(
+            world, this.x, this.y, this.z, this.blockType, this.rotationIndex, this.bench, this.getBenchTierLevel(), this.extraResourcesSection
+         );
          CraftingConfig craftingConfig = world.getGameplayConfig().getCraftingConfig();
          int maxChestCount = craftingConfig.getBenchMaterialChestLimit();
          int horizontalRadius = craftingConfig.getBenchMaterialHorizontalChestSearchRadius();
@@ -84,13 +87,13 @@ public abstract class BenchWindow extends BlockWindow implements MaterialContain
    }
 
    protected int getBenchTierLevel() {
-      return this.benchState != null ? this.benchState.getTierLevel() : 1;
+      return this.benchBlock != null ? this.benchBlock.getTierLevel() : 1;
    }
 
    @Override
    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       World world = componentAccessor.getExternalData().getWorld();
-      this.setBlockInteractionState(this.benchState.getTierStateName(), world);
+      this.setBlockInteractionState(this.benchBlock.getTierStateName(), world);
       CraftingManager craftingManagerComponent = componentAccessor.getComponent(ref, CraftingManager.getComponentType());
       if (craftingManagerComponent != null) {
          if (craftingManagerComponent.clearBench(ref, componentAccessor) && this.bench.getFailedSoundEventIndex() != 0) {
@@ -107,6 +110,10 @@ public abstract class BenchWindow extends BlockWindow implements MaterialContain
             worldChunk.setBlockInteractionState(this.x, this.y, this.z, blockType, state, true);
          }
       }
+   }
+
+   public void updateQueueSize(int size) {
+      this.windowData.addProperty("queueSize", size);
    }
 
    public void updateCraftingJob(float percent) {
@@ -145,7 +152,16 @@ public abstract class BenchWindow extends BlockWindow implements MaterialContain
    @Override
    public MaterialExtraResourcesSection getExtraResourcesSection() {
       if (!this.extraResourcesSection.isValid()) {
-         CraftingManager.feedExtraResourcesSection(this.benchState, this.extraResourcesSection);
+         PlayerRef playerRef = this.getPlayerRef();
+         if (playerRef != null) {
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref != null && ref.isValid()) {
+               World world = ref.getStore().getExternalData().getWorld();
+               CraftingManager.feedExtraResourcesSection(
+                  world, this.x, this.y, this.z, this.blockType, this.rotationIndex, this.bench, this.getBenchTierLevel(), this.extraResourcesSection
+               );
+            }
+         }
       }
 
       return this.extraResourcesSection;

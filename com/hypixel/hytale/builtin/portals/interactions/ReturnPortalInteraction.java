@@ -13,7 +13,9 @@ import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -65,7 +67,8 @@ public class ReturnPortalInteraction extends SimpleBlockInteraction {
                playerComponent.sendMessage(MESSAGE_PORTALS_DEVICE_NOT_IN_PORTAL_WORLD);
                context.getState().state = InteractionState.Failed;
             } else {
-               CursedItems.uncurseAll(playerComponent.getInventory().getCombinedEverything());
+               CombinedItemContainer everythingInventoryComponent = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.EVERYTHING);
+               CursedItems.uncurseAll(everythingInventoryComponent);
                InstancesPlugin.exitInstance(ref, commandBuffer);
             }
          }

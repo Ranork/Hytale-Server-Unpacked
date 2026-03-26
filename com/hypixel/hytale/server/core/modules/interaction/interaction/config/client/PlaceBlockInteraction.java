@@ -171,7 +171,8 @@ public class PlaceBlockInteraction extends SimpleInteraction {
                this.removeItemInHand,
                chunkReference,
                chunkStore,
-               commandBuffer
+               commandBuffer,
+               false
             );
             boolean isAdventure = playerComponent == null || playerComponent.getGameMode() == GameMode.Adventure;
             if (isAdventure && heldItemStack.getQuantity() == 1 && this.removeItemInHand) {

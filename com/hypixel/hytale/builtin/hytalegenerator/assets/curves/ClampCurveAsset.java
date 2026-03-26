@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.curves;
 
-import com.hypixel.hytale.builtin.hytalegenerator.framework.math.Calculator;
+import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;

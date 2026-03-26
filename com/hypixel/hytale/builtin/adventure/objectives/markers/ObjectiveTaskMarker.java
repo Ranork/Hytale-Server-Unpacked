@@ -53,6 +53,6 @@ public class ObjectiveTaskMarker {
    }
 
    public MapMarker toProto() {
-      return new MapMarker(this.id, this.name.getFormattedMessage(), null, this.icon, PositionUtil.toTransformPacket(this.transform), null, null);
+      return new MapMarker(this.id, this.name.getFormattedMessage(), this.icon, PositionUtil.toTransformPacket(this.transform), null, null);
    }
 }

@@ -31,10 +31,10 @@ import com.hypixel.hytale.server.core.modules.serverplayerlist.ServerPlayerListM
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
 import com.hypixel.hytale.server.core.modules.splitvelocity.SplitVelocity;
 import com.hypixel.hytale.server.core.modules.time.TimeModule;
+import com.hypixel.hytale.server.core.modules.voice.VoiceModule;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlocksModule;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
 import com.hypixel.hytale.server.core.update.UpdateModule;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -64,7 +64,6 @@ public final class Constants {
       BlockTypeModule.MANIFEST,
       LegacyModule.MANIFEST,
       BlockModule.MANIFEST,
-      BlockStateModule.MANIFEST,
       CollisionModule.MANIFEST,
       BlockSetModule.MANIFEST,
       MigrationModule.MANIFEST,
@@ -82,6 +81,7 @@ public final class Constants {
       DebugPlugin.MANIFEST,
       ProjectileModule.MANIFEST,
       ServerPlayerListModule.MANIFEST,
+      VoiceModule.MANIFEST,
       AccessControlModule.MANIFEST,
       SingleplayerModule.MANIFEST,
       Universe.MANIFEST,
@@ -105,9 +105,5 @@ public final class Constants {
 
    private static Path getUniversePath() {
       return OPTION_SET.has(Options.UNIVERSE) ? (Path)OPTION_SET.valueOf(Options.UNIVERSE) : Path.of("universe");
-   }
-
-   public static boolean shouldSkipModValidation() {
-      return OPTION_SET.has(Options.SKIP_MOD_VALIDATION) || HytaleServer.get().getConfig().shouldSkipModValidation();
    }
 }

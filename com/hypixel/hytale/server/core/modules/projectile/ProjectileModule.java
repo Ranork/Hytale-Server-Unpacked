@@ -14,11 +14,9 @@ import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
@@ -172,15 +170,13 @@ public class ProjectileModule extends JavaPlugin {
    private static void onProjectileSpawnInteraction(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> creatorRef, @Nonnull Store<EntityStore> store) {
       InteractionManager interactionManagerComponent = store.getComponent(creatorRef, InteractionModule.get().getInteractionManagerComponent());
       if (interactionManagerComponent != null) {
-         if (EntityUtils.getEntity(creatorRef, store) instanceof LivingEntity livingEntity) {
-            InteractionContext context = InteractionContext.forProxyEntity(interactionManagerComponent, livingEntity, ref);
-            String rootInteractionId = context.getRootInteractionId(InteractionType.ProjectileSpawn);
-            if (rootInteractionId != null) {
-               RootInteraction rootInteraction = RootInteraction.getRootInteractionOrUnknown(rootInteractionId);
-               if (rootInteraction != null) {
-                  InteractionChain chain = interactionManagerComponent.initChain(InteractionType.ProjectileSpawn, context, rootInteraction, true);
-                  interactionManagerComponent.queueExecuteChain(chain);
-               }
+         InteractionContext context = InteractionContext.forProxyEntity(interactionManagerComponent, creatorRef, ref, store);
+         String rootInteractionId = context.getRootInteractionId(InteractionType.ProjectileSpawn);
+         if (rootInteractionId != null) {
+            RootInteraction rootInteraction = RootInteraction.getRootInteractionOrUnknown(rootInteractionId);
+            if (rootInteraction != null) {
+               InteractionChain chain = interactionManagerComponent.initChain(InteractionType.ProjectileSpawn, context, rootInteraction, true);
+               interactionManagerComponent.queueExecuteChain(chain);
             }
          }
       }

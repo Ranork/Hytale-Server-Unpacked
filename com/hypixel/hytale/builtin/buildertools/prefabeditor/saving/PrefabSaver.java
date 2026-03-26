@@ -29,11 +29,10 @@ import com.hypixel.hytale.server.core.universe.world.chunk.EntityChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
-import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.longs.Long2ReferenceMap;
+import it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
@@ -111,7 +110,7 @@ public class PrefabSaver {
                         pastePosition,
                         originalFileAnchor,
                         settings,
-                        (Long2ObjectMap<Ref<ChunkStore>>)loadedChunks,
+                        (Long2ReferenceMap<Ref<ChunkStore>>)loadedChunks,
                         editorBlock,
                         editorBlockPrefabAir,
                         editorBlockPrefabAnchor
@@ -133,7 +132,7 @@ public class PrefabSaver {
       @Nonnull Vector3i pastePosition,
       @Nonnull Vector3i originalFileAnchor,
       @Nonnull PrefabSaverSettings settings,
-      @Nonnull Long2ObjectMap<Ref<ChunkStore>> loadedChunks,
+      @Nonnull Long2ReferenceMap<Ref<ChunkStore>> loadedChunks,
       int editorBlock,
       int editorBlockPrefabAir,
       int editorBlockPrefabAnchor
@@ -187,10 +186,6 @@ public class PrefabSaver {
                         Holder<ChunkStore> holder = worldChunkComponent.getBlockComponentHolder(x, y, z);
                         if (holder != null) {
                            holder = holder.clone();
-                           BlockState blockState = BlockState.getBlockState(holder);
-                           if (blockState != null) {
-                              blockState.clearPositionForSerialization();
-                           }
                         }
 
                         int supportValue = settings.isClearSupportValues() ? 0 : (blockPhysicsComponent != null ? blockPhysicsComponent.get(x, y, z) : 0);
@@ -298,7 +293,7 @@ public class PrefabSaver {
    }
 
    @Nonnull
-   private static CompletableFuture<Long2ObjectMap<Ref<ChunkStore>>> preloadChunksInSelectionAsync(
+   private static CompletableFuture<Long2ReferenceMap<Ref<ChunkStore>>> preloadChunksInSelectionAsync(
       @Nonnull ChunkStore chunkStore, @Nonnull Vector3i minPoint, @Nonnull Vector3i maxPoint
    ) {
       LongSet chunkIndices = new LongOpenHashSet();
@@ -313,7 +308,7 @@ public class PrefabSaver {
          }
       }
 
-      Long2ObjectMap<Ref<ChunkStore>> loadedChunks = new Long2ObjectOpenHashMap(chunkIndices.size());
+      Long2ReferenceMap<Ref<ChunkStore>> loadedChunks = new Long2ReferenceOpenHashMap(chunkIndices.size());
       List<CompletableFuture<Void>> chunkFutures = new ArrayList<>(chunkIndices.size());
       LongIterator var10 = chunkIndices.iterator();
 

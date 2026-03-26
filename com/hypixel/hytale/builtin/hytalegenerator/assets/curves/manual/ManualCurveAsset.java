@@ -2,7 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.curves.manual;
 
 import com.hypixel.hytale.assetstore.AssetExtraInfo;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.curves.CurveAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.math.NodeFunction;
+import com.hypixel.hytale.builtin.hytalegenerator.math.NodeFunction;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;

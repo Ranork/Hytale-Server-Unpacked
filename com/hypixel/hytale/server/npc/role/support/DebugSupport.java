@@ -1,15 +1,16 @@
 package com.hypixel.hytale.server.npc.role.support;
 
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
 import com.hypixel.hytale.server.npc.role.RoleDebugDisplay;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.builders.BuilderRole;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -37,6 +38,9 @@ public class DebugSupport {
    protected List<DebugSupport.SensorVisData> sensorVisDataList;
    @Nullable
    protected Map<Ref<EntityStore>, List<DebugSupport.EntityVisData>> entityVisDataMap;
+   protected boolean visPath;
+   @Nullable
+   protected List<DebugSupport.PathWaypointVisData> pathVisDataList;
 
    public DebugSupport(NPCEntity parent, @Nonnull BuilderRole builder) {
       this.parent = parent;
@@ -76,7 +80,7 @@ public class DebugSupport {
       return this.debugMotionSteering;
    }
 
-   public void setDisplayCustomString(String displayCustomString) {
+   public void setDisplayCustomString(@Nullable String displayCustomString) {
       this.displayCustomString = displayCustomString;
    }
 
@@ -87,7 +91,7 @@ public class DebugSupport {
       return ret;
    }
 
-   public void setDisplayPathfinderString(String displayPathfinderString) {
+   public void setDisplayPathfinderString(@Nullable String displayPathfinderString) {
       this.displayPathfinderString = displayPathfinderString;
    }
 
@@ -129,6 +133,7 @@ public class DebugSupport {
       this.traceSuccess = this.isDebugFlagSet(RoleDebugFlags.TraceSuccess);
       this.traceSensorFails = this.isDebugFlagSet(RoleDebugFlags.TraceSensorFailures);
       this.visSensorRanges = this.isDebugFlagSet(RoleDebugFlags.VisSensorRanges);
+      this.visPath = this.isDebugFlagSet(RoleDebugFlags.VisPath);
       this.debugDisplay = RoleDebugDisplay.create(this.debugFlags, this.debugDisplay);
    }
 
@@ -175,7 +180,7 @@ public class DebugSupport {
 
    public void recordEntityCheck(@Nonnull Ref<EntityStore> entityRef, int sensorColorIndex, boolean matched) {
       if (this.entityVisDataMap == null) {
-         this.entityVisDataMap = new HashMap<>();
+         this.entityVisDataMap = new Reference2ObjectOpenHashMap();
       }
 
       this.entityVisDataMap.computeIfAbsent(entityRef, k -> new ArrayList<>()).add(new DebugSupport.EntityVisData(sensorColorIndex, matched));
@@ -201,11 +206,45 @@ public class DebugSupport {
       }
    }
 
+   public boolean isVisPath() {
+      return this.visPath;
+   }
+
+   public void clearPathVisualization() {
+      if (this.pathVisDataList != null) {
+         this.pathVisDataList.clear();
+      }
+   }
+
+   public void recordPathWaypoint(@Nonnull Vector3d position, boolean isCurrentTarget, boolean isEndNode) {
+      this.recordPathWaypoint(position, isCurrentTarget, isEndNode, false);
+   }
+
+   public void recordPathWaypoint(@Nonnull Vector3d position, boolean isCurrentTarget, boolean isEndNode, boolean isSeekTarget) {
+      if (this.pathVisDataList == null) {
+         this.pathVisDataList = new ArrayList<>();
+      }
+
+      this.pathVisDataList.add(new DebugSupport.PathWaypointVisData(position.clone(), isCurrentTarget, isEndNode, isSeekTarget));
+   }
+
+   @Nullable
+   public List<DebugSupport.PathWaypointVisData> getPathVisData() {
+      return this.pathVisDataList;
+   }
+
+   public boolean hasPathVisData() {
+      return this.pathVisDataList != null && !this.pathVisDataList.isEmpty();
+   }
+
    public interface DebugFlagsChangeListener {
       void onDebugFlagsChanged(EnumSet<RoleDebugFlags> var1);
    }
 
    public record EntityVisData(int sensorColorIndex, boolean matched) {
+   }
+
+   public record PathWaypointVisData(Vector3d position, boolean isCurrentTarget, boolean isEndNode, boolean isSeekTarget) {
    }
 
    public record SensorVisData(double range, double minRange, int colorIndex, double viewAngle) {

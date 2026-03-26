@@ -58,8 +58,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.UUIDUtil;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import java.lang.ref.SoftReference;
 import java.util.Collections;
 import java.util.List;
@@ -448,15 +446,13 @@ public abstract class Interaction
 
       Vector3d position = transformComponent.getPosition();
       SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       playerSpatialResource.getSpatialStructure().collect(position, this.viewDistance, results);
       Ref<EntityStore> owningEntityRef = context.getOwningEntity();
       ComponentType<EntityStore, PlayerRef> playerRefComponentType = PlayerRef.getComponentType();
-      ObjectListIterator var21 = results.iterator();
 
-      while (var21.hasNext()) {
-         Ref<EntityStore> playerRef = (Ref<EntityStore>)var21.next();
-         if (!chain.requiresClient() || !playerRef.equals(owningEntityRef)) {
+      for (Ref<EntityStore> playerRef : results) {
+         if (playerRef.isValid() && (!chain.requiresClient() || !playerRef.equals(owningEntityRef))) {
             PlayerRef playerPlayerRefComponent = commandBuffer.getComponent(playerRef, playerRefComponentType);
 
             assert playerPlayerRefComponent != null;

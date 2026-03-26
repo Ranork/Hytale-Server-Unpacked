@@ -15,10 +15,8 @@ import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
@@ -95,18 +93,17 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
          if (targetBlockPos == null) {
             context.getState().state = InteractionState.Failed;
             super.tick0(firstRun, time, type, context, cooldownHandler);
-         } else if (EntityUtils.getEntity(ref, commandBuffer) instanceof LivingEntity livingEntity) {
-            Inventory inventory = livingEntity.getInventory();
-            ItemStack itemInHand = inventory.getItemInHand();
-            Vector3i var21 = new Vector3i(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(var21.x, var21.z));
+         } else {
+            ItemStack itemInHand = InventoryComponent.getItemInHand(commandBuffer, ref);
+            Vector3i targetBlock = new Vector3i(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
+            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
             if (chunk == null) {
                context.getState().state = InteractionState.Failed;
                super.tick0(firstRun, time, type, context, cooldownHandler);
             } else {
-               int blockId = chunk.getBlock(var21);
+               int blockId = chunk.getBlock(targetBlock);
                if (blockId != 1 && blockId != 0) {
-                  this.interactWithBlock(world, commandBuffer, type, context, itemInHand, var21, cooldownHandler);
+                  this.interactWithBlock(world, commandBuffer, type, context, itemInHand, targetBlock, cooldownHandler);
                   super.tick0(firstRun, time, type, context, cooldownHandler);
                } else {
                   context.getState().state = InteractionState.Failed;
@@ -138,39 +135,36 @@ public abstract class SimpleBlockInteraction extends SimpleInteraction {
          assert commandBuffer != null;
 
          World world = commandBuffer.getExternalData().getWorld();
-         if (EntityUtils.getEntity(ref, commandBuffer) instanceof LivingEntity livingEntity) {
-            Inventory inventory = livingEntity.getInventory();
-            ItemStack itemInHand = inventory.getItemInHand();
-            context.getState().blockFace = BlockFace.Up;
-            BlockPosition contextTargetBlock = context.getTargetBlock();
-            Vector3i targetBlock;
-            if (contextTargetBlock == null) {
-               targetBlock = TargetUtil.getTargetBlock(ref, 8.0, commandBuffer);
-               if (targetBlock == null) {
-                  context.getState().state = InteractionState.Failed;
-                  super.tick0(firstRun, time, type, context, cooldownHandler);
-                  return;
-               }
-
-               context.getState().blockPosition = new BlockPosition(targetBlock.x, targetBlock.y, targetBlock.z);
-            } else {
-               context.getState().blockPosition = contextTargetBlock;
-               targetBlock = new Vector3i(contextTargetBlock.x, contextTargetBlock.y, contextTargetBlock.z);
-            }
-
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-            if (chunk == null) {
+         ItemStack itemInHand = InventoryComponent.getItemInHand(commandBuffer, ref);
+         context.getState().blockFace = BlockFace.Up;
+         BlockPosition contextTargetBlock = context.getTargetBlock();
+         Vector3i targetBlock;
+         if (contextTargetBlock == null) {
+            targetBlock = TargetUtil.getTargetBlock(ref, 8.0, commandBuffer);
+            if (targetBlock == null) {
                context.getState().state = InteractionState.Failed;
                super.tick0(firstRun, time, type, context, cooldownHandler);
+               return;
+            }
+
+            context.getState().blockPosition = new BlockPosition(targetBlock.x, targetBlock.y, targetBlock.z);
+         } else {
+            context.getState().blockPosition = contextTargetBlock;
+            targetBlock = new Vector3i(contextTargetBlock.x, contextTargetBlock.y, contextTargetBlock.z);
+         }
+
+         WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
+         if (chunk == null) {
+            context.getState().state = InteractionState.Failed;
+            super.tick0(firstRun, time, type, context, cooldownHandler);
+         } else {
+            int blockId = chunk.getBlock(targetBlock);
+            if (blockId != 1 && blockId != 0) {
+               this.simulateInteractWithBlock(type, context, itemInHand, world, targetBlock);
+               super.tick0(firstRun, time, type, context, cooldownHandler);
             } else {
-               int blockId = chunk.getBlock(targetBlock);
-               if (blockId != 1 && blockId != 0) {
-                  this.simulateInteractWithBlock(type, context, itemInHand, world, targetBlock);
-                  super.tick0(firstRun, time, type, context, cooldownHandler);
-               } else {
-                  context.getState().state = InteractionState.Failed;
-                  super.tick0(firstRun, time, type, context, cooldownHandler);
-               }
+               context.getState().state = InteractionState.Failed;
+               super.tick0(firstRun, time, type, context, cooldownHandler);
             }
          }
       }

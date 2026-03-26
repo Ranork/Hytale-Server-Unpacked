@@ -1,49 +1,37 @@
 package com.hypixel.hytale.builtin.hytalegenerator.props;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.builtin.hytalegenerator.conveyor.stagedconveyor.ContextDependency;
-import com.hypixel.hytale.builtin.hytalegenerator.datastructures.voxelspace.VoxelSpace;
-import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
 import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class OffsetProp extends Prop {
    @Nonnull
-   private final Vector3i offset_voxelGrid;
+   private final Vector3i offset;
    @Nonnull
    private final Prop childProp;
    @Nonnull
    private final Bounds3i readBounds_voxelGrid;
    @Nonnull
    private final Bounds3i writeBounds_voxelGrid;
-   @Nonnull
-   private final ContextDependency contextDependency;
+   private final Vector3i rChildPosition;
+   private final Prop.Context rChildContext;
 
-   public OffsetProp(@Nonnull Vector3i offset_voxelGrid, @Nonnull Prop childProp) {
-      this.offset_voxelGrid = offset_voxelGrid.clone();
+   public OffsetProp(@Nonnull Vector3i offset, @Nonnull Prop childProp) {
+      this.offset = offset.clone();
       this.childProp = childProp;
-      this.readBounds_voxelGrid = childProp.getReadBounds_voxelGrid().clone().offset(offset_voxelGrid);
-      this.writeBounds_voxelGrid = childProp.getWriteBounds_voxelGrid().clone().offset(offset_voxelGrid);
-      this.contextDependency = ContextDependency.from(this.readBounds_voxelGrid, this.writeBounds_voxelGrid);
+      this.readBounds_voxelGrid = childProp.getReadBounds_voxelGrid().clone().offset(offset);
+      this.writeBounds_voxelGrid = childProp.getWriteBounds_voxelGrid().clone().offset(offset);
+      this.rChildPosition = new Vector3i();
+      this.rChildContext = new Prop.Context();
    }
 
    @Override
-   public ScanResult scan(@NonNullDecl Vector3i position_voxelGrid, @NonNullDecl VoxelSpace<Material> materialSpace, @NonNullDecl WorkerIndexer.Id id) {
-      Vector3i childPosition_voxelGrid = position_voxelGrid.clone().add(this.offset_voxelGrid);
-      return this.childProp.scan(childPosition_voxelGrid, materialSpace, id);
-   }
-
-   @Override
-   public void place(@NonNullDecl Prop.Context context) {
-      this.childProp.place(context);
-   }
-
-   @Nonnull
-   @Override
-   public ContextDependency getContextDependency() {
-      return this.contextDependency;
+   public boolean generate(@NonNullDecl Prop.Context context) {
+      this.rChildPosition.assign(context.position).add(this.offset);
+      this.rChildContext.assign(context);
+      this.rChildContext.position = this.rChildPosition;
+      return this.childProp.generate(this.rChildContext);
    }
 
    @NonNullDecl

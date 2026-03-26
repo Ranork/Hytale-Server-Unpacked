@@ -39,8 +39,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 
@@ -153,12 +152,10 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
                   }
                }
             } else {
-               ObjectList<Ref<EntityStore>> targetPlayerRefs = SpatialResource.getThreadLocalReferenceList();
+               List<Ref<EntityStore>> targetPlayerRefs = SpatialResource.getThreadLocalReferenceList();
                spatialStructure.ordered(itemEntityPosition, pickupRadius, targetPlayerRefs);
-               ObjectListIterator targetTransformComponent = targetPlayerRefs.iterator();
 
-               while (targetTransformComponent.hasNext()) {
-                  Ref<EntityStore> targetPlayerRef = (Ref<EntityStore>)targetTransformComponent.next();
+               for (Ref<EntityStore> targetPlayerRef : targetPlayerRefs) {
                   if (!store.getArchetype(targetPlayerRef).contains(DeathComponent.getComponentType())) {
                      Player playerComponent = store.getComponent(targetPlayerRef, this.playerComponentType);
 

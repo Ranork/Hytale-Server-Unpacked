@@ -9,15 +9,17 @@ import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.codec.codecs.map.ObjectMapCodec;
 import com.hypixel.hytale.codec.lookup.Priority;
 import com.hypixel.hytale.codec.util.RawJsonReader;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
-import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.HostAddress;
 import com.hypixel.hytale.server.core.auth.AuthCredentialStoreProvider;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.config.BackupConfig;
 import com.hypixel.hytale.server.core.config.ModConfig;
 import com.hypixel.hytale.server.core.config.RateLimitConfig;
+import com.hypixel.hytale.server.core.config.ServerWorldMapConfig;
 import com.hypixel.hytale.server.core.config.UpdateConfig;
 import com.hypixel.hytale.server.core.universe.playerdata.DefaultPlayerStorageProvider;
 import com.hypixel.hytale.server.core.universe.playerdata.DiskPlayerStorageProvider;
@@ -106,9 +108,29 @@ public class HytaleServerConfig {
       .add()
       .append(new KeyedCodec<>("Update", UpdateConfig.CODEC), (o, value) -> o.updateConfig = value, o -> o.updateConfig)
       .add()
-      .append(new KeyedCodec<>("SkipModValidationForVersion", Codec.STRING), (o, v) -> o.skipModValidationForVersion = v, o -> o.skipModValidationForVersion)
-      .add()
       .append(new KeyedCodec<>("Backup", BackupConfig.CODEC), (o, value) -> o.backupConfig = value, o -> o.backupConfig)
+      .add()
+      .append(
+         new KeyedCodec<>("WorldMap", ServerWorldMapConfig.CODEC),
+         (o, value) -> o.worldMapConfig = value != null ? value : new ServerWorldMapConfig(o),
+         o -> o.worldMapConfig
+      )
+      .add()
+      .append(
+         new KeyedCodec<>(
+            "FallbackServer",
+            BuilderCodec.builder(HostAddress.class, HostAddress::new)
+               .append(new KeyedCodec<>("Host", Codec.STRING), (o, i) -> o.host = i, o -> o.host)
+               .addValidator(Validators.nonNull())
+               .add()
+               .<Short>append(new KeyedCodec<>("Port", Codec.SHORT), (o, i) -> o.port = i, o -> o.port)
+               .addValidator(Validators.nonNull())
+               .add()
+               .build()
+         ),
+         (o, i) -> o.fallbackServer = i,
+         o -> o.fallbackServer
+      )
       .add()
       .afterDecode((config, extraInfo) -> {
          config.defaults.hytaleServerConfig = config;
@@ -116,6 +138,7 @@ public class HytaleServerConfig {
          config.rateLimitConfig.setHytaleServerConfig(config);
          config.updateConfig.setHytaleServerConfig(config);
          config.backupConfig.setHytaleServerConfig(config);
+         config.worldMapConfig.setHytaleServerConfig(config);
          config.modules.values().forEach(m -> m.setHytaleServerConfig(config));
          if (config.legacyPluginConfig != null && !config.legacyPluginConfig.isEmpty()) {
             for (Entry<PluginIdentifier, ModConfig> entry : config.legacyPluginConfig.entrySet()) {
@@ -173,8 +196,10 @@ public class HytaleServerConfig {
    private UpdateConfig updateConfig = new UpdateConfig(this);
    @Nonnull
    private BackupConfig backupConfig = new BackupConfig(this);
+   @Nonnull
+   private ServerWorldMapConfig worldMapConfig = new ServerWorldMapConfig(this);
    @Nullable
-   private String skipModValidationForVersion;
+   private HostAddress fallbackServer;
 
    public static void setBoot(@Nonnull HytaleServerConfig serverConfig, @Nonnull PluginIdentifier identifier, boolean enabled) {
       serverConfig.modConfig.computeIfAbsent(identifier, id -> new ModConfig()).setEnabled(enabled);
@@ -353,8 +378,24 @@ public class HytaleServerConfig {
       this.markChanged();
    }
 
-   public boolean shouldSkipModValidation() {
-      return this.skipModValidationForVersion != null && this.skipModValidationForVersion.equals(ManifestUtil.getImplementationRevisionId());
+   @Nullable
+   public HostAddress getFallbackServer() {
+      return this.fallbackServer;
+   }
+
+   public void setFallbackServer(@Nullable HostAddress fallbackServer) {
+      this.fallbackServer = fallbackServer;
+      this.markChanged();
+   }
+
+   @Nonnull
+   public ServerWorldMapConfig getWorldMapConfig() {
+      return this.worldMapConfig;
+   }
+
+   public void setWorldMapConfig(@Nonnull ServerWorldMapConfig worldMapConfig) {
+      this.worldMapConfig = worldMapConfig;
+      this.markChanged();
    }
 
    public void removeModule(@Nonnull String module) {

@@ -12,9 +12,9 @@ import javax.annotation.Nullable;
 
 public class SoundEvent {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 34;
+   public static final int FIXED_BLOCK_SIZE = 38;
    public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 42;
+   public static final int VARIABLE_BLOCK_START = 46;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String id;
@@ -26,6 +26,7 @@ public class SoundEvent {
    public boolean preventSoundInterruption;
    public float startAttenuationDistance;
    public float maxDistance;
+   public float spatialBlend;
    @Nullable
    public SoundEventLayer[] layers;
    public int audioCategory;
@@ -43,6 +44,7 @@ public class SoundEvent {
       boolean preventSoundInterruption,
       float startAttenuationDistance,
       float maxDistance,
+      float spatialBlend,
       @Nullable SoundEventLayer[] layers,
       int audioCategory
    ) {
@@ -55,6 +57,7 @@ public class SoundEvent {
       this.preventSoundInterruption = preventSoundInterruption;
       this.startAttenuationDistance = startAttenuationDistance;
       this.maxDistance = maxDistance;
+      this.spatialBlend = spatialBlend;
       this.layers = layers;
       this.audioCategory = audioCategory;
    }
@@ -69,6 +72,7 @@ public class SoundEvent {
       this.preventSoundInterruption = other.preventSoundInterruption;
       this.startAttenuationDistance = other.startAttenuationDistance;
       this.maxDistance = other.maxDistance;
+      this.spatialBlend = other.spatialBlend;
       this.layers = other.layers;
       this.audioCategory = other.audioCategory;
    }
@@ -85,9 +89,10 @@ public class SoundEvent {
       obj.preventSoundInterruption = buf.getByte(offset + 21) != 0;
       obj.startAttenuationDistance = buf.getFloatLE(offset + 22);
       obj.maxDistance = buf.getFloatLE(offset + 26);
-      obj.audioCategory = buf.getIntLE(offset + 30);
+      obj.spatialBlend = buf.getFloatLE(offset + 30);
+      obj.audioCategory = buf.getIntLE(offset + 34);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 42 + buf.getIntLE(offset + 34);
+         int varPos0 = offset + 46 + buf.getIntLE(offset + 38);
          int idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
             throw ProtocolException.negativeLength("Id", idLen);
@@ -101,7 +106,7 @@ public class SoundEvent {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 42 + buf.getIntLE(offset + 38);
+         int varPos1 = offset + 46 + buf.getIntLE(offset + 42);
          int layersCount = VarInt.peek(buf, varPos1);
          if (layersCount < 0) {
             throw ProtocolException.negativeLength("Layers", layersCount);
@@ -130,10 +135,10 @@ public class SoundEvent {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 42;
+      int maxEnd = 46;
       if ((nullBits & 1) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 34);
-         int pos0 = offset + 42 + fieldOffset0;
+         int fieldOffset0 = buf.getIntLE(offset + 38);
+         int pos0 = offset + 46 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.length(buf, pos0) + sl;
          if (pos0 - offset > maxEnd) {
@@ -142,8 +147,8 @@ public class SoundEvent {
       }
 
       if ((nullBits & 2) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 38);
-         int pos1 = offset + 42 + fieldOffset1;
+         int fieldOffset1 = buf.getIntLE(offset + 42);
+         int pos1 = offset + 46 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.length(buf, pos1);
 
@@ -179,6 +184,7 @@ public class SoundEvent {
       buf.writeByte(this.preventSoundInterruption ? 1 : 0);
       buf.writeFloatLE(this.startAttenuationDistance);
       buf.writeFloatLE(this.maxDistance);
+      buf.writeFloatLE(this.spatialBlend);
       buf.writeIntLE(this.audioCategory);
       int idOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
@@ -209,7 +215,7 @@ public class SoundEvent {
    }
 
    public int computeSize() {
-      int size = 42;
+      int size = 46;
       if (this.id != null) {
          size += PacketIO.stringSize(this.id);
       }
@@ -228,17 +234,17 @@ public class SoundEvent {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 42) {
-         return ValidationResult.error("Buffer too small: expected at least 42 bytes");
+      if (buffer.readableBytes() - offset < 46) {
+         return ValidationResult.error("Buffer too small: expected at least 46 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 1) != 0) {
-            int idOffset = buffer.getIntLE(offset + 34);
+            int idOffset = buffer.getIntLE(offset + 38);
             if (idOffset < 0) {
                return ValidationResult.error("Invalid offset for Id");
             }
 
-            int pos = offset + 42 + idOffset;
+            int pos = offset + 46 + idOffset;
             if (pos >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Id");
             }
@@ -260,12 +266,12 @@ public class SoundEvent {
          }
 
          if ((nullBits & 2) != 0) {
-            int layersOffset = buffer.getIntLE(offset + 38);
+            int layersOffset = buffer.getIntLE(offset + 42);
             if (layersOffset < 0) {
                return ValidationResult.error("Invalid offset for Layers");
             }
 
-            int posx = offset + 42 + layersOffset;
+            int posx = offset + 46 + layersOffset;
             if (posx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Layers");
             }
@@ -306,6 +312,7 @@ public class SoundEvent {
       copy.preventSoundInterruption = this.preventSoundInterruption;
       copy.startAttenuationDistance = this.startAttenuationDistance;
       copy.maxDistance = this.maxDistance;
+      copy.spatialBlend = this.spatialBlend;
       copy.layers = this.layers != null ? Arrays.stream(this.layers).map(e -> e.clone()).toArray(SoundEventLayer[]::new) : null;
       copy.audioCategory = this.audioCategory;
       return copy;
@@ -327,6 +334,7 @@ public class SoundEvent {
                && this.preventSoundInterruption == other.preventSoundInterruption
                && this.startAttenuationDistance == other.startAttenuationDistance
                && this.maxDistance == other.maxDistance
+               && this.spatialBlend == other.spatialBlend
                && Arrays.equals((Object[])this.layers, (Object[])other.layers)
                && this.audioCategory == other.audioCategory;
       }
@@ -344,6 +352,7 @@ public class SoundEvent {
       result = 31 * result + Boolean.hashCode(this.preventSoundInterruption);
       result = 31 * result + Float.hashCode(this.startAttenuationDistance);
       result = 31 * result + Float.hashCode(this.maxDistance);
+      result = 31 * result + Float.hashCode(this.spatialBlend);
       result = 31 * result + Arrays.hashCode((Object[])this.layers);
       return 31 * result + Integer.hashCode(this.audioCategory);
    }

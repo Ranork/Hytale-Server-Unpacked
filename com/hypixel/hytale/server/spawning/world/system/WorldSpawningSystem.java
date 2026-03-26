@@ -28,7 +28,7 @@ import com.hypixel.hytale.server.spawning.world.component.SpawnJobData;
 import com.hypixel.hytale.server.spawning.world.component.WorldSpawnData;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.time.Duration;
-import java.util.Set;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -243,49 +243,49 @@ public class WorldSpawningSystem extends TickingSystem<ChunkStore> {
    ) {
       int roleIndex = stat.getRoleIndex();
       boolean wasFullyPopulated = spawnData.isFullyPopulated();
-      Set<Ref<ChunkStore>> chunkRefSet = spawnData.getChunkRefSet();
+      List<Ref<ChunkStore>> chunkRefSet = spawnData.getChunkRefList();
       int environmentIndex = spawnData.getEnvironmentIndex();
       double weight = 0.0;
       boolean spawnable = false;
       boolean fullyPopulated = true;
       if (wasFullyPopulated) {
          for (Ref<ChunkStore> chunkRef : chunkRefSet) {
-            ChunkSpawnData chunkSpawnDataComponent = store.getComponent(chunkRef, this.chunkSpawnDataComponentType);
-
-            assert chunkSpawnDataComponent != null;
-
-            ChunkSpawnedNPCData chunkSpawnedNPCDataComponent = store.getComponent(chunkRef, this.chunkSpawnedNPCDataComponentType);
-
-            assert chunkSpawnedNPCDataComponent != null;
-
-            ChunkEnvironmentSpawnData chunkEnvironmentSpawnData = chunkSpawnDataComponent.getEnvironmentSpawnData(environmentIndex);
-            fullyPopulated = fullyPopulated
-               && chunkEnvironmentSpawnData.isFullyPopulated(chunkSpawnedNPCDataComponent.getEnvironmentSpawnCount(environmentIndex));
-            if (chunkEnvironmentSpawnData.isRoleSpawnable(roleIndex)) {
-               spawnable = true;
-               weight += store.getComponent(chunkRef, this.spawnJobDataComponentType) == null && !getAndUpdateSpawnCooldown(chunkSpawnDataComponent)
-                  ? 1.0
-                  : 0.0;
+            if (chunkRef.isValid()) {
+               ChunkSpawnData chunkSpawnDataComponent = store.getComponent(chunkRef, this.chunkSpawnDataComponentType);
+               if (chunkSpawnDataComponent != null) {
+                  ChunkSpawnedNPCData chunkSpawnedNPCDataComponent = store.getComponent(chunkRef, this.chunkSpawnedNPCDataComponentType);
+                  if (chunkSpawnedNPCDataComponent != null) {
+                     ChunkEnvironmentSpawnData chunkEnvironmentSpawnData = chunkSpawnDataComponent.getEnvironmentSpawnData(environmentIndex);
+                     fullyPopulated = fullyPopulated
+                        && chunkEnvironmentSpawnData.isFullyPopulated(chunkSpawnedNPCDataComponent.getEnvironmentSpawnCount(environmentIndex));
+                     if (chunkEnvironmentSpawnData.isRoleSpawnable(roleIndex)) {
+                        spawnable = true;
+                        weight += store.getComponent(chunkRef, this.spawnJobDataComponentType) == null && !getAndUpdateSpawnCooldown(chunkSpawnDataComponent)
+                           ? 1.0
+                           : 0.0;
+                     }
+                  }
+               }
             }
          }
       } else {
-         for (Ref<ChunkStore> chunkRef : chunkRefSet) {
-            ChunkSpawnData chunkSpawnDataComponentx = store.getComponent(chunkRef, this.chunkSpawnDataComponentType);
-
-            assert chunkSpawnDataComponentx != null;
-
-            ChunkSpawnedNPCData chunkSpawnedNPCDataComponentx = store.getComponent(chunkRef, this.chunkSpawnedNPCDataComponentType);
-
-            assert chunkSpawnedNPCDataComponentx != null;
-
-            ChunkEnvironmentSpawnData chunkEnvironmentSpawnData = chunkSpawnDataComponentx.getEnvironmentSpawnData(environmentIndex);
-            double spawnCount = chunkSpawnedNPCDataComponentx.getEnvironmentSpawnCount(environmentIndex);
-            fullyPopulated = fullyPopulated && chunkEnvironmentSpawnData.isFullyPopulated(spawnCount);
-            if (chunkEnvironmentSpawnData.isRoleSpawnable(roleIndex)) {
-               spawnable = true;
-               weight += store.getComponent(chunkRef, this.spawnJobDataComponentType) == null && !getAndUpdateSpawnCooldown(chunkSpawnDataComponentx)
-                  ? chunkEnvironmentSpawnData.getWeight(spawnCount)
-                  : 0.0;
+         for (Ref<ChunkStore> chunkRefx : chunkRefSet) {
+            if (chunkRefx.isValid()) {
+               ChunkSpawnData chunkSpawnDataComponent = store.getComponent(chunkRefx, this.chunkSpawnDataComponentType);
+               if (chunkSpawnDataComponent != null) {
+                  ChunkSpawnedNPCData chunkSpawnedNPCDataComponent = store.getComponent(chunkRefx, this.chunkSpawnedNPCDataComponentType);
+                  if (chunkSpawnedNPCDataComponent != null) {
+                     ChunkEnvironmentSpawnData chunkEnvironmentSpawnData = chunkSpawnDataComponent.getEnvironmentSpawnData(environmentIndex);
+                     double spawnCount = chunkSpawnedNPCDataComponent.getEnvironmentSpawnCount(environmentIndex);
+                     fullyPopulated = fullyPopulated && chunkEnvironmentSpawnData.isFullyPopulated(spawnCount);
+                     if (chunkEnvironmentSpawnData.isRoleSpawnable(roleIndex)) {
+                        spawnable = true;
+                        weight += store.getComponent(chunkRefx, this.spawnJobDataComponentType) == null && !getAndUpdateSpawnCooldown(chunkSpawnDataComponent)
+                           ? chunkEnvironmentSpawnData.getWeight(spawnCount)
+                           : 0.0;
+                     }
+                  }
+               }
             }
          }
       }
@@ -294,35 +294,39 @@ public class WorldSpawningSystem extends TickingSystem<ChunkStore> {
       if (spawnable) {
          return RandomExtra.randomWeightedElement(
             chunkRefSet,
-            (chunkRefx, index) -> {
-               ChunkSpawnData chunkSpawnDataComponent = store.getComponent(chunkRefx, this.chunkSpawnDataComponentType);
-
-               assert chunkSpawnDataComponent != null;
-
-               ChunkEnvironmentSpawnData chunkEnvironmentSpawnDatax = chunkSpawnDataComponent.getEnvironmentSpawnData(environmentIndex);
-               return chunkEnvironmentSpawnDatax.isRoleSpawnable(index);
+            (chunkRefxx, index) -> {
+               ChunkSpawnData chunkSpawnDataComponent = store.getComponent(chunkRefxx, this.chunkSpawnDataComponentType);
+               if (chunkSpawnDataComponent == null) {
+                  return false;
+               } else {
+                  ChunkEnvironmentSpawnData chunkEnvironmentSpawnDatax = chunkSpawnDataComponent.getEnvironmentSpawnData(environmentIndex);
+                  return chunkEnvironmentSpawnDatax.isRoleSpawnable(index);
+               }
             },
             wasFullyPopulated
-               ? (chunkRefx, index) -> {
-                  ChunkSpawnData spawnChunkDataComponent = store.getComponent(chunkRefx, this.chunkSpawnDataComponentType);
-
-                  assert spawnChunkDataComponent != null;
-
-                  return store.getComponent(chunkRefx, this.spawnJobDataComponentType) == null && !spawnChunkDataComponent.isOnSpawnCooldown() ? 1.0 : 0.0;
+               ? (chunkRefxx, index) -> {
+                  ChunkSpawnData spawnChunkDataComponent = store.getComponent(chunkRefxx, this.chunkSpawnDataComponentType);
+                  if (spawnChunkDataComponent == null) {
+                     return 0.0;
+                  } else {
+                     return store.getComponent(chunkRefxx, this.spawnJobDataComponentType) == null && !spawnChunkDataComponent.isOnSpawnCooldown() ? 1.0 : 0.0;
+                  }
                }
-               : (chunkRefx, index) -> {
-                  ChunkSpawnData chunkSpawnDataComponent = store.getComponent(chunkRefx, this.chunkSpawnDataComponentType);
-
-                  assert chunkSpawnDataComponent != null;
-
-                  ChunkSpawnedNPCData chunkSpawnedNPCDataComponentx = store.getComponent(chunkRefx, this.chunkSpawnedNPCDataComponentType);
-
-                  assert chunkSpawnedNPCDataComponentx != null;
-
-                  ChunkEnvironmentSpawnData chunkEnvironmentSpawnDatax = chunkSpawnDataComponent.getEnvironmentSpawnData(environmentIndex);
-                  return store.getComponent(chunkRefx, this.spawnJobDataComponentType) == null && !chunkSpawnDataComponent.isOnSpawnCooldown()
-                     ? chunkEnvironmentSpawnDatax.getWeight(chunkSpawnedNPCDataComponentx.getEnvironmentSpawnCount(environmentIndex))
-                     : 0.0;
+               : (chunkRefxx, index) -> {
+                  ChunkSpawnData chunkSpawnDataComponent = store.getComponent(chunkRefxx, this.chunkSpawnDataComponentType);
+                  if (chunkSpawnDataComponent == null) {
+                     return 0.0;
+                  } else {
+                     ChunkSpawnedNPCData chunkSpawnedNPCDataComponentx = store.getComponent(chunkRefxx, this.chunkSpawnedNPCDataComponentType);
+                     if (chunkSpawnedNPCDataComponentx == null) {
+                        return 0.0;
+                     } else {
+                        ChunkEnvironmentSpawnData chunkEnvironmentSpawnDatax = chunkSpawnDataComponent.getEnvironmentSpawnData(environmentIndex);
+                        return store.getComponent(chunkRefxx, this.spawnJobDataComponentType) == null && !chunkSpawnDataComponent.isOnSpawnCooldown()
+                           ? chunkEnvironmentSpawnDatax.getWeight(chunkSpawnedNPCDataComponentx.getEnvironmentSpawnCount(environmentIndex))
+                           : 0.0;
+                     }
+                  }
                },
             weight,
             roleIndex

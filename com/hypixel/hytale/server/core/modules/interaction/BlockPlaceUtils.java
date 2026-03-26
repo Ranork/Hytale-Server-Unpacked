@@ -1,6 +1,8 @@
 package com.hypixel.hytale.server.core.modules.interaction;
 
+import com.hypixel.hytale.codec.EmptyExtraInfo;
 import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
@@ -40,8 +42,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlocksUtil;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.state.PlacedByBlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
@@ -87,7 +87,8 @@ public class BlockPlaceUtils {
       boolean removeItemInHand,
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
-      @Nonnull ComponentAccessor<EntityStore> entityStore
+      @Nonnull ComponentAccessor<EntityStore> entityStore,
+      boolean quickReplace
    ) {
       if (blockPosition.getY() >= 0 && blockPosition.getY() < 320) {
          Ref<ChunkStore> targetChunkReference = chunkReference;
@@ -170,10 +171,11 @@ public class BlockPlaceUtils {
                      targetBlockChunkComponent,
                      chunkReference,
                      chunkStore,
-                     entityStore
+                     entityStore,
+                     quickReplace
                   );
                   if (success) {
-                     onPlaceBlockSuccess(itemStack, worldChunkComponent, targetBlockPosition);
+                     onPlaceBlockSuccess(itemStack, worldChunkComponent, targetBlockPosition, blockTypeAsset, targetRotation);
                   } else {
                      onPlaceBlockFailure(itemStack, inventory, activeSlot, playerComponent, targetBlockSection, targetBlockPosition);
                   }
@@ -208,22 +210,30 @@ public class BlockPlaceUtils {
       blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
    }
 
-   private static void onPlaceBlockSuccess(@Nullable ItemStack itemStack, @Nonnull WorldChunk worldChunkComponent, @Nonnull Vector3i blockPosition) {
+   private static void onPlaceBlockSuccess(
+      @Nullable ItemStack itemStack,
+      @Nonnull WorldChunk worldChunkComponent,
+      @Nonnull Vector3i blockPosition,
+      BlockType blockTypeAsset,
+      RotationTuple targetRotation
+   ) {
       if (itemStack != null) {
          BsonDocument metadata = itemStack.getMetadata();
          if (metadata != null) {
-            BsonValue bsonValue = metadata.get("BlockState");
+            BsonValue bsonValue = metadata.get("BlockHolder");
             if (bsonValue != null) {
                try {
                   BsonDocument document = bsonValue.asDocument();
-                  BlockState blockState = BlockState.load(document, worldChunkComponent, blockPosition.clone());
-                  if (blockState != null) {
-                     worldChunkComponent.setState(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockState);
+                  Holder<ChunkStore> blockEntity = ChunkStore.REGISTRY.getEntityCodec().decode(document, EmptyExtraInfo.EMPTY);
+                  if (blockEntity != null) {
+                     worldChunkComponent.setState(
+                        blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockTypeAsset, targetRotation.index(), blockEntity
+                     );
                   } else {
-                     LOGGER.at(Level.WARNING).log("Failed to set BlockState from item metadata: %s, %s", itemStack.getItemId(), document);
+                     LOGGER.at(Level.WARNING).log("Failed to set Block Entity from item metadata: %s, %s", itemStack.getItemId(), document);
                   }
-               } catch (Exception var7) {
-                  throw SneakyThrow.sneakyThrow(var7);
+               } catch (Exception var9) {
+                  throw SneakyThrow.sneakyThrow(var9);
                }
             }
          }
@@ -305,7 +315,8 @@ public class BlockPlaceUtils {
       @Nonnull BlockChunk blockChunkComponent,
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
-      @Nonnull ComponentAccessor<EntityStore> entityStore
+      @Nonnull ComponentAccessor<EntityStore> entityStore,
+      boolean quickReplace
    ) {
       WorldConfig worldConfig = entityStore.getExternalData().getWorld().getGameplayConfig().getWorldConfig();
       if (!worldConfig.isBlockPlacementAllowed()) {
@@ -328,8 +339,9 @@ public class BlockPlaceUtils {
 
          BlockType blockType = BlockType.getAssetMap().getAsset(blockTypeKey);
          int rotationIndex = rotation.index();
-         if (blockType != null
-            && worldChunkComponent.testPlaceBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockType, rotationIndex)) {
+         if (quickReplace
+            || blockType != null
+               && worldChunkComponent.testPlaceBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockType, rotationIndex)) {
             BlockBoundingBoxes hitBoxType = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
             if (hitBoxType != null) {
                FillerBlockUtil.forEachFillerBlock(
@@ -355,11 +367,6 @@ public class BlockPlaceUtils {
                   if (sectionRef != null && sectionRef.isValid()) {
                      BlockPhysics.markDeco(chunkStore, sectionRef, blockPosition.x, blockPosition.y, blockPosition.z);
                   }
-               }
-
-               BlockState blockState = worldChunkComponent.getState(blockPosition.x, blockPosition.y, blockPosition.z);
-               if (blockState instanceof PlacedByBlockState placedByBlockState) {
-                  placedByBlockState.placedBy(ref, blockTypeKey, blockState, entityStore);
                }
 
                int blockIndexInChunk = ChunkUtil.indexBlockInColumn(blockPosition.x, blockPosition.y, blockPosition.z);
@@ -393,39 +400,42 @@ public class BlockPlaceUtils {
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
       @Nonnull ComponentAccessor<EntityStore> entityStore
    ) {
-      BlockType existingBlock = worldChunkComponent.getBlockType(blockPosition);
-      if (existingBlock != null) {
-         if (existingBlock.getMaterial() != BlockMaterial.Empty) {
-            return;
-         }
-
-         BlockGathering gathering = existingBlock.getGathering();
-         int dropQuantity = 1;
-         String itemId = null;
-         String dropListId = null;
-         if (gathering != null) {
-            SoftBlockDropType softGathering = gathering.getSoft();
-            if (softGathering != null) {
-               itemId = softGathering.getItemId();
-               dropListId = softGathering.getDropListId();
+      int targetBlockId = worldChunkComponent.getBlock(blockPosition);
+      if (targetBlockId != 0) {
+         BlockType targetBlockType = BlockType.getAssetMap().getAsset(targetBlockId);
+         if (targetBlockType != null) {
+            if (targetBlockType.getMaterial() != BlockMaterial.Empty) {
+               return;
             }
-         }
 
-         int setBlockSettings = 288;
-         BlockHarvestUtils.performBlockBreak(
-            chunkStore.getExternalData().getWorld(),
-            blockPosition,
-            existingBlock,
-            null,
-            dropQuantity,
-            itemId,
-            dropListId,
-            288,
-            ref,
-            chunkReference,
-            entityStore,
-            chunkStore
-         );
+            BlockGathering gathering = targetBlockType.getGathering();
+            int dropQuantity = 1;
+            String itemId = null;
+            String dropListId = null;
+            if (gathering != null) {
+               SoftBlockDropType softGathering = gathering.getSoft();
+               if (softGathering != null) {
+                  itemId = softGathering.getItemId();
+                  dropListId = softGathering.getDropListId();
+               }
+            }
+
+            int setBlockSettings = 288;
+            BlockHarvestUtils.performBlockBreak(
+               chunkStore.getExternalData().getWorld(),
+               blockPosition,
+               targetBlockType,
+               null,
+               dropQuantity,
+               itemId,
+               dropListId,
+               288,
+               ref,
+               chunkReference,
+               entityStore,
+               chunkStore
+            );
+         }
       }
    }
 

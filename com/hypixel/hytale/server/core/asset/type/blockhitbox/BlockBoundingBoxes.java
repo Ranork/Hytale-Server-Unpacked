@@ -173,13 +173,13 @@ public class BlockBoundingBoxes implements JsonAssetWithMap<String, IndexedLooku
          default:
             break;
          case Ninety:
-            rotate90Z(box);
+            rotate270Z(box);
             break;
          case OneEighty:
             rotate180Z(box);
             break;
          case TwoSeventy:
-            rotate270Z(box);
+            rotate90Z(box);
       }
 
       switch (rotationPitch) {

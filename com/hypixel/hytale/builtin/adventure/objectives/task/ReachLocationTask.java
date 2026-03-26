@@ -20,7 +20,7 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -79,7 +79,7 @@ public class ReachLocationTask extends ObjectiveTask {
          return null;
       } else {
          String targetLocationId = this.getAsset().getTargetLocationId();
-         List<Ref<EntityStore>> reachLocationMarkerEntities = new ObjectArrayList();
+         List<Ref<EntityStore>> reachLocationMarkerEntities = new ReferenceArrayList();
          store.forEachChunk(REACH_LOCATION_MARKER_COMPONENT_TYPE, (archetypeChunk, componentStoreCommandBuffer) -> {
             for (int index = 0; index < archetypeChunk.size(); index++) {
                ReachLocationMarker reachLocationMarkerComponent = archetypeChunk.getComponent(index, REACH_LOCATION_MARKER_COMPONENT_TYPE);

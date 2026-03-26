@@ -19,7 +19,7 @@ public class PersonalMarkersProvider implements WorldMapManager.MarkerProvider {
       PlayerWorldData perWorldData = player.getPlayerConfigData().getPerWorldData(world.getName());
 
       for (UserMapMarker userMapMarker : perWorldData.getUserMapMarkers()) {
-         collector.add(userMapMarker.toProtocolMarker());
+         collector.addIgnoreViewDistance(userMapMarker.toProtocolMarker());
       }
    }
 }

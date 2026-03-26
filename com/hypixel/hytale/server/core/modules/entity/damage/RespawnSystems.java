@@ -12,9 +12,15 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
+import com.hypixel.hytale.server.core.modules.voice.VoiceModule;
+import com.hypixel.hytale.server.core.modules.voice.VoicePlayerState;
+import com.hypixel.hytale.server.core.modules.voice.VoiceRouter;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,7 +40,7 @@ public class RespawnSystems {
 
          assert playerComponent != null;
 
-         if (playerComponent.getInventory().containsBrokenItem()) {
+         if (Inventory.containsBrokenItem(ref, commandBuffer)) {
             playerComponent.sendMessage(Message.translation("server.general.repair.itemBrokenOnRespawn").color("#ff5555"));
          }
       }
@@ -109,6 +115,39 @@ public class RespawnSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
+      }
+   }
+
+   public static class ReenableVoiceOnRespawn extends RespawnSystems.OnRespawnSystem {
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return Query.and(Player.getComponentType(), PlayerRef.getComponentType());
+      }
+
+      public void onComponentRemoved(
+         @Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+         if (playerRefComponent != null) {
+            VoiceModule voiceModule = VoiceModule.get();
+            if (voiceModule != null) {
+               VoicePlayerState voiceState = voiceModule.getPlayerState(playerRefComponent.getUuid());
+               if (voiceState != null) {
+                  voiceState.setSilenced(false);
+               }
+
+               VoiceRouter voiceRouter = voiceModule.getVoiceRouter();
+               PlayerRef playerRef = Universe.get().getPlayer(playerRefComponent.getUuid());
+               if (playerRef != null) {
+                  if (voiceRouter != null) {
+                     voiceRouter.sendVoiceConfig(playerRef);
+                  }
+
+                  voiceModule.scheduleImmediatePositionUpdate(playerRef);
+               }
+            }
+         }
       }
    }
 

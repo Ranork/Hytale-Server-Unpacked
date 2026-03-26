@@ -157,7 +157,7 @@ public class PluginClassLoader extends URLClassLoader {
    public static boolean isFromThirdPartyPlugin(@Nullable Throwable throwable) {
       while (throwable != null) {
          for (StackTraceElement element : throwable.getStackTrace()) {
-            if ("ThirdParty".equals(element.getClassLoaderName())) {
+            if (element.getClassLoaderName() != null && element.getClassLoaderName().startsWith("ThirdParty")) {
                return true;
             }
          }

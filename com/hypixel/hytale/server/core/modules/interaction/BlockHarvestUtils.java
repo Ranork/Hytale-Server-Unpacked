@@ -34,8 +34,8 @@ import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.blockhealth.BlockHealth;
 import com.hypixel.hytale.server.core.modules.blockhealth.BlockHealthChunk;
 import com.hypixel.hytale.server.core.modules.blockhealth.BlockHealthModule;
@@ -56,7 +56,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import it.unimi.dsi.fastutil.objects.ObjectLists;
 import java.util.List;
 import java.util.Objects;
@@ -80,7 +79,7 @@ public class BlockHarvestUtils {
                String gatherType = breaking.getGatherType();
                if (gatherType == null) {
                   return null;
-               } else if (item == null || item.getWeapon() == null && item.getBuilderToolData() == null) {
+               } else if (item == null || item.getWeapon() == null && item.getBuilderTool() == null) {
                   int requiredQuality = breaking.getQuality();
                   if (tool == null) {
                      ItemToolSpec defaultSpec = ItemToolSpec.getAssetMap().getAsset(gatherType);
@@ -247,7 +246,7 @@ public class BlockHarvestUtils {
 
                   ItemToolSpec itemToolSpec = getSpecPowerDamageBlock(heldItem, targetBlockType, tool);
                   float specPower = itemToolSpec != null ? itemToolSpec.getPower() : 0.0F;
-                  boolean canApplyItemStackPenalties = entity != null && entity.canApplyItemStackPenalties(ref, entityStore);
+                  boolean canApplyItemStackPenalties = ref != null && ItemUtils.canApplyItemStackPenalties(ref, entityStore);
                   if (specPower != 0.0F && heldItem != null && heldItem.getTool() != null && itemStack.isBroken() && canApplyItemStackPenalties) {
                      BrokenPenalties brokenPenalties = gameplayConfig.getItemDurabilityConfig().getBrokenPenalties();
                      specPower *= 1.0F - (float)brokenPenalties.getTool(0.0);
@@ -271,7 +270,7 @@ public class BlockHarvestUtils {
                               if ((setBlockSettings & 4) == 0) {
                                  String particleSystemId = unbreakableBlockConfig.getParticleSystemId();
                                  if (particleSystemId != null) {
-                                    ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                                    List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                                     playerSpatialResource.getSpatialStructure().collect(targetBlockCenterPos, 75.0, results);
                                     ParticleUtil.spawnParticleEffect(particleSystemId, targetBlockCenterPos, results, entityStore);
                                  }
@@ -457,7 +456,7 @@ public class BlockHarvestUtils {
                               if ((setBlockSettings & 4) == 0) {
                                  String particleSystemId = incorrectToolConfig.getParticleSystemId();
                                  if (particleSystemId != null) {
-                                    ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                                    List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                                     playerSpatialResource.getSpatialStructure().collect(targetBlockCenterPos, 75.0, results);
                                     ParticleUtil.spawnParticleEffect(particleSystemId, targetBlockCenterPos, results, entityStore);
                                  }
@@ -475,14 +474,15 @@ public class BlockHarvestUtils {
 
                      if (entity != null
                         && ref != null
-                        && entity.canDecreaseItemStackDurability(ref, entityStore)
+                        && ItemUtils.canDecreaseItemStackDurability(ref, entityStore)
                         && itemStack != null
                         && !itemStack.isUnbreakable()) {
-                        byte activeHotbarSlot = entity.getInventory().getActiveHotbarSlot();
-                        if (activeHotbarSlot != -1) {
+                        InventoryComponent.Hotbar hotbarComponent = entityStore.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+                        if (hotbarComponent != null && hotbarComponent.getActiveSlot() != -1) {
                            double durability = calculateDurabilityUse(heldItem, targetBlockType);
-                           ItemContainer hotbar = entity.getInventory().getHotbar();
-                           entity.updateItemStackDurability(ref, itemStack, hotbar, activeHotbarSlot, -durability, entityStore);
+                           entity.updateItemStackDurability(
+                              ref, itemStack, hotbarComponent.getInventory(), hotbarComponent.getActiveSlot(), -durability, entityStore
+                           );
                         }
                      }
 
@@ -514,7 +514,6 @@ public class BlockHarvestUtils {
       @Nonnull ComponentAccessor<EntityStore> entityStore,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
-      World world = chunkStore.getExternalData().getWorld();
       int targetBlockX = targetBlock.getX();
       int targetBlockY = targetBlock.getY();
       int targetBlockZ = targetBlock.getZ();
@@ -522,33 +521,36 @@ public class BlockHarvestUtils {
 
       assert worldChunkComponent != null;
 
-      int targetBlockTypeIndex = worldChunkComponent.getBlock(targetBlockX, targetBlockY, targetBlockZ);
-      BlockType targetBlockTypeAsset = BlockType.getAssetMap().getAsset(targetBlockTypeIndex);
-      if (targetBlockTypeAsset != null) {
-         Vector3i affectedBlock = targetBlock;
-         if (!targetBlockTypeAsset.isUnknown()) {
-            BlockChunk blockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
+      int targetBlockTypeId = worldChunkComponent.getBlock(targetBlockX, targetBlockY, targetBlockZ);
+      if (targetBlockTypeId != 0) {
+         BlockType targetBlockTypeAsset = BlockType.getAssetMap().getAsset(targetBlockTypeId);
+         if (targetBlockTypeAsset != null) {
+            World world = chunkStore.getExternalData().getWorld();
+            Vector3i affectedBlock = targetBlock;
+            if (!targetBlockTypeAsset.isUnknown()) {
+               BlockChunk blockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
 
-            assert blockChunkComponent != null;
+               assert blockChunkComponent != null;
 
-            BlockSection targetBlockSection = blockChunkComponent.getSectionAtBlockY(targetBlockY);
-            int filler = targetBlockSection.getFiller(targetBlockX, targetBlockY, targetBlockZ);
-            int fillerX = FillerBlockUtil.unpackX(filler);
-            int fillerY = FillerBlockUtil.unpackY(filler);
-            int fillerZ = FillerBlockUtil.unpackZ(filler);
-            if (fillerX != 0 || fillerY != 0 || fillerZ != 0) {
-               affectedBlock = targetBlock.clone().subtract(fillerX, fillerY, fillerZ);
-               BlockType originBlock = world.getBlockType(affectedBlock);
-               if (originBlock != null && !targetBlockTypeAsset.getId().equals(originBlock.getId())) {
-                  world.breakBlock(targetBlockX, targetBlockY, targetBlockZ, setBlockSettings);
-                  return;
+               BlockSection targetBlockSection = blockChunkComponent.getSectionAtBlockY(targetBlockY);
+               int filler = targetBlockSection.getFiller(targetBlockX, targetBlockY, targetBlockZ);
+               int fillerX = FillerBlockUtil.unpackX(filler);
+               int fillerY = FillerBlockUtil.unpackY(filler);
+               int fillerZ = FillerBlockUtil.unpackZ(filler);
+               if (fillerX != 0 || fillerY != 0 || fillerZ != 0) {
+                  affectedBlock = targetBlock.clone().subtract(fillerX, fillerY, fillerZ);
+                  BlockType originBlock = world.getBlockType(affectedBlock);
+                  if (originBlock != null && !targetBlockTypeAsset.getId().equals(originBlock.getId())) {
+                     world.breakBlock(targetBlockX, targetBlockY, targetBlockZ, setBlockSettings);
+                     return;
+                  }
                }
             }
-         }
 
-         performBlockBreak(
-            world, affectedBlock, targetBlockTypeAsset, heldItemStack, 0, null, null, setBlockSettings, ref, chunkReference, entityStore, chunkStore
-         );
+            performBlockBreak(
+               world, affectedBlock, targetBlockTypeAsset, heldItemStack, 0, null, null, setBlockSettings, ref, chunkReference, entityStore, chunkStore
+            );
+         }
       }
    }
 
@@ -566,69 +568,71 @@ public class BlockHarvestUtils {
       @Nonnull ComponentAccessor<EntityStore> entityStore,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
-      Vector3i targetBlockPosition = blockPosition;
-      Ref<ChunkStore> targetChunkReference = chunkReference;
-      ComponentAccessor<ChunkStore> targetChunkStore = chunkStore;
-      if (ref != null) {
-         BreakBlockEvent event = new BreakBlockEvent(heldItemStack, blockPosition, targetBlockTypeKey);
-         entityStore.invoke(ref, event);
-         if (event.isCancelled()) {
+      if (targetBlockTypeKey != BlockType.EMPTY) {
+         Vector3i targetBlockPosition = blockPosition;
+         Ref<ChunkStore> targetChunkReference = chunkReference;
+         ComponentAccessor<ChunkStore> targetChunkStore = chunkStore;
+         if (ref != null) {
+            BreakBlockEvent event = new BreakBlockEvent(heldItemStack, blockPosition, targetBlockTypeKey);
+            entityStore.invoke(ref, event);
+            if (event.isCancelled()) {
+               BlockChunk blockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
+
+               assert blockChunkComponent != null;
+
+               BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockPosition.getY());
+               blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+               return;
+            }
+
+            targetBlockPosition = event.getTargetBlock();
+            targetChunkStore = world.getChunkStore().getStore();
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPosition.x, targetBlockPosition.z);
+            targetChunkReference = targetChunkStore.getExternalData().getChunkReference(chunkIndex);
+            if (targetChunkReference == null || !targetChunkReference.isValid()) {
+               return;
+            }
+         }
+
+         if (!targetBlockPosition.equals(blockPosition) || !world.equals(world)) {
             BlockChunk blockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
 
             assert blockChunkComponent != null;
 
             BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockPosition.getY());
             blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
-            return;
          }
 
-         targetBlockPosition = event.getTargetBlock();
-         targetChunkStore = world.getChunkStore().getStore();
-         long chunkIndex = ChunkUtil.indexChunkFromBlock(targetBlockPosition.x, targetBlockPosition.z);
-         targetChunkReference = targetChunkStore.getExternalData().getChunkReference(chunkIndex);
-         if (targetChunkReference == null || !targetChunkReference.isValid()) {
-            return;
-         }
-      }
-
-      if (!targetBlockPosition.equals(blockPosition) || !world.equals(world)) {
-         BlockChunk blockChunkComponent = chunkStore.getComponent(chunkReference, BlockChunk.getComponentType());
+         int x = blockPosition.getX();
+         int y = blockPosition.getY();
+         int z = blockPosition.getZ();
+         BlockChunk blockChunkComponent = chunkStore.getComponent(targetChunkReference, BlockChunk.getComponentType());
 
          assert blockChunkComponent != null;
 
-         BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockPosition.getY());
-         blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+         BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(y);
+         int filler = blockSection.getFiller(x, y, z);
+         int blockTypeIndex = blockSection.get(x, y, z);
+         BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeIndex);
+         boolean isNaturalBlockBreak = BlockInteractionUtils.isNaturalAction(ref, entityStore);
+         setBlockSettings |= 256;
+         if (!isNaturalBlockBreak) {
+            setBlockSettings |= 2048;
+         }
+
+         naturallyRemoveBlock(
+            targetBlockPosition,
+            blockTypeAsset,
+            filler,
+            dropQuantity,
+            dropItemId,
+            dropListId,
+            setBlockSettings,
+            targetChunkReference,
+            entityStore,
+            targetChunkStore
+         );
       }
-
-      int x = blockPosition.getX();
-      int y = blockPosition.getY();
-      int z = blockPosition.getZ();
-      BlockChunk blockChunkComponent = chunkStore.getComponent(targetChunkReference, BlockChunk.getComponentType());
-
-      assert blockChunkComponent != null;
-
-      BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(y);
-      int filler = blockSection.getFiller(x, y, z);
-      int blockTypeIndex = blockSection.get(x, y, z);
-      BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeIndex);
-      boolean isNaturalBlockBreak = BlockInteractionUtils.isNaturalAction(ref, entityStore);
-      setBlockSettings |= 256;
-      if (!isNaturalBlockBreak) {
-         setBlockSettings |= 2048;
-      }
-
-      naturallyRemoveBlock(
-         targetBlockPosition,
-         blockTypeAsset,
-         filler,
-         dropQuantity,
-         dropItemId,
-         dropListId,
-         setBlockSettings,
-         targetChunkReference,
-         entityStore,
-         targetChunkStore
-      );
    }
 
    @Deprecated

@@ -13,10 +13,10 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
    public static final int PACKET_ID = 413;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-   public static final int FIXED_BLOCK_SIZE = 57;
+   public static final int FIXED_BLOCK_SIZE = 61;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 57;
-   public static final int MAX_SIZE = 57;
+   public static final int VARIABLE_BLOCK_START = 61;
+   public static final int MAX_SIZE = 61;
    @Nonnull
    public InteractionType type = InteractionType.Primary;
    public int x;
@@ -36,6 +36,7 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
    public float raycastDirectionX;
    public float raycastDirectionY;
    public float raycastDirectionZ;
+   public int undoGroupSize;
 
    @Override
    public int getId() {
@@ -68,7 +69,8 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       float raycastOriginZ,
       float raycastDirectionX,
       float raycastDirectionY,
-      float raycastDirectionZ
+      float raycastDirectionZ,
+      int undoGroupSize
    ) {
       this.type = type;
       this.x = x;
@@ -88,6 +90,7 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       this.raycastDirectionX = raycastDirectionX;
       this.raycastDirectionY = raycastDirectionY;
       this.raycastDirectionZ = raycastDirectionZ;
+      this.undoGroupSize = undoGroupSize;
    }
 
    public BuilderToolOnUseInteraction(@Nonnull BuilderToolOnUseInteraction other) {
@@ -109,6 +112,7 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       this.raycastDirectionX = other.raycastDirectionX;
       this.raycastDirectionY = other.raycastDirectionY;
       this.raycastDirectionZ = other.raycastDirectionZ;
+      this.undoGroupSize = other.undoGroupSize;
    }
 
    @Nonnull
@@ -132,11 +136,12 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       obj.raycastDirectionX = buf.getFloatLE(offset + 45);
       obj.raycastDirectionY = buf.getFloatLE(offset + 49);
       obj.raycastDirectionZ = buf.getFloatLE(offset + 53);
+      obj.undoGroupSize = buf.getIntLE(offset + 57);
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 57;
+      return 61;
    }
 
    @Override
@@ -159,15 +164,16 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       buf.writeFloatLE(this.raycastDirectionX);
       buf.writeFloatLE(this.raycastDirectionY);
       buf.writeFloatLE(this.raycastDirectionZ);
+      buf.writeIntLE(this.undoGroupSize);
    }
 
    @Override
    public int computeSize() {
-      return 57;
+      return 61;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 57 ? ValidationResult.error("Buffer too small: expected at least 57 bytes") : ValidationResult.OK;
+      return buffer.readableBytes() - offset < 61 ? ValidationResult.error("Buffer too small: expected at least 61 bytes") : ValidationResult.OK;
    }
 
    public BuilderToolOnUseInteraction clone() {
@@ -190,6 +196,7 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
       copy.raycastDirectionX = this.raycastDirectionX;
       copy.raycastDirectionY = this.raycastDirectionY;
       copy.raycastDirectionZ = this.raycastDirectionZ;
+      copy.undoGroupSize = this.undoGroupSize;
       return copy;
    }
 
@@ -217,7 +224,8 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
                && this.raycastOriginZ == other.raycastOriginZ
                && this.raycastDirectionX == other.raycastDirectionX
                && this.raycastDirectionY == other.raycastDirectionY
-               && this.raycastDirectionZ == other.raycastDirectionZ;
+               && this.raycastDirectionZ == other.raycastDirectionZ
+               && this.undoGroupSize == other.undoGroupSize;
       }
    }
 
@@ -241,7 +249,8 @@ public class BuilderToolOnUseInteraction implements Packet, ToServerPacket {
          this.raycastOriginZ,
          this.raycastDirectionX,
          this.raycastDirectionY,
-         this.raycastDirectionZ
+         this.raycastDirectionZ,
+         this.undoGroupSize
       );
    }
 }

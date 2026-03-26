@@ -14,9 +14,11 @@ import com.hypixel.hytale.component.system.tick.RunWhenPausedSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -112,10 +114,20 @@ public class PlayerSavingSystems {
          Vector3f rotation = headRotationComponent.getRotation();
          Vector3d lastSavedPosition = data.lastSavedPosition;
          Vector3f lastSavedRotation = data.lastSavedRotation;
-         if (!lastSavedPosition.equals(position)
-            || !lastSavedRotation.equals(rotation)
-            || data.consumeHasChanged()
-            || playerComponent.getInventory().consumeNeedsSaving()) {
+         InventoryComponent.Storage storage = archetypeChunk.getComponent(index, InventoryComponent.Storage.getComponentType());
+         InventoryComponent.Armor armor = archetypeChunk.getComponent(index, InventoryComponent.Armor.getComponentType());
+         InventoryComponent.Hotbar hotbar = archetypeChunk.getComponent(index, InventoryComponent.Hotbar.getComponentType());
+         InventoryComponent.Utility utility = archetypeChunk.getComponent(index, InventoryComponent.Utility.getComponentType());
+         InventoryComponent.Tool tool = archetypeChunk.getComponent(index, InventoryComponent.Tool.getComponentType());
+         InventoryComponent.Backpack backpack = archetypeChunk.getComponent(index, InventoryComponent.Backpack.getComponentType());
+         boolean needsSaving = data.consumeHasChanged();
+         needsSaving |= storage != null && storage.consumeNeedsSaving();
+         needsSaving |= armor != null && armor.consumeNeedsSaving();
+         needsSaving |= hotbar != null && hotbar.consumeNeedsSaving();
+         needsSaving |= utility != null && utility.consumeNeedsSaving();
+         needsSaving |= tool != null && tool.consumeNeedsSaving();
+         needsSaving |= backpack != null && backpack.consumeNeedsSaving();
+         if (!lastSavedPosition.equals(position) || !lastSavedRotation.equals(rotation) || needsSaving) {
             lastSavedPosition.assign(position);
             lastSavedRotation.assign(rotation);
             playerComponent.saveConfig(store.getExternalData().getWorld(), EntityUtils.toHolder(index, archetypeChunk));
@@ -163,7 +175,7 @@ public class PlayerSavingSystems {
                playerComponent.saveConfig(world, EntityUtils.toHolder(index, archetypeChunk));
             }
 
-            playerRefComponent.getPacketHandler().disconnect("Stopping world!");
+            playerRefComponent.getPacketHandler().disconnect(Message.translation("server.general.disconnect.stoppingWorld"));
          });
       }
    }

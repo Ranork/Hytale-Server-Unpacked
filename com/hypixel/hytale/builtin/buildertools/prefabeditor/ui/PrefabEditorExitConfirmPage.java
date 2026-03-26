@@ -78,17 +78,21 @@ public class PrefabEditorExitConfirmPage extends InteractiveCustomUIPage<PrefabE
 
       assert playerComponent != null;
 
+      PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
       switch (data.action) {
          case ConfirmExit:
             playerComponent.getPageManager().setPage(ref, store, Page.None);
-            PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
             prefabEditSessionManager.exitEditSession(ref, this.world, this.playerRef, store);
             break;
          case Cancel:
+            if (!prefabEditSessionManager.isInEditWorld(this.playerRef, store)) {
+               prefabEditSessionManager.sendToEditWorld(ref, this.world, this.playerRef);
+            }
+
             playerComponent.getPageManager().setPage(ref, store, Page.None);
             break;
          case SaveAndExit:
-            playerComponent.getPageManager().openCustomPage(ref, store, new PrefabEditorSaveSettingsPage(this.playerRef, this.prefabEditSession));
+            playerComponent.getPageManager().openCustomPage(ref, store, new PrefabEditorSaveSettingsPage(this.playerRef, this.prefabEditSession, true));
       }
    }
 

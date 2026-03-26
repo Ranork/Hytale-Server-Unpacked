@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
 public class ScatterOperation extends ToolOperation {
-   private final int brushDensity = this.getBrushDensity();
    private final BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
 
    public ScatterOperation(
@@ -28,7 +27,7 @@ public class ScatterOperation extends ToolOperation {
       if (currentBlock <= 0
          && this.builderState.isAsideBlock(this.edit.getAccessor(), x, y, z)
          && this.assetMap.getAsset(this.edit.getBlock(x, y - 1, z)).getFlags().isStackable
-         && this.random.nextInt(100) <= this.brushDensity) {
+         && this.random.nextInt(100) <= this.density) {
          this.edit.setBlock(x, y, z, this.pattern.nextBlock(this.random));
       }
 

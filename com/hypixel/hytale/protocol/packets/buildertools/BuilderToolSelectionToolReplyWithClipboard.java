@@ -18,13 +18,15 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
    public static final boolean IS_COMPRESSED = true;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 1;
-   public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 9;
-   public static final int MAX_SIZE = 139264019;
+   public static final int VARIABLE_FIELD_COUNT = 3;
+   public static final int VARIABLE_BLOCK_START = 13;
+   public static final int MAX_SIZE = 1677721600;
    @Nullable
    public BlockChange[] blocksChange;
    @Nullable
    public FluidChange[] fluidsChange;
+   @Nullable
+   public ClipboardEntityChange[] entityChanges;
 
    @Override
    public int getId() {
@@ -39,14 +41,18 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
    public BuilderToolSelectionToolReplyWithClipboard() {
    }
 
-   public BuilderToolSelectionToolReplyWithClipboard(@Nullable BlockChange[] blocksChange, @Nullable FluidChange[] fluidsChange) {
+   public BuilderToolSelectionToolReplyWithClipboard(
+      @Nullable BlockChange[] blocksChange, @Nullable FluidChange[] fluidsChange, @Nullable ClipboardEntityChange[] entityChanges
+   ) {
       this.blocksChange = blocksChange;
       this.fluidsChange = fluidsChange;
+      this.entityChanges = entityChanges;
    }
 
    public BuilderToolSelectionToolReplyWithClipboard(@Nonnull BuilderToolSelectionToolReplyWithClipboard other) {
       this.blocksChange = other.blocksChange;
       this.fluidsChange = other.fluidsChange;
+      this.entityChanges = other.entityChanges;
    }
 
    @Nonnull
@@ -54,7 +60,7 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
       BuilderToolSelectionToolReplyWithClipboard obj = new BuilderToolSelectionToolReplyWithClipboard();
       byte nullBits = buf.getByte(offset);
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 9 + buf.getIntLE(offset + 1);
+         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
          int blocksChangeCount = VarInt.peek(buf, varPos0);
          if (blocksChangeCount < 0) {
             throw ProtocolException.negativeLength("BlocksChange", blocksChangeCount);
@@ -79,7 +85,7 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 9 + buf.getIntLE(offset + 5);
+         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
          int fluidsChangeCount = VarInt.peek(buf, varPos1);
          if (fluidsChangeCount < 0) {
             throw ProtocolException.negativeLength("FluidsChange", fluidsChangeCount);
@@ -103,15 +109,40 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
          }
       }
 
+      if ((nullBits & 4) != 0) {
+         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
+         int entityChangesCount = VarInt.peek(buf, varPos2);
+         if (entityChangesCount < 0) {
+            throw ProtocolException.negativeLength("EntityChanges", entityChangesCount);
+         }
+
+         if (entityChangesCount > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityChanges", entityChangesCount, 4096000);
+         }
+
+         int varIntLen = VarInt.length(buf, varPos2);
+         if (varPos2 + varIntLen + entityChangesCount * 45L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("EntityChanges", varPos2 + varIntLen + entityChangesCount * 45, buf.readableBytes());
+         }
+
+         obj.entityChanges = new ClipboardEntityChange[entityChangesCount];
+         int elemPos = varPos2 + varIntLen;
+
+         for (int i = 0; i < entityChangesCount; i++) {
+            obj.entityChanges[i] = ClipboardEntityChange.deserialize(buf, elemPos);
+            elemPos += ClipboardEntityChange.computeBytesConsumed(buf, elemPos);
+         }
+      }
+
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 9;
+      int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
-         int pos0 = offset + 9 + fieldOffset0;
+         int pos0 = offset + 13 + fieldOffset0;
          int arrLen = VarInt.peek(buf, pos0);
          pos0 += VarInt.length(buf, pos0);
 
@@ -126,7 +157,7 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
-         int pos1 = offset + 9 + fieldOffset1;
+         int pos1 = offset + 13 + fieldOffset1;
          int arrLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.length(buf, pos1);
 
@@ -136,6 +167,21 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
 
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
+         }
+      }
+
+      if ((nullBits & 4) != 0) {
+         int fieldOffset2 = buf.getIntLE(offset + 9);
+         int pos2 = offset + 13 + fieldOffset2;
+         int arrLen = VarInt.peek(buf, pos2);
+         pos2 += VarInt.length(buf, pos2);
+
+         for (int i = 0; i < arrLen; i++) {
+            pos2 += ClipboardEntityChange.computeBytesConsumed(buf, pos2);
+         }
+
+         if (pos2 - offset > maxEnd) {
+            maxEnd = pos2 - offset;
          }
       }
 
@@ -154,10 +200,16 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
          nullBits = (byte)(nullBits | 2);
       }
 
+      if (this.entityChanges != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
       buf.writeByte(nullBits);
       int blocksChangeOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int fluidsChangeOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
+      int entityChangesOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
       if (this.blocksChange != null) {
@@ -189,11 +241,26 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
       } else {
          buf.setIntLE(fluidsChangeOffsetSlot, -1);
       }
+
+      if (this.entityChanges != null) {
+         buf.setIntLE(entityChangesOffsetSlot, buf.writerIndex() - varBlockStart);
+         if (this.entityChanges.length > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityChanges", this.entityChanges.length, 4096000);
+         }
+
+         VarInt.write(buf, this.entityChanges.length);
+
+         for (ClipboardEntityChange item : this.entityChanges) {
+            item.serialize(buf);
+         }
+      } else {
+         buf.setIntLE(entityChangesOffsetSlot, -1);
+      }
    }
 
    @Override
    public int computeSize() {
-      int size = 9;
+      int size = 13;
       if (this.blocksChange != null) {
          size += VarInt.size(this.blocksChange.length) + this.blocksChange.length * 17;
       }
@@ -202,12 +269,22 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
          size += VarInt.size(this.fluidsChange.length) + this.fluidsChange.length * 17;
       }
 
+      if (this.entityChanges != null) {
+         int entityChangesSize = 0;
+
+         for (ClipboardEntityChange elem : this.entityChanges) {
+            entityChangesSize += elem.computeSize();
+         }
+
+         size += VarInt.size(this.entityChanges.length) + entityChangesSize;
+      }
+
       return size;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 9) {
-         return ValidationResult.error("Buffer too small: expected at least 9 bytes");
+      if (buffer.readableBytes() - offset < 13) {
+         return ValidationResult.error("Buffer too small: expected at least 13 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 1) != 0) {
@@ -216,7 +293,7 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
                return ValidationResult.error("Invalid offset for BlocksChange");
             }
 
-            int pos = offset + 9 + blocksChangeOffset;
+            int pos = offset + 13 + blocksChangeOffset;
             if (pos >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for BlocksChange");
             }
@@ -243,7 +320,7 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
                return ValidationResult.error("Invalid offset for FluidsChange");
             }
 
-            int posx = offset + 9 + fluidsChangeOffset;
+            int posx = offset + 13 + fluidsChangeOffset;
             if (posx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for FluidsChange");
             }
@@ -264,6 +341,38 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
             }
          }
 
+         if ((nullBits & 4) != 0) {
+            int entityChangesOffset = buffer.getIntLE(offset + 9);
+            if (entityChangesOffset < 0) {
+               return ValidationResult.error("Invalid offset for EntityChanges");
+            }
+
+            int posxx = offset + 13 + entityChangesOffset;
+            if (posxx >= buffer.writerIndex()) {
+               return ValidationResult.error("Offset out of bounds for EntityChanges");
+            }
+
+            int entityChangesCount = VarInt.peek(buffer, posxx);
+            if (entityChangesCount < 0) {
+               return ValidationResult.error("Invalid array count for EntityChanges");
+            }
+
+            if (entityChangesCount > 4096000) {
+               return ValidationResult.error("EntityChanges exceeds max length 4096000");
+            }
+
+            posxx += VarInt.length(buffer, posxx);
+
+            for (int i = 0; i < entityChangesCount; i++) {
+               ValidationResult structResult = ClipboardEntityChange.validateStructure(buffer, posxx);
+               if (!structResult.isValid()) {
+                  return ValidationResult.error("Invalid ClipboardEntityChange in EntityChanges[" + i + "]: " + structResult.error());
+               }
+
+               posxx += ClipboardEntityChange.computeBytesConsumed(buffer, posxx);
+            }
+         }
+
          return ValidationResult.OK;
       }
    }
@@ -272,6 +381,7 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
       BuilderToolSelectionToolReplyWithClipboard copy = new BuilderToolSelectionToolReplyWithClipboard();
       copy.blocksChange = this.blocksChange != null ? Arrays.stream(this.blocksChange).map(e -> e.clone()).toArray(BlockChange[]::new) : null;
       copy.fluidsChange = this.fluidsChange != null ? Arrays.stream(this.fluidsChange).map(e -> e.clone()).toArray(FluidChange[]::new) : null;
+      copy.entityChanges = this.entityChanges != null ? Arrays.stream(this.entityChanges).map(e -> e.clone()).toArray(ClipboardEntityChange[]::new) : null;
       return copy;
    }
 
@@ -283,7 +393,8 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
          return !(obj instanceof BuilderToolSelectionToolReplyWithClipboard other)
             ? false
             : Arrays.equals((Object[])this.blocksChange, (Object[])other.blocksChange)
-               && Arrays.equals((Object[])this.fluidsChange, (Object[])other.fluidsChange);
+               && Arrays.equals((Object[])this.fluidsChange, (Object[])other.fluidsChange)
+               && Arrays.equals((Object[])this.entityChanges, (Object[])other.entityChanges);
       }
    }
 
@@ -291,6 +402,7 @@ public class BuilderToolSelectionToolReplyWithClipboard implements Packet, ToCli
    public int hashCode() {
       int result = 1;
       result = 31 * result + Arrays.hashCode((Object[])this.blocksChange);
-      return 31 * result + Arrays.hashCode((Object[])this.fluidsChange);
+      result = 31 * result + Arrays.hashCode((Object[])this.fluidsChange);
+      return 31 * result + Arrays.hashCode((Object[])this.entityChanges);
    }
 }

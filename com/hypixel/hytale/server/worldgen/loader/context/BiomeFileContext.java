@@ -7,7 +7,7 @@ import javax.annotation.Nonnull;
 public class BiomeFileContext extends FileContext<ZoneFileContext> {
    private final BiomeFileContext.Type type;
 
-   public BiomeFileContext(int id, String name, Path filepath, BiomeFileContext.Type type, ZoneFileContext parent) {
+   public BiomeFileContext(int id, @Nonnull String name, @Nonnull Path filepath, @Nonnull BiomeFileContext.Type type, @Nonnull ZoneFileContext parent) {
       super(id, name, filepath, parent);
       this.type = type;
    }

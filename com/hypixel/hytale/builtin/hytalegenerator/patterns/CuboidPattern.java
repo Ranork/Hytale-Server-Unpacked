@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
-import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 
@@ -12,7 +12,7 @@ public class CuboidPattern extends Pattern {
    @Nonnull
    private final Vector3i max;
    @Nonnull
-   private final SpaceSize readSpaceSize;
+   private final Bounds3i bounds_voxelGrid;
    @Nonnull
    private final Vector3i rScanMin;
    @Nonnull
@@ -26,7 +26,8 @@ public class CuboidPattern extends Pattern {
       this.subPattern = subPattern;
       this.min = min;
       this.max = max;
-      this.readSpaceSize = new SpaceSize(min, max.clone().add(1, 1, 1));
+      this.bounds_voxelGrid = new Bounds3i(min, max.clone().add(Vector3i.ALL_ONES));
+      this.bounds_voxelGrid.stack(subPattern.getBounds_voxelGrid());
       this.rScanMin = new Vector3i();
       this.rScanMax = new Vector3i();
       this.rChildPosition = new Vector3i();
@@ -44,7 +45,7 @@ public class CuboidPattern extends Pattern {
       for (this.rChildPosition.x = this.rScanMin.x; this.rChildPosition.x <= this.rScanMax.x; this.rChildPosition.x++) {
          for (this.rChildPosition.z = this.rScanMin.z; this.rChildPosition.z <= this.rScanMax.z; this.rChildPosition.z++) {
             for (this.rChildPosition.y = this.rScanMin.y; this.rChildPosition.y <= this.rScanMax.y; this.rChildPosition.y++) {
-               if (!context.materialSpace.isInsideSpace(this.rChildPosition)) {
+               if (!context.materialSpace.getBounds().contains(this.rChildPosition)) {
                   return false;
                }
 
@@ -60,7 +61,7 @@ public class CuboidPattern extends Pattern {
 
    @Nonnull
    @Override
-   public SpaceSize readSpace() {
-      return this.readSpaceSize.clone();
+   public Bounds3i getBounds_voxelGrid() {
+      return this.bounds_voxelGrid;
    }
 }

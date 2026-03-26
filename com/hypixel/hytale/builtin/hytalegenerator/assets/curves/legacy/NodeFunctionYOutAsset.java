@@ -5,7 +5,7 @@ import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.math.NodeFunction;
+import com.hypixel.hytale.builtin.hytalegenerator.math.NodeFunction;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;

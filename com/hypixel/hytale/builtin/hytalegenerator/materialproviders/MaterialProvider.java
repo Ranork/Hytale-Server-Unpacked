@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.materialproviders;
 
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.TerrainDensityProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.TerrainDensityProvider;
 import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -25,6 +25,17 @@ public abstract class MaterialProvider<V> {
       @Nullable
       public TerrainDensityProvider terrainDensityProvider;
       public double distanceToBiomeEdge;
+
+      public Context() {
+         this.position = new Vector3i();
+         this.density = 0.0;
+         this.depthIntoFloor = 0;
+         this.depthIntoCeiling = 0;
+         this.spaceAboveFloor = 0;
+         this.spaceBelowCeiling = 0;
+         this.terrainDensityProvider = p -> 0.0;
+         this.distanceToBiomeEdge = Double.MAX_VALUE;
+      }
 
       public Context(
          @Nonnull Vector3i position,

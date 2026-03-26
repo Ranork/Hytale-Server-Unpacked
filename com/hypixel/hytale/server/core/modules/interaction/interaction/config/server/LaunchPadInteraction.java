@@ -24,7 +24,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.meta.state.LaunchPad;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -72,7 +72,7 @@ public class LaunchPadInteraction extends SimpleBlockInteraction {
                   SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(
                      EntityModule.get().getPlayerSpatialResourceType()
                   );
-                  ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                  List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                   playerSpatialResource.getSpatialStructure().collect(particlePos, 75.0, results);
                   ParticleUtil.spawnParticleEffect("Splash", particlePos, results, commandBuffer);
                }

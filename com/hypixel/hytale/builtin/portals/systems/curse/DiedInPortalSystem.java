@@ -8,6 +8,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathSystems;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -19,12 +21,16 @@ public class DiedInPortalSystem extends DeathSystems.OnDeathSystem {
    public void onComponentAdded(
       @Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
    ) {
-      PortalWorld portalWorld = commandBuffer.getResource(PortalWorld.getResourceType());
-      if (portalWorld.exists()) {
-         UUID playerId = commandBuffer.getComponent(ref, UUIDComponent.getComponentType()).getUuid();
-         portalWorld.getDiedInWorld().add(playerId);
-         Player player = store.getComponent(ref, Player.getComponentType());
-         CursedItems.deleteAll(player);
+      PortalWorld portalWorldResource = commandBuffer.getResource(PortalWorld.getResourceType());
+      if (portalWorldResource.exists()) {
+         UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
+
+         assert uuidComponent != null;
+
+         UUID playerUUID = uuidComponent.getUuid();
+         portalWorldResource.getDiedInWorld().add(playerUUID);
+         CombinedItemContainer everythingInventoryComponent = InventoryComponent.getCombined(store, ref, InventoryComponent.EVERYTHING);
+         CursedItems.deleteAll(everythingInventoryComponent);
       }
    }
 

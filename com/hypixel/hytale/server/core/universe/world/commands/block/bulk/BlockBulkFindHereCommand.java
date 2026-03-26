@@ -60,7 +60,7 @@ public class BlockBulkFindHereCommand extends AbstractPlayerCommand {
       CompletableFuture.runAsync(
          () -> {
             long start = System.nanoTime();
-            IntOpenHashSet temp = new IntOpenHashSet();
+            new IntOpenHashSet();
             ChunkStore chunkComponentStore = world.getChunkStore();
             AtomicInteger found = new AtomicInteger();
             SpiralIterator iterator = new SpiralIterator(originChunkX, originChunkZ, radius);
@@ -74,21 +74,25 @@ public class BlockBulkFindHereCommand extends AbstractPlayerCommand {
                for (int sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
                   BlockSection section = blockChunk.getSectionAtIndex(sectionIndex);
                   if (section.containsAny(blockIdList)) {
-                     section.find(blockIdList, temp, blockIndex -> found.getAndIncrement());
-                     temp.clear();
+                     section.find(blockIdList, blockIndex -> found.getAndIncrement());
                   }
                }
             }
 
             long diff = System.nanoTime() - start;
-            BlockType findBlock = BlockType.getAssetMap().getAsset(blockId);
-            String blockName = printBlockName ? " " + findBlock.getId() : "";
-            playerRef.sendMessage(
-               Message.translation("server.commands.block.find-here.result")
-                  .param("count", found.get())
-                  .param("blockName", blockName)
-                  .param("time", TimeUnit.NANOSECONDS.toSeconds(diff))
-            );
+            if (printBlockName) {
+               BlockType findBlock = BlockType.getAssetMap().getAsset(blockId);
+               playerRef.sendMessage(
+                  Message.translation("server.commands.block.find-here.resultWithName")
+                     .param("count", found.get())
+                     .param("blockName", findBlock.getId())
+                     .param("time", TimeUnit.NANOSECONDS.toSeconds(diff))
+               );
+            } else {
+               playerRef.sendMessage(
+                  Message.translation("server.commands.block.find-here.result").param("count", found.get()).param("time", TimeUnit.NANOSECONDS.toSeconds(diff))
+               );
+            }
          }
       );
    }

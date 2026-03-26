@@ -8,6 +8,7 @@ import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.global
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.BlockPatternOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.BreakpointOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.ClearOperationMaskOperation;
+import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.ClearRotationOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.DeleteOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.EchoOnceOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.EchoOperation;
@@ -54,6 +55,7 @@ import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequen
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.saveandload.PersistentDataOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.saveandload.SaveBrushConfigOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.saveandload.SaveIndexOperation;
+import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.transforms.RotateOperation;
 import com.hypixel.hytale.codec.lookup.CodecMapCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
@@ -155,6 +157,8 @@ public abstract class BrushOperation {
       BRUSH_OPERATION_REGISTRY.put("set", SetOperation::new);
       BRUSH_OPERATION_REGISTRY.put("smooth", SmoothOperation::new);
       BRUSH_OPERATION_REGISTRY.put("shape", ShapeOperation::new);
+      BRUSH_OPERATION_REGISTRY.put("rotation", RotateOperation::new);
+      BRUSH_OPERATION_REGISTRY.put("clearrotation", ClearRotationOperation::new);
       BRUSH_OPERATION_REGISTRY.put("offset", OffsetOperation::new);
       BRUSH_OPERATION_REGISTRY.put("layer", LayerOperation::new);
       BRUSH_OPERATION_REGISTRY.put("heightmaplayer", HeightmapLayerOperation::new);

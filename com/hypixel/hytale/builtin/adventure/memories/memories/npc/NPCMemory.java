@@ -24,9 +24,11 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -36,6 +38,7 @@ import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.PickupItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
@@ -44,8 +47,7 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGenerator;
 import com.hypixel.hytale.server.worldgen.chunk.ZoneBiomeResult;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -223,7 +225,7 @@ public class NPCMemory extends Memory {
 
             Vector3d position = transformComponent.getPosition();
             SpatialResource<Ref<EntityStore>, EntityStore> npcSpatialResource = store.getResource(NPCPlugin.get().getNpcSpatialResource());
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             npcSpatialResource.getSpatialStructure().collect(position, this.radius, results);
             if (!results.isEmpty()) {
                PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.playerRefComponentType);
@@ -239,10 +241,8 @@ public class NPCMemory extends Memory {
                NPCMemory temp = new NPCMemory();
                World world = commandBuffer.getExternalData().getWorld();
                String foundLocationZoneNameKey = findLocationZoneName(world, position);
-               ObjectListIterator var18 = results.iterator();
 
-               while (var18.hasNext()) {
-                  Ref<EntityStore> npcRef = (Ref<EntityStore>)var18.next();
+               for (Ref<EntityStore> npcRef : results) {
                   NPCEntity npcComponent = commandBuffer.getComponent(npcRef, NPCEntity.getComponentType());
                   if (npcComponent != null) {
                      Role role = npcComponent.getRole();
@@ -282,6 +282,13 @@ public class NPCMemory extends Memory {
                                  pickupItemComponent.setInitialLifeTime(0.62F);
                                  commandBuffer.addEntity(memoryItemHolder, AddReason.SPAWN);
                                  displayCatchEntityParticles(memoriesGameplayConfig, memoryItemHolderPosition, npcRef, commandBuffer);
+                                 String memoriesCatchSoundEventId = memoriesGameplayConfig.getMemoriesCatchSoundEventId();
+                                 if (memoriesCatchSoundEventId != null) {
+                                    int soundEventIndex = SoundEvent.getAssetMap().getIndex(memoriesCatchSoundEventId);
+                                    if (soundEventIndex != 0) {
+                                       SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, npcTransformComponent.getPosition(), commandBuffer);
+                                    }
+                                 }
                               }
                            }
                         }
@@ -324,12 +331,10 @@ public class NPCMemory extends Memory {
                SpawnModelParticles packet = new SpawnModelParticles(networkIdComponent.getId(), modelParticlesProtocol);
                SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
                SpatialStructure<Ref<EntityStore>> spatialStructure = spatialResource.getSpatialStructure();
-               ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+               List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                spatialStructure.ordered(targetPosition, memoriesGameplayConfig.getMemoriesCatchParticleViewDistance(), results);
-               ObjectListIterator var11 = results.iterator();
 
-               while (var11.hasNext()) {
-                  Ref<EntityStore> ref = (Ref<EntityStore>)var11.next();
+               for (Ref<EntityStore> ref : results) {
                   PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
                   if (playerRefComponent != null) {
                      playerRefComponent.getPacketHandler().write(packet);

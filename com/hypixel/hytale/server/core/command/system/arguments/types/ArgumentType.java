@@ -75,6 +75,10 @@ public abstract class ArgumentType<DataType> implements SuggestionProvider {
       return false;
    }
 
+   public boolean isGreedyString() {
+      return false;
+   }
+
    @Nonnull
    @Override
    public String toString() {

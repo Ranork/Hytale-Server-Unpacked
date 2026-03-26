@@ -8,10 +8,10 @@ import javax.annotation.Nullable;
 
 public class AmbienceFXSound {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 27;
+   public static final int FIXED_BLOCK_SIZE = 31;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 27;
-   public static final int MAX_SIZE = 27;
+   public static final int VARIABLE_BLOCK_START = 31;
+   public static final int MAX_SIZE = 31;
    public int soundEventIndex;
    @Nonnull
    public AmbienceFXSoundPlay3D play3D = AmbienceFXSoundPlay3D.Random;
@@ -22,6 +22,7 @@ public class AmbienceFXSound {
    public Rangef frequency;
    @Nullable
    public Range radius;
+   public int maxBodiesPerEmitter;
 
    public AmbienceFXSound() {
    }
@@ -32,7 +33,8 @@ public class AmbienceFXSound {
       int blockSoundSetIndex,
       @Nonnull AmbienceFXAltitude altitude,
       @Nullable Rangef frequency,
-      @Nullable Range radius
+      @Nullable Range radius,
+      int maxBodiesPerEmitter
    ) {
       this.soundEventIndex = soundEventIndex;
       this.play3D = play3D;
@@ -40,6 +42,7 @@ public class AmbienceFXSound {
       this.altitude = altitude;
       this.frequency = frequency;
       this.radius = radius;
+      this.maxBodiesPerEmitter = maxBodiesPerEmitter;
    }
 
    public AmbienceFXSound(@Nonnull AmbienceFXSound other) {
@@ -49,6 +52,7 @@ public class AmbienceFXSound {
       this.altitude = other.altitude;
       this.frequency = other.frequency;
       this.radius = other.radius;
+      this.maxBodiesPerEmitter = other.maxBodiesPerEmitter;
    }
 
    @Nonnull
@@ -67,11 +71,12 @@ public class AmbienceFXSound {
          obj.radius = Range.deserialize(buf, offset + 19);
       }
 
+      obj.maxBodiesPerEmitter = buf.getIntLE(offset + 27);
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 27;
+      return 31;
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -100,14 +105,16 @@ public class AmbienceFXSound {
       } else {
          buf.writeZero(8);
       }
+
+      buf.writeIntLE(this.maxBodiesPerEmitter);
    }
 
    public int computeSize() {
-      return 27;
+      return 31;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 27 ? ValidationResult.error("Buffer too small: expected at least 27 bytes") : ValidationResult.OK;
+      return buffer.readableBytes() - offset < 31 ? ValidationResult.error("Buffer too small: expected at least 31 bytes") : ValidationResult.OK;
    }
 
    public AmbienceFXSound clone() {
@@ -118,6 +125,7 @@ public class AmbienceFXSound {
       copy.altitude = this.altitude;
       copy.frequency = this.frequency != null ? this.frequency.clone() : null;
       copy.radius = this.radius != null ? this.radius.clone() : null;
+      copy.maxBodiesPerEmitter = this.maxBodiesPerEmitter;
       return copy;
    }
 
@@ -133,12 +141,13 @@ public class AmbienceFXSound {
                && this.blockSoundSetIndex == other.blockSoundSetIndex
                && Objects.equals(this.altitude, other.altitude)
                && Objects.equals(this.frequency, other.frequency)
-               && Objects.equals(this.radius, other.radius);
+               && Objects.equals(this.radius, other.radius)
+               && this.maxBodiesPerEmitter == other.maxBodiesPerEmitter;
       }
    }
 
    @Override
    public int hashCode() {
-      return Objects.hash(this.soundEventIndex, this.play3D, this.blockSoundSetIndex, this.altitude, this.frequency, this.radius);
+      return Objects.hash(this.soundEventIndex, this.play3D, this.blockSoundSetIndex, this.altitude, this.frequency, this.radius, this.maxBodiesPerEmitter);
    }
 }

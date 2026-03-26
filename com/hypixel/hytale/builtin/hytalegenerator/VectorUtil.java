@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator;
 
-import com.hypixel.hytale.builtin.hytalegenerator.framework.math.Calculator;
+import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
 import com.hypixel.hytale.math.vector.Vector2d;
 import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -13,6 +13,13 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 public class VectorUtil {
+   public static void assignFloored(@Nonnull Vector3i to, @Nonnull Vector3d from) {
+      to.x = (int)Math.floor(from.x);
+      to.y = (int)Math.floor(from.y);
+      to.z = (int)Math.floor(from.z);
+      to.dropHash();
+   }
+
    public static boolean areasOverlap(@Nonnull Vector3d minA, @Nonnull Vector3d maxA, @Nonnull Vector3d minB, @Nonnull Vector3d maxB) {
       return isAnyGreater(maxA, minB) && isAnySmaller(minA, maxB);
    }

@@ -1,43 +1,47 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
+import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
+import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class OffsetPositionProvider extends PositionProvider {
    @Nonnull
-   private final Vector3i offset3i;
-   @Nonnull
-   private final Vector3d offset3d;
+   private final Vector3d vector;
    @Nonnull
    private final PositionProvider positionProvider;
+   @Nonnull
+   private final Bounds3d rBounds;
+   @Nonnull
+   private final PositionProvider.Context rChildContext;
+   @Nonnull
+   private PositionProvider.Context rContext;
+   @Nonnull
+   private final Pipe.One<Vector3d> rChildPipe = new Pipe.One<Vector3d>() {
+      public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
+         position.add(OffsetPositionProvider.this.vector);
+         OffsetPositionProvider.this.rContext.pipe.accept(position, control);
+      }
+   };
 
-   public OffsetPositionProvider(@Nonnull Vector3i offset, @Nonnull PositionProvider positionProvider) {
-      this.offset3i = offset.clone();
+   public OffsetPositionProvider(@Nonnull Vector3d vector, @Nonnull PositionProvider positionProvider) {
+      this.vector = vector.clone();
       this.positionProvider = positionProvider;
-      this.offset3d = this.offset3i.toVector3d();
-   }
-
-   public OffsetPositionProvider(@Nonnull Vector3d offset, @Nonnull PositionProvider positionProvider) {
-      this.offset3d = offset.clone();
-      this.positionProvider = positionProvider;
-      this.offset3i = this.offset3d.toVector3i();
+      this.rBounds = new Bounds3d();
+      this.rChildContext = new PositionProvider.Context();
+      this.rContext = new PositionProvider.Context();
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
-      Vector3d windowMin = context.minInclusive.clone();
-      Vector3d windowMax = context.maxExclusive.clone();
-      windowMin.subtract(this.offset3d);
-      windowMax.subtract(this.offset3d);
-      PositionProvider.Context childContext = new PositionProvider.Context();
-      childContext.minInclusive = windowMin;
-      childContext.maxExclusive = windowMax;
-      childContext.consumer = p -> {
-         Vector3d offsetP = p.clone();
-         offsetP.add(this.offset3d);
-         context.consumer.accept(offsetP);
-      };
-      this.positionProvider.positionsIn(childContext);
+   public void generate(@Nonnull PositionProvider.Context context) {
+      this.rContext = context;
+      this.rBounds.assign(context.bounds);
+      this.rBounds.offsetOpposite(this.vector);
+      this.rChildContext.assign(context);
+      this.rChildContext.bounds = this.rBounds;
+      this.rChildContext.pipe = this.rChildPipe;
+      this.positionProvider.generate(this.rChildContext);
    }
 }

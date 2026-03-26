@@ -22,6 +22,8 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.StoreSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.math.util.FastRandom;
+import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.asset.type.environment.config.WeatherForecast;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -31,9 +33,9 @@ import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -135,9 +137,10 @@ public class WeatherSystem {
             if (weatherResource.getForcedWeatherIndex() == 0) {
                WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
                int currentHour = worldTimeResource.getCurrentHour();
+               LocalDateTime dateTime = worldTimeResource.getGameDateTime();
                if (weatherResource.compareAndSwapHour(currentHour)) {
                   Int2IntMap environmentWeather = weatherResource.getEnvironmentWeather();
-                  ThreadLocalRandom random = ThreadLocalRandom.current();
+                  long worldSeed = store.getExternalData().getWorld().getWorldConfig().getSeed();
                   IndexedLookupTableAssetMap<String, Environment> assetMap = Environment.getAssetMap();
 
                   for (Entry<String, Environment> entry : assetMap.getAssetMap().entrySet()) {
@@ -147,7 +150,11 @@ public class WeatherSystem {
                         throw new IllegalArgumentException("Unknown key! " + key);
                      }
 
-                     IWeightedMap<WeatherForecast> weatherForecast = entry.getValue().getWeatherForecast(currentHour);
+                     Environment environment = entry.getValue();
+                     IWeightedMap<WeatherForecast> weatherForecast = environment.getWeatherForecast(currentHour);
+                     String seedKey = environment.getWeatherSeedKey();
+                     long seed = HashUtil.hash(worldSeed, seedKey.hashCode(), dateTime.hashCode());
+                     FastRandom random = new FastRandom(seed);
                      int selectedWeatherIndex = weatherForecast.get(random).getWeatherIndex();
                      environmentWeather.put(index, selectedWeatherIndex);
                   }

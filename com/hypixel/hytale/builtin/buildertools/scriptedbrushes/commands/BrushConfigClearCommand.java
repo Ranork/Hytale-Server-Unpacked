@@ -40,6 +40,7 @@ public class BrushConfigClearCommand extends AbstractPlayerCommand {
          brushConfigCommandExecutor.getSequentialOperations().clear();
          brushConfigCommandExecutor.getGlobalOperations().clear();
          prototypeSettings.setUsePrototypeBrushConfigurations(false);
+         prototypeSettings.setPrototypeItemId(null);
          playerRef.sendMessage(MESSAGE_COMMANDS_BRUSH_CONFIG_CLEARED);
       }
    }

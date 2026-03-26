@@ -1,57 +1,49 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
+import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
+import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.PropDistribution;
 import com.hypixel.hytale.math.vector.Vector3d;
-import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class PositionProvider {
-   public abstract void positionsIn(@Nonnull PositionProvider.Context var1);
-
-   @Nonnull
-   public static PositionProvider noPositionProvider() {
-      return new PositionProvider() {
-         @Override
-         public void positionsIn(@Nonnull PositionProvider.Context context) {
-         }
-      };
-   }
+   public abstract void generate(@Nonnull PositionProvider.Context var1);
 
    public static class Context {
-      @Nonnull
-      public static final Consumer<Vector3d> EMPTY_CONSUMER = p -> {};
-      public Vector3d minInclusive;
-      public Vector3d maxExclusive;
-      public Consumer<Vector3d> consumer;
+      public Bounds3d bounds;
+      public Pipe.One<Vector3d> pipe;
       @Nullable
       public Vector3d anchor;
 
       public Context() {
-         this.minInclusive = Vector3d.ZERO;
-         this.maxExclusive = Vector3d.ZERO;
-         this.consumer = EMPTY_CONSUMER;
+         this.bounds = new Bounds3d();
+         this.pipe = Pipe.getEmptyOne();
          this.anchor = null;
       }
 
-      public Context(@Nonnull Vector3d minInclusive, @Nonnull Vector3d maxExclusive, @Nonnull Consumer<Vector3d> consumer, @Nullable Vector3d anchor) {
-         this.minInclusive = minInclusive;
-         this.maxExclusive = maxExclusive;
-         this.consumer = consumer;
+      public Context(@Nonnull Bounds3d bounds, @Nonnull Pipe.One<Vector3d> pipe, @Nullable Vector3d anchor) {
+         this.bounds = bounds;
+         this.pipe = pipe;
          this.anchor = anchor;
       }
 
       public Context(@Nonnull PositionProvider.Context other) {
-         this.minInclusive = other.minInclusive;
-         this.maxExclusive = other.maxExclusive;
-         this.consumer = other.consumer;
+         this.bounds = other.bounds;
+         this.pipe = other.pipe;
          this.anchor = other.anchor;
       }
 
       public void assign(@Nonnull PositionProvider.Context other) {
-         this.minInclusive = other.minInclusive;
-         this.maxExclusive = other.maxExclusive;
-         this.consumer = other.consumer;
+         this.bounds = other.bounds;
+         this.pipe = other.pipe;
          this.anchor = other.anchor;
+      }
+
+      public void assign(@Nonnull PropDistribution.Context other) {
+         this.bounds.assign(other.bounds);
+         this.pipe = Pipe.getEmptyOne();
+         this.anchor = null;
       }
    }
 }

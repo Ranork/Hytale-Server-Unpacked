@@ -27,7 +27,6 @@ public final class TransformingClassLoader extends URLClassLoader {
       "ch.qos.logback.",
       "com.google.flogger.",
       "server.io.sentry.",
-      "com.hypixel.protoplus.",
       "com.hypixel.fastutil.",
       "com.hypixel.hytale.plugin.early."
    );

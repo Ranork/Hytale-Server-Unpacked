@@ -21,6 +21,13 @@ public class PersistentRef {
    @Nullable
    protected Ref<EntityStore> reference;
 
+   public PersistentRef() {
+   }
+
+   public PersistentRef(@Nullable UUID uuid) {
+      this.uuid = uuid;
+   }
+
    @Nullable
    public UUID getUuid() {
       return this.uuid;

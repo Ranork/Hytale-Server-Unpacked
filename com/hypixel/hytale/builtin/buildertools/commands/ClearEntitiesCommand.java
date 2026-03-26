@@ -15,7 +15,8 @@ import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import java.util.ArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import javax.annotation.Nonnull;
 
 public class ClearEntitiesCommand extends AbstractPlayerCommand {
@@ -47,11 +48,13 @@ public class ClearEntitiesCommand extends AbstractPlayerCommand {
             int width = max.getX() - min.getX();
             int height = max.getY() - min.getY();
             int depth = max.getZ() - min.getZ();
-            ArrayList<Ref<EntityStore>> entitiesToRemove = new ArrayList<>();
+            ReferenceArrayList<Ref<EntityStore>> entitiesToRemove = new ReferenceArrayList();
             BuilderToolsPlugin.forEachCopyableInSelection(world, min.getX(), min.getY(), min.getZ(), width, height, depth, entitiesToRemove::add);
             Store<EntityStore> entityStore = world.getEntityStore().getStore();
+            ObjectListIterator var16 = entitiesToRemove.iterator();
 
-            for (Ref<EntityStore> entityRef : entitiesToRemove) {
+            while (var16.hasNext()) {
+               Ref<EntityStore> entityRef = (Ref<EntityStore>)var16.next();
                entityStore.removeEntity(entityRef, RemoveReason.REMOVE);
             }
 

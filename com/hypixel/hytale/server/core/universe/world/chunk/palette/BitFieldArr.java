@@ -4,7 +4,6 @@ import javax.annotation.Nonnull;
 
 public class BitFieldArr {
    public static final int BITS_PER_INDEX = 8;
-   public static final int LAST_BIT_INDEX = 7;
    public static final int INDEX_MASK = 255;
    private final int bits;
    private final int length;
@@ -18,7 +17,7 @@ public class BitFieldArr {
          throw new IllegalArgumentException("The length must be greater than zero.");
       } else {
          this.bits = bits;
-         this.array = new byte[length * bits / 8];
+         this.array = new byte[(length * bits + 8 - 1) / 8];
          this.length = length;
       }
    }
@@ -29,62 +28,48 @@ public class BitFieldArr {
 
    public int get(int index) {
       int bitIndex = index * this.bits;
-      int endBitIndex = (index + 1) * this.bits - 1;
-      int endArrIndex = endBitIndex / 8;
-      int value = 0;
+      int byteIndex = bitIndex / 8;
+      int bitOffset = bitIndex % 8;
+      if (bitOffset + this.bits <= 8) {
+         int mask = (1 << this.bits) - 1;
+         return (this.array[byteIndex] & 0xFF) >>> bitOffset & mask;
+      } else {
+         int value = 0;
+         int remainingBits = this.bits;
 
-      for (int i = 0; i < this.bits; bitIndex++) {
-         int arrIndex = bitIndex / 8;
-         int startBit = bitIndex % 8;
-         if (arrIndex <= endArrIndex && startBit != 7) {
-            int endBit;
-            if (arrIndex == endArrIndex) {
-               endBit = endBitIndex % 8;
-               if (startBit == endBit) {
-                  value |= (this.array[arrIndex] >> startBit & 1) << i;
-               } else if (startBit == 0 && endBit == 7) {
-                  value |= (this.array[arrIndex] & 255) << i;
-               } else {
-                  int mask = -1 >>> 32 - (endBit + 1 - startBit);
-                  value |= (this.array[arrIndex] >>> startBit & mask) << i;
-               }
-            } else {
-               endBit = 7;
-               if (startBit == 0) {
-                  value |= (this.array[arrIndex] & 255) << i;
-               } else {
-                  int mask = -1 >>> 32 - (endBit + 1 - startBit);
-                  value |= (this.array[arrIndex] >>> startBit & mask) << i;
-               }
-            }
-
-            int inc = endBit - startBit;
-            i += inc;
-            bitIndex += inc;
-         } else {
-            value |= (this.array[arrIndex] >> startBit & 1) << i;
+         for (int shift = 0; remainingBits > 0; bitOffset = 0) {
+            int bitsInThisByte = Math.min(8 - bitOffset, remainingBits);
+            int mask = (1 << bitsInThisByte) - 1;
+            value |= ((this.array[byteIndex] & 255) >>> bitOffset & mask) << shift;
+            shift += bitsInThisByte;
+            remainingBits -= bitsInThisByte;
+            byteIndex++;
          }
 
-         i++;
+         return value;
       }
-
-      return value;
    }
 
    public void set(int index, int value) {
       int bitIndex = index * this.bits;
-
-      for (int i = 0; i < this.bits; bitIndex++) {
-         this.setBit(bitIndex, value >> i & 1);
-         i++;
-      }
-   }
-
-   private void setBit(int bitIndex, int bit) {
-      if (bit == 0) {
-         this.array[bitIndex / 8] = (byte)(this.array[bitIndex / 8] & ~(1 << bitIndex % 8));
+      int byteIndex = bitIndex / 8;
+      int bitOffset = bitIndex % 8;
+      if (bitOffset + this.bits <= 8) {
+         int mask = (1 << this.bits) - 1;
+         int clearMask = ~(mask << bitOffset);
+         this.array[byteIndex] = (byte)(this.array[byteIndex] & clearMask | (value & mask) << bitOffset);
       } else {
-         this.array[bitIndex / 8] = (byte)(this.array[bitIndex / 8] | 1 << bitIndex % 8);
+         int remainingBits = this.bits;
+
+         for (int currentValue = value; remainingBits > 0; bitOffset = 0) {
+            int bitsInThisByte = Math.min(8 - bitOffset, remainingBits);
+            int mask = (1 << bitsInThisByte) - 1;
+            int clearMask = ~(mask << bitOffset);
+            this.array[byteIndex] = (byte)(this.array[byteIndex] & clearMask | (currentValue & mask) << bitOffset);
+            currentValue >>>= bitsInThisByte;
+            remainingBits -= bitsInThisByte;
+            byteIndex++;
+         }
       }
    }
 
@@ -110,9 +95,9 @@ public class BitFieldArr {
    }
 
    public void copyFrom(@Nonnull BitFieldArr other) {
-      if (this.bits == other.bits) {
+      if (this.bits != other.bits) {
          throw new IllegalArgumentException("bits must be the same");
-      } else if (this.length == other.length) {
+      } else if (this.length != other.length) {
          throw new IllegalArgumentException("length must be the same");
       } else {
          System.arraycopy(other.array, 0, this.array, 0, this.array.length);

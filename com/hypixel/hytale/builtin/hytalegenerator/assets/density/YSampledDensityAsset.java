@@ -19,16 +19,19 @@ public class YSampledDensityAsset extends DensityAsset {
       .add()
       .append(new KeyedCodec<>("SampleOffset", Codec.DOUBLE, true), (asset, value) -> asset.sampleOffset = value, asset -> asset.sampleOffset)
       .add()
+      .append(new KeyedCodec<>("Interpolate", Codec.BOOLEAN, true), (asset, value) -> asset.interpolate = value, asset -> asset.interpolate)
+      .add()
       .build();
    private double sampleDistance = 4.0;
    private double sampleOffset = 0.0;
+   private boolean interpolate = true;
 
    @Nonnull
    @Override
    public Density build(@Nonnull DensityAsset.Argument argument) {
       return (Density)(this.sampleDistance <= 0.0
          ? new ConstantValueDensity(0.0)
-         : new YSampledDensity(this.buildFirstInput(argument), this.sampleDistance, this.sampleOffset));
+         : new YSampledDensity(this.buildFirstInput(argument), this.sampleDistance, this.sampleOffset, this.interpolate));
    }
 
    @Override

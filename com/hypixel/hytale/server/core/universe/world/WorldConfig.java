@@ -5,6 +5,7 @@ import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.map.ObjectMapCodec;
+import com.hypixel.hytale.codec.codecs.set.SetCodec;
 import com.hypixel.hytale.codec.lookup.MapKeyMapCodec;
 import com.hypixel.hytale.codec.schema.metadata.NoDefaultValue;
 import com.hypixel.hytale.codec.util.RawJsonReader;
@@ -23,6 +24,7 @@ import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.codec.ShapeCodecs;
+import com.hypixel.hytale.server.core.config.WorldWorldMapConfig;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.spawn.GlobalSpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
@@ -37,7 +39,9 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -81,6 +85,9 @@ public class WorldConfig {
       .documentation("Sets the world generator that will be used by the world.")
       .add()
       .append(new KeyedCodec<>("WorldMap", IWorldMapProvider.CODEC), (o, i) -> o.worldMapProvider = i, o -> o.worldMapProvider)
+      .add()
+      .<WorldWorldMapConfig>append(new KeyedCodec<>("WorldMapConfig", WorldWorldMapConfig.CODEC), (o, i) -> o.worldMapConfig = i, o -> o.worldMapConfig)
+      .documentation("Optional per-world overrides for world map configuration and limits.")
       .add()
       .<IChunkStorageProvider<?>>append(
          new KeyedCodec<>("ChunkStorage", IChunkStorageProvider.CODEC), (o, i) -> o.chunkStorageProvider = i, o -> o.chunkStorageProvider
@@ -203,6 +210,15 @@ public class WorldConfig {
       .documentation("Instance specific configuration.")
       .addValidator(Validators.deprecated())
       .add()
+      .<Set>append(
+         new KeyedCodec<>("DisabledFluidTickers", new SetCodec<>(Codec.STRING, HashSet::new, false)),
+         (o, i) -> o.disabledFluidTickers = i,
+         o -> o.disabledFluidTickers
+      )
+      .documentation(
+         "A set of fluid tag strings (e.g. \"Fluid=Water\", \"Fire=Fire\") whose tickers should be disabled in this world. Fluids matching any of these tags will not tick."
+      )
+      .add()
       .<IResourceStorageProvider>append(
          new KeyedCodec<>("ResourceStorage", IResourceStorageProvider.CODEC), (o, i) -> o.resourceStorageProvider = i, o -> o.resourceStorageProvider
       )
@@ -221,7 +237,7 @@ public class WorldConfig {
       .add()
       .build();
    @Nonnull
-   private transient AtomicBoolean hasChanged = new AtomicBoolean();
+   private final transient AtomicBoolean hasChanged = new AtomicBoolean();
    private UUID uuid = UUID.randomUUID();
    private String displayName;
    private long seed = System.currentTimeMillis();
@@ -229,6 +245,8 @@ public class WorldConfig {
    private ISpawnProvider spawnProvider = null;
    private IWorldGenProvider worldGenProvider = IWorldGenProvider.CODEC.getDefault();
    private IWorldMapProvider worldMapProvider = IWorldMapProvider.CODEC.getDefault();
+   @Nullable
+   private WorldWorldMapConfig worldMapConfig;
    private IChunkStorageProvider<?> chunkStorageProvider = IChunkStorageProvider.CODEC.getDefault();
    @Nonnull
    private WorldConfig.ChunkConfig chunkConfig = new WorldConfig.ChunkConfig();
@@ -260,6 +278,8 @@ public class WorldConfig {
    private boolean isObjectiveMarkersEnabled = true;
    private boolean deleteOnUniverseStart = false;
    private boolean deleteOnRemove = false;
+   @Nonnull
+   private Set<String> disabledFluidTickers = Collections.emptySet();
    private IResourceStorageProvider resourceStorageProvider = IResourceStorageProvider.CODEC.getDefault();
    protected MapKeyMapCodec.TypeMap<Object> pluginConfig = new MapKeyMapCodec.TypeMap<>(PLUGIN_CODEC);
    @Nullable
@@ -356,6 +376,16 @@ public class WorldConfig {
       this.worldMapProvider = worldMapProvider;
    }
 
+   @Nullable
+   public WorldWorldMapConfig getWorldMapConfig() {
+      return this.worldMapConfig;
+   }
+
+   public void setWorldMapConfig(@Nullable WorldWorldMapConfig worldMapConfig) {
+      this.worldMapConfig = worldMapConfig;
+      this.markChanged();
+   }
+
    public IChunkStorageProvider<?> getChunkStorageProvider() {
       return this.chunkStorageProvider;
    }
@@ -393,12 +423,16 @@ public class WorldConfig {
       return this.isPvpEnabled;
    }
 
+   public void setPvpEnabled(boolean pvpEnabled) {
+      this.isPvpEnabled = pvpEnabled;
+   }
+
    public boolean isFallDamageEnabled() {
       return this.isFallDamageEnabled;
    }
 
-   public void setPvpEnabled(boolean pvpEnabled) {
-      this.isPvpEnabled = pvpEnabled;
+   public void setFallDamageEnabled(boolean fallDamageEnabled) {
+      this.isFallDamageEnabled = fallDamageEnabled;
    }
 
    public boolean isGameTimePaused() {
@@ -543,6 +577,15 @@ public class WorldConfig {
 
    public void setObjectiveMarkersEnabled(boolean objectiveMarkersEnabled) {
       this.isObjectiveMarkersEnabled = objectiveMarkersEnabled;
+   }
+
+   @Nonnull
+   public Set<String> getDisabledFluidTickers() {
+      return this.disabledFluidTickers;
+   }
+
+   public void setDisabledFluidTickers(@Nonnull Set<String> disabledFluidTickers) {
+      this.disabledFluidTickers = disabledFluidTickers;
    }
 
    public IResourceStorageProvider getResourceStorageProvider() {

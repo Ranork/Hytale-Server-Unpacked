@@ -21,10 +21,18 @@ public class MaxPlayersCommand extends CommandBase {
       if (this.amountArg.provided(context)) {
          int maxPlayers = this.amountArg.get(context);
          HytaleServer.get().getConfig().setMaxPlayers(maxPlayers);
-         context.sendMessage(Message.translation("server.commands.maxplayers.set").param("maxPlayers", maxPlayers));
+         if (maxPlayers > 0) {
+            context.sendMessage(Message.translation("server.commands.maxplayers.set").param("maxPlayers", maxPlayers));
+         } else {
+            context.sendMessage(Message.translation("server.commands.maxplayers.setInfinite"));
+         }
       } else {
          int maxPlayers = HytaleServer.get().getConfig().getMaxPlayers();
-         context.sendMessage(Message.translation("server.commands.maxplayers.get").param("maxPlayers", maxPlayers));
+         if (maxPlayers > 0) {
+            context.sendMessage(Message.translation("server.commands.maxplayers.get").param("maxPlayers", maxPlayers));
+         } else {
+            context.sendMessage(Message.translation("server.commands.maxplayers.getInfinite"));
+         }
       }
    }
 }

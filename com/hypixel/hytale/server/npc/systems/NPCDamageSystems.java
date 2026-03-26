@@ -10,7 +10,11 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
+import com.hypixel.hytale.component.dependency.Dependency;
+import com.hypixel.hytale.component.dependency.Order;
+import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
@@ -26,6 +30,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DamageEventSystem;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathSystems;
+import com.hypixel.hytale.server.core.modules.entity.damage.DeferredCorpseRemoval;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.item.ItemModule;
@@ -38,6 +43,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.DamageData;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -160,10 +166,18 @@ public class NPCDamageSystems {
       }
    }
 
-   public static class DropDeathItems extends DeathSystems.OnDeathSystem {
+   public static class DropDeathItems extends EntityTickingSystem<EntityStore> {
       @Nonnull
       private static final Query<EntityStore> QUERY = Query.and(
-         NPCEntity.getComponentType(), TransformComponent.getComponentType(), HeadRotation.getComponentType(), Query.not(Player.getComponentType())
+         NPCEntity.getComponentType(),
+         TransformComponent.getComponentType(),
+         HeadRotation.getComponentType(),
+         Query.not(Player.getComponentType()),
+         DeathComponent.getComponentType()
+      );
+      @Nonnull
+      private static final Set<Dependency<EntityStore>> DEPENDENCIES = Set.of(
+         new SystemDependency<>(Order.AFTER, DeathSystems.TickCorpseRemoval.class), new SystemDependency<>(Order.BEFORE, DeathSystems.CorpseRemoval.class)
       );
 
       @Nonnull
@@ -172,45 +186,70 @@ public class NPCDamageSystems {
          return QUERY;
       }
 
-      public void onComponentAdded(
-         @Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return DEPENDENCIES;
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         if (component.getItemsLossMode() == DeathConfig.ItemsLossMode.ALL) {
-            NPCEntity npcComponent = commandBuffer.getComponent(ref, NPCEntity.getComponentType());
+         DeathComponent deathComponent = archetypeChunk.getComponent(index, DeathComponent.getComponentType());
+
+         assert deathComponent != null;
+
+         if (deathComponent.getItemsLossMode() == DeathConfig.ItemsLossMode.ALL) {
+            NPCEntity npcComponent = archetypeChunk.getComponent(index, NPCEntity.getComponentType());
 
             assert npcComponent != null;
 
             Role role = npcComponent.getRole();
             if (role != null) {
-               List<ItemStack> itemsToDrop = new ObjectArrayList();
-               if (role.isPickupDropOnDeath()) {
-                  Inventory inventory = npcComponent.getInventory();
-                  itemsToDrop.addAll(inventory.getStorage().dropAllItemStacks());
-               }
-
-               String dropListId = role.getDropListId();
-               if (dropListId != null) {
-                  ItemModule itemModule = ItemModule.get();
-                  if (itemModule.isEnabled()) {
-                     List<ItemStack> randomItemsToDrop = itemModule.getRandomItemDrops(dropListId);
-                     itemsToDrop.addAll(randomItemsToDrop);
+               if (!role.hasDroppedDeathItems()) {
+                  if (!role.isDropDeathItemsInstantly()) {
+                     DeferredCorpseRemoval deferredRemoval = archetypeChunk.getComponent(index, DeferredCorpseRemoval.getComponentType());
+                     if (deferredRemoval != null && !deferredRemoval.shouldRemove()) {
+                        return;
+                     }
                   }
-               }
 
-               if (!itemsToDrop.isEmpty()) {
-                  TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
+                  role.setDeathItemsDropped();
+                  List<ItemStack> itemsToDrop = new ObjectArrayList();
+                  if (role.isPickupDropOnDeath()) {
+                     Inventory inventory = npcComponent.getInventory();
+                     itemsToDrop.addAll(inventory.getStorage().dropAllItemStacks());
+                  }
 
-                  assert transformComponent != null;
+                  String dropListId = role.getDropListId();
+                  if (dropListId != null) {
+                     ItemModule itemModule = ItemModule.get();
+                     if (itemModule.isEnabled()) {
+                        List<ItemStack> randomItemsToDrop = itemModule.getRandomItemDrops(dropListId);
+                        itemsToDrop.addAll(randomItemsToDrop);
+                     }
+                  }
 
-                  Vector3d position = transformComponent.getPosition();
-                  HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
+                  if (!itemsToDrop.isEmpty()) {
+                     TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
 
-                  assert headRotationComponent != null;
+                     assert transformComponent != null;
 
-                  Vector3f headRotation = headRotationComponent.getRotation();
-                  Vector3d dropPosition = position.clone().add(0.0, 1.0, 0.0);
-                  Holder<EntityStore>[] drops = ItemComponent.generateItemDrops(store, itemsToDrop, dropPosition, headRotation.clone());
-                  commandBuffer.addEntities(drops, AddReason.SPAWN);
+                     Vector3d position = transformComponent.getPosition();
+                     HeadRotation headRotationComponent = archetypeChunk.getComponent(index, HeadRotation.getComponentType());
+
+                     assert headRotationComponent != null;
+
+                     Vector3f headRotation = headRotationComponent.getRotation();
+                     Vector3d dropPosition = position.clone().add(0.0, 1.0, 0.0);
+                     Holder<EntityStore>[] drops = ItemComponent.generateItemDrops(store, itemsToDrop, dropPosition, headRotation.clone());
+                     commandBuffer.addEntities(drops, AddReason.SPAWN);
+                  }
                }
             }
          }

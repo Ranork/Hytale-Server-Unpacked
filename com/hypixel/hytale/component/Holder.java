@@ -135,21 +135,33 @@ public class Holder<ECS_TYPE> {
    public <T extends Component<ECS_TYPE>> void addComponent(@Nonnull ComponentType<ECS_TYPE, T> componentType, @Nonnull T component) {
       assert this.archetype != null;
 
+      if (!this.addComponentInternal(componentType, component)) {
+         throw new IllegalArgumentException("Entity contains component type: " + componentType);
+      }
+   }
+
+   <T extends Component<ECS_TYPE>> boolean addComponentInternal(@Nonnull ComponentType<ECS_TYPE, T> componentType, @Nonnull T component) {
+      assert this.archetype != null;
+
       long stamp = this.lock.writeLock();
 
+      boolean var5;
       try {
          if (this.ensureValidComponents) {
             componentType.validate();
          }
 
-         if (this.archetype.contains(componentType)) {
-            throw new IllegalArgumentException("Entity contains component type: " + componentType);
+         if (!this.archetype.contains(componentType)) {
+            this.addComponent0(componentType, component);
+            return true;
          }
 
-         this.addComponent0(componentType, component);
+         var5 = false;
       } finally {
          this.lock.unlockWrite(stamp);
       }
+
+      return var5;
    }
 
    private <T extends Component<ECS_TYPE>> void addComponent0(@Nonnull ComponentType<ECS_TYPE, T> componentType, @Nonnull T component) {

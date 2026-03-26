@@ -2,8 +2,8 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.props.prefabprop.direc
 
 import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.ConstantPatternAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.PatternAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.props.directionality.Directionality;
-import com.hypixel.hytale.builtin.hytalegenerator.props.directionality.StaticDirectionality;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality.Directionality;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality.StaticDirectionality;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;

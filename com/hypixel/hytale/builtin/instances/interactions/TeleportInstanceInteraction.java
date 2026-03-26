@@ -293,7 +293,7 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
             RotationTuple rotationTuple = RotationTuple.get(rotationIndex);
             IndexedLookupTableAssetMap<String, BlockBoundingBoxes> hitboxAssetMap = BlockBoundingBoxes.getAssetMap();
             Box hitbox = hitboxAssetMap.getAsset(blockType.getHitboxTypeIndex()).get(rotationIndex).getBoundingBox();
-            Vector3d position = this.positionOffset != null ? rotationTuple.rotate(this.positionOffset) : new Vector3d();
+            Vector3d position = this.positionOffset != null ? rotationTuple.rotatedVector(this.positionOffset) : new Vector3d();
             position.x = position.x + (hitbox.middleX() + targetBlock.x);
             position.y = position.y + (hitbox.middleY() + targetBlock.y);
             position.z = position.z + (hitbox.middleZ() + targetBlock.z);

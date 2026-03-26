@@ -59,11 +59,6 @@ public class DistortedCaveNodeShape implements CaveNodeShape {
    }
 
    @Override
-   public boolean hasGeometry() {
-      return this.shape.hasGeometry();
-   }
-
-   @Override
    public boolean shouldReplace(int seed, double x, double z, int y) {
       double t = this.shape.getProjection(x, z);
       if (this.shape.isValidProjection(t)) {

@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayFIFOQueue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -184,20 +185,16 @@ public class ChunkLightingManager implements Runnable {
       }
    }
 
-   public boolean invalidateLightAtBlock(WorldChunk worldChunk, int blockX, int blockY, int blockZ, BlockType blockType, int oldHeight, int newHeight) {
-      return this.lightCalculation.invalidateLightAtBlock(worldChunk, blockX, blockY, blockZ, blockType, oldHeight, newHeight);
+   public boolean invalidateLightAtBlock(@Nonnull ChunkStore chunkStore, int blockX, int blockY, int blockZ, BlockType blockType, int oldHeight, int newHeight) {
+      return this.lightCalculation.invalidateLightAtBlock(chunkStore, blockX, blockY, blockZ, blockType, oldHeight, newHeight);
    }
 
-   public boolean invalidateLightInChunk(WorldChunk worldChunk) {
-      return this.lightCalculation.invalidateLightInChunkSections(worldChunk, 0, 10);
+   public boolean invalidateLightInChunk(@Nonnull ChunkStore chunkStore, int chunkX, int chunkZ) {
+      return this.lightCalculation.invalidateLightInChunkSections(chunkStore, chunkX, chunkZ, 0, 10);
    }
 
-   public boolean invalidateLightInChunkSection(WorldChunk worldChunk, int sectionIndex) {
-      return this.lightCalculation.invalidateLightInChunkSections(worldChunk, sectionIndex, sectionIndex + 1);
-   }
-
-   public boolean invalidateLightInChunkSections(WorldChunk worldChunk, int sectionIndexFrom, int sectionIndexTo) {
-      return this.lightCalculation.invalidateLightInChunkSections(worldChunk, sectionIndexFrom, sectionIndexTo);
+   public boolean invalidateLightInChunkSection(@Nonnull ChunkStore chunkStore, int chunkX, int chunkZ, int sectionIndex) {
+      return this.lightCalculation.invalidateLightInChunkSections(chunkStore, chunkX, chunkZ, sectionIndex, sectionIndex + 1);
    }
 
    public void invalidateLoadedChunks() {

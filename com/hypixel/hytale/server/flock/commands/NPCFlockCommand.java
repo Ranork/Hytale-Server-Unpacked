@@ -21,8 +21,7 @@ import com.hypixel.hytale.server.flock.FlockPlugin;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
@@ -59,17 +58,15 @@ public class NPCFlockCommand extends AbstractCommandCollection {
       double y = position.getY();
       double z = position.getZ();
       SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(NPCPlugin.get().getNpcSpatialResource());
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       spatialResource.getSpatialStructure().collect(position, 8.0, results);
       ComponentType<EntityStore, NPCEntity> npcComponentType = NPCEntity.getComponentType();
 
       assert npcComponentType != null;
 
       int count = 0;
-      ObjectListIterator var19 = results.iterator();
 
-      while (var19.hasNext()) {
-         Ref<EntityStore> targetRef = (Ref<EntityStore>)var19.next();
+      for (Ref<EntityStore> targetRef : results) {
          NPCEntity targetNpcComponent = store.getComponent(targetRef, npcComponentType);
 
          assert targetNpcComponent != null;
@@ -108,12 +105,10 @@ public class NPCFlockCommand extends AbstractCommandCollection {
       double y = position.getY();
       double z = position.getZ();
       SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(NPCPlugin.get().getNpcSpatialResource());
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       spatialResource.getSpatialStructure().ordered(position, 8.0, results);
-      ObjectListIterator var17 = results.iterator();
 
-      while (var17.hasNext()) {
-         Ref<EntityStore> entityRef = (Ref<EntityStore>)var17.next();
+      for (Ref<EntityStore> entityRef : results) {
          TransformComponent entityTransformComponent = store.getComponent(entityRef, transformComponentType);
 
          assert entityTransformComponent != null;

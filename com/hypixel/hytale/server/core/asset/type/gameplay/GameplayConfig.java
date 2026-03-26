@@ -26,123 +26,128 @@ public class GameplayConfig implements JsonAssetWithMap<String, DefaultAssetMap<
          GameplayConfig.class,
          GameplayConfig::new,
          Codec.STRING,
-         (gameplayConfig, s) -> gameplayConfig.id = s,
+         (config, s) -> config.id = s,
          GameplayConfig::getId,
          (asset, data) -> asset.data = data,
          asset -> asset.data
       )
       .appendInherited(
          new KeyedCodec<>("Gathering", GatheringConfig.CODEC),
-         (gameplayConfig, o) -> gameplayConfig.gatheringConfig = o,
-         gameplayConfig -> gameplayConfig.gatheringConfig,
-         (gameplayConfig, parent) -> gameplayConfig.gatheringConfig = parent.gatheringConfig
+         (config, o) -> config.gatheringConfig = o,
+         config -> config.gatheringConfig,
+         (config, parent) -> config.gatheringConfig = parent.gatheringConfig
       )
       .add()
       .appendInherited(
          new KeyedCodec<>("World", WorldConfig.CODEC),
-         (gameplayConfig, o) -> gameplayConfig.worldConfig = o,
-         gameplayConfig -> gameplayConfig.worldConfig,
-         (gameplayConfig, parent) -> gameplayConfig.worldConfig = parent.worldConfig
+         (config, o) -> config.worldConfig = o,
+         config -> config.worldConfig,
+         (config, parent) -> config.worldConfig = parent.worldConfig
       )
       .add()
       .appendInherited(
          new KeyedCodec<>("WorldMap", WorldMapConfig.CODEC),
-         (gameplayConfig, o) -> gameplayConfig.worldMapConfig = o,
-         gameplayConfig -> gameplayConfig.worldMapConfig,
-         (gameplayConfig, parent) -> gameplayConfig.worldMapConfig = parent.worldMapConfig
+         (config, o) -> config.worldMapConfig = o,
+         config -> config.worldMapConfig,
+         (config, parent) -> config.worldMapConfig = parent.worldMapConfig
       )
       .add()
       .appendInherited(
          new KeyedCodec<>("Death", DeathConfig.CODEC),
-         (gameplayConfig, o) -> gameplayConfig.deathConfig = o,
-         gameplayConfig -> gameplayConfig.deathConfig,
-         (gameplayConfig, parent) -> gameplayConfig.deathConfig = parent.deathConfig
+         (config, o) -> config.deathConfig = o,
+         config -> config.deathConfig,
+         (config, parent) -> config.deathConfig = parent.deathConfig
       )
       .add()
       .appendInherited(
          new KeyedCodec<>("Respawn", RespawnConfig.CODEC),
-         (gameplayConfig, o) -> gameplayConfig.respawnConfig = o,
-         gameplayConfig -> gameplayConfig.respawnConfig,
-         (gameplayConfig, parent) -> gameplayConfig.respawnConfig = parent.respawnConfig
+         (config, o) -> config.respawnConfig = o,
+         config -> config.respawnConfig,
+         (config, parent) -> config.respawnConfig = parent.respawnConfig
       )
       .add()
       .appendInherited(
          new KeyedCodec<>("ShowItemPickupNotifications", Codec.BOOLEAN),
-         (gameplayConfig, showItemPickupNotifications) -> gameplayConfig.showItemPickupNotifications = showItemPickupNotifications,
-         gameplayConfig -> gameplayConfig.showItemPickupNotifications,
-         (gameplayConfig, parent) -> gameplayConfig.showItemPickupNotifications = parent.showItemPickupNotifications
+         (config, showItemPickupNotifications) -> config.showItemPickupNotifications = showItemPickupNotifications,
+         config -> config.showItemPickupNotifications,
+         (config, parent) -> config.showItemPickupNotifications = parent.showItemPickupNotifications
       )
       .add()
       .appendInherited(
          new KeyedCodec<>("ItemDurability", ItemDurabilityConfig.CODEC),
-         (gameplayConfig, o) -> gameplayConfig.itemDurabilityConfig = o,
-         gameplayConfig -> gameplayConfig.itemDurabilityConfig,
-         (gameplayConfig, parent) -> gameplayConfig.itemDurabilityConfig = parent.itemDurabilityConfig
+         (config, o) -> config.itemDurabilityConfig = o,
+         config -> config.itemDurabilityConfig,
+         (config, parent) -> config.itemDurabilityConfig = parent.itemDurabilityConfig
       )
       .add()
       .appendInherited(
          new KeyedCodec<>("ItemEntity", ItemEntityConfig.CODEC),
-         (gameplayConfig, itemEntityConfig) -> gameplayConfig.itemEntityConfig = itemEntityConfig,
-         gameplayConfig -> gameplayConfig.itemEntityConfig,
-         (gameplayConfig, parent) -> gameplayConfig.itemEntityConfig = parent.itemEntityConfig
+         (config, itemEntityConfig) -> config.itemEntityConfig = itemEntityConfig,
+         config -> config.itemEntityConfig,
+         (config, parent) -> config.itemEntityConfig = parent.itemEntityConfig
       )
       .add()
       .appendInherited(
          new KeyedCodec<>("Combat", CombatConfig.CODEC),
-         (gameplayConfig, combatConfig) -> gameplayConfig.combatConfig = combatConfig,
-         gameplayConfig -> gameplayConfig.combatConfig,
-         (gameplayConfig, parent) -> gameplayConfig.combatConfig = parent.combatConfig
+         (config, combatConfig) -> config.combatConfig = combatConfig,
+         config -> config.combatConfig,
+         (config, parent) -> config.combatConfig = parent.combatConfig
       )
       .add()
-      .<MapKeyMapCodec.TypeMap<Object>>appendInherited(new KeyedCodec<>("Plugin", PLUGIN_CODEC), (o, i) -> {
-         if (o.pluginConfig.isEmpty()) {
-            o.pluginConfig = i;
+      .<MapKeyMapCodec.TypeMap<Object>>appendInherited(new KeyedCodec<>("Plugin", PLUGIN_CODEC), (config, i) -> {
+         if (config.pluginConfig.isEmpty()) {
+            config.pluginConfig = i;
          } else {
-            MapKeyMapCodec.TypeMap<Object> temp = o.pluginConfig;
-            o.pluginConfig = new MapKeyMapCodec.TypeMap<>(PLUGIN_CODEC);
-            o.pluginConfig.putAll(temp);
-            o.pluginConfig.putAll(i);
+            MapKeyMapCodec.TypeMap<Object> temp = config.pluginConfig;
+            config.pluginConfig = new MapKeyMapCodec.TypeMap<>(PLUGIN_CODEC);
+            config.pluginConfig.putAll(temp);
+            config.pluginConfig.putAll(i);
          }
-      }, o -> o.pluginConfig, (o, p) -> o.pluginConfig = p.pluginConfig)
+      }, config -> config.pluginConfig, (config, p) -> config.pluginConfig = p.pluginConfig)
       .addValidator(Validators.nonNull())
       .add()
       .appendInherited(
          new KeyedCodec<>("Player", PlayerConfig.CODEC),
-         (gameplayConfig, playerConfig) -> gameplayConfig.playerConfig = playerConfig,
-         gameplayConfig -> gameplayConfig.playerConfig,
-         (gameplayConfig, parent) -> gameplayConfig.playerConfig = parent.playerConfig
+         (config, playerConfig) -> config.playerConfig = playerConfig,
+         config -> config.playerConfig,
+         (config, parent) -> config.playerConfig = parent.playerConfig
       )
       .add()
       .<CameraEffectsConfig>appendInherited(
          new KeyedCodec<>("CameraEffects", CameraEffectsConfig.CODEC),
-         (o, i) -> o.cameraEffectsConfig = i,
-         o -> o.cameraEffectsConfig,
-         (o, p) -> o.cameraEffectsConfig = p.cameraEffectsConfig
+         (config, i) -> config.cameraEffectsConfig = i,
+         config -> config.cameraEffectsConfig,
+         (config, p) -> config.cameraEffectsConfig = p.cameraEffectsConfig
       )
       .addValidator(Validators.nonNull())
       .add()
       .<String>appendInherited(
          new KeyedCodec<>("CreativePlaySoundSet", SoundSet.CHILD_ASSET_CODEC),
-         (o, i) -> o.creativePlaySoundSet = i,
-         o -> o.creativePlaySoundSet,
-         (o, p) -> o.creativePlaySoundSet = p.creativePlaySoundSet
+         (config, i) -> config.creativePlaySoundSet = i,
+         config -> config.creativePlaySoundSet,
+         (config, p) -> config.creativePlaySoundSet = p.creativePlaySoundSet
       )
       .addValidator(SoundSet.VALIDATOR_CACHE.getValidator())
       .add()
       .appendInherited(
          new KeyedCodec<>("Crafting", CraftingConfig.CODEC),
-         (gameplayConfig, o) -> gameplayConfig.craftingConfig = o,
-         gameplayConfig -> gameplayConfig.craftingConfig,
-         (gameplayConfig, parent) -> gameplayConfig.craftingConfig = parent.craftingConfig
+         (config, o) -> config.craftingConfig = o,
+         config -> config.craftingConfig,
+         (config, parent) -> config.craftingConfig = parent.craftingConfig
       )
       .add()
-      .appendInherited(new KeyedCodec<>("Spawn", SpawnConfig.CODEC), (o, v) -> o.spawnConfig = v, o -> o.spawnConfig, (o, p) -> o.spawnConfig = p.spawnConfig)
+      .appendInherited(
+         new KeyedCodec<>("Spawn", SpawnConfig.CODEC),
+         (config, v) -> config.spawnConfig = v,
+         config -> config.spawnConfig,
+         (config, p) -> config.spawnConfig = p.spawnConfig
+      )
       .add()
       .<Integer>appendInherited(
          new KeyedCodec<>("MaxEnvironmentalNPCSpawns", Codec.INTEGER),
-         (o, v) -> o.maxEnvironmentalNPCSpawns = v,
-         o -> o.maxEnvironmentalNPCSpawns,
-         (o, p) -> o.maxEnvironmentalNPCSpawns = p.maxEnvironmentalNPCSpawns
+         (config, v) -> config.maxEnvironmentalNPCSpawns = v,
+         config -> config.maxEnvironmentalNPCSpawns,
+         (config, p) -> config.maxEnvironmentalNPCSpawns = p.maxEnvironmentalNPCSpawns
       )
       .documentation("The absolute maximum number of environmental NPC spawns. < 0 for infinite.")
       .add()
@@ -151,8 +156,8 @@ public class GameplayConfig implements JsonAssetWithMap<String, DefaultAssetMap<
    private static AssetStore<String, GameplayConfig, DefaultAssetMap<String, GameplayConfig>> ASSET_STORE;
    @Nonnull
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(GameplayConfig::getAssetStore));
-   protected AssetExtraInfo.Data data;
    protected String id;
+   protected AssetExtraInfo.Data data;
    protected GatheringConfig gatheringConfig = new GatheringConfig();
    protected WorldConfig worldConfig = new WorldConfig();
    protected WorldMapConfig worldMapConfig = new WorldMapConfig();

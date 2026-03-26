@@ -38,6 +38,11 @@ public class WorldGenPrefabSupplier implements PrefabSupplier {
    }
 
    @Nonnull
+   public String getPrefabKey() {
+      return this.prefabKey;
+   }
+
+   @Nonnull
    public String getPrefabName() {
       if (this.prefabName == null) {
          this.prefabName = PrefabLoader.resolveRelativeJsonPath(this.prefabKey, this.path, this.loader.getRootFolder());

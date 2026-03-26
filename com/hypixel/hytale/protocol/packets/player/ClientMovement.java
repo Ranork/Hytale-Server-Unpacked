@@ -20,10 +20,10 @@ public class ClientMovement implements Packet, ToServerPacket {
    public static final int PACKET_ID = 108;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 2;
-   public static final int FIXED_BLOCK_SIZE = 153;
+   public static final int FIXED_BLOCK_SIZE = 155;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 153;
-   public static final int MAX_SIZE = 153;
+   public static final int VARIABLE_BLOCK_START = 155;
+   public static final int MAX_SIZE = 155;
    @Nullable
    public MovementStates movementStates;
    @Nullable
@@ -103,43 +103,43 @@ public class ClientMovement implements Packet, ToServerPacket {
       }
 
       if ((nullBits[0] & 2) != 0) {
-         obj.relativePosition = HalfFloatPosition.deserialize(buf, offset + 24);
+         obj.relativePosition = HalfFloatPosition.deserialize(buf, offset + 25);
       }
 
       if ((nullBits[0] & 4) != 0) {
-         obj.absolutePosition = Position.deserialize(buf, offset + 30);
+         obj.absolutePosition = Position.deserialize(buf, offset + 31);
       }
 
       if ((nullBits[0] & 8) != 0) {
-         obj.bodyOrientation = Direction.deserialize(buf, offset + 54);
+         obj.bodyOrientation = Direction.deserialize(buf, offset + 55);
       }
 
       if ((nullBits[0] & 16) != 0) {
-         obj.lookOrientation = Direction.deserialize(buf, offset + 66);
+         obj.lookOrientation = Direction.deserialize(buf, offset + 67);
       }
 
       if ((nullBits[0] & 32) != 0) {
-         obj.teleportAck = TeleportAck.deserialize(buf, offset + 78);
+         obj.teleportAck = TeleportAck.deserialize(buf, offset + 79);
       }
 
       if ((nullBits[0] & 64) != 0) {
-         obj.wishMovement = Position.deserialize(buf, offset + 79);
+         obj.wishMovement = Position.deserialize(buf, offset + 80);
       }
 
       if ((nullBits[0] & 128) != 0) {
-         obj.velocity = Vector3d.deserialize(buf, offset + 103);
+         obj.velocity = Vector3d.deserialize(buf, offset + 104);
       }
 
-      obj.mountedTo = buf.getIntLE(offset + 127);
+      obj.mountedTo = buf.getIntLE(offset + 128);
       if ((nullBits[1] & 1) != 0) {
-         obj.riderMovementStates = MovementStates.deserialize(buf, offset + 131);
+         obj.riderMovementStates = MovementStates.deserialize(buf, offset + 132);
       }
 
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 153;
+      return 155;
    }
 
    @Override
@@ -185,7 +185,7 @@ public class ClientMovement implements Packet, ToServerPacket {
       if (this.movementStates != null) {
          this.movementStates.serialize(buf);
       } else {
-         buf.writeZero(22);
+         buf.writeZero(23);
       }
 
       if (this.relativePosition != null) {
@@ -234,17 +234,17 @@ public class ClientMovement implements Packet, ToServerPacket {
       if (this.riderMovementStates != null) {
          this.riderMovementStates.serialize(buf);
       } else {
-         buf.writeZero(22);
+         buf.writeZero(23);
       }
    }
 
    @Override
    public int computeSize() {
-      return 153;
+      return 155;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 153 ? ValidationResult.error("Buffer too small: expected at least 153 bytes") : ValidationResult.OK;
+      return buffer.readableBytes() - offset < 155 ? ValidationResult.error("Buffer too small: expected at least 155 bytes") : ValidationResult.OK;
    }
 
    public ClientMovement clone() {

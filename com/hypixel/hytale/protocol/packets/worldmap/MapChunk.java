@@ -11,7 +11,7 @@ public class MapChunk {
    public static final int FIXED_BLOCK_SIZE = 9;
    public static final int VARIABLE_FIELD_COUNT = 1;
    public static final int VARIABLE_BLOCK_START = 9;
-   public static final int MAX_SIZE = 16384023;
+   public static final int MAX_SIZE = 20480037;
    public int chunkX;
    public int chunkZ;
    @Nullable

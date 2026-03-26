@@ -2,12 +2,9 @@ package com.hypixel.hytale.server.core.asset.type.blocktype.config;
 
 import com.hypixel.hytale.assetstore.AssetExtraInfo;
 import com.hypixel.hytale.assetstore.codec.ContainedAssetCodec;
-import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
-import com.hypixel.hytale.codec.lookup.CodecMapCodec;
-import com.hypixel.hytale.codec.lookup.Priority;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Collections;
@@ -19,9 +16,7 @@ import javax.annotation.Nullable;
 
 public class StateData {
    public static final String NULL_STATE_ID = "default";
-   public static final BuilderCodec.Builder<StateData> DEFAULT_CODEC_BUILDER = BuilderCodec.builder(StateData.class, StateData::new)
-      .appendInherited(new KeyedCodec<>("Id", Codec.STRING), (stateData, s) -> stateData.id = s, stateData -> stateData.id, (o, p) -> o.id = p.id)
-      .add()
+   public static final BuilderCodec.Builder<StateData> CODEC_BUILDER = BuilderCodec.builder(StateData.class, StateData::new)
       .afterDecode((stateData, extraInfo) -> {
          if (stateData.stateToBlock != null) {
             Map<String, String> map = new Object2ObjectOpenHashMap();
@@ -33,23 +28,11 @@ public class StateData {
             stateData.blockToState = Collections.unmodifiableMap(map);
          }
       });
-   public static final BuilderCodec<StateData> DEFAULT_CODEC = DEFAULT_CODEC_BUILDER.build();
-   public static final CodecMapCodec<StateData> CODEC = new CodecMapCodec<StateData>(true)
-      .register(Priority.DEFAULT, "StateData", StateData.class, DEFAULT_CODEC);
-   private String id;
+   public static final BuilderCodec<StateData> CODEC = CODEC_BUILDER.build();
    private Map<String, String> stateToBlock;
    private Map<String, String> blockToState;
 
    protected StateData() {
-   }
-
-   public StateData(String id) {
-      this.id = id;
-   }
-
-   @Nullable
-   public String getId() {
-      return this.id;
    }
 
    @Nullable
@@ -84,7 +67,7 @@ public class StateData {
    @Nonnull
    @Override
    public String toString() {
-      return "StateData{id='" + this.id + "', stateToBlock='" + this.stateToBlock + "'}";
+      return "StateData{, stateToBlock='" + this.stateToBlock + "'}";
    }
 
    public void copyFrom(@Nullable StateData state) {
@@ -95,7 +78,7 @@ public class StateData {
    }
 
    static void addDefinitions() {
-      DEFAULT_CODEC_BUILDER.addField(
+      CODEC_BUILDER.addField(
          new KeyedCodec<>(
             "Definitions",
             new MapCodec(

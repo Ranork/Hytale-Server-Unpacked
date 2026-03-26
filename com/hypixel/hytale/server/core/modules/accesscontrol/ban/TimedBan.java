@@ -2,7 +2,7 @@ package com.hypixel.hytale.server.core.modules.accesscontrol.ban;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.hypixel.hytale.common.util.StringUtil;
+import com.hypixel.hytale.server.core.Message;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
@@ -53,11 +53,19 @@ public class TimedBan extends AbstractBan {
 
    @Nonnull
    @Override
-   public CompletableFuture<Optional<String>> getDisconnectReason(UUID uuid) {
-      Duration timeRemaining = Duration.between(Instant.now(), this.expiresOn);
-      StringBuilder message = new StringBuilder("You are temporarily banned for ").append(StringUtil.humanizeTime(timeRemaining)).append('!');
-      this.reason.ifPresent(s -> message.append(" Reason: ").append(s));
-      return CompletableFuture.completedFuture(Optional.of(message.toString()));
+   public CompletableFuture<Optional<Message>> getDisconnectReason(@Nonnull UUID uuid) {
+      long length = Duration.between(Instant.now(), this.expiresOn).toMillis();
+      long days = length / 86400000L;
+      long hours = (length - days * 86400000L) / 3600000L;
+      long mins = (length - (days * 86400000L + hours * 3600000L)) / 60000L;
+      Message message = this.reason.isPresent()
+         ? Message.translation("client.general.disconnect.banned.timed.withReason")
+            .param("days", days)
+            .param("hours", hours)
+            .param("mins", mins)
+            .param("reason", this.reason.get())
+         : Message.translation("client.general.disconnect.banned.timed").param("days", days).param("hours", hours).param("mins", mins);
+      return CompletableFuture.completedFuture(Optional.of(message));
    }
 
    @Nonnull

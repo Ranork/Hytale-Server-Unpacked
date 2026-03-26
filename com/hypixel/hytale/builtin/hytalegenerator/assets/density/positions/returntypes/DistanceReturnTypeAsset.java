@@ -3,8 +3,8 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.density.positions.retu
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.DistanceReturnType;
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes.ReturnType;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
-import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 

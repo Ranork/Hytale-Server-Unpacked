@@ -104,38 +104,40 @@ public class PrefabEditSessionManager {
    }
 
    private void onPlayerReady(@Nonnull PlayerReadyEvent event) {
-      Ref<EntityStore> playerRef = event.getPlayer().getReference();
-      if (playerRef != null && playerRef.isValid()) {
-         Store<EntityStore> store = playerRef.getStore();
+      Ref<EntityStore> ref = event.getPlayer().getReference();
+      if (ref != null && ref.isValid()) {
+         Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
          world.execute(() -> {
-            UUIDComponent uuidComponent = store.getComponent(playerRef, UUIDComponent.getComponentType());
+            UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
 
             assert uuidComponent != null;
 
             UUID playerUUID = uuidComponent.getUuid();
             if (this.inProgressTeleportations.containsKey(playerUUID)) {
                this.inProgressTeleportations.remove(playerUUID);
-               MovementStatesComponent movementStatesComponent = store.getComponent(playerRef, MovementStatesComponent.getComponentType());
+               MovementStatesComponent movementStatesComponent = store.getComponent(ref, MovementStatesComponent.getComponentType());
 
                assert movementStatesComponent != null;
 
                MovementStates movementStates = movementStatesComponent.getMovementStates();
-               Player playerComponent = store.getComponent(playerRef, Player.getComponentType());
+               Player playerComponent = store.getComponent(ref, Player.getComponentType());
 
                assert playerComponent != null;
 
-               playerComponent.applyMovementStates(playerRef, new SavedMovementStates(true), movementStates, store);
-               PlayerRef playerRefComponent = store.getComponent(playerRef, PlayerRef.getComponentType());
+               playerComponent.applyMovementStates(ref, new SavedMovementStates(true), movementStates, store);
+               PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
                if (playerRefComponent != null) {
-                  this.givePrefabSelectorTool(playerComponent, playerRefComponent);
+                  givePrefabSelectorTool(ref, playerComponent, playerRefComponent, store);
                }
             }
          });
       }
    }
 
-   private void givePrefabSelectorTool(@Nonnull Player playerComponent, @Nonnull PlayerRef playerRef) {
+   private static void givePrefabSelectorTool(
+      @Nonnull Ref<EntityStore> ref, @Nonnull Player playerComponent, @Nonnull PlayerRef playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       Inventory inventory = playerComponent.getInventory();
       ItemContainer hotbar = inventory.getHotbar();
       int hotbarSize = hotbar.getCapacity();
@@ -143,7 +145,7 @@ public class PrefabEditSessionManager {
       for (short slot = 0; slot < hotbarSize; slot++) {
          ItemStack itemStack = hotbar.getItemStack(slot);
          if (itemStack != null && !itemStack.isEmpty() && "EditorTool_PrefabEditing_SelectPrefab".equals(itemStack.getItemId())) {
-            inventory.setActiveHotbarSlot((byte)slot);
+            inventory.setActiveHotbarSlot(ref, (byte)slot, componentAccessor);
             playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)slot));
             return;
          }
@@ -164,21 +166,22 @@ public class PrefabEditSessionManager {
       }
 
       hotbar.setItemStackForSlot(emptySlot, new ItemStack("EditorTool_PrefabEditing_SelectPrefab"));
-      inventory.setActiveHotbarSlot((byte)emptySlot);
+      inventory.setActiveHotbarSlot(ref, (byte)emptySlot, componentAccessor);
       playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
    }
 
    public void onPlayerAddedToWorld(@Nonnull AddPlayerToWorldEvent event) {
       World world = event.getWorld();
+      Holder<EntityStore> playerHolder = event.getHolder();
+      UUIDComponent uuidComponent = playerHolder.getComponent(UUIDComponent.getComponentType());
+
+      assert uuidComponent != null;
+
       if (world.getName().startsWith("prefabEditor-")) {
-         world.execute(() -> {
-            Holder<EntityStore> playerHolder = event.getHolder();
-            UUIDComponent uuidComponent = playerHolder.getComponent(UUIDComponent.getComponentType());
-
-            assert uuidComponent != null;
-
-            this.inProgressTeleportations.put(uuidComponent.getUuid(), world.getWorldConfig().getUuid());
-         });
+         world.execute(() -> this.inProgressTeleportations.put(uuidComponent.getUuid(), world.getWorldConfig().getUuid()));
+      } else if (this.isEditingAPrefab(uuidComponent.getUuid())) {
+         PrefabEditSession editSession = this.getPrefabEditSession(uuidComponent.getUuid());
+         editSession.setWorldArrivedFrom(world.getWorldConfig().getUuid());
       }
    }
 
@@ -387,7 +390,7 @@ public class PrefabEditSessionManager {
          config.setIsSpawnMarkersEnabled(false);
          config.setObjectiveMarkersEnabled(false);
          config.setGameMode(GameMode.Creative);
-         config.setDeleteOnRemove(true);
+         config.setDeleteOnRemove(false);
          config.setUuid(UUID.randomUUID());
          config.setGameTimePaused(true);
          config.setIsAllNPCFrozen(true);
@@ -909,6 +912,28 @@ public class PrefabEditSessionManager {
       }
    }
 
+   public boolean isInEditWorld(@Nonnull PlayerRef playerRef, @Nonnull Store<EntityStore> store) {
+      String currentWorldName = store.getExternalData().getWorld().getName();
+      String editWorldName = this.getPrefabEditSession(playerRef.getUuid()).getWorldName();
+      return currentWorldName.equals(editWorldName);
+   }
+
+   @Nullable
+   public CompletableFuture<Void> sendToEditWorld(@Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull PlayerRef playerRef) {
+      PrefabEditSession prefabEditSession = this.getPrefabEditSession(playerRef.getUuid());
+      if (prefabEditSession == null) {
+         return CompletableFuture.completedFuture(null);
+      } else {
+         String sessionWorldName = prefabEditSession.getWorldName();
+         World editSessionWorld = Universe.get().getWorld(sessionWorldName);
+         Teleport teleportComponent = Teleport.createForPlayer(
+            editSessionWorld,
+            ref.getStore().getComponent(ref, Player.getComponentType()).getPlayerConfigData().getPerWorldData(sessionWorldName).getLastPosition()
+         );
+         return CompletableFuture.runAsync(() -> ref.getStore().putComponent(ref, Teleport.getComponentType(), teleportComponent), world);
+      }
+   }
+
    @Nullable
    public CompletableFuture<Void> exitEditSession(
       @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull PlayerRef playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor
@@ -918,35 +943,42 @@ public class PrefabEditSessionManager {
          return null;
       } else {
          prefabEditSession.hidePrefabAnchors(playerRef.getPacketHandler());
-         World returnWorld = Universe.get().getWorld(prefabEditSession.getWorldArrivedFrom());
-         Transform returnLocation = prefabEditSession.getTransformArrivedFrom();
-         if (returnWorld == null || returnLocation == null) {
-            LOGGER.at(Level.WARNING)
-               .log(
-                  "Prefab editor exit fallback triggered for player %s: returnWorld=%s (worldArrivedFrom=%s), returnLocation=%s. Using default world spawn.",
-                  playerRef.getUuid(),
-                  returnWorld != null ? returnWorld.getName() : "null",
-                  prefabEditSession.getWorldArrivedFrom(),
-                  returnLocation
-               );
-            returnWorld = Universe.get().getDefaultWorld();
-            returnLocation = returnWorld.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, componentAccessor);
+         Runnable closeEditSession = () -> {
+            World worldToRemove = Universe.get().getWorld(prefabEditSession.getWorldName());
+            if (worldToRemove != null) {
+               worldToRemove.getWorldConfig().setDeleteOnRemove(true);
+               Universe.get().removeWorld(prefabEditSession.getWorldName());
+            }
+
+            for (PrefabEditingMetadata prefab : prefabEditSession.getLoadedPrefabMetadata().values()) {
+               this.prefabsBeingEdited.remove(prefab.getPrefabPath());
+            }
+
+            this.activeEditSessions.remove(playerRef.getUuid());
+            playerRef.sendMessage(Message.translation("server.commands.editprefab.closedEditSession"));
+         };
+         if (!this.isInEditWorld(playerRef, ref.getStore())) {
+            return CompletableFuture.runAsync(closeEditSession);
+         } else {
+            World returnWorld = Universe.get().getWorld(prefabEditSession.getWorldArrivedFrom());
+            Transform returnLocation = prefabEditSession.getTransformArrivedFrom();
+            if (returnWorld == null || returnLocation == null) {
+               LOGGER.at(Level.WARNING)
+                  .log(
+                     "Prefab editor exit fallback triggered for player %s: returnWorld=%s (worldArrivedFrom=%s), returnLocation=%s. Using default world spawn.",
+                     playerRef.getUuid(),
+                     returnWorld != null ? returnWorld.getName() : "null",
+                     prefabEditSession.getWorldArrivedFrom(),
+                     returnLocation
+                  );
+               returnWorld = Universe.get().getDefaultWorld();
+               returnLocation = returnWorld.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, componentAccessor);
+            }
+
+            Teleport teleportComponent = Teleport.createForPlayer(returnWorld, returnLocation);
+            return CompletableFuture.runAsync(() -> componentAccessor.putComponent(ref, Teleport.getComponentType(), teleportComponent), world)
+               .thenRunAsync(closeEditSession);
          }
-
-         Teleport teleportComponent = Teleport.createForPlayer(returnWorld, returnLocation);
-         return CompletableFuture.runAsync(() -> componentAccessor.putComponent(ref, Teleport.getComponentType(), teleportComponent), world)
-            .thenRunAsync(() -> {
-               World worldToRemove = Universe.get().getWorld(prefabEditSession.getWorldName());
-               if (worldToRemove != null) {
-                  Universe.get().removeWorld(prefabEditSession.getWorldName());
-               }
-
-               for (PrefabEditingMetadata prefab : prefabEditSession.getLoadedPrefabMetadata().values()) {
-                  this.prefabsBeingEdited.remove(prefab.getPrefabPath());
-               }
-
-               this.activeEditSessions.remove(playerRef.getUuid());
-            });
       }
    }
 

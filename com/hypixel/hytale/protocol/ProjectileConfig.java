@@ -13,9 +13,9 @@ import javax.annotation.Nullable;
 
 public class ProjectileConfig {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 163;
+   public static final int FIXED_BLOCK_SIZE = 167;
    public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 171;
+   public static final int VARIABLE_BLOCK_START = 175;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public PhysicsConfig physicsConfig;
@@ -29,6 +29,7 @@ public class ProjectileConfig {
    @Nullable
    public Map<InteractionType, Integer> interactions;
    public int launchLocalSoundEventIndex;
+   public int launchWorldSoundEventIndex;
    public int projectileSoundEventIndex;
 
    public ProjectileConfig() {
@@ -42,6 +43,7 @@ public class ProjectileConfig {
       @Nullable Direction rotationOffset,
       @Nullable Map<InteractionType, Integer> interactions,
       int launchLocalSoundEventIndex,
+      int launchWorldSoundEventIndex,
       int projectileSoundEventIndex
    ) {
       this.physicsConfig = physicsConfig;
@@ -51,6 +53,7 @@ public class ProjectileConfig {
       this.rotationOffset = rotationOffset;
       this.interactions = interactions;
       this.launchLocalSoundEventIndex = launchLocalSoundEventIndex;
+      this.launchWorldSoundEventIndex = launchWorldSoundEventIndex;
       this.projectileSoundEventIndex = projectileSoundEventIndex;
    }
 
@@ -62,6 +65,7 @@ public class ProjectileConfig {
       this.rotationOffset = other.rotationOffset;
       this.interactions = other.interactions;
       this.launchLocalSoundEventIndex = other.launchLocalSoundEventIndex;
+      this.launchWorldSoundEventIndex = other.launchWorldSoundEventIndex;
       this.projectileSoundEventIndex = other.projectileSoundEventIndex;
    }
 
@@ -83,14 +87,15 @@ public class ProjectileConfig {
       }
 
       obj.launchLocalSoundEventIndex = buf.getIntLE(offset + 155);
-      obj.projectileSoundEventIndex = buf.getIntLE(offset + 159);
+      obj.launchWorldSoundEventIndex = buf.getIntLE(offset + 159);
+      obj.projectileSoundEventIndex = buf.getIntLE(offset + 163);
       if ((nullBits & 8) != 0) {
-         int varPos0 = offset + 171 + buf.getIntLE(offset + 163);
+         int varPos0 = offset + 175 + buf.getIntLE(offset + 167);
          obj.model = Model.deserialize(buf, varPos0);
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos1 = offset + 171 + buf.getIntLE(offset + 167);
+         int varPos1 = offset + 175 + buf.getIntLE(offset + 171);
          int interactionsCount = VarInt.peek(buf, varPos1);
          if (interactionsCount < 0) {
             throw ProtocolException.negativeLength("Interactions", interactionsCount);
@@ -119,10 +124,10 @@ public class ProjectileConfig {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 171;
+      int maxEnd = 175;
       if ((nullBits & 8) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 163);
-         int pos0 = offset + 171 + fieldOffset0;
+         int fieldOffset0 = buf.getIntLE(offset + 167);
+         int pos0 = offset + 175 + fieldOffset0;
          pos0 += Model.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
@@ -130,8 +135,8 @@ public class ProjectileConfig {
       }
 
       if ((nullBits & 16) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 167);
-         int pos1 = offset + 171 + fieldOffset1;
+         int fieldOffset1 = buf.getIntLE(offset + 171);
+         int pos1 = offset + 175 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
          pos1 += VarInt.length(buf, pos1);
 
@@ -191,6 +196,7 @@ public class ProjectileConfig {
       }
 
       buf.writeIntLE(this.launchLocalSoundEventIndex);
+      buf.writeIntLE(this.launchWorldSoundEventIndex);
       buf.writeIntLE(this.projectileSoundEventIndex);
       int modelOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
@@ -222,7 +228,7 @@ public class ProjectileConfig {
    }
 
    public int computeSize() {
-      int size = 171;
+      int size = 175;
       if (this.model != null) {
          size += this.model.computeSize();
       }
@@ -235,17 +241,17 @@ public class ProjectileConfig {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 171) {
-         return ValidationResult.error("Buffer too small: expected at least 171 bytes");
+      if (buffer.readableBytes() - offset < 175) {
+         return ValidationResult.error("Buffer too small: expected at least 175 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 8) != 0) {
-            int modelOffset = buffer.getIntLE(offset + 163);
+            int modelOffset = buffer.getIntLE(offset + 167);
             if (modelOffset < 0) {
                return ValidationResult.error("Invalid offset for Model");
             }
 
-            int pos = offset + 171 + modelOffset;
+            int pos = offset + 175 + modelOffset;
             if (pos >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Model");
             }
@@ -259,12 +265,12 @@ public class ProjectileConfig {
          }
 
          if ((nullBits & 16) != 0) {
-            int interactionsOffset = buffer.getIntLE(offset + 167);
+            int interactionsOffset = buffer.getIntLE(offset + 171);
             if (interactionsOffset < 0) {
                return ValidationResult.error("Invalid offset for Interactions");
             }
 
-            int posx = offset + 171 + interactionsOffset;
+            int posx = offset + 175 + interactionsOffset;
             if (posx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Interactions");
             }
@@ -301,6 +307,7 @@ public class ProjectileConfig {
       copy.rotationOffset = this.rotationOffset != null ? this.rotationOffset.clone() : null;
       copy.interactions = this.interactions != null ? new HashMap<>(this.interactions) : null;
       copy.launchLocalSoundEventIndex = this.launchLocalSoundEventIndex;
+      copy.launchWorldSoundEventIndex = this.launchWorldSoundEventIndex;
       copy.projectileSoundEventIndex = this.projectileSoundEventIndex;
       return copy;
    }
@@ -319,6 +326,7 @@ public class ProjectileConfig {
                && Objects.equals(this.rotationOffset, other.rotationOffset)
                && Objects.equals(this.interactions, other.interactions)
                && this.launchLocalSoundEventIndex == other.launchLocalSoundEventIndex
+               && this.launchWorldSoundEventIndex == other.launchWorldSoundEventIndex
                && this.projectileSoundEventIndex == other.projectileSoundEventIndex;
       }
    }
@@ -333,6 +341,7 @@ public class ProjectileConfig {
          this.rotationOffset,
          this.interactions,
          this.launchLocalSoundEventIndex,
+         this.launchWorldSoundEventIndex,
          this.projectileSoundEventIndex
       );
    }

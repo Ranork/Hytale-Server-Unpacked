@@ -194,13 +194,13 @@ public abstract class TickingThread implements Runnable {
    }
 
    public void debugAssertInTickingThread() {
-      if (!Thread.currentThread().equals(this.thread) && this.thread != null) {
+      if (this.thread != null && Thread.currentThread() != this.thread) {
          throw new AssertionError("Assert not in ticking thread!");
       }
    }
 
    public boolean isInThread() {
-      return Thread.currentThread().equals(this.thread);
+      return Thread.currentThread() == this.thread;
    }
 
    public boolean isStarted() {

@@ -3,9 +3,11 @@ package com.hypixel.hytale.server.worldgen.container;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
 import com.hypixel.hytale.procedurallib.supplier.IDoubleCoordinateSupplier;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
 import javax.annotation.Nonnull;
 
 public class WaterContainer {
+   public static final ListPool<WaterContainer.Entry> ENTRY_POOL = new ListPool<>(10, new WaterContainer.Entry[0]);
    public static final int NO_WATER_AT_COORDINATED = Integer.MIN_VALUE;
    private final WaterContainer.Entry[] entries;
 

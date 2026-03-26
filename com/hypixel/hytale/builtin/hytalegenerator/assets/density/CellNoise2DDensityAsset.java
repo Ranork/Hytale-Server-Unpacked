@@ -5,9 +5,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDen
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.MultiCacheDensity;
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.Noise2dDensity;
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.YOverrideDensity;
-import com.hypixel.hytale.builtin.hytalegenerator.fields.FastNoiseLite;
-import com.hypixel.hytale.builtin.hytalegenerator.fields.noise.CellNoiseField;
-import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.noise.CellNoiseField;
+import com.hypixel.hytale.builtin.hytalegenerator.noise.FastNoiseLite;
+import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;

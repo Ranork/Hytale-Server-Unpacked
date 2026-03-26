@@ -18,12 +18,10 @@ import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BenchType;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.StateData;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Bench;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.CraftingBench;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.DiagramCraftingBench;
@@ -46,8 +44,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.systems.ChunkSystems;
 import com.hypixel.hytale.server.core.universe.world.events.ChunkPreLoadProcessEvent;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import java.util.Arrays;
@@ -95,52 +91,9 @@ public class BlockTypeModule extends JavaPlugin {
       return this.blockPhysicsComponentType;
    }
 
-   @Deprecated
-   private static void onChunkPreLoadProcessEnsureBlockState(@Nonnull ChunkPreLoadProcessEvent event) {
-      if (event.isNewlyGenerated()) {
-         BlockTypeAssetMap<String, BlockType> blockTypeAssetMap = BlockType.getAssetMap();
-         Holder<ChunkStore> holder = event.getHolder();
-         WorldChunk chunk = event.getChunk();
-         ChunkColumn column = holder.getComponent(ChunkColumn.getComponentType());
-         if (column != null) {
-            Holder<ChunkStore>[] sections = column.getSectionHolders();
-            if (sections != null) {
-               for (int sectionIndex = 0; sectionIndex < 10; sectionIndex++) {
-                  BlockSection section = sections[sectionIndex].ensureAndGetComponent(BlockSection.getComponentType());
-                  if (!section.isSolidAir()) {
-                     int sectionYBlock = sectionIndex << 5;
-
-                     for (int sectionY = 0; sectionY < 32; sectionY++) {
-                        int y = sectionYBlock | sectionY;
-
-                        for (int x = 0; x < 32; x++) {
-                           for (int z = 0; z < 32; z++) {
-                              int blockId = section.get(x, y, z);
-                              BlockType blockType = blockTypeAssetMap.getAsset(blockId);
-                              if (blockType != null && !blockType.isUnknown() && section.getFiller(x, y, z) == 0) {
-                                 StateData state = blockType.getState();
-                                 if (state != null && state.getId() != null && chunk.getState(x, y, z) == null) {
-                                    Vector3i position = new Vector3i(x, y, z);
-                                    BlockState blockState = BlockStateModule.get().createBlockState(state.getId(), chunk, position, blockType);
-                                    if (blockState != null) {
-                                       chunk.setState(x, y, z, blockState);
-                                    }
-                                 }
-                              }
-                           }
-                        }
-                     }
-                  }
-               }
-            }
-         }
-      }
-   }
-
    private static void onChunkPreLoadProcess(@Nonnull ChunkPreLoadProcessEvent event) {
       if (event.isNewlyGenerated()) {
          WorldChunk chunk = event.getChunk();
-         BlockChunk blockChunk = chunk.getBlockChunk();
          Holder<ChunkStore> holder = event.getHolder();
          ChunkColumn column = holder.getComponent(ChunkColumn.getComponentType());
          if (column != null) {

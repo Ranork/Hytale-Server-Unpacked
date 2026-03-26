@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.plugin;
 
-import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkRequest;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.ChunkRequest;
 import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
 import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenLoadException;
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;

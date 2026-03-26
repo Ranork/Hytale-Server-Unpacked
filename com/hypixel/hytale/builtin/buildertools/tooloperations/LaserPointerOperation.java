@@ -59,7 +59,7 @@ public class LaserPointerOperation extends ToolOperation {
       Vector3d lookVecPosition = lookVec.getPosition();
       Vector3d lookVecDirection = lookVec.getDirection();
       Vector3d hitLocation = TargetUtil.getTargetLocation(ref, blockId -> blockId != 0, 128.0, componentAccessor);
-      Vector3d endLocation = hitLocation != null ? hitLocation : lookVecPosition.add(lookVecDirection.scale(128.0));
+      Vector3d endLocation = hitLocation != null ? hitLocation : lookVecPosition.clone().add(lookVecDirection.clone().scale(128.0));
       BuilderToolLaserPointer laserPacket = new BuilderToolLaserPointer();
       laserPacket.playerNetworkId = playerNetworkId;
       laserPacket.startX = (float)lookVecPosition.x;
@@ -71,6 +71,11 @@ public class LaserPointerOperation extends ToolOperation {
       laserPacket.color = laserColor;
       laserPacket.durationMs = duration;
       PlayerUtil.broadcastPacketToPlayers(componentAccessor, laserPacket);
+   }
+
+   @Override
+   public boolean showEditNotification() {
+      return false;
    }
 
    @Override

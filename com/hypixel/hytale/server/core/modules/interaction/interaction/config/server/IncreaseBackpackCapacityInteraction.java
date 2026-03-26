@@ -4,13 +4,14 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -37,12 +38,21 @@ public class IncreaseBackpackCapacityInteraction extends SimpleInstantInteractio
    @Override
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       Ref<EntityStore> ref = context.getEntity();
-      Player playerComponent = context.getCommandBuffer().getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         Inventory inventory = playerComponent.getInventory();
-         short newBackpackCapacity = (short)(inventory.getBackpack().getCapacity() + this.capacity);
-         inventory.resizeBackpack(newBackpackCapacity, null);
-         playerComponent.sendMessage(Message.translation("server.commands.inventory.backpack.size").param("capacity", inventory.getBackpack().getCapacity()));
+      CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+
+      assert commandBuffer != null;
+
+      InventoryComponent.Backpack backpackInventoryComponent = commandBuffer.getComponent(ref, InventoryComponent.Backpack.getComponentType());
+      if (backpackInventoryComponent != null) {
+         short newBackpackCapacity = (short)(backpackInventoryComponent.getInventory().getCapacity() + this.capacity);
+         backpackInventoryComponent.resize(newBackpackCapacity, null);
+         Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
+         if (playerComponent != null) {
+            playerComponent.sendMessage(
+               Message.translation("server.commands.inventory.backpack.size").param("capacity", backpackInventoryComponent.getInventory().getCapacity())
+            );
+         }
+
          context.getHeldItemContainer().removeItemStackFromSlot(context.getHeldItemSlot(), context.getHeldItem(), 1);
       }
    }

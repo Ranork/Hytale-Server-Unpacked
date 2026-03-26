@@ -52,7 +52,6 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
@@ -74,8 +73,8 @@ import com.hypixel.hytale.server.spawning.beacons.InitialBeaconDelay;
 import com.hypixel.hytale.server.spawning.beacons.LegacySpawnBeaconEntity;
 import com.hypixel.hytale.server.spawning.beacons.SpawnBeacon;
 import com.hypixel.hytale.server.spawning.beacons.SpawnBeaconSystems;
+import com.hypixel.hytale.server.spawning.blockstates.SpawnMarkerBlock;
 import com.hypixel.hytale.server.spawning.blockstates.SpawnMarkerBlockReference;
-import com.hypixel.hytale.server.spawning.blockstates.SpawnMarkerBlockState;
 import com.hypixel.hytale.server.spawning.blockstates.SpawnMarkerBlockStateSystems;
 import com.hypixel.hytale.server.spawning.commands.SpawnCommand;
 import com.hypixel.hytale.server.spawning.corecomponents.builders.BuilderActionTriggerSpawnBeacon;
@@ -141,6 +140,7 @@ public class SpawningPlugin extends JavaPlugin {
    private static final float OVERPOPULATION_RATIO = 0.25F;
    private static final int OVERPOPULATION_GROUP_BUFFER = 4;
    private static SpawningPlugin instance;
+   private ComponentType<ChunkStore, SpawnMarkerBlock> spawnMarkerBlockComponentType;
    private Model spawnMarkerModel;
    private double localSpawnControllerJoinDelay;
    private int tickColumnBudget;
@@ -238,10 +238,7 @@ public class SpawningPlugin extends JavaPlugin {
             .build()
       );
       NPCPlugin.get().registerCoreComponentType("TriggerSpawnBeacon", BuilderActionTriggerSpawnBeacon::new);
-      BlockStateModule.get()
-         .registerBlockState(
-            SpawnMarkerBlockState.class, "SpawnMarkerBlock", SpawnMarkerBlockState.CODEC, SpawnMarkerBlockState.Data.class, SpawnMarkerBlockState.Data.CODEC
-         );
+      this.spawnMarkerBlockComponentType = this.getChunkStoreRegistry().registerComponent(SpawnMarkerBlock.class, "SpawnMarkerBlock", SpawnMarkerBlock.CODEC);
       this.spawnMarkerComponentType = this.getEntityStoreRegistry().registerComponent(SpawnMarkerEntity.class, "SpawnMarkerComponent", SpawnMarkerEntity.CODEC);
       this.localSpawnControllerComponentType = this.getEntityStoreRegistry().registerComponent(LocalSpawnController.class, LocalSpawnController::new);
       this.worldSpawnDataResourceType = this.getEntityStoreRegistry().registerResource(WorldSpawnData.class, WorldSpawnData::new);
@@ -382,10 +379,8 @@ public class SpawningPlugin extends JavaPlugin {
          .registerSystem(
             new ChunkSpawningSystems.TickingState(this.worldSpawnDataResourceType, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType)
          );
-      ComponentType<ChunkStore, SpawnMarkerBlockState> spawnMarkerBlockStateComponentType = BlockStateModule.get()
-         .getComponentType(SpawnMarkerBlockState.class);
-      this.getChunkStoreRegistry().registerSystem(new SpawnMarkerBlockStateSystems.AddOrRemove(spawnMarkerBlockStateComponentType));
-      this.getChunkStoreRegistry().registerSystem(new SpawnMarkerBlockStateSystems.TickHeartbeat(spawnMarkerBlockStateComponentType));
+      this.getChunkStoreRegistry().registerSystem(new SpawnMarkerBlockStateSystems.AddOrRemove(this.spawnMarkerBlockComponentType));
+      this.getChunkStoreRegistry().registerSystem(new SpawnMarkerBlockStateSystems.TickHeartbeat(this.spawnMarkerBlockComponentType));
       this.getEntityStoreRegistry().registerSystem(new SpawnMarkerBlockStateSystems.SpawnMarkerAddedFromExternal(this.spawnMarkerBlockReferenceComponentType));
       this.getEntityStoreRegistry().registerSystem(new SpawnMarkerBlockStateSystems.SpawnMarkerTickHeartbeat(this.spawnMarkerBlockReferenceComponentType));
       this.getEntityStoreRegistry().registerSystem(new EntityModule.HiddenFromPlayerMigrationSystem(this.spawnSuppressorComponentType), true);
@@ -499,6 +494,10 @@ public class SpawningPlugin extends JavaPlugin {
 
    public ComponentType<EntityStore, SpawnMarkerBlockReference> getSpawnMarkerBlockReferenceComponentType() {
       return this.spawnMarkerBlockReferenceComponentType;
+   }
+
+   public ComponentType<ChunkStore, SpawnMarkerBlock> getSpawnMarkerBlockComponentType() {
+      return this.spawnMarkerBlockComponentType;
    }
 
    public boolean shouldNPCDespawn(

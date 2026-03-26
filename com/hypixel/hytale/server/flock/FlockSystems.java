@@ -161,10 +161,8 @@ public class FlockSystems {
                      double leaderRingInnerRadius = leaderRingOuterRadius - 0.08F;
                      double leaderOuterRingRadius = leaderRingOuterRadius + 0.15F;
                      double leaderOuterRingInnerRadius = leaderOuterRingRadius - 0.08F;
-                     DebugUtils.addDisc(world, leaderPos.x, leaderMidY, leaderPos.z, leaderRingOuterRadius, leaderRingInnerRadius, color, 0.8F, 8, 0.1F, false);
-                     DebugUtils.addDisc(
-                        world, leaderPos.x, leaderMidY, leaderPos.z, leaderOuterRingRadius, leaderOuterRingInnerRadius, color, 0.8F, 8, 0.1F, false
-                     );
+                     DebugUtils.addDisc(world, leaderPos.x, leaderMidY, leaderPos.z, leaderRingOuterRadius, leaderRingInnerRadius, color, 0.8F, 8, 0.1F, 0);
+                     DebugUtils.addDisc(world, leaderPos.x, leaderMidY, leaderPos.z, leaderOuterRingRadius, leaderOuterRingInnerRadius, color, 0.8F, 8, 0.1F, 0);
 
                      for (Ref<EntityStore> memberRef : entityGroup.getMemberList()) {
                         if (memberRef.isValid() && !memberRef.equals(leaderRef)) {
@@ -178,7 +176,7 @@ public class FlockSystems {
                               double memberRingOuterRadius = memberWidth / 2.0 + 0.3F;
                               double memberRingInnerRadius = memberRingOuterRadius - 0.08F;
                               DebugUtils.addDisc(
-                                 world, memberPos.x, memberMidY, memberPos.z, memberRingOuterRadius, memberRingInnerRadius, color, 0.8F, 8, 0.1F, false
+                                 world, memberPos.x, memberMidY, memberPos.z, memberRingOuterRadius, memberRingInnerRadius, color, 0.8F, 8, 0.1F, 0
                               );
                               renderConnectingLine(
                                  world,
@@ -217,7 +215,7 @@ public class FlockSystems {
          double dirZ = leaderZ - memberZ;
          double horizontalDist = Math.sqrt(dirX * dirX + dirZ * dirZ);
          if (horizontalDist < 0.001) {
-            DebugUtils.addLine(world, memberX, memberY, memberZ, leaderX, leaderY, leaderZ, color, 0.04F, 0.1F, false);
+            DebugUtils.addLine(world, memberX, memberY, memberZ, leaderX, leaderY, leaderZ, color, 0.04F, 0.1F, 0);
          } else {
             double hDirX = dirX / horizontalDist;
             double hDirZ = dirZ / horizontalDist;
@@ -225,7 +223,7 @@ public class FlockSystems {
             double startZ = memberZ + hDirZ * memberRadius;
             double endX = leaderX - hDirX * leaderRadius;
             double endZ = leaderZ - hDirZ * leaderRadius;
-            DebugUtils.addLine(world, startX, memberY, startZ, endX, leaderY, endZ, color, 0.04F, 0.1F, false);
+            DebugUtils.addLine(world, startX, memberY, startZ, endX, leaderY, endZ, color, 0.04F, 0.1F, 0);
          }
       }
    }

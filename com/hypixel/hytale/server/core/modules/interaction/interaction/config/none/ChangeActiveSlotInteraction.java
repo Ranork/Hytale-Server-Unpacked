@@ -93,7 +93,7 @@ public class ChangeActiveSlotInteraction extends Interaction {
                var15.putMetaObject(TARGET_SLOT, Integer.valueOf(slot));
             }
 
-            livingEntity.getInventory().setActiveHotbarSlot(slot);
+            livingEntity.getInventory().setActiveHotbarSlot(ref, slot, commandBuffer);
             Runnable action = var15.removeMetaObject(PLACE_MOVED_ITEM);
             if (action != null) {
                action.run();

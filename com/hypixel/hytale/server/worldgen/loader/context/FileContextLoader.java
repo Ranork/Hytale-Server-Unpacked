@@ -23,17 +23,19 @@ public class FileContextLoader {
    private static final UnaryOperator<AssetPath> DISABLED_FILE = FileContextLoader::getDisabledFilePath;
    private static final Predicate<AssetPath> ZONE_FILE_MATCHER = FileContextLoader::isValidZoneFile;
    private static final Predicate<AssetPath> BIOME_FILE_MATCHER = FileContextLoader::isValidBiomeFile;
+   private final String name;
    private final Path dataFolder;
    private final Set<String> zoneRequirement;
 
-   public FileContextLoader(Path dataFolder, Set<String> zoneRequirement) {
+   public FileContextLoader(String name, Path dataFolder, Set<String> zoneRequirement) {
+      this.name = name;
       this.dataFolder = dataFolder;
       this.zoneRequirement = zoneRequirement;
    }
 
    @Nonnull
    public FileLoadingContext load() {
-      FileLoadingContext context = new FileLoadingContext(this.dataFolder);
+      FileLoadingContext context = new FileLoadingContext(this.name, this.dataFolder);
       Path zonesFolder = this.dataFolder.resolve("Zones");
 
       try {

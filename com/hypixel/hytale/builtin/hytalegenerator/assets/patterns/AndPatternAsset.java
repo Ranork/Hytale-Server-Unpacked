@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.patterns;
 
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.AndPattern;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -22,7 +23,7 @@ public class AndPatternAsset extends PatternAsset {
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
       if (super.isSkipped()) {
-         return Pattern.noPattern();
+         return ConstantPattern.INSTANCE_FALSE;
       } else {
          ArrayList<Pattern> patterns = new ArrayList<>(this.patternAssets.length);
 

@@ -10,18 +10,26 @@ import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.palette.BitFieldArr;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-class ImageBuilder {
+public class ImageBuilder {
+   private static volatile boolean quantizationEnabled = true;
    private final long index;
    private final World world;
+   private final int imageWidth;
+   private final int imageHeight;
    @Nonnull
-   private final MapImage image;
+   private final int[] rawPixels;
+   @Nullable
+   private MapImage image;
    private final int sampleWidth;
    private final int sampleHeight;
    private final int blockStepX;
@@ -44,15 +52,30 @@ class ImageBuilder {
    @Nullable
    private WorldChunk worldChunk;
    private FluidSection[] fluidSections;
+   private static final int QUANTIZE_STEP = 8;
+   private static final int QUANTIZE_HALF = 4;
+   private static final int[][] BAYER_MATRIX = new int[][]{{0, 8, 2, 10}, {12, 4, 14, 6}, {3, 11, 1, 9}, {15, 7, 13, 5}};
+   private static final int GRADIENT_THRESHOLD = 2;
+
+   public static boolean isQuantizationEnabled() {
+      return quantizationEnabled;
+   }
+
+   public static boolean toggleQuantization() {
+      quantizationEnabled = !quantizationEnabled;
+      return quantizationEnabled;
+   }
 
    public ImageBuilder(long index, int imageWidth, int imageHeight, World world) {
       this.index = index;
       this.world = world;
-      this.image = new MapImage(imageWidth, imageHeight, new int[imageWidth * imageHeight]);
-      this.sampleWidth = Math.min(32, this.image.width);
-      this.sampleHeight = Math.min(32, this.image.height);
-      this.blockStepX = Math.max(1, 32 / this.image.width);
-      this.blockStepZ = Math.max(1, 32 / this.image.height);
+      this.imageWidth = imageWidth;
+      this.imageHeight = imageHeight;
+      this.rawPixels = new int[imageWidth * imageHeight];
+      this.sampleWidth = Math.min(32, imageWidth);
+      this.sampleHeight = Math.min(32, imageHeight);
+      this.blockStepX = Math.max(1, 32 / imageWidth);
+      this.blockStepZ = Math.max(1, 32 / imageHeight);
       this.heightSamples = new short[this.sampleWidth * this.sampleHeight];
       this.tintSamples = new int[this.sampleWidth * this.sampleHeight];
       this.blockSamples = new int[this.sampleWidth * this.sampleHeight];
@@ -270,17 +293,17 @@ class ImageBuilder {
          }
       }
 
-      float imageToSampleRatioWidth = (float)this.sampleWidth / this.image.width;
-      float imageToSampleRatioHeight = (float)this.sampleHeight / this.image.height;
-      int blockPixelWidth = Math.max(1, this.image.width / this.sampleWidth);
-      int blockPixelHeight = Math.max(1, this.image.height / this.sampleHeight);
+      float imageToSampleRatioWidth = (float)this.sampleWidth / this.imageWidth;
+      float imageToSampleRatioHeight = (float)this.sampleHeight / this.imageHeight;
+      int blockPixelWidth = Math.max(1, this.imageWidth / this.sampleWidth);
+      int blockPixelHeight = Math.max(1, this.imageHeight / this.sampleHeight);
 
       for (int iz = 0; iz < this.sampleHeight; iz++) {
          System.arraycopy(this.heightSamples, iz * this.sampleWidth, this.neighborHeightSamples, (iz + 1) * (this.sampleWidth + 2) + 1, this.sampleWidth);
       }
 
-      for (int ix = 0; ix < this.image.width; ix++) {
-         for (int iz = 0; iz < this.image.height; iz++) {
+      for (int ix = 0; ix < this.imageWidth; ix++) {
+         for (int iz = 0; iz < this.imageHeight; iz++) {
             int sampleX = Math.min((int)(ix * imageToSampleRatioWidth), this.sampleWidth - 1);
             int sampleZ = Math.min((int)(iz * imageToSampleRatioHeight), this.sampleHeight - 1);
             int sampleIndex = sampleZ * this.sampleWidth + sampleX;
@@ -320,11 +343,129 @@ class ImageBuilder {
          }
       }
 
+      this.image = this.encodeToPalette();
       return this;
    }
 
+   private static int quantizeChannel(int value) {
+      return Math.min(255, (value + 4) / 8 * 8);
+   }
+
+   private static boolean isNearBoundary(int value) {
+      int distanceFromBoundary = (value + 4) % 8;
+      return distanceFromBoundary <= 2 || distanceFromBoundary >= 6;
+   }
+
+   private static int quantizeChannelWithDither(int value, int ditherOffset) {
+      int adjusted = value + ditherOffset;
+      adjusted = Math.max(0, Math.min(255, adjusted));
+      return Math.min(255, (adjusted + 4) / 8 * 8);
+   }
+
+   private static int quantizeColor(int argb) {
+      int r = quantizeChannel(argb >> 24 & 0xFF);
+      int g = quantizeChannel(argb >> 16 & 0xFF);
+      int b = quantizeChannel(argb >> 8 & 0xFF);
+      int a = argb & 0xFF;
+      return r << 24 | g << 16 | b << 8 | a;
+   }
+
+   private static boolean colorNearBoundary(int argb) {
+      int r = argb >> 24 & 0xFF;
+      int g = argb >> 16 & 0xFF;
+      int b = argb >> 8 & 0xFF;
+      return isNearBoundary(r) || isNearBoundary(g) || isNearBoundary(b);
+   }
+
+   private static int quantizeColorWithDither(int argb, int x, int y) {
+      int bayerValue = BAYER_MATRIX[y & 3][x & 3];
+      int ditherOffset = (bayerValue - 8) * 8 / 16;
+      int r = quantizeChannelWithDither(argb >> 24 & 0xFF, ditherOffset);
+      int g = quantizeChannelWithDither(argb >> 16 & 0xFF, ditherOffset);
+      int b = quantizeChannelWithDither(argb >> 8 & 0xFF, ditherOffset);
+      int a = argb & 0xFF;
+      return r << 24 | g << 16 | b << 8 | a;
+   }
+
+   private boolean isInTransitionZone(int index) {
+      int centerPixel = this.rawPixels[index];
+      int centerQuantized = quantizeColor(centerPixel);
+      int x = index % this.imageWidth;
+      int y = index / this.imageWidth;
+
+      for (int dy = -2; dy <= 2; dy++) {
+         for (int dx = -2; dx <= 2; dx++) {
+            if (dx != 0 || dy != 0) {
+               int nx = x + dx;
+               int ny = y + dy;
+               if (nx >= 0 && nx < this.imageWidth && ny >= 0 && ny < this.imageHeight) {
+                  int neighborPixel = this.rawPixels[ny * this.imageWidth + nx];
+                  int neighborQuantized = quantizeColor(neighborPixel);
+                  if (neighborQuantized != centerQuantized) {
+                     return true;
+                  }
+               }
+            }
+         }
+      }
+
+      return false;
+   }
+
+   @Nonnull
+   private MapImage encodeToPalette() {
+      int pixelCount = this.rawPixels.length;
+      int[] processedPixels = new int[pixelCount];
+      IntOpenHashSet uniqueColors = new IntOpenHashSet();
+
+      for (int i = 0; i < pixelCount; i++) {
+         int pixel;
+         if (quantizationEnabled) {
+            if (this.isInTransitionZone(i)) {
+               int x = i % this.imageWidth;
+               int y = i / this.imageWidth;
+               pixel = quantizeColorWithDither(this.rawPixels[i], x, y);
+            } else {
+               pixel = quantizeColor(this.rawPixels[i]);
+            }
+         } else {
+            pixel = this.rawPixels[i];
+         }
+
+         processedPixels[i] = pixel;
+         uniqueColors.add(pixel);
+      }
+
+      int[] palette = uniqueColors.toIntArray();
+      int bitsPerIndex = calculateBitsRequired(palette.length);
+      Int2IntOpenHashMap colorToIndex = new Int2IntOpenHashMap(palette.length);
+
+      for (int i = 0; i < palette.length; i++) {
+         colorToIndex.put(palette[i], i);
+      }
+
+      BitFieldArr indices = new BitFieldArr(bitsPerIndex, pixelCount);
+
+      for (int i = 0; i < pixelCount; i++) {
+         indices.set(i, colorToIndex.get(processedPixels[i]));
+      }
+
+      byte[] packedIndices = indices.get();
+      return new MapImage(this.imageWidth, this.imageHeight, palette, (byte)bitsPerIndex, packedIndices);
+   }
+
+   private static int calculateBitsRequired(int colorCount) {
+      if (colorCount <= 16) {
+         return 4;
+      } else if (colorCount <= 256) {
+         return 8;
+      } else {
+         return colorCount <= 4096 ? 12 : 16;
+      }
+   }
+
    private void packImageData(int ix, int iz) {
-      this.image.data[iz * this.image.width + ix] = this.outColor.pack();
+      this.rawPixels[iz * this.imageWidth + ix] = this.outColor.pack();
    }
 
    private static float shadeFromHeights(

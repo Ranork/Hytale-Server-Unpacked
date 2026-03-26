@@ -11,11 +11,26 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
+import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
+import org.joml.Vector2f;
+import org.joml.Vector2fc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+import org.joml.Vector4f;
+import org.joml.Vector4fc;
 
 public final class PacketIO {
    public static final int FRAME_HEADER_SIZE = 4;
    public static final Charset UTF8 = StandardCharsets.UTF_8;
    public static final Charset ASCII = StandardCharsets.US_ASCII;
+   public static final Vector2fc ZERO_VECTOR2 = new Vector2f();
+   public static final Vector3fc ZERO_VECTOR3 = new Vector3f();
+   public static final Vector4fc ZERO_VECTOR4 = new Vector4f();
+   public static final Quaternionfc ZERO_QUATERNION = new Quaternionf(0.0F, 0.0F, 0.0F, 0.0F);
+   public static final Matrix4fc ZERO_MATRIX = new Matrix4f().zero();
    private static final int COMPRESSION_LEVEL = Integer.getInteger("hytale.protocol.compressionLevel", Zstd.defaultCompressionLevel());
 
    private PacketIO() {
@@ -190,6 +205,92 @@ public final class PacketIO {
          VarInt.write(buf, bytes.length);
          buf.writeBytes(bytes);
       }
+   }
+
+   @Nonnull
+   public static Vector2f readVector2f(@Nonnull ByteBuf buf, int offset) {
+      return new Vector2f(buf.getFloatLE(offset), buf.getFloatLE(offset + 4));
+   }
+
+   @Nonnull
+   public static Vector3f readVector3f(@Nonnull ByteBuf buf, int offset) {
+      return new Vector3f(buf.getFloatLE(offset), buf.getFloatLE(offset + 4), buf.getFloatLE(offset + 8));
+   }
+
+   @Nonnull
+   public static Vector4f readVector4f(@Nonnull ByteBuf buf, int offset) {
+      return new Vector4f(buf.getFloatLE(offset), buf.getFloatLE(offset + 4), buf.getFloatLE(offset + 8), buf.getFloatLE(offset + 12));
+   }
+
+   @Nonnull
+   public static Quaternionf readQuaternionf(@Nonnull ByteBuf buf, int offset) {
+      return new Quaternionf(buf.getFloatLE(offset), buf.getFloatLE(offset + 4), buf.getFloatLE(offset + 8), buf.getFloatLE(offset + 12));
+   }
+
+   @Nonnull
+   public static Matrix4f readMatrix4f(@Nonnull ByteBuf buf, int offset) {
+      return new Matrix4f(
+         buf.getFloatLE(offset),
+         buf.getFloatLE(offset + 4),
+         buf.getFloatLE(offset + 8),
+         buf.getFloatLE(offset + 12),
+         buf.getFloatLE(offset + 16),
+         buf.getFloatLE(offset + 20),
+         buf.getFloatLE(offset + 24),
+         buf.getFloatLE(offset + 28),
+         buf.getFloatLE(offset + 32),
+         buf.getFloatLE(offset + 36),
+         buf.getFloatLE(offset + 40),
+         buf.getFloatLE(offset + 44),
+         buf.getFloatLE(offset + 48),
+         buf.getFloatLE(offset + 52),
+         buf.getFloatLE(offset + 56),
+         buf.getFloatLE(offset + 60)
+      );
+   }
+
+   public static void writeVector2f(@Nonnull ByteBuf buf, @Nonnull Vector2fc v) {
+      buf.writeFloatLE(v.x());
+      buf.writeFloatLE(v.y());
+   }
+
+   public static void writeVector3f(@Nonnull ByteBuf buf, @Nonnull Vector3fc v) {
+      buf.writeFloatLE(v.x());
+      buf.writeFloatLE(v.y());
+      buf.writeFloatLE(v.z());
+   }
+
+   public static void writeVector4f(@Nonnull ByteBuf buf, @Nonnull Vector4fc v) {
+      buf.writeFloatLE(v.x());
+      buf.writeFloatLE(v.y());
+      buf.writeFloatLE(v.z());
+      buf.writeFloatLE(v.w());
+   }
+
+   public static void writeQuaternionf(@Nonnull ByteBuf buf, @Nonnull Quaternionfc q) {
+      buf.writeFloatLE(q.x());
+      buf.writeFloatLE(q.y());
+      buf.writeFloatLE(q.z());
+      buf.writeFloatLE(q.w());
+   }
+
+   public static void writeMatrix4f(@Nonnull ByteBuf buf, @Nonnull Matrix4fc m) {
+      buf.writeFloatLE(m.m00());
+      buf.writeFloatLE(m.m10());
+      buf.writeFloatLE(m.m20());
+      buf.writeFloatLE(m.m30());
+      buf.writeFloatLE(m.m01());
+      buf.writeFloatLE(m.m11());
+      buf.writeFloatLE(m.m21());
+      buf.writeFloatLE(m.m31());
+      buf.writeFloatLE(m.m02());
+      buf.writeFloatLE(m.m12());
+      buf.writeFloatLE(m.m22());
+      buf.writeFloatLE(m.m32());
+      buf.writeFloatLE(m.m03());
+      buf.writeFloatLE(m.m13());
+      buf.writeFloatLE(m.m23());
+      buf.writeFloatLE(m.m33());
    }
 
    @Nonnull

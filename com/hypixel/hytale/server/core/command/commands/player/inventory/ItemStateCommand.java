@@ -8,8 +8,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -32,22 +31,20 @@ public class ItemStateCommand extends AbstractPlayerCommand {
    protected void execute(
       @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-
-      assert playerComponent != null;
-
-      Inventory inventory = playerComponent.getInventory();
-      byte activeHotbarSlot = inventory.getActiveHotbarSlot();
-      if (activeHotbarSlot == -1) {
-         context.sendMessage(MESSAGE_COMMANDS_ITEMSTATE_NO_ITEM);
-      } else {
-         ItemContainer hotbar = inventory.getHotbar();
-         ItemStack item = hotbar.getItemStack(activeHotbarSlot);
-         if (item == null) {
+      InventoryComponent.Hotbar hotbarComponent = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent != null) {
+         byte activeHotbarSlot = hotbarComponent.getActiveSlot();
+         if (activeHotbarSlot == -1) {
             context.sendMessage(MESSAGE_COMMANDS_ITEMSTATE_NO_ITEM);
          } else {
-            String state = this.stateArg.get(context);
-            hotbar.setItemStackForSlot(activeHotbarSlot, item.withState(state));
+            ItemContainer hotbar = hotbarComponent.getInventory();
+            ItemStack item = hotbar.getItemStack(activeHotbarSlot);
+            if (item == null) {
+               context.sendMessage(MESSAGE_COMMANDS_ITEMSTATE_NO_ITEM);
+            } else {
+               String state = this.stateArg.get(context);
+               hotbar.setItemStackForSlot(activeHotbarSlot, item.withState(state));
+            }
          }
       }
    }

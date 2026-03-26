@@ -25,23 +25,27 @@ public class EntityFilterViewSector extends EntityFilterBase {
 
    @Override
    public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
-      TransformComponent transformComponent = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
+      if (this.viewCone == 0.0F) {
+         return true;
+      } else {
+         TransformComponent transformComponent = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
 
-      assert transformComponent != null;
+         assert transformComponent != null;
 
-      Vector3d position = transformComponent.getPosition();
-      HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
+         Vector3d position = transformComponent.getPosition();
+         HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
 
-      assert headRotationComponent != null;
+         assert headRotationComponent != null;
 
-      TransformComponent targetTransformComponent = store.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
+         TransformComponent targetTransformComponent = store.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
 
-      assert targetTransformComponent != null;
+         assert targetTransformComponent != null;
 
-      Vector3d targetPosition = targetTransformComponent.getPosition();
-      return NPCPhysicsMath.inViewSector(
-         position.getX(), position.getZ(), headRotationComponent.getRotation().getYaw(), this.viewCone, targetPosition.getX(), targetPosition.getZ()
-      );
+         Vector3d targetPosition = targetTransformComponent.getPosition();
+         return NPCPhysicsMath.inViewSector(
+            position.getX(), position.getZ(), headRotationComponent.getRotation().getYaw(), this.viewCone, targetPosition.getX(), targetPosition.getZ()
+         );
+      }
    }
 
    @Override

@@ -21,9 +21,10 @@ public class BuilderWeightedAction extends BuilderBase<WeightedAction> {
    private final BuilderObjectReferenceHelper<Action> action = new BuilderObjectReferenceHelper<>(Action.class, this);
    private final DoubleHolder weight = new DoubleHolder();
 
-   @Nonnull
+   @Nullable
    public WeightedAction build(@Nonnull BuilderSupport builderSupport) {
-      return new WeightedAction(this, builderSupport);
+      Action action = this.getAction(builderSupport);
+      return action == null ? null : new WeightedAction(this, builderSupport, action);
    }
 
    @Nonnull

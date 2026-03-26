@@ -17,6 +17,8 @@ import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Resource;
+import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
@@ -31,7 +33,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -43,8 +45,9 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
    @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final int MAX_PORTALS = 24;
-   @Nullable
-   private CompletableFuture<Vector3d> findPortalSpawnPos;
+   private final ResourceType<EntityStore, VoidInvasionPortalsSpawnSystem.VoidInvasionData> voidInvasionDataResourceType = this.registerResource(
+      VoidInvasionPortalsSpawnSystem.VoidInvasionData.class, VoidInvasionPortalsSpawnSystem.VoidInvasionData::new
+   );
 
    public VoidInvasionPortalsSpawnSystem() {
       super(2.0F);
@@ -63,18 +66,19 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
       assert voidEventComponent != null;
 
       World world = store.getExternalData().getWorld();
-      if (this.findPortalSpawnPos == null) {
+      VoidInvasionPortalsSpawnSystem.VoidInvasionData data = commandBuffer.getResource(this.voidInvasionDataResourceType);
+      if (data.findPortalSpawnPos == null) {
          SpatialHashGrid<Ref<EntityStore>> spawners = cleanupAndGetSpawners(voidEventComponent);
          if (spawners.size() < 24) {
-            this.findPortalSpawnPos = findPortalSpawnPosition(world, voidEventComponent, commandBuffer);
+            data.findPortalSpawnPos = findPortalSpawnPosition(world, voidEventComponent, commandBuffer);
          }
-      } else if (this.findPortalSpawnPos.isDone()) {
+      } else if (data.findPortalSpawnPos.isDone()) {
          Vector3d portalPos;
          try {
-            portalPos = this.findPortalSpawnPos.join();
-            this.findPortalSpawnPos = null;
-         } catch (Throwable var16) {
-            ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(var16)).log("Error trying to find a void event spawn position");
+            portalPos = data.findPortalSpawnPos.join();
+            data.findPortalSpawnPos = null;
+         } catch (Throwable var17) {
+            ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(var17)).log("Error trying to find a void event spawn position");
             return;
          }
 
@@ -156,7 +160,7 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
       if (playerRefs.isEmpty()) {
          return null;
       } else {
-         List<Ref<EntityStore>> players = new ObjectArrayList(playerRefs.size());
+         List<Ref<EntityStore>> players = new ReferenceArrayList(playerRefs.size());
 
          for (PlayerRef playerRef : playerRefs) {
             players.add(playerRef.getReference());
@@ -182,5 +186,16 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
    @Override
    public Query<EntityStore> getQuery() {
       return VoidEvent.getComponentType();
+   }
+
+   public static class VoidInvasionData implements Resource<EntityStore> {
+      @Nullable
+      private CompletableFuture<Vector3d> findPortalSpawnPos;
+
+      @Nullable
+      @Override
+      public Resource<EntityStore> clone() {
+         return new VoidInvasionPortalsSpawnSystem.VoidInvasionData();
+      }
    }
 }

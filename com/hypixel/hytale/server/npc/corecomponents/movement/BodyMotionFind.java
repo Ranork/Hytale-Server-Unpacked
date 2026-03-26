@@ -239,4 +239,15 @@ public class BodyMotionFind extends BodyMotionFindWithTarget {
       v -= p;
       return v >= min && v < max;
    }
+
+   @Override
+   public double getDesiredTargetDistance() {
+      return this.distance;
+   }
+
+   @Nullable
+   @Override
+   public Ref<EntityStore> getDesiredTargetEntity() {
+      return this.lastDesiredTargetEntity;
+   }
 }

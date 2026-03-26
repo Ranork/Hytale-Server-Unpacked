@@ -11,7 +11,8 @@ import javax.annotation.Nonnull;
 public class StringArg extends ToolArg<String> {
    public static final StringArg[] EMPTY_ARRAY = new StringArg[0];
    public static final BuilderCodec<StringArg> CODEC = BuilderCodec.builder(StringArg.class, StringArg::new, ToolArg.DEFAULT_CODEC)
-      .addField(new KeyedCodec<>("Default", Codec.STRING), (stringArg, d) -> stringArg.value = d, stringArg -> stringArg.value)
+      .append(new KeyedCodec<>("Default", Codec.STRING), (stringArg, d) -> stringArg.value = d, stringArg -> stringArg.value)
+      .add()
       .build();
 
    public StringArg() {

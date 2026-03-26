@@ -89,6 +89,8 @@ public class DamageModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new DeathSystems.KillFeed());
       entityStoreRegistry.registerSystem(new DeathSystems.PlayerDeathScreen());
       entityStoreRegistry.registerSystem(new DeathSystems.PlayerDeathMarker());
+      entityStoreRegistry.registerSystem(new DeathSystems.StopVoiceOnDeath());
+      entityStoreRegistry.registerSystem(new DeathSystems.TickCorpseRemoval());
       entityStoreRegistry.registerSystem(new DeathSystems.CorpseRemoval());
       entityStoreRegistry.registerSystem(new DeathSystems.DeathAnimation());
       entityStoreRegistry.registerSystem(new DeathSystems.SpawnedDeathAnimation());
@@ -98,6 +100,7 @@ public class DamageModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new RespawnSystems.ClearInteractionsRespawnSystem());
       entityStoreRegistry.registerSystem(new RespawnSystems.CheckBrokenItemsRespawnSystem());
       entityStoreRegistry.registerSystem(new RespawnSystems.ClearRespawnUI());
+      entityStoreRegistry.registerSystem(new RespawnSystems.ReenableVoiceOnRespawn());
       entityStoreRegistry.registerSystem(new DamageCalculatorSystems.SequenceModifier());
       this.getCommandRegistry().registerCommand(new DesyncDamageCommand());
    }

@@ -24,11 +24,11 @@ import com.hypixel.hytale.protocol.EntityStatUpdate;
 import com.hypixel.hytale.protocol.EntityStatsUpdate;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.AllLegacyLivingEntityTypesQuery;
@@ -389,16 +389,12 @@ public class EntityStatsSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         LivingEntity livingEntity = (LivingEntity)EntityUtils.getEntity(index, archetypeChunk);
-
-         assert livingEntity != null;
-
          EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, this.entityStatMapComponentType);
 
          assert entityStatMapComponent != null;
 
          Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-         livingEntity.getStatModifiersManager().recalculateEntityStatModifiers(ref, entityStatMapComponent, commandBuffer);
+         entityStatMapComponent.getStatModifiersManager().recalculateEntityStatModifiers(ref, entityStatMapComponent, commandBuffer);
       }
    }
 
@@ -459,29 +455,28 @@ public class EntityStatsSystems {
             }
          }
 
-         EntityType entity = archetypeChunk.getComponent(index, this.entityTypeComponent);
+         InventoryComponent.Armor armorComponent = commandBuffer.getComponent(ref, InventoryComponent.Armor.getComponentType());
+         if (armorComponent != null) {
+            ItemContainer armorContainer = armorComponent.getInventory();
+            short armorContainerCapacity = armorContainer.getCapacity();
 
-         assert entity != null;
-
-         ItemContainer armorContainer = entity.getInventory().getArmor();
-         short armorContainerCapacity = armorContainer.getCapacity();
-
-         for (short i = 0; i < armorContainerCapacity; i++) {
-            ItemStack itemStack = armorContainer.getItemStack(i);
-            if (!ItemStack.isEmpty(itemStack)) {
-               Item item = itemStack.getItem();
-               if (item.getArmor() != null && item.getArmor().getRegeneratingValues() != null && !item.getArmor().getRegeneratingValues().isEmpty()) {
-                  for (int statIndexx = 1; statIndexx < size; statIndexx++) {
-                     EntityStatValue value = map.get(statIndexx);
-                     if (value != null) {
-                        List<RegeneratingValue> regenValues = (List<RegeneratingValue>)item.getArmor().getRegeneratingValues().get(statIndexx);
-                        if (regenValues != null && !regenValues.isEmpty()) {
-                           for (RegeneratingValue regeneratingValuex : regenValues) {
-                              if (regeneratingValuex.getRegenerating().getAmount() > 0.0F ? !(value.get() >= value.getMax()) : !(value.get() <= value.getMin())
-                                 )
-                               {
-                                 map.tempRegenerationValues[statIndexx] = map.tempRegenerationValues[statIndexx]
-                                    + regeneratingValuex.regenerate(commandBuffer, ref, now, dt, value, map.tempRegenerationValues[statIndexx]);
+            for (short i = 0; i < armorContainerCapacity; i++) {
+               ItemStack itemStack = armorContainer.getItemStack(i);
+               if (!ItemStack.isEmpty(itemStack)) {
+                  Item item = itemStack.getItem();
+                  if (item.getArmor() != null && item.getArmor().getRegeneratingValues() != null && !item.getArmor().getRegeneratingValues().isEmpty()) {
+                     for (int statIndexx = 1; statIndexx < size; statIndexx++) {
+                        EntityStatValue value = map.get(statIndexx);
+                        if (value != null) {
+                           List<RegeneratingValue> regenValues = (List<RegeneratingValue>)item.getArmor().getRegeneratingValues().get(statIndexx);
+                           if (regenValues != null && !regenValues.isEmpty()) {
+                              for (RegeneratingValue regeneratingValuex : regenValues) {
+                                 if (regeneratingValuex.getRegenerating().getAmount() > 0.0F
+                                    ? !(value.get() >= value.getMax())
+                                    : !(value.get() <= value.getMin())) {
+                                    map.tempRegenerationValues[statIndexx] = map.tempRegenerationValues[statIndexx]
+                                       + regeneratingValuex.regenerate(commandBuffer, ref, now, dt, value, map.tempRegenerationValues[statIndexx]);
+                                 }
                               }
                            }
                         }
@@ -489,19 +484,19 @@ public class EntityStatsSystems {
                   }
                }
             }
-         }
 
-         for (int statIndexxx = 1; statIndexxx < size; statIndexxx++) {
-            EntityStatValue value = map.get(statIndexxx);
-            if (value != null) {
-               float amount = map.tempRegenerationValues[statIndexxx];
-               boolean invulnerable = commandBuffer.getArchetype(ref).contains(Invulnerable.getComponentType());
-               if (amount < 0.0F && !value.getIgnoreInvulnerability() && invulnerable) {
-                  return;
-               }
+            for (int statIndexxx = 1; statIndexxx < size; statIndexxx++) {
+               EntityStatValue value = map.get(statIndexxx);
+               if (value != null) {
+                  float amount = map.tempRegenerationValues[statIndexxx];
+                  boolean invulnerable = commandBuffer.getArchetype(ref).contains(Invulnerable.getComponentType());
+                  if (amount < 0.0F && !value.getIgnoreInvulnerability() && invulnerable) {
+                     return;
+                  }
 
-               if (amount != 0.0F) {
-                  map.addStatValue(statIndexxx, amount);
+                  if (amount != 0.0F) {
+                     map.addStatValue(statIndexxx, amount);
+                  }
                }
             }
          }

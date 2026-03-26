@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.packets.worldmap.MapChunk;
 import com.hypixel.hytale.protocol.packets.worldmap.MapImage;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -47,7 +48,8 @@ public class WorldMap implements NetworkSerializable<UpdateWorldMap> {
    }
 
    public void addPointOfInterest(String id, String name, String markerType, @Nonnull Transform transform) {
-      MapMarker old = this.pointsOfInterest.putIfAbsent(id, new MapMarker(id, null, name, markerType, PositionUtil.toTransformPacket(transform), null, null));
+      MapMarker old = this.pointsOfInterest
+         .putIfAbsent(id, new MapMarker(id, Message.translation(name).getFormattedMessage(), markerType, PositionUtil.toTransformPacket(transform), null, null));
       if (old != null) {
          throw new IllegalArgumentException("Id " + id + " already exists!");
       }

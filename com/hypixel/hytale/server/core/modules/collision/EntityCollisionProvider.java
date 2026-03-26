@@ -16,8 +16,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.projectile.component.Projectile;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import javax.annotation.Nonnull;
@@ -130,27 +129,23 @@ public class EntityCollisionProvider {
       this.position = pos;
       this.direction = dir;
       this.boundingBox = boundingBox;
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       SpatialResource<Ref<EntityStore>, EntityStore> entitySpatialResource = componentAccessor.getResource(EntityModule.get().getEntitySpatialResourceType());
       entitySpatialResource.getSpatialStructure().collect(pos, radius, results);
-      ObjectListIterator playerSpatialResource = results.iterator();
 
-      while (playerSpatialResource.hasNext()) {
-         Ref<EntityStore> ref = (Ref<EntityStore>)playerSpatialResource.next();
+      for (Ref<EntityStore> ref : results) {
          if (ref.isValid()) {
             consumer.accept(ref, this);
          }
       }
 
       results.clear();
-      SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResourcex = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
-      playerSpatialResourcex.getSpatialStructure().collect(pos, radius, results);
-      ObjectListIterator var15 = results.iterator();
+      SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
+      playerSpatialResource.getSpatialStructure().collect(pos, radius, results);
 
-      while (var15.hasNext()) {
-         Ref<EntityStore> ref = (Ref<EntityStore>)var15.next();
-         if (ref.isValid()) {
-            consumerPlayer.accept(ref, this);
+      for (Ref<EntityStore> refx : results) {
+         if (refx.isValid()) {
+            consumerPlayer.accept(refx, this);
          }
       }
    }

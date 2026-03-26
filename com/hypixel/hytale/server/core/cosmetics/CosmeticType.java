@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.core.cosmetics;
 
 public enum CosmeticType {
    EMOTES,
+   EMOTES_INGAME,
    SKIN_TONES,
    EYE_COLORS,
    GRADIENT_SETS,

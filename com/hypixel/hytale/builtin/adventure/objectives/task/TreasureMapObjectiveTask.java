@@ -2,7 +2,7 @@ package com.hypixel.hytale.builtin.adventure.objectives.task;
 
 import com.hypixel.hytale.builtin.adventure.objectives.Objective;
 import com.hypixel.hytale.builtin.adventure.objectives.ObjectivePlugin;
-import com.hypixel.hytale.builtin.adventure.objectives.blockstates.TreasureChestState;
+import com.hypixel.hytale.builtin.adventure.objectives.blockstates.TreasureChestBlock;
 import com.hypixel.hytale.builtin.adventure.objectives.config.task.TreasureMapObjectiveTaskAsset;
 import com.hypixel.hytale.builtin.adventure.objectives.events.TreasureChestOpeningEvent;
 import com.hypixel.hytale.builtin.adventure.objectives.markers.ObjectiveTaskMarker;
@@ -24,12 +24,11 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock;
 import com.hypixel.hytale.server.core.modules.item.ItemModule;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
-import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerState;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collections;
@@ -140,15 +139,23 @@ public class TreasureMapObjectiveTask extends ObjectiveTask {
       if (conditionPosition == null) {
          return transactionRecord.fail("Position not safe to spawn chest");
       } else {
-         TreasureChestState treasureChestState = this.spawnChestBlock(world, conditionPosition, chestConfig.getChestBlockTypeKey(), transactionRecord);
-         if (treasureChestState == null) {
+         Ref<ChunkStore> treasureChestRef = this.spawnChestBlock(world, conditionPosition, chestConfig.getChestBlockTypeKey(), transactionRecord);
+         if (treasureChestRef == null) {
             return transactionRecord;
          } else {
+            TreasureChestBlock treasureChest = treasureChestRef.getStore().getComponent(treasureChestRef, TreasureChestBlock.getComponentType());
+
+            assert treasureChest != null;
+
+            ItemContainerBlock container = treasureChestRef.getStore().getComponent(treasureChestRef, ItemContainerBlock.getComponentType());
+
+            assert container != null;
+
             UUID chestUUID = UUID.randomUUID();
             List<ItemStack> stacks = ItemModule.get().getRandomItemDrops(chestConfig.getDroplistId());
-            treasureChestState.setObjectiveData(objective.getObjectiveUUID(), chestUUID, stacks);
+            treasureChest.setObjectiveData(objective.getObjectiveUUID(), chestUUID);
+            container.getItemContainer().addItemStacks(stacks);
             this.chestUUIDs.add(chestUUID);
-            treasureChestState.getChunk().setState(conditionPosition.getX(), conditionPosition.getY(), conditionPosition.getZ(), treasureChestState);
             ObjectivePlugin.get().getLogger().at(Level.INFO).log("Spawned chest at: " + conditionPosition);
             ObjectiveTaskMarker marker = new ObjectiveTaskMarker(
                this.getChestMarkerIDFromUUID(chestUUID), new Transform(conditionPosition), "Home.png", Message.translation("server.objectives.treasure.marker")
@@ -160,7 +167,7 @@ public class TreasureMapObjectiveTask extends ObjectiveTask {
    }
 
    @Nullable
-   private TreasureChestState spawnChestBlock(
+   private Ref<ChunkStore> spawnChestBlock(
       @Nonnull World world, @Nonnull Vector3i conditionPosition, String chestBlockTypeKey, @Nonnull SpawnTreasureChestTransactionRecord transactionRecord
    ) {
       long chunkIndex = ChunkUtil.indexChunkFromBlock(conditionPosition.x, conditionPosition.z);
@@ -169,18 +176,23 @@ public class TreasureMapObjectiveTask extends ObjectiveTask {
          return null;
       } else {
          worldChunk.setBlock(conditionPosition.x, conditionPosition.y, conditionPosition.z, chestBlockTypeKey);
-         BlockState blockState = worldChunk.getState(conditionPosition.x, conditionPosition.y, conditionPosition.z);
-         if (!(blockState instanceof ItemContainerState)) {
-            transactionRecord.fail("BlockState is not a container");
+         Ref<ChunkStore> blockEntity = worldChunk.getBlockComponentEntity(conditionPosition.x, conditionPosition.y, conditionPosition.z);
+         if (blockEntity == null) {
+            transactionRecord.fail("Missing block entity");
             return null;
          } else {
-            TreasureChestState treasureChestState = BlockStateModule.get()
-               .createBlockState(TreasureChestState.class, worldChunk, conditionPosition.clone(), blockState.getBlockType());
+            TreasureChestBlock treasureChestState = world.getChunkStore().getStore().getComponent(blockEntity, TreasureChestBlock.getComponentType());
             if (treasureChestState == null) {
-               transactionRecord.fail("Failed to create TreasureChestState!");
+               transactionRecord.fail("Missing TreasureChestBlock!");
                return null;
             } else {
-               return treasureChestState;
+               ItemContainerBlock container = world.getChunkStore().getStore().getComponent(blockEntity, ItemContainerBlock.getComponentType());
+               if (container == null) {
+                  transactionRecord.fail("Missing ItemContainerBlock!");
+                  return null;
+               } else {
+                  return blockEntity;
+               }
             }
          }
       }

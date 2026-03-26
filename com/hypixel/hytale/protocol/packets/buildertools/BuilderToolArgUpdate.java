@@ -16,15 +16,13 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
    public static final int PACKET_ID = 400;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 14;
+   public static final int FIXED_BLOCK_SIZE = 13;
    public static final int VARIABLE_FIELD_COUNT = 2;
-   public static final int VARIABLE_BLOCK_START = 22;
-   public static final int MAX_SIZE = 32768032;
+   public static final int VARIABLE_BLOCK_START = 21;
+   public static final int MAX_SIZE = 32768031;
    public int token;
    public int section;
    public int slot;
-   @Nonnull
-   public BuilderToolArgGroup group = BuilderToolArgGroup.Tool;
    @Nullable
    public String id;
    @Nullable
@@ -43,11 +41,10 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
    public BuilderToolArgUpdate() {
    }
 
-   public BuilderToolArgUpdate(int token, int section, int slot, @Nonnull BuilderToolArgGroup group, @Nullable String id, @Nullable String value) {
+   public BuilderToolArgUpdate(int token, int section, int slot, @Nullable String id, @Nullable String value) {
       this.token = token;
       this.section = section;
       this.slot = slot;
-      this.group = group;
       this.id = id;
       this.value = value;
    }
@@ -56,7 +53,6 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
       this.token = other.token;
       this.section = other.section;
       this.slot = other.slot;
-      this.group = other.group;
       this.id = other.id;
       this.value = other.value;
    }
@@ -68,9 +64,8 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
       obj.token = buf.getIntLE(offset + 1);
       obj.section = buf.getIntLE(offset + 5);
       obj.slot = buf.getIntLE(offset + 9);
-      obj.group = BuilderToolArgGroup.fromValue(buf.getByte(offset + 13));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 22 + buf.getIntLE(offset + 14);
+         int varPos0 = offset + 21 + buf.getIntLE(offset + 13);
          int idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
             throw ProtocolException.negativeLength("Id", idLen);
@@ -84,7 +79,7 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 22 + buf.getIntLE(offset + 18);
+         int varPos1 = offset + 21 + buf.getIntLE(offset + 17);
          int valueLen = VarInt.peek(buf, varPos1);
          if (valueLen < 0) {
             throw ProtocolException.negativeLength("Value", valueLen);
@@ -102,10 +97,10 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 22;
+      int maxEnd = 21;
       if ((nullBits & 1) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 14);
-         int pos0 = offset + 22 + fieldOffset0;
+         int fieldOffset0 = buf.getIntLE(offset + 13);
+         int pos0 = offset + 21 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.length(buf, pos0) + sl;
          if (pos0 - offset > maxEnd) {
@@ -114,8 +109,8 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
       }
 
       if ((nullBits & 2) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 18);
-         int pos1 = offset + 22 + fieldOffset1;
+         int fieldOffset1 = buf.getIntLE(offset + 17);
+         int pos1 = offset + 21 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
          pos1 += VarInt.length(buf, pos1) + sl;
          if (pos1 - offset > maxEnd) {
@@ -142,7 +137,6 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
       buf.writeIntLE(this.token);
       buf.writeIntLE(this.section);
       buf.writeIntLE(this.slot);
-      buf.writeByte(this.group.getValue());
       int idOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int valueOffsetSlot = buf.writerIndex();
@@ -165,7 +159,7 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
 
    @Override
    public int computeSize() {
-      int size = 22;
+      int size = 21;
       if (this.id != null) {
          size += PacketIO.stringSize(this.id);
       }
@@ -178,17 +172,17 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 22) {
-         return ValidationResult.error("Buffer too small: expected at least 22 bytes");
+      if (buffer.readableBytes() - offset < 21) {
+         return ValidationResult.error("Buffer too small: expected at least 21 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 1) != 0) {
-            int idOffset = buffer.getIntLE(offset + 14);
+            int idOffset = buffer.getIntLE(offset + 13);
             if (idOffset < 0) {
                return ValidationResult.error("Invalid offset for Id");
             }
 
-            int pos = offset + 22 + idOffset;
+            int pos = offset + 21 + idOffset;
             if (pos >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Id");
             }
@@ -210,12 +204,12 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
          }
 
          if ((nullBits & 2) != 0) {
-            int valueOffset = buffer.getIntLE(offset + 18);
+            int valueOffset = buffer.getIntLE(offset + 17);
             if (valueOffset < 0) {
                return ValidationResult.error("Invalid offset for Value");
             }
 
-            int posx = offset + 22 + valueOffset;
+            int posx = offset + 21 + valueOffset;
             if (posx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Value");
             }
@@ -245,7 +239,6 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
       copy.token = this.token;
       copy.section = this.section;
       copy.slot = this.slot;
-      copy.group = this.group;
       copy.id = this.id;
       copy.value = this.value;
       return copy;
@@ -261,7 +254,6 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
             : this.token == other.token
                && this.section == other.section
                && this.slot == other.slot
-               && Objects.equals(this.group, other.group)
                && Objects.equals(this.id, other.id)
                && Objects.equals(this.value, other.value);
       }
@@ -269,6 +261,6 @@ public class BuilderToolArgUpdate implements Packet, ToServerPacket {
 
    @Override
    public int hashCode() {
-      return Objects.hash(this.token, this.section, this.slot, this.group, this.id, this.value);
+      return Objects.hash(this.token, this.section, this.slot, this.id, this.value);
    }
 }

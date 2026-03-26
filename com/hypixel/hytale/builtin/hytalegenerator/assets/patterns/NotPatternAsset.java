@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.patterns;
 
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.NotPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -17,7 +18,7 @@ public class NotPatternAsset extends PatternAsset {
    @Nonnull
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
-      return (Pattern)(super.isSkipped() ? Pattern.noPattern() : new NotPattern(this.patternAsset.build(argument)));
+      return (Pattern)(super.isSkipped() ? ConstantPattern.INSTANCE_FALSE : new NotPattern(this.patternAsset.build(argument)));
    }
 
    @Override

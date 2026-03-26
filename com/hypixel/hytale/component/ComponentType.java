@@ -53,7 +53,7 @@ public class ComponentType<ECS_TYPE, T extends Component<ECS_TYPE>> implements C
 
    @Override
    public void validateRegistry(@Nonnull ComponentRegistry<ECS_TYPE> registry) {
-      if (!this.registry.equals(registry)) {
+      if (this.registry != registry) {
          throw new IllegalArgumentException("ComponentType is for a different registry! " + this);
       }
    }
@@ -75,7 +75,7 @@ public class ComponentType<ECS_TYPE, T extends Component<ECS_TYPE>> implements C
          return true;
       } else if (o != null && this.getClass() == o.getClass()) {
          ComponentType<?, ?> that = (ComponentType<?, ?>)o;
-         return this.index != that.index ? false : this.registry.equals(that.registry);
+         return this.index != that.index ? false : this.registry == that.registry;
       } else {
          return false;
       }

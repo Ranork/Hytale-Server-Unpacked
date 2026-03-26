@@ -62,7 +62,7 @@ public class FluidCommand extends AbstractCommandCollection {
          } else {
             ChunkStore chunkStore = world.getChunkStore();
             Vector3i pos = offset == null ? blockTarget : offset.getBlockPosition(blockTarget.toVector3d(), chunkStore);
-            chunkStore.getChunkSectionReferenceAsync(ChunkUtil.chunkCoordinate(pos.x), ChunkUtil.chunkCoordinate(pos.y), ChunkUtil.chunkCoordinate(pos.z))
+            chunkStore.getChunkSectionReferenceAtBlockAsync(pos.x, pos.y, pos.z)
                .thenAcceptAsync(
                   section -> {
                      Store<ChunkStore> sectionStore = section.getStore();
@@ -131,7 +131,7 @@ public class FluidCommand extends AbstractCommandCollection {
                }
 
                Integer finalLevel = level;
-               chunkStore.getChunkSectionReferenceAsync(ChunkUtil.chunkCoordinate(pos.x), ChunkUtil.chunkCoordinate(pos.y), ChunkUtil.chunkCoordinate(pos.z))
+               chunkStore.getChunkSectionReferenceAtBlockAsync(pos.x, pos.y, pos.z)
                   .thenAcceptAsync(
                      section -> {
                         Store<ChunkStore> sectionStore = section.getStore();

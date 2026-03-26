@@ -50,6 +50,7 @@ public class CaveGeneratorJsonLoader extends JsonLoader<SeedStringResource, Cave
    }
 
    public interface Constants {
+      String FILE_NAME = "Caves";
       String FILE_CAVES_JSON = "Caves.json";
       String KEY_TYPES = "Types";
       String ERROR_LOADING_CAVES = "Error while loading caves for world generator from %s";

@@ -2,10 +2,11 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.props.prefabprop.direc
 
 import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.ConstantPatternAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.patterns.PatternAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
-import com.hypixel.hytale.builtin.hytalegenerator.props.directionality.Directionality;
-import com.hypixel.hytale.builtin.hytalegenerator.props.directionality.OrthogonalDirection;
-import com.hypixel.hytale.builtin.hytalegenerator.props.directionality.PatternDirectionality;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality.Directionality;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality.OrthogonalDirection;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality.PatternDirectionality;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -41,10 +42,18 @@ public class PatternDirectionalityAsset extends DirectionalityAsset {
    public Directionality build(@Nonnull DirectionalityAsset.Argument argument) {
       int intSeed = argument.parentSeed.child(this.seed).createSupplier().get();
       OrthogonalDirection direction = this.prefabDirection;
-      Pattern northPattern = this.northPatternAsset == null ? Pattern.noPattern() : this.northPatternAsset.build(PatternAsset.argumentFrom(argument));
-      Pattern southPattern = this.southPatternAsset == null ? Pattern.noPattern() : this.southPatternAsset.build(PatternAsset.argumentFrom(argument));
-      Pattern eastPattern = this.eastPatternAsset == null ? Pattern.noPattern() : this.eastPatternAsset.build(PatternAsset.argumentFrom(argument));
-      Pattern westPattern = this.westPatternAsset == null ? Pattern.noPattern() : this.westPatternAsset.build(PatternAsset.argumentFrom(argument));
+      Pattern northPattern = (Pattern)(this.northPatternAsset == null
+         ? ConstantPattern.INSTANCE_FALSE
+         : this.northPatternAsset.build(PatternAsset.argumentFrom(argument)));
+      Pattern southPattern = (Pattern)(this.southPatternAsset == null
+         ? ConstantPattern.INSTANCE_FALSE
+         : this.southPatternAsset.build(PatternAsset.argumentFrom(argument)));
+      Pattern eastPattern = (Pattern)(this.eastPatternAsset == null
+         ? ConstantPattern.INSTANCE_FALSE
+         : this.eastPatternAsset.build(PatternAsset.argumentFrom(argument)));
+      Pattern westPattern = (Pattern)(this.westPatternAsset == null
+         ? ConstantPattern.INSTANCE_FALSE
+         : this.westPatternAsset.build(PatternAsset.argumentFrom(argument)));
       return new PatternDirectionality(direction, southPattern, northPattern, eastPattern, westPattern, intSeed);
    }
 

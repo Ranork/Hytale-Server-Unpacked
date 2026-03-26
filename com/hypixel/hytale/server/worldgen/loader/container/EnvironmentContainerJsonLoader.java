@@ -2,6 +2,8 @@ package com.hypixel.hytale.server.worldgen.loader.container;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
 import com.hypixel.hytale.common.util.ArrayUtil;
@@ -14,14 +16,20 @@ import com.hypixel.hytale.procedurallib.property.NoiseProperty;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.container.EnvironmentContainer;
+import com.hypixel.hytale.server.worldgen.loader.context.BiomeFileContext;
 import com.hypixel.hytale.server.worldgen.util.ConstantNoiseProperty;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class EnvironmentContainerJsonLoader extends JsonLoader<SeedStringResource, EnvironmentContainer> {
-   public EnvironmentContainerJsonLoader(SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json) {
+   @Nonnull
+   protected final BiomeFileContext biomeContext;
+
+   public EnvironmentContainerJsonLoader(SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json, @Nonnull BiomeFileContext biomeContext) {
       super(seed, dataFolder, json);
+      this.biomeContext = biomeContext;
    }
 
    @Nonnull
@@ -47,29 +55,36 @@ public class EnvironmentContainerJsonLoader extends JsonLoader<SeedStringResourc
 
    @Nonnull
    protected EnvironmentContainer.EnvironmentContainerEntry[] loadEntries() {
-      if (this.json != null && this.json.isJsonObject() && this.has("Entries")) {
-         JsonArray arr = this.get("Entries").getAsJsonArray();
-         if (arr.isEmpty()) {
-            return EnvironmentContainer.EnvironmentContainerEntry.EMPTY_ARRAY;
-         } else {
-            EnvironmentContainer.EnvironmentContainerEntry[] entries = new EnvironmentContainer.EnvironmentContainerEntry[arr.size()];
+      JsonArray envArray = this.mustGetArray("Entries", EMPTY_ARRAY);
 
-            for (int i = 0; i < arr.size(); i++) {
-               try {
-                  entries[i] = new EnvironmentContainerJsonLoader.EnvironmentContainerEntryJsonLoader(
-                        this.seed.append(String.format("-%s", i)), this.dataFolder, arr.get(i)
+      EnvironmentContainer.EnvironmentContainerEntry[] e;
+      try (ListPool.Resource<EnvironmentContainer.EnvironmentContainerEntry> entries = EnvironmentContainer.ENTRY_POOL.acquire(envArray.size())) {
+         for (int i = 0; i < envArray.size(); i++) {
+            try {
+               entries.add(
+                  new EnvironmentContainerJsonLoader.EnvironmentContainerEntryJsonLoader(
+                        this.seed.append(String.format("-%s", i)), this.dataFolder, envArray.get(i)
                      )
-                     .load();
-               } catch (Throwable var5) {
-                  throw new Error(String.format("Failed to load TintContainerEntry #%s", i), var5);
-               }
+                     .load()
+               );
+            } catch (Throwable var6) {
+               throw new Error(String.format("Failed to load TintContainerEntry #%s", i), var6);
             }
-
-            return entries;
          }
-      } else {
-         return EnvironmentContainer.EnvironmentContainerEntry.EMPTY_ARRAY;
+
+         ModifyEvent.SeedGenerator<SeedStringResource> seed = new ModifyEvent.SeedGenerator<>(this.seed);
+         ModifyEvent.dispatch(
+            ModifyEvents.BiomeEnvironments.class,
+            new ModifyEvents.BiomeEnvironments(
+               this.biomeContext,
+               entries,
+               content -> new EnvironmentContainerJsonLoader.EnvironmentContainerEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+            )
+         );
+         e = entries.toArray();
       }
+
+      return e;
    }
 
    public interface Constants {

@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.AnchorPositionProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -24,11 +25,11 @@ public class AnchorPositionProviderAsset extends PositionProviderAsset {
    @Override
    public PositionProvider build(@Nonnull PositionProviderAsset.Argument argument) {
       if (super.skip()) {
-         return PositionProvider.noPositionProvider();
+         return EmptyPositionProvider.INSTANCE;
       } else {
-         PositionProvider positionProvider = this.positionProviderAsset == null
-            ? PositionProvider.noPositionProvider()
-            : this.positionProviderAsset.build(argument);
+         PositionProvider positionProvider = (PositionProvider)(this.positionProviderAsset == null
+            ? EmptyPositionProvider.INSTANCE
+            : this.positionProviderAsset.build(argument));
          return new AnchorPositionProvider(positionProvider, this.isReversed);
       }
    }

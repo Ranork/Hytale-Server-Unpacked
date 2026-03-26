@@ -7,14 +7,14 @@ import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
-import com.hypixel.hytale.builtin.hytalegenerator.PropField;
+import com.hypixel.hytale.builtin.hytalegenerator.PropRuntime;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.environmentproviders.ConstantEnvironmentProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.environmentproviders.EnvironmentProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.ConstantMaterialProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.materialproviders.MaterialProviderAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.assets.propstageiterations.PropRuntimeAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.propruntime.PropRuntimeAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.terrains.DensityTerrainAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.terrains.TerrainAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.tintproviders.ConstantTintProviderAsset;
@@ -26,12 +26,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.environmentproviders.Environme
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
-import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
-import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.Assignments;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
-import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
 import com.hypixel.hytale.builtin.hytalegenerator.tintproviders.TintProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
@@ -147,10 +145,10 @@ public class BiomeAsset implements JsonAssetWithMap<String, DefaultAssetMap<Stri
 
       for (PropRuntimeAsset fieldAsset : this.propRuntimeAssets) {
          if (!fieldAsset.isSkip()) {
-            PositionProvider positionProvider = fieldAsset.buildPositionProvider(parentSeed, referenceBundle, workerId);
-            Assignments distribution = fieldAsset.buildPropDistribution(parentSeed, materialCache, fieldAsset.getRuntime(), referenceBundle, workerId);
-            PropField field = new PropField(fieldAsset.getRuntime(), distribution, positionProvider);
-            biome.addPropFieldTo(field);
+            PropRuntime propRuntime = new PropRuntime(
+               fieldAsset.getRuntime(), fieldAsset.buildPropDistribution(parentSeed, materialCache, fieldAsset.getRuntime(), referenceBundle, workerId)
+            );
+            biome.addPropFieldTo(propRuntime);
          }
       }
 

@@ -4,6 +4,7 @@ import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetArrayHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.AssetValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleOrValidator;
@@ -20,7 +21,7 @@ import javax.annotation.Nonnull;
 
 public class BuilderActionBeacon extends BuilderActionBase {
    protected final StringHolder message = new StringHolder();
-   protected double range;
+   protected final DoubleHolder range = new DoubleHolder();
    protected final AssetArrayHolder targetGroups = new AssetArrayHolder();
    protected final StringHolder targetToSendSlot = new StringHolder();
    protected double expirationTime;
@@ -59,14 +60,7 @@ public class BuilderActionBeacon extends BuilderActionBase {
    public BuilderActionBeacon readConfig(@Nonnull JsonElement data) {
       this.requireString(data, "Message", this.message, StringNotEmptyValidator.get(), BuilderDescriptorState.Experimental, "Message to send to targets", null);
       this.getDouble(
-         data,
-         "Range",
-         d -> this.range = d,
-         64.0,
-         DoubleSingleValidator.greater0(),
-         BuilderDescriptorState.Experimental,
-         "The maximum range to send the message",
-         null
+         data, "Range", this.range, 64.0, DoubleSingleValidator.greater0(), BuilderDescriptorState.Experimental, "The maximum range to send the message", null
       );
       this.requireAssetArray(
          data,
@@ -116,8 +110,8 @@ public class BuilderActionBeacon extends BuilderActionBase {
       return this.message.get(support.getExecutionContext());
    }
 
-   public double getRange() {
-      return this.range;
+   public double getRange(@Nonnull BuilderSupport support) {
+      return this.range.get(support.getExecutionContext());
    }
 
    public int[] getTargetGroups(@Nonnull BuilderSupport support) {

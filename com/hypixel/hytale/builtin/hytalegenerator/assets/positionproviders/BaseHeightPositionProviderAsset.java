@@ -1,11 +1,13 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.DecimalConstantsFrameworkAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.BaseHeightPositionProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.OffsetPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 
 public class BaseHeightPositionProviderAsset extends PositionProviderAsset {
@@ -33,7 +35,7 @@ public class BaseHeightPositionProviderAsset extends PositionProviderAsset {
    @Override
    public PositionProvider build(@Nonnull PositionProviderAsset.Argument argument) {
       if (super.skip()) {
-         return PositionProvider.noPositionProvider();
+         return EmptyPositionProvider.INSTANCE;
       } else {
          PositionProvider positionProvider = this.positionProviderAsset.build(argument);
          Double baseHeight = DecimalConstantsFrameworkAsset.Entries.get(this.baseHeightName, argument.referenceBundle);
@@ -41,7 +43,7 @@ public class BaseHeightPositionProviderAsset extends PositionProviderAsset {
             baseHeight = 0.0;
          }
 
-         return new BaseHeightPositionProvider(baseHeight, positionProvider, this.minYRead, this.maxYRead);
+         return new OffsetPositionProvider(new Vector3d(0.0, baseHeight, 0.0), positionProvider);
       }
    }
 

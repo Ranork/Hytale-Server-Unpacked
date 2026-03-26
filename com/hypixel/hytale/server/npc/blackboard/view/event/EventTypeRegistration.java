@@ -12,7 +12,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.BitSet;
 import java.util.List;
 import java.util.function.Consumer;
@@ -40,7 +40,7 @@ public class EventTypeRegistration<EventType extends Enum<EventType>, Notificati
       while (it.hasNext()) {
          int set = it.nextInt();
          this.eventSets.set(set);
-         ((List)this.entitiesBySet.computeIfAbsent(set, k -> new ObjectArrayList())).add(ref);
+         ((List)this.entitiesBySet.computeIfAbsent(set, k -> new ReferenceArrayList())).add(ref);
       }
    }
 

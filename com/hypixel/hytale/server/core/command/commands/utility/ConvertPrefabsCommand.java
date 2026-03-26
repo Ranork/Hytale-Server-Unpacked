@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.core.command.commands.utility;
 
 import com.hypixel.hytale.common.util.PathUtil;
+import com.hypixel.hytale.component.data.unknown.UnknownComponents;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -15,6 +16,7 @@ import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldConfig;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.provider.EmptyChunkStorageProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.resources.EmptyResourceStorageProvider;
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.DummyWorldGenProvider;
@@ -55,6 +57,7 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
    @Nonnull
    private final FlagArg entitiesFlag = this.withFlagArg("entities", "server.commands.convertprefabs.entities.desc");
    private final FlagArg destructiveFlag = this.withFlagArg("destructive", "server.commands.convertprefabs.destructive.desc");
+   private final FlagArg onlyUnknownFlag = this.withFlagArg("only-unknown", "server.commands.convertprefabs.onlyUnknown.desc");
    @Nonnull
    private final OptionalArg<String> pathArg = this.withOptionalArg("path", "server.commands.convertprefabs.path.desc", ArgTypes.STRING);
    @Nonnull
@@ -74,6 +77,7 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
       boolean relative = this.relativeFlag.get(context);
       boolean entities = this.entitiesFlag.get(context);
       boolean destructive = this.destructiveFlag.get(context);
+      boolean onlyUnknown = this.onlyUnknownFlag.get(context);
       World defaultWorld = Universe.get().getDefaultWorld();
       if (defaultWorld == null) {
          context.sendMessage(MESSAGE_COMMANDS_CONVERT_PREFABS_DEFAULT_WORLD_NULL);
@@ -89,7 +93,7 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
                context.sendMessage(Message.translation("server.commands.convertprefabs.invalidPath"));
                return CompletableFuture.completedFuture(null);
             } else {
-               return this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
+               return this.convertPath(assetPath, blocks, filler, relative, entities, destructive, onlyUnknown, failed, skipped).thenApply(_v -> {
                   this.sendCompletionMessages(context, assetPath, failed, skipped);
                   return null;
                });
@@ -98,33 +102,39 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
             return switch (storeOption) {
                case "server" -> {
                   Path assetPath = PrefabStore.get().getServerPrefabsPath();
-                  yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
+                  yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, onlyUnknown, failed, skipped).thenApply(_v -> {
                      this.sendCompletionMessages(context, assetPath, failed, skipped);
                      return null;
                   });
                }
                case "asset" -> {
                   Path assetPath = PrefabStore.get().getAssetPrefabsPath();
-                  yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
+                  yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, onlyUnknown, failed, skipped).thenApply(_v -> {
                      this.sendCompletionMessages(context, assetPath, failed, skipped);
                      return null;
                   });
                }
                case "worldgen" -> {
                   Path assetPath = PrefabStore.get().getWorldGenPrefabsPath();
-                  yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, failed, skipped).thenApply(_v -> {
+                  yield this.convertPath(assetPath, blocks, filler, relative, entities, destructive, onlyUnknown, failed, skipped).thenApply(_v -> {
                      this.sendCompletionMessages(context, assetPath, failed, skipped);
                      return null;
                   });
                }
                case "all" -> {
                   Path assetPath = Path.of("");
-                  yield this.convertPath(PrefabStore.get().getWorldGenPrefabsPath(), blocks, filler, relative, entities, destructive, failed, skipped)
-                     .thenCompose(
-                        _v -> this.convertPath(PrefabStore.get().getServerPrefabsPath(), blocks, filler, relative, entities, destructive, failed, skipped)
+                  yield this.convertPath(
+                        PrefabStore.get().getWorldGenPrefabsPath(), blocks, filler, relative, entities, destructive, onlyUnknown, failed, skipped
                      )
                      .thenCompose(
-                        _v -> this.convertPath(PrefabStore.get().getAssetPrefabsPath(), blocks, filler, relative, entities, destructive, failed, skipped)
+                        _v -> this.convertPath(
+                           PrefabStore.get().getServerPrefabsPath(), blocks, filler, relative, entities, destructive, onlyUnknown, failed, skipped
+                        )
+                     )
+                     .thenCompose(
+                        _v -> this.convertPath(
+                           PrefabStore.get().getAssetPrefabsPath(), blocks, filler, relative, entities, destructive, onlyUnknown, failed, skipped
+                        )
                      )
                      .thenApply(_v -> {
                         this.sendCompletionMessages(context, assetPath, failed, skipped);
@@ -161,6 +171,7 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
       boolean relative,
       boolean entities,
       boolean destructive,
+      boolean onlySerializeIfUnknown,
       @Nonnull List<String> failed,
       @Nonnull List<String> skipped
    ) {
@@ -179,8 +190,8 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
 
             try {
                conversionWorldFuture = universe.makeWorld("ConvertPrefabs-" + UUID.randomUUID(), Files.createTempDirectory("convertprefab"), config);
-            } catch (IOException var14) {
-               throw SneakyThrow.sneakyThrow(var14);
+            } catch (IOException var15) {
+               throw SneakyThrow.sneakyThrow(var15);
             }
          }
 
@@ -197,7 +208,9 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
                   return CompletableFuture.completedFuture(null);
                }
 
-               e = this.processPrefabsInBatches(prefabPaths, blocks, filler, relative, entities, destructive, conversionWorldFuture, failed, skipped)
+               e = this.processPrefabsInBatches(
+                     prefabPaths, blocks, filler, relative, entities, destructive, onlySerializeIfUnknown, conversionWorldFuture, failed, skipped
+                  )
                   .thenApply(_v -> {
                      if (conversionWorldFuture != null) {
                         conversionWorldFuture.thenAccept(world -> Universe.get().removeWorld(world.getName()));
@@ -208,8 +221,8 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
             }
 
             return e;
-         } catch (IOException var16) {
-            throw SneakyThrow.sneakyThrow(var16);
+         } catch (IOException var17) {
+            throw SneakyThrow.sneakyThrow(var17);
          }
       }
    }
@@ -222,6 +235,7 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
       boolean relative,
       boolean entities,
       boolean destructive,
+      boolean onlySerializeIfUnknown,
       @Nullable CompletableFuture<World> conversionWorldFuture,
       @Nonnull List<String> failed,
       @Nonnull List<String> skipped
@@ -237,7 +251,9 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
          }
 
          CompletableFuture<?>[] batchFutures = batch.stream()
-            .map(path -> this.processPrefab(path, blocks, filler, relative, entities, destructive, conversionWorldFuture, failed, skipped))
+            .map(
+               path -> this.processPrefab(path, blocks, filler, relative, entities, destructive, onlySerializeIfUnknown, conversionWorldFuture, failed, skipped)
+            )
             .toArray(CompletableFuture[]::new);
          result = result.thenCompose(_v -> CompletableFuture.allOf(batchFutures));
       }
@@ -253,6 +269,7 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
       boolean relative,
       boolean entities,
       boolean destructive,
+      boolean onlySerializeIfUnknown,
       @Nullable CompletableFuture<World> conversionWorldFuture,
       @Nonnull List<String> failed,
       @Nonnull List<String> skipped
@@ -270,15 +287,37 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
 
             return prefab;
          })
-         .thenCompose(prefab -> entities && conversionWorldFuture != null ? conversionWorldFuture.<Void>thenCompose(world -> CompletableFuture.runAsync(() -> {
-            try {
-               prefab.reserializeEntities(world.getEntityStore().getStore(), destructive);
-            } catch (IOException var4x) {
-               throw SneakyThrow.sneakyThrow(var4x);
+         .thenApply(prefab -> {
+            if (onlySerializeIfUnknown) {
+               boolean[] hasUnknown = new boolean[1];
+               prefab.forEachBlock((x, y, z, block) -> {
+                  if (block.holder() != null) {
+                     UnknownComponents<ChunkStore> unknown = block.holder().getComponent(ChunkStore.REGISTRY.getUnknownComponentType());
+                     if (unknown != null && !unknown.getUnknownComponents().isEmpty()) {
+                        hasUnknown[0] = true;
+                     }
+                  }
+               });
+               if (!hasUnknown[0]) {
+                  return null;
+               }
             }
-         }, world)).thenApply(_v -> prefab) : CompletableFuture.completedFuture(prefab))
+
+            return (BlockSelection)prefab;
+         })
          .thenCompose(
-            prefab -> blocks && conversionWorldFuture != null
+            prefab -> prefab != null && entities && conversionWorldFuture != null
+               ? conversionWorldFuture.<Void>thenCompose(world -> CompletableFuture.runAsync(() -> {
+                  try {
+                     prefab.reserializeEntities(world.getEntityStore().getStore(), destructive);
+                  } catch (IOException var4x) {
+                     throw SneakyThrow.sneakyThrow(var4x);
+                  }
+               }, world)).thenApply(_v -> prefab)
+               : CompletableFuture.completedFuture(prefab)
+         )
+         .thenCompose(
+            prefab -> prefab != null && blocks && conversionWorldFuture != null
                ? conversionWorldFuture.<Void>thenCompose(
                      world -> CompletableFuture.runAsync(() -> prefab.reserializeBlockStates(world.getChunkStore(), destructive), world)
                   )
@@ -286,8 +325,12 @@ public class ConvertPrefabsCommand extends AbstractAsyncCommand {
                : CompletableFuture.completedFuture(prefab)
          )
          .thenCompose(prefab -> {
-            BsonDocument newDocument = SelectionPrefabSerializer.serialize(prefab);
-            return BsonUtil.writeDocument(path, newDocument, false);
+            if (prefab == null) {
+               return CompletableFuture.completedFuture(null);
+            } else {
+               BsonDocument newDocument = SelectionPrefabSerializer.serialize(prefab);
+               return BsonUtil.writeDocument(path, newDocument, false);
+            }
          })
          .exceptionally(
             throwable -> {

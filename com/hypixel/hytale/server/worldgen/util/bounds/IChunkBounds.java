@@ -42,11 +42,11 @@ public interface IChunkBounds {
    }
 
    default int randomX(@Nonnull Random random) {
-      return random.nextInt(this.getHighBoundX() - this.getLowBoundX()) + this.getLowBoundX();
+      return getRandomOffset(this.getLowBoundX(), this.getHighBoundX(), random);
    }
 
    default int randomZ(@Nonnull Random random) {
-      return random.nextInt(this.getHighBoundZ() - this.getLowBoundZ()) + this.getLowBoundZ();
+      return getRandomOffset(this.getLowBoundZ(), this.getHighBoundZ(), random);
    }
 
    default double fractionX(double d) {
@@ -71,5 +71,22 @@ public interface IChunkBounds {
 
    default int getHighChunkZ() {
       return ChunkUtil.chunkCoordinate(this.getHighBoundZ());
+   }
+
+   default boolean isValid() {
+      return this.getHighBoundX() > this.getLowBoundX() && this.getHighBoundZ() > this.getLowBoundZ();
+   }
+
+   static int getRandomOffset(int min, int max, @Nonnull Random random) {
+      if (!<unrepresentable>.$assertionsDisabled && max <= min) {
+         throw new AssertionError("Invalid bounds: " + min + " to " + max);
+      } else {
+         return max <= min ? min : random.nextInt(max - min) + min;
+      }
+   }
+
+   static {
+      if (<unrepresentable>.$assertionsDisabled) {
+      }
    }
 }

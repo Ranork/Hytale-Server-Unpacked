@@ -51,6 +51,9 @@ public class PortalType implements JsonAssetWithMap<String, DefaultAssetMap<Stri
       .<String>append(new KeyedCodec<>("GameplayConfig", Codec.STRING), (config, o) -> config.gameplayConfig = o, config -> config.gameplayConfig)
       .documentation("The ID of the GameplayConfig asset for worlds spawned with this portal type.")
       .add()
+      .<PortalSpawnConfig>append(new KeyedCodec<>("Spawn", PortalSpawnConfig.CODEC), (config, o) -> config.spawn = o, config -> config.spawn)
+      .documentation("Configs related to spawning into the portal fragment's instance.")
+      .add()
       .build();
    private static AssetStore<String, PortalType, DefaultAssetMap<String, PortalType>> ASSET_STORE;
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(PortalType::getAssetStore));
@@ -61,6 +64,7 @@ public class PortalType implements JsonAssetWithMap<String, DefaultAssetMap<Stri
    private String gameplayConfig = "Portal";
    private boolean voidInvasionEnabled = false;
    private Set<String> cursedItems = Collections.emptySet();
+   private PortalSpawnConfig spawn = new PortalSpawnConfig();
 
    public static AssetStore<String, PortalType, DefaultAssetMap<String, PortalType>> getAssetStore() {
       if (ASSET_STORE == null) {
@@ -100,6 +104,10 @@ public class PortalType implements JsonAssetWithMap<String, DefaultAssetMap<Stri
 
    public boolean isVoidInvasionEnabled() {
       return this.voidInvasionEnabled;
+   }
+
+   public PortalSpawnConfig getSpawn() {
+      return this.spawn;
    }
 
    @Nullable

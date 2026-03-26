@@ -131,7 +131,7 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
                BlockSection section = blockChunkComponent.getSectionAtBlockY(targetBlock.y);
                int rotationIndex = section.getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
                RotationTuple rotationTuple = RotationTuple.get(rotationIndex);
-               Vector3d position = rotationTuple.rotate(this.spawnOffset);
+               Vector3d position = rotationTuple.rotatedVector(this.spawnOffset);
                Vector3d blockCenter = new Vector3d();
                blockType.getBlockCenter(rotationIndex, blockCenter);
                position.add(blockCenter).add(targetBlock);

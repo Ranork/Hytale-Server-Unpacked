@@ -222,7 +222,9 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
             World world = ref.getStore().getExternalData().getWorld();
             DebugUtils.addSphere(world, this.targetPosition, color, 0.5, 0.1F);
             if (this.startPosition.distanceTo(this.targetPosition) > 1.0E-4) {
-               DebugUtils.addArrow(world, this.startPosition, this.targetPosition.clone().subtract(this.startPosition).setLength(1.0), color, 0.1F, true);
+               DebugUtils.addArrow(
+                  world, this.startPosition, this.targetPosition.clone().subtract(this.startPosition).setLength(1.0), color, 0.1F, DebugUtils.FLAG_FADE
+               );
             }
          }
 

@@ -27,6 +27,7 @@ import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
@@ -473,10 +474,50 @@ public class NPCSystems {
          assert npcComponent != null;
 
          Role role = npcComponent.getRole();
-         double deathAnimationTime = role.getDeathAnimationTime();
-         if (deathAnimationTime > 0.0) {
-            commandBuffer.addComponent(ref, this.deferredCorpseRemovalComponentType, new DeferredCorpseRemoval(deathAnimationTime));
+         if (role != null) {
+            double deathAnimationTime = role.getDeathAnimationTime();
+            if (deathAnimationTime > 0.0) {
+               commandBuffer.addComponent(ref, this.deferredCorpseRemovalComponentType, new DeferredCorpseRemoval(deathAnimationTime, role.getDeathParticles()));
+            }
          }
+      }
+   }
+
+   public static class OnNPCAdded extends HolderSystem<EntityStore> {
+      @Override
+      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
+         NPCEntity npc = holder.getComponent(NPCEntity.getComponentType());
+
+         assert npc != null;
+
+         npc.getInventory().migrateToComponents(holder);
+         if (!holder.getArchetype().contains(InventoryComponent.Storage.getComponentType())) {
+            holder.addComponent(InventoryComponent.Storage.getComponentType(), new InventoryComponent.Storage((short)0));
+         }
+
+         if (!holder.getArchetype().contains(InventoryComponent.Armor.getComponentType())) {
+            holder.addComponent(InventoryComponent.Armor.getComponentType(), new InventoryComponent.Armor(InventoryComponent.DEFAULT_ARMOR_CAPACITY));
+         }
+
+         if (!holder.getArchetype().contains(InventoryComponent.Hotbar.getComponentType())) {
+            holder.addComponent(InventoryComponent.Hotbar.getComponentType(), new InventoryComponent.Hotbar((short)3));
+         }
+
+         if (!holder.getArchetype().contains(InventoryComponent.Utility.getComponentType())) {
+            holder.addComponent(InventoryComponent.Utility.getComponentType(), new InventoryComponent.Utility((short)0));
+         }
+
+         npc.getInventory().backwardsCompatHook(holder);
+      }
+
+      @Override
+      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
+      }
+
+      @Nullable
+      @Override
+      public Query<EntityStore> getQuery() {
+         return NPCEntity.getComponentType();
       }
    }
 

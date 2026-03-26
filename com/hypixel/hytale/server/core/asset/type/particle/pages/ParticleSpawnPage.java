@@ -34,7 +34,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -111,7 +110,7 @@ public class ParticleSpawnPage extends InteractiveCustomUIPage<ParticleSpawnPage
                   }
 
                   SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = store.getResource(EntityModule.get().getPlayerSpatialResourceType());
-                  ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+                  List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                   playerSpatialResource.getSpatialStructure().collect(this.position, 75.0, results);
                   ParticleUtil.spawnParticleEffect(this.selectedParticleSystemId, this.position, this.rotation, results, store);
                }

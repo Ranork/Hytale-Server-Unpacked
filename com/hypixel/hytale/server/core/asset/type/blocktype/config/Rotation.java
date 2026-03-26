@@ -287,4 +287,50 @@ public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.
       rotationRoll.rotateZ(rotated, rotated);
       return rotated;
    }
+
+   public static void applyRotationTo(@Nonnull Vector3i vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationPitch.rotateX(vector, vector);
+      rotationYaw.rotateY(vector, vector);
+      rotationRoll.rotateZ(vector, vector);
+   }
+
+   public static void applyRotationTo(@Nonnull Vector3f vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationPitch.rotateX(vector, vector);
+      rotationYaw.rotateY(vector, vector);
+      rotationRoll.rotateZ(vector, vector);
+   }
+
+   public static void applyRotationTo(@Nonnull Vector3d vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationPitch.rotateX(vector, vector);
+      rotationYaw.rotateY(vector, vector);
+      rotationRoll.rotateZ(vector, vector);
+   }
+
+   public static void undoRotationTo(@Nonnull Vector3i vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationRoll.toInverse().rotateZ(vector, vector);
+      rotationYaw.toInverse().rotateY(vector, vector);
+      rotationPitch.toInverse().rotateX(vector, vector);
+   }
+
+   public static void undoRotationTo(@Nonnull Vector3f vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationRoll.toInverse().rotateZ(vector, vector);
+      rotationYaw.toInverse().rotateY(vector, vector);
+      rotationPitch.toInverse().rotateX(vector, vector);
+   }
+
+   public static void undoRotationTo(@Nonnull Vector3d vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationRoll.toInverse().rotateZ(vector, vector);
+      rotationYaw.toInverse().rotateY(vector, vector);
+      rotationPitch.toInverse().rotateX(vector, vector);
+   }
+
+   public Rotation toInverse() {
+      if (this == None) {
+         return None;
+      } else if (this == Ninety) {
+         return TwoSeventy;
+      } else {
+         return this == TwoSeventy ? Ninety : OneEighty;
+      }
+   }
 }

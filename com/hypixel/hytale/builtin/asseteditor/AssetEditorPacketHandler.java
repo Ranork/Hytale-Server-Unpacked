@@ -36,7 +36,7 @@ import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateAsset;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateAssetPack;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateJsonAsset;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateWeatherPreviewLock;
-import com.hypixel.hytale.protocol.packets.connection.Disconnect;
+import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.DisconnectType;
 import com.hypixel.hytale.protocol.packets.connection.Pong;
 import com.hypixel.hytale.protocol.packets.interface_.UpdateLanguage;
@@ -110,8 +110,8 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
    }
 
    public void registerHandlers() {
-      this.registerHandler(1, p -> this.handle((Disconnect)p));
-      this.registerHandler(3, p -> this.handlePong((Pong)p));
+      this.registerHandler(1, p -> this.handle((ClientDisconnect)p));
+      this.registerHandler(4, p -> this.handlePong((Pong)p));
       this.registerHandler(321, p -> this.handle((AssetEditorRequestChildrenList)p));
       this.registerHandler(324, p -> this.handle((AssetEditorUpdateAsset)p));
       this.registerHandler(323, p -> this.handle((AssetEditorUpdateJsonAsset)p));
@@ -382,12 +382,19 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
 
    public void handle(@Nonnull AssetEditorCreateAssetPack packet) {
       if (!this.lacksPermission(packet.token, "hytale.editor.packs.create")) {
-         LOGGER.at(Level.INFO).log("%s is creating a new asset pack: %s:%s", this.editorClient.getUsername(), packet.manifest.group, packet.manifest.name);
-         AssetEditorPlugin.get().handleCreateAssetPack(this.editorClient, packet.manifest, packet.token);
+         LOGGER.at(Level.INFO)
+            .log(
+               "%s is creating a new asset pack: %s:%s (directory index: %d)",
+               this.editorClient.getUsername(),
+               packet.manifest.group,
+               packet.manifest.name,
+               packet.targetDirectoryIndex
+            );
+         AssetEditorPlugin.get().handleCreateAssetPack(this.editorClient, packet.manifest, packet.token, packet.targetDirectoryIndex);
       }
    }
 
-   public void handle(@Nonnull Disconnect packet) {
+   public void handle(@Nonnull ClientDisconnect packet) {
       switch (packet.type) {
          case Disconnect:
             this.disconnectReason.setClientDisconnectType(DisconnectType.Disconnect);
@@ -403,7 +410,7 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
             this.editorClient.getUsername(),
             NettyUtil.formatRemoteAddress(this.getChannel()),
             packet.type.name(),
-            packet.reason
+            packet.reason.name()
          );
       this.getChannel().close();
    }

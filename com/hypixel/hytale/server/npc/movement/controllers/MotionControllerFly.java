@@ -141,8 +141,8 @@ public class MotionControllerFly extends MotionControllerBase {
                expYaw = PhysicsMath.headingFromDirection(dirX, dirZ);
                expPitch = TrigMathUtil.atan2(translation.y, Math.sqrt(dotXZ));
             } else {
-               expYaw = steering.hasYaw() ? steering.getYaw() : yaw;
-               expPitch = steering.hasPitch() ? steering.getPitch() : (this.autoLevel ? 0.0F : pitch);
+               expYaw = steering.hasYawOrDirection() ? steering.getYawOrDirection() : yaw;
+               expPitch = steering.hasPitchOrDirection() ? steering.getPitchOrDirection() : (this.autoLevel ? 0.0F : pitch);
             }
 
             steering.clearYaw();

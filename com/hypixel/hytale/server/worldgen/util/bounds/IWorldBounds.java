@@ -15,10 +15,15 @@ public interface IWorldBounds extends IChunkBounds {
    }
 
    default int randomY(@Nonnull Random random) {
-      return random.nextInt(this.getHighBoundY() - this.getLowBoundY()) + this.getLowBoundY();
+      return IChunkBounds.getRandomOffset(this.getLowBoundY(), this.getHighBoundY(), random);
    }
 
    default double fractionY(double d) {
       return (this.getHighBoundY() - this.getLowBoundY()) * d + this.getLowBoundY();
+   }
+
+   @Override
+   default boolean isValid() {
+      return IChunkBounds.super.isValid() && this.getHighBoundY() > this.getLowBoundY();
    }
 }

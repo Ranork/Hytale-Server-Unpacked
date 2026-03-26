@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderTemplateInteractionVars;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderValidationHelper;
 import com.hypixel.hytale.server.npc.asset.builder.FeatureEvaluatorHelper;
+import com.hypixel.hytale.server.npc.asset.builder.FeatureOverride;
 import com.hypixel.hytale.server.npc.asset.builder.InstructionContextHelper;
 import com.hypixel.hytale.server.npc.asset.builder.InstructionType;
 import com.hypixel.hytale.server.npc.asset.builder.SpawnableWithModelBuilder;
@@ -46,6 +47,7 @@ import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ItemAttitude
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ItemDropListExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ItemExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ModelExistsValidator;
+import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ParticleSystemExistsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.asset.RootInteractionValidator;
 import com.hypixel.hytale.server.npc.config.AttitudeGroup;
 import com.hypixel.hytale.server.npc.config.ItemAttitudeGroup;
@@ -102,6 +104,19 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
    protected final DoubleHolder separationNearRadiusTarget = new DoubleHolder();
    protected final DoubleHolder separationFarRadiusTarget = new DoubleHolder();
    protected final BooleanHolder applySeparation = new BooleanHolder();
+   protected final BooleanHolder avoidanceFallCheck = new BooleanHolder();
+   protected final EnumHolder<Role.AvoidanceMode> avoidanceMode = new EnumHolder<>();
+   protected final EnumHolder<Role.SeparationMode> separationMode = new EnumHolder<>();
+   protected final EnumHolder<FeatureOverride> featureOverrideOrientationHint = new EnumHolder<>();
+   protected final EnumHolder<FeatureOverride> featureOverrideAlwaysSeparate = new EnumHolder<>();
+   protected final EnumHolder<FeatureOverride> featureOverrideNormalizeDistances = new EnumHolder<>();
+   protected final DoubleHolder separationSafeDistanceMultiplier = new DoubleHolder();
+   protected final DoubleHolder separationLegacySteeringStrength = new DoubleHolder();
+   protected final DoubleHolder separationPushSteeringStrength = new DoubleHolder();
+   protected final DoubleHolder separationPushDistanceWeightDefault = new DoubleHolder();
+   protected final DoubleHolder separationPushDistanceWeightTarget = new DoubleHolder();
+   protected final DoubleHolder separationPushDistanceWeightAttacker = new DoubleHolder();
+   protected final DoubleHolder separationPushSpeedScale = new DoubleHolder();
    protected boolean stayInEnvironment;
    protected String allowedEnvironments;
    protected final StringArrayHolder flockSpawnTypes = new StringArrayHolder();
@@ -123,15 +138,18 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
    protected final IntHolder defaultOffHandSlot = new IntHolder();
    protected boolean pickupDropOnDeath;
    protected String[] armor;
-   protected double deathAnimationTime;
+   protected final DoubleHolder deathAnimationTime = new DoubleHolder();
+   protected final AssetHolder deathParticles = new AssetHolder();
+   protected final BooleanHolder dropDeathItemsInstantly = new BooleanHolder();
    protected float despawnAnimationTime;
    @Nonnull
    protected AssetHolder deathInteraction = new AssetHolder();
-   protected Role.AvoidanceMode avoidanceMode;
    protected boolean disableDamageFlock;
    protected final AssetArrayHolder disableDamageGroups = new AssetArrayHolder();
-   protected String spawnParticles;
-   protected double[] spawnParticleOffset;
+   protected final AssetHolder spawnParticles = new AssetHolder();
+   protected final NumberArrayHolder spawnParticleOffset = new NumberArrayHolder();
+   protected final StringHolder spawnParticlesTargetNode = new StringHolder();
+   protected final BooleanHolder spawnParticlesDetached = new BooleanHolder();
    protected double spawnViewDistance;
    protected int inventorySlots;
    protected int hotbarSlots;
@@ -474,15 +492,122 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
          null
       );
       this.getBoolean(data, "ApplyAvoidance", b -> this.applyAvoidance = b, false, BuilderDescriptorState.Experimental, "Apply avoidance steering force", null);
+      this.getBoolean(
+         data, "AvoidanceFallCheck", this.avoidanceFallCheck, false, BuilderDescriptorState.Experimental, "Perform extra avoidance fall check", null
+      );
       this.getBoolean(data, "ApplySeparation", this.applySeparation, false, BuilderDescriptorState.Experimental, "Apply separation steering force", null);
       this.getEnum(
          data,
          "AvoidanceMode",
-         e -> this.avoidanceMode = e,
+         this.avoidanceMode,
          Role.AvoidanceMode.class,
          Role.AvoidanceMode.Any,
          BuilderDescriptorState.Experimental,
          "Abilities to use for avoidance",
+         null
+      );
+      this.getEnum(
+         data,
+         "SeparationMode",
+         this.separationMode,
+         Role.SeparationMode.class,
+         Role.SeparationMode.Legacy,
+         BuilderDescriptorState.Experimental,
+         "Mode for separation calculation",
+         null
+      );
+      this.getDouble(
+         data,
+         "SeparationPushSafeDistanceMultiplier",
+         this.separationSafeDistanceMultiplier,
+         0.8,
+         DoubleRangeValidator.between01(),
+         BuilderDescriptorState.Experimental,
+         "Push Mode: Multiplier to reduce target distance to avoid NPC jittering close to target",
+         null
+      );
+      this.getDouble(
+         data,
+         "SeparationLegacySteeringStrength",
+         this.separationLegacySteeringStrength,
+         0.5,
+         DoubleSingleValidator.greater0(),
+         BuilderDescriptorState.Experimental,
+         "Legacy mode: Separation steering strength",
+         null
+      );
+      this.getDouble(
+         data,
+         "SeparationPushSteeringStrength",
+         this.separationPushSteeringStrength,
+         0.8,
+         DoubleSingleValidator.greater0(),
+         BuilderDescriptorState.Experimental,
+         "Push mode: Separation steering strength",
+         null
+      );
+      this.getDouble(
+         data,
+         "SeparationPushDistanceWeightDefault",
+         this.separationPushDistanceWeightDefault,
+         1.0,
+         DoubleSingleValidator.greater0(),
+         BuilderDescriptorState.Experimental,
+         "Push mode: falloff exponent for separation distance",
+         null
+      );
+      this.getDouble(
+         data,
+         "SeparationPushDistanceWeightTarget",
+         this.separationPushDistanceWeightTarget,
+         8.0,
+         DoubleSingleValidator.greater0(),
+         BuilderDescriptorState.Experimental,
+         "Push mode: falloff exponent when NPC is close to motion target",
+         null
+      );
+      this.getDouble(
+         data,
+         "SeparationPushDistanceWeightAttacker",
+         this.separationPushDistanceWeightAttacker,
+         8.0,
+         DoubleSingleValidator.greater0(),
+         BuilderDescriptorState.Experimental,
+         "Push mode: falloff exponent towards other potential attackers when close to motion target",
+         null
+      );
+      this.getDouble(
+         data,
+         "SeparationPushSpeedScale",
+         this.separationPushSpeedScale,
+         0.5,
+         DoubleRangeValidator.fromExclToIncl(0.0, 1.0),
+         BuilderDescriptorState.Experimental,
+         "Push mode: scale to increase smaller speeds for separation",
+         null
+      );
+      this.getOverride(
+         data,
+         "SeparationOverrideOrientation",
+         this.featureOverrideOrientationHint,
+         BuilderDescriptorState.Experimental,
+         "Whether to override orientation of NPC when separating",
+         null
+      );
+      this.getOverride(
+         data,
+         "SeparationOverrideAlwaysSeparate",
+         this.featureOverrideAlwaysSeparate,
+         BuilderDescriptorState.Experimental,
+         "Whether to separate even if the NPC would rest",
+         null
+      );
+      this.getOverride(
+         data,
+         "SeparationOverrideNormalizeDistances",
+         this.featureOverrideNormalizeDistances,
+         BuilderDescriptorState.Experimental,
+         "Whether to normalize distances when summing distances",
          null
       );
       this.getDouble(
@@ -622,11 +747,30 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       this.getDouble(
          data,
          "DeathAnimationTime",
-         d -> this.deathAnimationTime = d,
-         5.0,
+         this.deathAnimationTime,
+         1.5,
          DoubleSingleValidator.greaterEqual0(),
          BuilderDescriptorState.Experimental,
          "How long to let the death animation play before removing",
+         null
+      );
+      this.getAsset(
+         data,
+         "DeathParticles",
+         this.deathParticles,
+         "Effect_Death",
+         ParticleSystemExistsValidator.withConfig(AssetValidator.CanBeEmpty),
+         BuilderDescriptorState.Stable,
+         "Particles to play when the NPC corpse is removed.",
+         null
+      );
+      this.getBoolean(
+         data,
+         "DropDeathItemsInstantly",
+         this.dropDeathItemsInstantly,
+         false,
+         BuilderDescriptorState.Stable,
+         "Whether or not to drop death items instantly on death, or when the body disappears.",
          null
       );
       this.getAsset(
@@ -649,17 +793,36 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
          "How long to let the despawn animation play before removing",
          null
       );
-      this.getString(
-         data, "SpawnParticles", v -> this.spawnParticles = v, null, null, BuilderDescriptorState.Experimental, "Particle system when spawning", null
+      this.getAsset(
+         data,
+         "SpawnParticles",
+         this.spawnParticles,
+         null,
+         ParticleSystemExistsValidator.withConfig(AssetValidator.CanBeEmpty),
+         BuilderDescriptorState.Experimental,
+         "Particle system when spawning",
+         null
       );
       this.getVector3d(
          data,
          "SpawnParticlesOffset",
-         v -> this.spawnParticleOffset = v,
+         this.spawnParticleOffset,
          null,
          null,
          BuilderDescriptorState.Experimental,
          "Displacement from foot point to spawn relative to NPC heading",
+         null
+      );
+      this.getString(
+         data, "SpawnParticlesTargetNode", this.spawnParticlesTargetNode, null, null, BuilderDescriptorState.Stable, "Target node for spawn particles", null
+      );
+      this.getBoolean(
+         data,
+         "SpawnParticlesDetached",
+         this.spawnParticlesDetached,
+         true,
+         BuilderDescriptorState.Stable,
+         "Whether spawn particles should be attached to the model or not",
          null
       );
       this.getDouble(
@@ -932,13 +1095,23 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
    }
 
    @Override
-   public String getSpawnParticles() {
-      return this.spawnParticles;
+   public String getSpawnParticles(@Nonnull BuilderSupport support) {
+      return this.spawnParticles.get(support.getExecutionContext());
    }
 
    @Override
-   public Vector3d getSpawnParticleOffset() {
-      return createVector3d(this.spawnParticleOffset, Vector3d.ZERO::clone);
+   public Vector3d getSpawnParticleOffset(@Nonnull BuilderSupport support) {
+      return createVector3d(this.spawnParticleOffset.get(support.getExecutionContext()), Vector3d.ZERO::clone);
+   }
+
+   @Override
+   public String getSpawnParticleTargetNode(@Nonnull BuilderSupport support) {
+      return this.spawnParticlesTargetNode.get(support.getExecutionContext());
+   }
+
+   @Override
+   public boolean isSpawnParticleDetached(@Nonnull BuilderSupport support) {
+      return this.spawnParticlesDetached.get(support.getExecutionContext());
    }
 
    @Override
@@ -1043,8 +1216,52 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       return this.applyAvoidance;
    }
 
-   public Role.AvoidanceMode getAvoidanceMode() {
-      return this.avoidanceMode;
+   public Role.AvoidanceMode getAvoidanceMode(BuilderSupport builderSupport) {
+      return this.avoidanceMode.get(builderSupport.getExecutionContext());
+   }
+
+   public Role.SeparationMode getSeparationMode(BuilderSupport builderSupport) {
+      return this.separationMode.get(builderSupport.getExecutionContext());
+   }
+
+   public double getSeparationSafeDistanceMultiplier(BuilderSupport builderSupport) {
+      return this.separationSafeDistanceMultiplier.get(builderSupport.getExecutionContext());
+   }
+
+   public double getSeparationLegacySteeringStrength(BuilderSupport builderSupport) {
+      return this.separationLegacySteeringStrength.get(builderSupport.getExecutionContext());
+   }
+
+   public double getSeparationPushSteeringStrength(BuilderSupport builderSupport) {
+      return this.separationPushSteeringStrength.get(builderSupport.getExecutionContext());
+   }
+
+   public double getSeparationPushDistanceWeightDefault(BuilderSupport builderSupport) {
+      return this.separationPushDistanceWeightDefault.get(builderSupport.getExecutionContext());
+   }
+
+   public double getSeparationPushDistanceWeightTarget(BuilderSupport builderSupport) {
+      return this.separationPushDistanceWeightTarget.get(builderSupport.getExecutionContext());
+   }
+
+   public double getSeparationPushDistanceWeightAttacker(BuilderSupport builderSupport) {
+      return this.separationPushDistanceWeightAttacker.get(builderSupport.getExecutionContext());
+   }
+
+   public double getSeparationPushSpeedScale(BuilderSupport builderSupport) {
+      return this.separationPushSpeedScale.get(builderSupport.getExecutionContext());
+   }
+
+   public FeatureOverride getOverrideUseOrientationHint(BuilderSupport builderSupport) {
+      return this.featureOverrideOrientationHint.get(builderSupport.getExecutionContext());
+   }
+
+   public FeatureOverride getOverrideAlwaysSeparate(BuilderSupport builderSupport) {
+      return this.featureOverrideAlwaysSeparate.get(builderSupport.getExecutionContext());
+   }
+
+   public FeatureOverride getOverrideNormalizeDistances(BuilderSupport builderSupport) {
+      return this.featureOverrideNormalizeDistances.get(builderSupport.getExecutionContext());
    }
 
    public double getCollisionRadius() {
@@ -1073,6 +1290,10 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
 
    public boolean isApplySeparation(BuilderSupport support) {
       return this.applySeparation.get(support.getExecutionContext());
+   }
+
+   public boolean isAvoidanceFallCheck(BuilderSupport builderSupport) {
+      return this.avoidanceFallCheck.get(builderSupport.getExecutionContext());
    }
 
    public boolean isStayingInEnvironment() {
@@ -1144,8 +1365,16 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       return this.combatConfig.build(support.getExecutionContext());
    }
 
-   public double getDeathAnimationTime() {
-      return this.deathAnimationTime;
+   public double getDeathAnimationTime(@Nonnull BuilderSupport support) {
+      return this.deathAnimationTime.get(support.getExecutionContext());
+   }
+
+   public String getDeathParticles(@Nonnull BuilderSupport support) {
+      return this.deathParticles.get(support.getExecutionContext());
+   }
+
+   public boolean isDropDeathItemsInstantly(@Nonnull BuilderSupport support) {
+      return this.dropDeathItemsInstantly.get(support.getExecutionContext());
    }
 
    @Nullable

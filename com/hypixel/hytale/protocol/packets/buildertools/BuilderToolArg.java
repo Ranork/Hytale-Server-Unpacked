@@ -1,7 +1,9 @@
 package com.hypixel.hytale.protocol.packets.buildertools;
 
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
+import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -10,10 +12,12 @@ import javax.annotation.Nullable;
 public class BuilderToolArg {
    public static final int NULLABLE_BIT_FIELD_SIZE = 2;
    public static final int FIXED_BLOCK_SIZE = 33;
-   public static final int VARIABLE_FIELD_COUNT = 4;
-   public static final int VARIABLE_BLOCK_START = 49;
+   public static final int VARIABLE_FIELD_COUNT = 5;
+   public static final int VARIABLE_BLOCK_START = 53;
    public static final int MAX_SIZE = 1677721600;
    public boolean required;
+   @Nullable
+   public String id;
    @Nonnull
    public BuilderToolArgType argType = BuilderToolArgType.Bool;
    @Nullable
@@ -44,6 +48,7 @@ public class BuilderToolArg {
 
    public BuilderToolArg(
       boolean required,
+      @Nullable String id,
       @Nonnull BuilderToolArgType argType,
       @Nullable BuilderToolBoolArg boolArg,
       @Nullable BuilderToolFloatArg floatArg,
@@ -58,6 +63,7 @@ public class BuilderToolArg {
       @Nullable BuilderToolOptionArg optionArg
    ) {
       this.required = required;
+      this.id = id;
       this.argType = argType;
       this.boolArg = boolArg;
       this.floatArg = floatArg;
@@ -74,6 +80,7 @@ public class BuilderToolArg {
 
    public BuilderToolArg(@Nonnull BuilderToolArg other) {
       this.required = other.required;
+      this.id = other.id;
       this.argType = other.argType;
       this.boolArg = other.boolArg;
       this.floatArg = other.floatArg;
@@ -123,23 +130,37 @@ public class BuilderToolArg {
       }
 
       if ((nullBits[0] & 128) != 0) {
-         int varPos0 = offset + 49 + buf.getIntLE(offset + 33);
-         obj.stringArg = BuilderToolStringArg.deserialize(buf, varPos0);
+         int varPos0 = offset + 53 + buf.getIntLE(offset + 33);
+         int idLen = VarInt.peek(buf, varPos0);
+         if (idLen < 0) {
+            throw ProtocolException.negativeLength("Id", idLen);
+         }
+
+         if (idLen > 4096000) {
+            throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         }
+
+         obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
       }
 
       if ((nullBits[1] & 1) != 0) {
-         int varPos1 = offset + 49 + buf.getIntLE(offset + 37);
-         obj.blockArg = BuilderToolBlockArg.deserialize(buf, varPos1);
+         int varPos1 = offset + 53 + buf.getIntLE(offset + 37);
+         obj.stringArg = BuilderToolStringArg.deserialize(buf, varPos1);
       }
 
       if ((nullBits[1] & 2) != 0) {
-         int varPos2 = offset + 49 + buf.getIntLE(offset + 41);
-         obj.maskArg = BuilderToolMaskArg.deserialize(buf, varPos2);
+         int varPos2 = offset + 53 + buf.getIntLE(offset + 41);
+         obj.blockArg = BuilderToolBlockArg.deserialize(buf, varPos2);
       }
 
       if ((nullBits[1] & 4) != 0) {
-         int varPos3 = offset + 49 + buf.getIntLE(offset + 45);
-         obj.optionArg = BuilderToolOptionArg.deserialize(buf, varPos3);
+         int varPos3 = offset + 53 + buf.getIntLE(offset + 45);
+         obj.maskArg = BuilderToolMaskArg.deserialize(buf, varPos3);
+      }
+
+      if ((nullBits[1] & 8) != 0) {
+         int varPos4 = offset + 53 + buf.getIntLE(offset + 49);
+         obj.optionArg = BuilderToolOptionArg.deserialize(buf, varPos4);
       }
 
       return obj;
@@ -147,11 +168,12 @@ public class BuilderToolArg {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
-      int maxEnd = 49;
+      int maxEnd = 53;
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 33);
-         int pos0 = offset + 49 + fieldOffset0;
-         pos0 += BuilderToolStringArg.computeBytesConsumed(buf, pos0);
+         int pos0 = offset + 53 + fieldOffset0;
+         int sl = VarInt.peek(buf, pos0);
+         pos0 += VarInt.length(buf, pos0) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -159,8 +181,8 @@ public class BuilderToolArg {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 37);
-         int pos1 = offset + 49 + fieldOffset1;
-         pos1 += BuilderToolBlockArg.computeBytesConsumed(buf, pos1);
+         int pos1 = offset + 53 + fieldOffset1;
+         pos1 += BuilderToolStringArg.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -168,8 +190,8 @@ public class BuilderToolArg {
 
       if ((nullBits[1] & 2) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 41);
-         int pos2 = offset + 49 + fieldOffset2;
-         pos2 += BuilderToolMaskArg.computeBytesConsumed(buf, pos2);
+         int pos2 = offset + 53 + fieldOffset2;
+         pos2 += BuilderToolBlockArg.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -177,10 +199,19 @@ public class BuilderToolArg {
 
       if ((nullBits[1] & 4) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 45);
-         int pos3 = offset + 49 + fieldOffset3;
-         pos3 += BuilderToolOptionArg.computeBytesConsumed(buf, pos3);
+         int pos3 = offset + 53 + fieldOffset3;
+         pos3 += BuilderToolMaskArg.computeBytesConsumed(buf, pos3);
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
+         }
+      }
+
+      if ((nullBits[1] & 8) != 0) {
+         int fieldOffset4 = buf.getIntLE(offset + 49);
+         int pos4 = offset + 53 + fieldOffset4;
+         pos4 += BuilderToolOptionArg.computeBytesConsumed(buf, pos4);
+         if (pos4 - offset > maxEnd) {
+            maxEnd = pos4 - offset;
          }
       }
 
@@ -218,20 +249,24 @@ public class BuilderToolArg {
          nullBits[0] = (byte)(nullBits[0] | 64);
       }
 
-      if (this.stringArg != null) {
+      if (this.id != null) {
          nullBits[0] = (byte)(nullBits[0] | 128);
       }
 
-      if (this.blockArg != null) {
+      if (this.stringArg != null) {
          nullBits[1] = (byte)(nullBits[1] | 1);
       }
 
-      if (this.maskArg != null) {
+      if (this.blockArg != null) {
          nullBits[1] = (byte)(nullBits[1] | 2);
       }
 
-      if (this.optionArg != null) {
+      if (this.maskArg != null) {
          nullBits[1] = (byte)(nullBits[1] | 4);
+      }
+
+      if (this.optionArg != null) {
+         nullBits[1] = (byte)(nullBits[1] | 8);
       }
 
       buf.writeBytes(nullBits);
@@ -279,6 +314,8 @@ public class BuilderToolArg {
          buf.writeZero(1);
       }
 
+      int idOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
       int stringArgOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int blockArgOffsetSlot = buf.writerIndex();
@@ -288,6 +325,13 @@ public class BuilderToolArg {
       int optionArgOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
+      if (this.id != null) {
+         buf.setIntLE(idOffsetSlot, buf.writerIndex() - varBlockStart);
+         PacketIO.writeVarString(buf, this.id, 4096000);
+      } else {
+         buf.setIntLE(idOffsetSlot, -1);
+      }
+
       if (this.stringArg != null) {
          buf.setIntLE(stringArgOffsetSlot, buf.writerIndex() - varBlockStart);
          this.stringArg.serialize(buf);
@@ -318,7 +362,11 @@ public class BuilderToolArg {
    }
 
    public int computeSize() {
-      int size = 49;
+      int size = 53;
+      if (this.id != null) {
+         size += PacketIO.stringSize(this.id);
+      }
+
       if (this.stringArg != null) {
          size += this.stringArg.computeSize();
       }
@@ -339,84 +387,111 @@ public class BuilderToolArg {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 49) {
-         return ValidationResult.error("Buffer too small: expected at least 49 bytes");
+      if (buffer.readableBytes() - offset < 53) {
+         return ValidationResult.error("Buffer too small: expected at least 53 bytes");
       } else {
          byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
          if ((nullBits[0] & 128) != 0) {
-            int stringArgOffset = buffer.getIntLE(offset + 33);
+            int idOffset = buffer.getIntLE(offset + 33);
+            if (idOffset < 0) {
+               return ValidationResult.error("Invalid offset for Id");
+            }
+
+            int pos = offset + 53 + idOffset;
+            if (pos >= buffer.writerIndex()) {
+               return ValidationResult.error("Offset out of bounds for Id");
+            }
+
+            int idLen = VarInt.peek(buffer, pos);
+            if (idLen < 0) {
+               return ValidationResult.error("Invalid string length for Id");
+            }
+
+            if (idLen > 4096000) {
+               return ValidationResult.error("Id exceeds max length 4096000");
+            }
+
+            pos += VarInt.length(buffer, pos);
+            pos += idLen;
+            if (pos > buffer.writerIndex()) {
+               return ValidationResult.error("Buffer overflow reading Id");
+            }
+         }
+
+         if ((nullBits[1] & 1) != 0) {
+            int stringArgOffset = buffer.getIntLE(offset + 37);
             if (stringArgOffset < 0) {
                return ValidationResult.error("Invalid offset for StringArg");
             }
 
-            int pos = offset + 49 + stringArgOffset;
-            if (pos >= buffer.writerIndex()) {
+            int posx = offset + 53 + stringArgOffset;
+            if (posx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for StringArg");
             }
 
-            ValidationResult stringArgResult = BuilderToolStringArg.validateStructure(buffer, pos);
+            ValidationResult stringArgResult = BuilderToolStringArg.validateStructure(buffer, posx);
             if (!stringArgResult.isValid()) {
                return ValidationResult.error("Invalid StringArg: " + stringArgResult.error());
             }
 
-            pos += BuilderToolStringArg.computeBytesConsumed(buffer, pos);
+            posx += BuilderToolStringArg.computeBytesConsumed(buffer, posx);
          }
 
-         if ((nullBits[1] & 1) != 0) {
-            int blockArgOffset = buffer.getIntLE(offset + 37);
+         if ((nullBits[1] & 2) != 0) {
+            int blockArgOffset = buffer.getIntLE(offset + 41);
             if (blockArgOffset < 0) {
                return ValidationResult.error("Invalid offset for BlockArg");
             }
 
-            int posx = offset + 49 + blockArgOffset;
-            if (posx >= buffer.writerIndex()) {
+            int posxx = offset + 53 + blockArgOffset;
+            if (posxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for BlockArg");
             }
 
-            ValidationResult blockArgResult = BuilderToolBlockArg.validateStructure(buffer, posx);
+            ValidationResult blockArgResult = BuilderToolBlockArg.validateStructure(buffer, posxx);
             if (!blockArgResult.isValid()) {
                return ValidationResult.error("Invalid BlockArg: " + blockArgResult.error());
             }
 
-            posx += BuilderToolBlockArg.computeBytesConsumed(buffer, posx);
+            posxx += BuilderToolBlockArg.computeBytesConsumed(buffer, posxx);
          }
 
-         if ((nullBits[1] & 2) != 0) {
-            int maskArgOffset = buffer.getIntLE(offset + 41);
+         if ((nullBits[1] & 4) != 0) {
+            int maskArgOffset = buffer.getIntLE(offset + 45);
             if (maskArgOffset < 0) {
                return ValidationResult.error("Invalid offset for MaskArg");
             }
 
-            int posxx = offset + 49 + maskArgOffset;
-            if (posxx >= buffer.writerIndex()) {
+            int posxxx = offset + 53 + maskArgOffset;
+            if (posxxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for MaskArg");
             }
 
-            ValidationResult maskArgResult = BuilderToolMaskArg.validateStructure(buffer, posxx);
+            ValidationResult maskArgResult = BuilderToolMaskArg.validateStructure(buffer, posxxx);
             if (!maskArgResult.isValid()) {
                return ValidationResult.error("Invalid MaskArg: " + maskArgResult.error());
             }
 
-            posxx += BuilderToolMaskArg.computeBytesConsumed(buffer, posxx);
+            posxxx += BuilderToolMaskArg.computeBytesConsumed(buffer, posxxx);
          }
 
-         if ((nullBits[1] & 4) != 0) {
-            int optionArgOffset = buffer.getIntLE(offset + 45);
+         if ((nullBits[1] & 8) != 0) {
+            int optionArgOffset = buffer.getIntLE(offset + 49);
             if (optionArgOffset < 0) {
                return ValidationResult.error("Invalid offset for OptionArg");
             }
 
-            int posxxx = offset + 49 + optionArgOffset;
-            if (posxxx >= buffer.writerIndex()) {
+            int posxxxx = offset + 53 + optionArgOffset;
+            if (posxxxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for OptionArg");
             }
 
-            ValidationResult optionArgResult = BuilderToolOptionArg.validateStructure(buffer, posxxx);
+            ValidationResult optionArgResult = BuilderToolOptionArg.validateStructure(buffer, posxxxx);
             if (!optionArgResult.isValid()) {
                return ValidationResult.error("Invalid OptionArg: " + optionArgResult.error());
             }
 
-            posxxx += BuilderToolOptionArg.computeBytesConsumed(buffer, posxxx);
+            posxxxx += BuilderToolOptionArg.computeBytesConsumed(buffer, posxxxx);
          }
 
          return ValidationResult.OK;
@@ -426,6 +501,7 @@ public class BuilderToolArg {
    public BuilderToolArg clone() {
       BuilderToolArg copy = new BuilderToolArg();
       copy.required = this.required;
+      copy.id = this.id;
       copy.argType = this.argType;
       copy.boolArg = this.boolArg != null ? this.boolArg.clone() : null;
       copy.floatArg = this.floatArg != null ? this.floatArg.clone() : null;
@@ -449,6 +525,7 @@ public class BuilderToolArg {
          return !(obj instanceof BuilderToolArg other)
             ? false
             : this.required == other.required
+               && Objects.equals(this.id, other.id)
                && Objects.equals(this.argType, other.argType)
                && Objects.equals(this.boolArg, other.boolArg)
                && Objects.equals(this.floatArg, other.floatArg)
@@ -468,6 +545,7 @@ public class BuilderToolArg {
    public int hashCode() {
       return Objects.hash(
          this.required,
+         this.id,
          this.argType,
          this.boolArg,
          this.floatArg,

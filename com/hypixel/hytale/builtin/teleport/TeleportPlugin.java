@@ -18,6 +18,7 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
@@ -259,7 +260,7 @@ public class TeleportPlugin extends JavaPlugin {
                for (Warp warp : warps.values()) {
                   if (warp.getWorld().equals(world.getName())) {
                      MapMarker marker = new MapMarkerBuilder("Warp-" + warp.getId(), "Warp.png", warp.getTransform())
-                        .withCustomName("Warp: " + warp.getId())
+                        .withName(Message.translation("server.map.warp").param("warpName", warp.getId()))
                         .build();
                      collector.add(marker);
                   }

@@ -19,6 +19,8 @@ public class CosmeticRegistry {
    @Nonnull
    private final Map<String, Emote> emotes;
    @Nonnull
+   private final Map<String, Emote> emotesInGame;
+   @Nonnull
    private final Map<String, PlayerSkinTintColor> eyeColors;
    @Nonnull
    private final Map<String, PlayerSkinGradientSet> gradientSets;
@@ -66,6 +68,7 @@ public class CosmeticRegistry {
    public CosmeticRegistry(@Nonnull AssetPack pack) {
       Path assetsDirectory = pack.getRoot();
       this.emotes = this.load(assetsDirectory, "Emotes.json", Emote::new);
+      this.emotesInGame = this.load(assetsDirectory, "EmotesInGame.json", Emote::new);
       this.eyeColors = this.load(assetsDirectory, "EyeColors.json", PlayerSkinTintColor::new);
       this.gradientSets = this.load(assetsDirectory, "GradientSets.json", PlayerSkinGradientSet::new);
       this.bodyCharacteristics = this.load(assetsDirectory, "BodyCharacteristics.json", PlayerSkinPart::new);
@@ -110,6 +113,11 @@ public class CosmeticRegistry {
    @Nonnull
    public Map<String, Emote> getEmotes() {
       return this.emotes;
+   }
+
+   @Nonnull
+   public Map<String, Emote> getEmotesInGame() {
+      return this.emotesInGame;
    }
 
    @Nonnull
@@ -225,6 +233,7 @@ public class CosmeticRegistry {
    public Map<String, ?> getByType(@Nonnull CosmeticType type) {
       return switch (type) {
          case EMOTES -> this.getEmotes();
+         case EMOTES_INGAME -> this.getEmotesInGame();
          case SKIN_TONES -> this.getGradientSets().get("Skin").getGradients();
          case EYE_COLORS -> this.getEyeColors();
          case GRADIENT_SETS -> this.getGradientSets();

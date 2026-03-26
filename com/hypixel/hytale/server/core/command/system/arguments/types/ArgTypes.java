@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxColli
 import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionConfig;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
+import com.hypixel.hytale.server.core.prefab.selection.mask.BlockFilter;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -91,6 +92,22 @@ public final class ArgTypes {
    ) {
       public String parse(String input, ParseResult parseResult) {
          return input;
+      }
+   };
+   public static final SingleArgumentType<String> GREEDY_STRING = new SingleArgumentType<String>(
+      "server.commands.parsing.argtype.greedystring.name",
+      "server.commands.parsing.argtype.greedystring.usage",
+      "Hello world!",
+      "Let's go everyone",
+      "This is a multi-word sentence."
+   ) {
+      public String parse(String input, ParseResult parseResult) {
+         return input;
+      }
+
+      @Override
+      public boolean isGreedyString() {
+         return true;
       }
    };
    public static final SingleArgumentType<Float> FLOAT = new SingleArgumentType<Float>(
@@ -732,8 +749,15 @@ public final class ArgTypes {
       @Nullable
       public BlockMask parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
          try {
-            return BlockMask.parse(input);
-         } catch (Exception var4) {
+            BlockMask mask = BlockMask.parse(input);
+            if (mask.hasInvalidBlocks()) {
+               BlockFilter.ParsedFilterParts parts = BlockFilter.parseComponents(input);
+               parseResult.fail(Message.translation("server.builderTools.invalidBlockType").param("key", parts.blocks()));
+               return null;
+            } else {
+               return mask;
+            }
+         } catch (Exception var5) {
             parseResult.fail(Message.raw("There was an error in the parsing of your block mask: " + input + ", please try again."));
             return null;
          }

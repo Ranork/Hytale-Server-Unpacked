@@ -36,12 +36,19 @@ public enum RoleDebugFlags implements Supplier<String> {
    DisplayName("Display the role name for this entity"),
    ValidateMath("Validate (some) math computations in movement"),
    VisAvoidance("Visualize avoidance vectors"),
+   VisSeparationSummed("Visualize summed separation distance vector"),
    VisSeparation("Visualize separation vector"),
+   VisSeparationTargets("Visualize separation targets"),
+   VisOrientation("Visualize orientation hint provided by avoidance and separation"),
    VisAiming("Visualize aiming"),
    VisMarkedTargets("Visualize arrows to marked targets"),
    VisSensorRanges("Visualize entity sensor detection ranges"),
    VisLeashPosition("Visualize NPC leash position"),
+   VisSteeringPre("Visualize motion steering pre separation/avoidance"),
+   VisSteeringPost("Visualize motion steering post separation/avoidance"),
+   VisTranslation("Visualize current translation vector"),
    VisFlock("Visualize flock member connections"),
+   VisPath("Visualize pathfinding waypoints"),
    BeaconMessages("Enable debugging of beacon message sending and receiving");
 
    private static final RoleDebugFlags.RoleDebugPreset[] presets = new RoleDebugFlags.RoleDebugPreset[]{
@@ -51,7 +58,10 @@ public enum RoleDebugFlags implements Supplier<String> {
       new RoleDebugFlags.RoleDebugPreset("steer", EnumSet.of(MotionControllerMove, MotionControllerSteer, Collisions)),
       new RoleDebugFlags.RoleDebugPreset("valid", EnumSet.of(MotionControllerMove, MotionControllerSteer, Collisions, ValidatePositions)),
       new RoleDebugFlags.RoleDebugPreset("block", EnumSet.of(MotionControllerMove, MotionControllerSteer, Collisions, BlockCollisions)),
-      new RoleDebugFlags.RoleDebugPreset("visDist", EnumSet.of(VisAvoidance, VisSeparation)),
+      new RoleDebugFlags.RoleDebugPreset(
+         "visDist", EnumSet.of(VisAvoidance, VisSeparation, VisSteeringPre, VisSteeringPost, VisSeparationTargets, VisSeparationSummed)
+      ),
+      new RoleDebugFlags.RoleDebugPreset("visMove", EnumSet.of(VisSteeringPost, VisTranslation)),
       new RoleDebugFlags.RoleDebugPreset("visSensorInfo", EnumSet.of(VisMarkedTargets, VisSensorRanges)),
       new RoleDebugFlags.RoleDebugPreset(
          "display",

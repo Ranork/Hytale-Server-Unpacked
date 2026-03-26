@@ -22,7 +22,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
@@ -79,11 +78,10 @@ public class BlockBulkFindCommand extends AbstractWorldCommand {
             long start = System.nanoTime();
             int tested = 0;
             int[] found = new int[]{0};
-            IntOpenHashSet temp = new IntOpenHashSet();
             ChunkStore chunkComponentStore = world.getChunkStore();
             SpiralIterator iterator = new SpiralIterator(originChunkX, originChunkZ, SpiralIterator.MAX_RADIUS);
 
-            label34:
+            label32:
             while (iterator.hasNext()) {
                long key = iterator.next();
                BlockChunk blockChunk = chunkComponentStore.getChunkReferenceAsync(key)
@@ -96,7 +94,7 @@ public class BlockBulkFindCommand extends AbstractWorldCommand {
                      int chunkX = ChunkUtil.xOfChunkIndex(key);
                      int chunkY = sectionIndex;
                      int chunkZ = ChunkUtil.zOfChunkIndex(key);
-                     section.find(idAsList, temp, blockIndex -> {
+                     section.find(idAsList, blockIndex -> {
                         if (found[0] < count) {
                            found[0]++;
                            int x = chunkX << 5 | ChunkUtil.xFromIndex(blockIndex);
@@ -106,10 +104,8 @@ public class BlockBulkFindCommand extends AbstractWorldCommand {
                         }
                      });
                      if (found[0] >= count) {
-                        break label34;
+                        break label32;
                      }
-
-                     temp.clear();
                   }
                }
 

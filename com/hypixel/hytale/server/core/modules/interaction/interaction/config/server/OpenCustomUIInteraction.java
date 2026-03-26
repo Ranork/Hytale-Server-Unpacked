@@ -12,7 +12,6 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -27,8 +26,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.function.Function;
@@ -89,58 +86,6 @@ public class OpenCustomUIInteraction extends SimpleInstantInteraction {
       registerCustomPageSupplier(plugin, tClass, id, (ref, componentAccessor, playerRef, context) -> supplier.apply(playerRef));
    }
 
-   @Deprecated
-   public static <T extends BlockState> void registerBlockCustomPage(
-      @Nonnull PluginBase plugin,
-      Class<?> tClass,
-      String id,
-      @Nonnull Class<T> stateClass,
-      @Nonnull OpenCustomUIInteraction.BlockCustomPageSupplier<T> blockSupplier
-   ) {
-      registerBlockCustomPage(plugin, tClass, id, stateClass, blockSupplier, false);
-   }
-
-   @Deprecated
-   public static <T extends BlockState> void registerBlockCustomPage(
-      @Nonnull PluginBase plugin,
-      Class<?> tClass,
-      String id,
-      @Nonnull Class<T> stateClass,
-      @Nonnull OpenCustomUIInteraction.BlockCustomPageSupplier<T> blockSupplier,
-      boolean createState
-   ) {
-      OpenCustomUIInteraction.CustomPageSupplier supplier = (ref, componentAccessor, playerRef, context) -> {
-         BlockPosition targetBlock = context.getTargetBlock();
-         if (targetBlock == null) {
-            return null;
-         } else {
-            Store<EntityStore> store = ref.getStore();
-            World world = store.getExternalData().getWorld();
-            BlockState state = world.getState(targetBlock.x, targetBlock.y, targetBlock.z, true);
-            if (state == null) {
-               if (createState) {
-                  WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
-                  state = BlockStateModule.get()
-                     .createBlockState(
-                        stateClass,
-                        chunk,
-                        new Vector3i(targetBlock.x, targetBlock.y, targetBlock.z),
-                        chunk.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z)
-                     );
-                  chunk.setState(targetBlock.x, targetBlock.y, targetBlock.z, state);
-               }
-
-               if (state == null) {
-                  return null;
-               }
-            }
-
-            return stateClass.isInstance(state) ? blockSupplier.tryCreate(playerRef, stateClass.cast(state)) : null;
-         }
-      };
-      registerCustomPageSupplier(plugin, tClass, id, supplier);
-   }
-
    public static void registerBlockEntityCustomPage(
       @Nonnull PluginBase plugin, Class<?> tClass, String id, @Nonnull OpenCustomUIInteraction.BlockEntityCustomPageSupplier blockSupplier
    ) {
@@ -198,11 +143,6 @@ public class OpenCustomUIInteraction extends SimpleInstantInteraction {
          }
       };
       registerCustomPageSupplier(plugin, tClass, id, supplier);
-   }
-
-   @FunctionalInterface
-   public interface BlockCustomPageSupplier<T extends BlockState> {
-      CustomUIPage tryCreate(@Nonnull PlayerRef var1, @Nonnull T var2);
    }
 
    @FunctionalInterface

@@ -273,7 +273,7 @@ public class NetworkCommand extends AbstractCommandCollection {
          ) {
             NetworkChannel networkChannel = this.channelArg.get(context);
             int priority = this.priorityArg.get(context);
-            if (priority >= 0 && priority <= 255) {
+            if (priority >= 0 && priority <= 127) {
                if (playerRef.getPacketHandler().getChannel(networkChannel) instanceof QuicStreamChannel quicStreamChannel) {
                   quicStreamChannel.updatePriority(new QuicStreamPriority(priority, true));
                   context.sendMessage(

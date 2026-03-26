@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.core.modules.accesscontrol.ban;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.hypixel.hytale.server.core.Message;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -43,9 +44,10 @@ public class InfiniteBan extends AbstractBan {
 
    @Nonnull
    @Override
-   public CompletableFuture<Optional<String>> getDisconnectReason(UUID uuid) {
-      StringBuilder message = new StringBuilder("You are permanently banned!");
-      this.reason.ifPresent(s -> message.append(" Reason: ").append(s));
-      return CompletableFuture.completedFuture(Optional.of(message.toString()));
+   public CompletableFuture<Optional<Message>> getDisconnectReason(@Nonnull UUID uuid) {
+      Message message = this.reason.isPresent()
+         ? Message.translation("client.general.disconnect.banned.permanent.withReason").param("reason", this.reason.get())
+         : Message.translation("client.general.disconnect.banned.permanent");
+      return CompletableFuture.completedFuture(Optional.of(message));
    }
 }

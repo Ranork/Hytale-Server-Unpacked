@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.props;
 
+import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.OffsetProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -16,12 +17,12 @@ public class OffsetPropAsset extends PropAsset {
       .add()
       .build();
    private Vector3i offset_voxelGrid = new Vector3i();
-   private PropAsset propAsset = new NoPropAsset();
+   private PropAsset propAsset = new EmptyPropAsset();
 
    @Nonnull
    @Override
    public Prop build(@Nonnull PropAsset.Argument argument) {
-      return (Prop)(super.skip() ? Prop.noProp() : new OffsetProp(this.offset_voxelGrid, this.propAsset.build(argument)));
+      return (Prop)(super.skip() ? EmptyProp.INSTANCE : new OffsetProp(this.offset_voxelGrid, this.propAsset.build(argument)));
    }
 
    @Override

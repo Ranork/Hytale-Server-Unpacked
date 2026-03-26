@@ -104,10 +104,7 @@ public class SpreadToProcedure implements RandomTickProcedure {
       double sunlightFactor = worldTimeResource.getSunlightFactor();
       BlockSection aboveSection = blockSection;
       if (!ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, worldX, worldY + 1, worldZ)) {
-         Ref<ChunkStore> aboveChunk = store.getExternalData()
-            .getChunkSectionReference(
-               commandBuffer, ChunkUtil.chunkCoordinate(worldX), ChunkUtil.chunkCoordinate(worldY + 1), ChunkUtil.chunkCoordinate(worldZ)
-            );
+         Ref<ChunkStore> aboveChunk = store.getExternalData().getChunkSectionReferenceAtBlock(commandBuffer, worldX, worldY + 1, worldZ);
          if (aboveChunk == null) {
             return;
          }
@@ -144,10 +141,7 @@ public class SpreadToProcedure implements RandomTickProcedure {
                int targetZ = worldZ + direction.z;
                BlockSection targetBlockSection = blockSection;
                if (!ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, targetX, targetY, targetZ)) {
-                  Ref<ChunkStore> otherChunk = store.getExternalData()
-                     .getChunkSectionReference(
-                        commandBuffer, ChunkUtil.chunkCoordinate(targetX), ChunkUtil.chunkCoordinate(targetY), ChunkUtil.chunkCoordinate(targetZ)
-                     );
+                  Ref<ChunkStore> otherChunk = store.getExternalData().getChunkSectionReferenceAtBlock(commandBuffer, targetX, targetY, targetZ);
                   if (otherChunk == null) {
                      continue;
                   }
@@ -166,10 +160,7 @@ public class SpreadToProcedure implements RandomTickProcedure {
                      if (ChunkUtil.isSameChunkSection(targetX, targetY, targetZ, targetX, targetY + 1, targetZ)) {
                         aboveTargetBlockId = targetBlockSection.get(ChunkUtil.indexBlock(targetX, targetY + 1, targetZ));
                      } else {
-                        Ref<ChunkStore> aboveChunkx = store.getExternalData()
-                           .getChunkSectionReference(
-                              commandBuffer, ChunkUtil.chunkCoordinate(targetX), ChunkUtil.chunkCoordinate(targetY + 1), ChunkUtil.chunkCoordinate(targetZ)
-                           );
+                        Ref<ChunkStore> aboveChunkx = store.getExternalData().getChunkSectionReferenceAtBlock(commandBuffer, targetX, targetY + 1, targetZ);
                         if (aboveChunkx == null) {
                            continue;
                         }

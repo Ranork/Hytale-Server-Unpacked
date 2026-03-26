@@ -111,8 +111,6 @@ public class MapMarkerTracker {
          return true;
       } else if (!Objects.equals(oldMarker.name, newMarker.name)) {
          return true;
-      } else if (!Objects.equals(oldMarker.customName, newMarker.customName)) {
-         return true;
       } else {
          double yawDistance = Math.abs(oldMarker.transform.orientation.yaw - newMarker.transform.orientation.yaw);
          if (!(yawDistance > 0.05) && (!this.isSendingSmallMovements() || !(yawDistance > 0.001))) {

@@ -56,14 +56,14 @@ public class ActionInventory extends ActionBase {
    @Override
    public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
-      Ref<EntityStore> entityRef = this.useTarget ? sensorInfo.getPositionProvider().getTarget() : ref;
-      LivingEntity entity = (LivingEntity)EntityUtils.getEntity(entityRef, store);
+      Ref<EntityStore> targetRef = this.useTarget ? sensorInfo.getPositionProvider().getTarget() : ref;
+      LivingEntity entity = (LivingEntity)EntityUtils.getEntity(targetRef, store);
       if (entity == null) {
          return false;
       } else {
          Inventory inventory = entity.getInventory();
          if (this.operation == ActionInventory.Operation.ClearHeldItem) {
-            InventoryHelper.clearItemInHand(inventory, (byte)-1);
+            InventoryHelper.clearItemInHand(targetRef, inventory, (byte)-1, store);
             return true;
          } else if (this.operation == ActionInventory.Operation.RemoveHeldItem) {
             InventoryHelper.removeItemInHand(inventory, this.count);
@@ -90,7 +90,7 @@ public class ActionInventory extends ActionBase {
                         if (item.getArmor() != null) {
                            InventoryHelper.useArmor(inventory.getArmor(), itemStack);
                         } else {
-                           InventoryHelper.useItem(inventory, item.getId());
+                           InventoryHelper.useItem(targetRef, inventory, item.getId(), store);
                         }
                      case ClearHeldItem:
                      case RemoveHeldItem:
@@ -107,7 +107,7 @@ public class ActionInventory extends ActionBase {
                         }
 
                         if (inventory.getActiveHotbarSlot() != this.slot && InventoryHelper.checkHotbarSlot(inventory, this.slot)) {
-                           inventory.setActiveHotbarSlot(this.slot);
+                           inventory.setActiveHotbarSlot(targetRef, this.slot, store);
                         }
                         break;
                      case SetOffHand:
@@ -120,7 +120,7 @@ public class ActionInventory extends ActionBase {
                            inventory.getUtility().setItemStackForSlot(this.slot, itemStack);
                         }
 
-                        InventoryHelper.setOffHandSlot(inventory, this.slot);
+                        InventoryHelper.setOffHandSlot(targetRef, inventory, this.slot, store);
                   }
 
                   return true;
@@ -129,14 +129,14 @@ public class ActionInventory extends ActionBase {
                   return true;
                }
             } else {
-               InventoryHelper.setOffHandSlot(inventory, this.slot);
+               InventoryHelper.setOffHandSlot(targetRef, inventory, this.slot, store);
                return true;
             }
          } else if (inventory.getActiveHotbarSlot() == this.slot) {
             return true;
          } else {
             if (InventoryHelper.checkHotbarSlot(inventory, this.slot)) {
-               inventory.setActiveHotbarSlot(this.slot);
+               inventory.setActiveHotbarSlot(targetRef, this.slot, store);
             }
 
             return true;

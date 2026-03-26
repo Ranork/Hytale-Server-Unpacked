@@ -8,6 +8,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -20,7 +22,6 @@ import javax.annotation.Nonnull;
 public class TeleportHistory implements Component<EntityStore> {
    private static final int MAX_TELEPORT_HISTORY = 100;
    private static final Message MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER = Message.translation("server.commands.teleport.notFurther");
-   private static final Message MESSAGE_COMMANDS_TELEPORT_WORLD_NOT_LOADED = Message.translation("server.commands.teleport.worldNotLoaded");
    @Nonnull
    private final Deque<TeleportHistory.Waypoint> back = new ArrayDeque<>();
    @Nonnull
@@ -64,9 +65,11 @@ public class TeleportHistory implements Component<EntityStore> {
 
          assert playerRef != null;
 
+         Universe universe = Universe.get();
          TeleportHistory.Waypoint point = null;
+         World targetWorld = null;
 
-         for (int i = 0; i < count; i++) {
+         for (int steps = 0; steps < count; steps++) {
             if (from.isEmpty()) {
                if (point == null) {
                   playerRef.sendMessage(MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER);
@@ -75,47 +78,62 @@ public class TeleportHistory implements Component<EntityStore> {
                break;
             }
 
-            point = from.pop();
-            to.push(point);
+            TeleportHistory.Waypoint candidate = from.pop();
+            World candidateWorld = universe.getWorld(candidate.world);
+            if (candidateWorld == null) {
+               playerRef.sendMessage(Message.translation("server.commands.teleport.worldRemoved").param("name", candidate.world));
+               return;
+            }
+
+            point = candidate;
+            targetWorld = candidateWorld;
          }
 
          if (point == null) {
-            throw new NullPointerException(to.toString());
+            playerRef.sendMessage(MESSAGE_COMMANDS_TELEPORT_NOT_FURTHER);
          } else {
-            World targetWorld = Universe.get().getWorld(point.world);
-            if (targetWorld == null) {
-               playerRef.sendMessage(MESSAGE_COMMANDS_TELEPORT_WORLD_NOT_LOADED);
+            World currentWorld = store.getExternalData().getWorld();
+            TransformComponent currentTransform = store.getComponent(ref, TransformComponent.getComponentType());
+            HeadRotation currentHeadRotation = store.getComponent(ref, HeadRotation.getComponentType());
+            if (currentTransform != null && currentHeadRotation != null) {
+               to.push(
+                  new TeleportHistory.Waypoint(
+                     currentWorld.getName(),
+                     currentTransform.getPosition().clone(),
+                     currentHeadRotation.getRotation().clone(),
+                     point.message != null ? point.message : ""
+                  )
+               );
+            }
+
+            Teleport teleportComponent = Teleport.createForPlayer(targetWorld, point.position, point.rotation);
+            store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
+            Vector3d pos = point.position;
+            int remainingInDirection = from.size();
+            int totalInOtherDirection = to.size();
+            if (point.message != null && !point.message.isEmpty()) {
+               playerRef.sendMessage(
+                  (isForward
+                        ? Message.translation("server.commands.teleport.teleportedForwardToWaypoint")
+                        : Message.translation("server.commands.teleport.teleportedBackToWaypoint"))
+                     .param("name", point.message)
+                     .param("x", pos.getX())
+                     .param("y", pos.getY())
+                     .param("z", pos.getZ())
+                     .param("remaining", remainingInDirection)
+                     .param("otherDirection", totalInOtherDirection)
+               );
             } else {
-               to.push(point);
-               Teleport teleportComponent = Teleport.createForPlayer(targetWorld, point.position, point.rotation);
-               store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
-               Vector3d pos = point.position;
-               int remainingInDirection = from.size();
-               int totalInOtherDirection = to.size() - 1;
-               if (point.message != null && !point.message.isEmpty()) {
-                  playerRef.sendMessage(
-                     (isForward
-                           ? Message.translation("server.commands.teleport.teleportedForwardToWaypoint")
-                           : Message.translation("server.commands.teleport.teleportedBackToWaypoint"))
-                        .param("name", point.message)
-                        .param("x", pos.getX())
-                        .param("y", pos.getY())
-                        .param("z", pos.getZ())
-                        .param("remaining", remainingInDirection)
-                        .param("otherDirection", totalInOtherDirection)
-                  );
-               } else {
-                  playerRef.sendMessage(
-                     (isForward
-                           ? Message.translation("server.commands.teleport.teleportedForwardToCoordinates")
-                           : Message.translation("server.commands.teleport.teleportedBackToCoordinates"))
-                        .param("x", pos.getX())
-                        .param("y", pos.getY())
-                        .param("z", pos.getZ())
-                        .param("remaining", remainingInDirection)
-                        .param("otherDirection", totalInOtherDirection)
-                  );
-               }
+               playerRef.sendMessage(
+                  (isForward
+                        ? Message.translation("server.commands.teleport.teleportedForwardToCoordinates")
+                        : Message.translation("server.commands.teleport.teleportedBackToCoordinates"))
+                     .param("x", pos.getX())
+                     .param("y", pos.getY())
+                     .param("z", pos.getZ())
+                     .param("remaining", remainingInDirection)
+                     .param("otherDirection", totalInOtherDirection)
+               );
             }
          }
       }

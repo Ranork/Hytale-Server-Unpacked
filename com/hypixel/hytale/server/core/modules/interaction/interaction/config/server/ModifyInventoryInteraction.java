@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
@@ -121,7 +122,7 @@ public class ModifyInventoryInteraction extends SimpleInstantInteraction {
       } else {
          boolean hasRequiredGameMode = this.requiredGameMode == null || playerComponent.getGameMode() == this.requiredGameMode;
          if (hasRequiredGameMode) {
-            CombinedItemContainer combinedHotbarFirst = playerComponent.getInventory().getCombinedBackpackStorageHotbarFirst();
+            CombinedItemContainer combinedHotbarFirst = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
             if (this.itemToRemove != null) {
                ItemStackTransaction removeItemStack = combinedHotbarFirst.removeItemStack(this.itemToRemove, true, true);
                if (!removeItemStack.succeeded()) {
@@ -172,7 +173,7 @@ public class ModifyInventoryInteraction extends SimpleInstantInteraction {
                      PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
                      if (playerRefComponent != null) {
                         int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
-                        SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.SFX);
+                        SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
                      }
                   }
 

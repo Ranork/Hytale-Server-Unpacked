@@ -13,7 +13,8 @@ import javax.annotation.Nonnull;
 public class BrushShapeArg extends ToolArg<BrushShape> {
    public static final EnumCodec<BrushShape> BRUSH_SHAPE_CODEC = new EnumCodec<>(BrushShape.class);
    public static final BuilderCodec<BrushShapeArg> CODEC = BuilderCodec.builder(BrushShapeArg.class, BrushShapeArg::new, ToolArg.DEFAULT_CODEC)
-      .addField(new KeyedCodec<>("Default", BRUSH_SHAPE_CODEC), (shapeArg, o) -> shapeArg.value = o, shapeArg -> shapeArg.value)
+      .append(new KeyedCodec<>("Default", BRUSH_SHAPE_CODEC), (shapeArg, o) -> shapeArg.value = o, shapeArg -> shapeArg.value)
+      .add()
       .build();
 
    public BrushShapeArg() {

@@ -48,6 +48,7 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
    protected final int maxRangeProviderSlot;
    protected final int positioningAngleProviderSlot;
    protected final double[] desiredDistanceRange = new double[2];
+   protected double minThresholdDistance;
    protected double targetDistanceSquared;
    protected boolean approaching;
    protected boolean movingAway;
@@ -58,6 +59,8 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
    protected final SteeringForcePursue seek = new SteeringForcePursue();
    protected final Vector3d targetPosition = new Vector3d();
    protected final Vector3d toTarget = new Vector3d();
+   @Nullable
+   protected Ref<EntityStore> lastTargetEntity;
    protected DoubleParameterProvider cachedMinRangeProvider;
    protected DoubleParameterProvider cachedMaxRangeProvider;
    protected DoubleParameterProvider cachedPositioningAngleProvider;
@@ -72,6 +75,7 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
       this.moveThreshold = builder.getMoveThreshold(support);
       double min = Math.max(0.0, this.initialDesiredDistanceRange[0] - this.moveThreshold);
       double max = this.initialDesiredDistanceRange[1] + this.moveThreshold;
+      this.minThresholdDistance = min;
       this.thresholdDistanceRangeSquared = new double[2];
       this.thresholdDistanceRangeSquared[0] = min * min;
       this.thresholdDistanceRangeSquared[1] = max * max;
@@ -95,6 +99,7 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       desiredSteering.clear();
+      this.lastTargetEntity = null;
       if (!support.getActiveMotionController().matchesType(MotionControllerWalk.class)) {
          support.setBackingAway(false);
          return false;
@@ -176,6 +181,7 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
 
          if (recalculateMinThreshold) {
             double min = Math.max(0.0, this.desiredDistanceRange[0] - this.moveThreshold);
+            this.minThresholdDistance = min;
             this.thresholdDistanceRangeSquared[0] = min * min;
          }
 
@@ -241,6 +247,7 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
             double z = this.targetPosition.getZ() - selfPosition.getZ();
             float targetYaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
             MotionController motionController = support.getActiveMotionController();
+            Ref<EntityStore> targetRef = positionProvider.getTarget();
             if (this.strafingDurationRange[1] > 0.0 || positioningAngle != Double.MAX_VALUE) {
                if (positioningAngle == Double.MAX_VALUE) {
                   if (!this.tickStrafingDelay(dt)) {
@@ -253,24 +260,21 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
                         this.pauseStrafing = true;
                      }
                   }
-               } else {
-                  Ref<EntityStore> targetRef = positionProvider.getTarget();
-                  if (targetRef != null) {
-                     TransformComponent targetTransformComponent = componentAccessor.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
+               } else if (targetRef != null) {
+                  TransformComponent targetTransformComponent = componentAccessor.getComponent(targetRef, TRANSFORM_COMPONENT_TYPE);
 
-                     assert targetTransformComponent != null;
+                  assert targetTransformComponent != null;
 
-                     float selfYaw = NPCPhysicsMath.lookatHeading(selfPosition, this.targetPosition, transformComponent.getRotation().getYaw());
-                     float difference = PhysicsMath.normalizeTurnAngle(targetTransformComponent.getRotation().getYaw() - selfYaw - (float)positioningAngle);
-                     if (Math.abs(difference) > 0.08726646F) {
-                        this.strafingDirection = difference > 0.0F ? -1 : 1;
-                        this.pauseStrafing = false;
-                     } else {
-                        this.pauseStrafing = true;
-                     }
+                  float selfYaw = NPCPhysicsMath.lookatHeading(selfPosition, this.targetPosition, transformComponent.getRotation().getYaw());
+                  float difference = PhysicsMath.normalizeTurnAngle(targetTransformComponent.getRotation().getYaw() - selfYaw - (float)positioningAngle);
+                  if (Math.abs(difference) > 0.08726646F) {
+                     this.strafingDirection = difference > 0.0F ? -1 : 1;
+                     this.pauseStrafing = false;
                   } else {
                      this.pauseStrafing = true;
                   }
+               } else {
+                  this.pauseStrafing = true;
                }
 
                if (!this.pauseStrafing) {
@@ -298,6 +302,10 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
                }
             }
 
+            if (targetRef != null && targetRef.isValid()) {
+               this.lastTargetEntity = targetRef;
+            }
+
             motionController.requireDepthProbing();
             desiredSteering.setYaw(targetYaw);
             return false;
@@ -319,6 +327,18 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
    @Override
    public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       super.deactivate(ref, role, componentAccessor);
+      this.lastTargetEntity = null;
       role.setBackingAway(false);
+   }
+
+   @Override
+   public double getDesiredTargetDistance() {
+      return this.minThresholdDistance;
+   }
+
+   @Nullable
+   @Override
+   public Ref<EntityStore> getDesiredTargetEntity() {
+      return this.lastTargetEntity;
    }
 }

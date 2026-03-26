@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.hypixel.hytale.assetstore.AssetPack;
+import com.hypixel.hytale.builtin.worldgen.modifier.EventHandler;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
 import com.hypixel.hytale.common.semver.Semver;
@@ -54,8 +55,11 @@ public class ChunkGeneratorJsonLoader extends Loader<SeedStringResource, ChunkGe
          Path overrideDataFolder = this.loadOverrideDataFolderPath(worldJson, this.config.path());
          WorldGenConfig config = this.config.withOverride(overrideDataFolder);
 
-         ChunkGenerator var13;
-         try (AssetFileSystem fs = FileIO.openFileIOSystem(new AssetFileSystem(config))) {
+         ChunkGenerator var14;
+         try (
+            AssetFileSystem fs = FileIO.openFileIOSystem(new AssetFileSystem(config));
+            EventHandler eh = EventHandler.acquire(config.path());
+         ) {
             logAssetPacks(fs.packs());
             Vector2i worldSize = this.loadWorldSize(worldJson);
             Vector2i worldOffset = this.loadWorldOffset(worldJson);
@@ -63,13 +67,13 @@ public class ChunkGeneratorJsonLoader extends Loader<SeedStringResource, ChunkGe
             PrefabStoreRoot prefabStore = this.loadPrefabStore(worldJson);
             this.seed.get().setPrefabConfig(config, prefabStore);
             ZonePatternProviderJsonLoader loader = this.loadZonePatternGenerator(maskProvider);
-            FileLoadingContext loadingContext = new FileContextLoader(overrideDataFolder, loader.loadZoneRequirement()).load();
+            FileLoadingContext loadingContext = new FileContextLoader(config.name(), overrideDataFolder, loader.loadZoneRequirement()).load();
             Zone[] zones = new ZonesJsonLoader(this.seed, overrideDataFolder, loadingContext).load();
             loader.setZones(zones);
-            var13 = new ChunkGenerator(loader.load(), overrideDataFolder);
+            var14 = new ChunkGenerator(loader.load(), overrideDataFolder);
          }
 
-         return var13;
+         return var14;
       }
    }
 

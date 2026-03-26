@@ -6,6 +6,7 @@ import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -13,7 +14,7 @@ import javax.annotation.Nonnull;
 
 public class ChunkSuppressionQueue implements Resource<ChunkStore> {
    private final List<Entry<Ref<ChunkStore>, ChunkSuppressionEntry>> toAdd = new ObjectArrayList();
-   private final List<Ref<ChunkStore>> toRemove = new ObjectArrayList();
+   private final List<Ref<ChunkStore>> toRemove = new ReferenceArrayList();
 
    public static ResourceType<ChunkStore, ChunkSuppressionQueue> getResourceType() {
       return SpawningPlugin.get().getChunkSuppressionQueueResourceType();

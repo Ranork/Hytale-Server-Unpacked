@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.fields.FastNoiseLite;
+import com.hypixel.hytale.builtin.hytalegenerator.noise.FastNoiseLite;
 import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

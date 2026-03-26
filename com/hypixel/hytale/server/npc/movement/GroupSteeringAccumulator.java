@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.npc.movement;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -30,6 +31,7 @@ public class GroupSteeringAccumulator {
    private double maxRangeSquared = Double.MAX_VALUE;
    private double maxDistance = Double.MAX_VALUE;
    private float collisionViewHalfAngleCosine = 1.0F;
+   private boolean normalizeDistances;
 
    public void begin(double x, double y, double z, double xViewDirection, double yViewDirection, double zViewDirection) {
       this.x = x;
@@ -109,7 +111,33 @@ public class GroupSteeringAccumulator {
       double d = NPCPhysicsMath.dotProduct(dx, dy, dz, this.componentSelector);
       if (d < this.maxRangeSquared
          && NPCPhysicsMath.isInViewCone(this.xViewDirection, this.yViewDirection, this.zViewDirection, this.collisionViewHalfAngleCosine, dx, dy, dz)) {
-         d = 1.0 - Math.sqrt(d) / this.maxDistance;
+         double length;
+         if (!this.normalizeDistances) {
+            length = Math.sqrt(d);
+         } else {
+            if (d < 1.0E-12) {
+               do {
+                  dx = RandomExtra.randomRange(-1.0, 1.0);
+                  dy = RandomExtra.randomRange(-1.0, 1.0);
+                  dz = RandomExtra.randomRange(-1.0, 1.0);
+                  d = NPCPhysicsMath.dotProduct(dx, dy, dz);
+               } while (d < 1.0E-12);
+
+               double scale = 1.0E-6 / Math.sqrt(d);
+               dx *= scale;
+               dy *= scale;
+               dz *= scale;
+               d = 1.0E-12;
+            }
+
+            length = Math.sqrt(d);
+            double inverseLength = 1.0 / length;
+            dx *= inverseLength;
+            dy *= inverseLength;
+            dz *= inverseLength;
+         }
+
+         d = 1.0 - length / this.maxDistance;
          double w = Math.pow(d, distanceWeight);
          this.sumOfDistances.add(dx * w, dy * w, dz * w);
          w = Math.pow(d, positionWeight);
@@ -122,10 +150,16 @@ public class GroupSteeringAccumulator {
 
    public void end() {
       if (this.count > 0) {
-         double scale = 1.0 / this.count;
-         this.sumOfDistances.scale(scale).scale(this.componentSelector);
-         this.sumOfPositions.scale(scale).scale(this.componentSelector);
-         this.sumOfVelocities.scale(scale).scale(this.componentSelector);
+         if (this.normalizeDistances) {
+            if (this.sumOfDistances.squaredLength() >= 1.0) {
+               this.sumOfDistances.normalize();
+            }
+         } else {
+            double scale = 1.0 / this.count;
+            this.sumOfDistances.scale(scale).scale(this.componentSelector);
+            this.sumOfPositions.scale(scale).scale(this.componentSelector);
+            this.sumOfVelocities.scale(scale).scale(this.componentSelector);
+         }
       }
    }
 
@@ -136,6 +170,10 @@ public class GroupSteeringAccumulator {
    public void setMaxRange(double maxRange) {
       this.maxRangeSquared = maxRange * maxRange;
       this.maxDistance = maxRange;
+   }
+
+   public void setNormalizeDistances(boolean normalizeDistances) {
+      this.normalizeDistances = normalizeDistances;
    }
 
    public void setViewConeHalfAngleCosine(float collisionViewHalfAngleCosine) {

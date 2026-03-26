@@ -38,7 +38,7 @@ import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.protocol.ModelTrail;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderToolData;
+import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
 import com.hypixel.hytale.server.core.asset.type.itemanimation.config.ItemPlayerAnimations;
 import com.hypixel.hytale.server.core.asset.type.itemsound.config.ItemSoundSet;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
@@ -103,6 +103,14 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .addValidatorLate(() -> ItemCategory.VALIDATOR_CACHE.getArrayValidator().late())
       .documentation("A list of categories this item will be shown in on the creative library menu.")
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("SubCategory", Codec.STRING),
+         (item, s) -> item.subCategory = s,
+         item -> item.subCategory,
+         (item, parent) -> item.subCategory = parent.subCategory
+      )
+      .documentation("Optional sub-category for grouping items with a label header in the creative library menu.")
       .add()
       .<AssetIconProperties>appendInherited(
          new KeyedCodec<>("IconProperties", AssetIconProperties.CODEC),
@@ -309,10 +317,10 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .add()
       .appendInherited(
-         new KeyedCodec<>("BuilderTool", BuilderToolData.CODEC),
-         (item, s) -> item.builderToolData = s,
-         item -> item.builderToolData,
-         (item, parent) -> item.builderToolData = parent.builderToolData
+         new KeyedCodec<>("BuilderTool", BuilderTool.CODEC),
+         (item, s) -> item.builderTool = s,
+         item -> item.builderTool,
+         (item, parent) -> item.builderTool = parent.builderTool
       )
       .add()
       .<ItemWeapon>appendInherited(
@@ -467,6 +475,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
          (item, parent) -> item.renderDeployablePreview = parent.renderDeployablePreview
       )
       .add()
+      .addField(new KeyedCodec<>("HudUI", new ArrayCodec<>(ItemHudUI.CODEC, ItemHudUI[]::new)), (item, s) -> item.hudUI = s, item -> item.hudUI)
       .appendInherited(
          new KeyedCodec<>("DropOnDeath", Codec.BOOLEAN),
          (item, aBoolean) -> item.dropOnDeath = aBoolean,
@@ -508,7 +517,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    protected boolean variant;
    protected ItemTool tool;
    protected BlockSelectorToolData blockSelectorToolData;
-   protected BuilderToolData builderToolData;
+   protected BuilderTool builderTool;
    protected ItemWeapon weapon;
    protected ItemArmor armor;
    protected ItemGlider glider;
@@ -522,6 +531,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    protected String texture = "Items/Unknown.png";
    protected String animation;
    protected String[] categories;
+   protected String subCategory;
    protected String set;
    protected String soundEventId;
    protected transient int soundEventIndex;
@@ -549,6 +559,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    protected ItemPullbackConfig pullbackConfig;
    protected boolean clipsGeometry;
    protected boolean renderDeployablePreview;
+   protected ItemHudUI[] hudUI;
    protected boolean dropOnDeath;
    protected boolean durabilityLossOnDeath = true;
    private transient SoftReference<ItemBase> cachedPacket;
@@ -593,12 +604,13 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       this.animation = other.animation;
       this.tool = other.tool;
       this.blockSelectorToolData = other.blockSelectorToolData;
-      this.builderToolData = other.builderToolData;
+      this.builderTool = other.builderTool;
       this.weapon = other.weapon;
       this.armor = other.armor;
       this.utility = other.utility;
       this.portalKey = other.portalKey;
       this.categories = other.categories;
+      this.subCategory = other.subCategory;
       this.set = other.set;
       this.soundEventId = other.soundEventId;
       this.soundEventIndex = other.soundEventIndex;
@@ -680,8 +692,8 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
             packet.blockSelectorTool = this.blockSelectorToolData.toPacket();
          }
 
-         if (this.builderToolData != null) {
-            packet.builderToolData = this.builderToolData.toPacket();
+         if (this.builderTool != null) {
+            packet.builderToolData = this.builderTool.toPacket();
          }
 
          if (this.weapon != null) {
@@ -702,6 +714,10 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
 
          if (this.categories != null && this.categories.length > 0) {
             packet.categories = this.categories;
+         }
+
+         if (this.subCategory != null) {
+            packet.subCategory = this.subCategory;
          }
 
          if (this.set != null) {
@@ -790,6 +806,14 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
 
          packet.clipsGeometry = this.clipsGeometry;
          packet.renderDeployablePreview = this.renderDeployablePreview;
+         if (this.hudUI != null && this.hudUI.length > 0) {
+            packet.hudUI = new com.hypixel.hytale.protocol.ItemHudUI[this.hudUI.length];
+
+            for (int i = 0; i < this.hudUI.length; i++) {
+               packet.hudUI[i] = this.hudUI[i].toPacket();
+            }
+         }
+
          this.cachedPacket = new SoftReference<>(packet);
          return packet;
       }
@@ -920,8 +944,8 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       return this.blockSelectorToolData;
    }
 
-   public BuilderToolData getBuilderToolData() {
-      return this.builderToolData;
+   public BuilderTool getBuilderTool() {
+      return this.builderTool;
    }
 
    public ItemArmor getArmor() {
@@ -949,6 +973,10 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
 
    public String[] getCategories() {
       return this.categories;
+   }
+
+   public String getSubCategory() {
+      return this.subCategory;
    }
 
    public String getSoundEventId() {
@@ -1051,7 +1079,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       }
 
       if (this.maxStack == -1) {
-         if (this.tool == null && this.weapon == null && this.armor == null && this.builderToolData == null && this.blockSelectorToolData == null) {
+         if (this.tool == null && this.weapon == null && this.armor == null && this.builderTool == null && this.blockSelectorToolData == null) {
             this.maxStack = 100;
          } else {
             this.maxStack = 1;

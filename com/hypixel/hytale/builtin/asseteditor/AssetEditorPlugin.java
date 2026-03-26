@@ -57,6 +57,7 @@ import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFetchJsonAsset
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorFileEntry;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorJsonAssetUpdated;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorLastModifiedAssets;
+import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorModsDirectories;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPopupNotificationType;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorRebuildCaches;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorRequestChildrenListReply;
@@ -77,7 +78,6 @@ import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.AssetPackRegisterEvent;
 import com.hypixel.hytale.server.core.asset.AssetPackUnregisterEvent;
-import com.hypixel.hytale.server.core.asset.AssetRegistryLoader;
 import com.hypixel.hytale.server.core.asset.common.events.CommonAssetMonitorEvent;
 import com.hypixel.hytale.server.core.config.ModConfig;
 import com.hypixel.hytale.server.core.io.PacketHandler;
@@ -89,6 +89,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.plugin.PluginState;
+import com.hypixel.hytale.server.core.schema.SchemaGenerator;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.BsonUtil;
@@ -216,7 +217,9 @@ public class AssetEditorPlugin extends JavaPlugin {
    @Override
    protected void shutdown() {
       InitialPacketHandler.EDITOR_PACKET_HANDLER_SUPPLIER = null;
-      String message = HytaleServer.get().isShuttingDown() ? "Server is shutting down!" : "Asset editor was disabled!";
+      Message message = HytaleServer.get().isShuttingDown()
+         ? Message.translation("server.general.disconnect.stoppingServer")
+         : Message.translation("server.general.disconnect.assetEditorDisabled");
 
       for (Set<EditorClient> clients : this.uuidToEditorClients.values()) {
          for (EditorClient client : clients) {
@@ -277,7 +280,7 @@ public class AssetEditorPlugin extends JavaPlugin {
                client.getPacketHandler().sendPing();
             } catch (Exception var6) {
                ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var6)).log("Failed to send ping to " + client);
-               client.getPacketHandler().disconnect("Exception when sending ping packet!");
+               client.getPacketHandler().disconnect(Message.translation("server.general.disconnect.pingException"));
             }
          }
       }
@@ -579,7 +582,7 @@ public class AssetEditorPlugin extends JavaPlugin {
 
    private void initializeAssetEditor(boolean updateLoadedAssets) {
       long start = System.nanoTime();
-      Map<String, Schema> schemas = AssetRegistryLoader.generateSchemas(new SchemaContext(), new BsonDocument());
+      Map<String, Schema> schemas = SchemaGenerator.generateAssetSchemas();
       schemas.remove("NPCRole.json");
       schemas.remove("other.json");
       AssetEditorSetupSchemas setupSchemasPacket = new AssetEditorSetupSchemas(new SchemaFile[schemas.size()]);
@@ -651,6 +654,16 @@ public class AssetEditorPlugin extends JavaPlugin {
       }
 
       editorClient.getPacketHandler().write(packSetupPacket);
+      if (canCreateAssetPacks) {
+         List<Path> modsDirectories = this.getModsDirectories();
+         String[] dirStrings = new String[modsDirectories.size()];
+
+         for (int j = 0; j < modsDirectories.size(); j++) {
+            dirStrings[j] = modsDirectories.get(j).toString();
+         }
+
+         editorClient.getPacketHandler().write(new AssetEditorModsDirectories(dirStrings));
+      }
 
       for (DataSource dataSource : this.assetPackDataSources.values()) {
          dataSource.getAssetTree().sendPackets(editorClient);
@@ -825,7 +838,19 @@ public class AssetEditorPlugin extends JavaPlugin {
       }
    }
 
-   public void handleCreateAssetPack(@Nonnull EditorClient editorClient, @Nonnull AssetPackManifest packetManifest, int requestToken) {
+   @Nonnull
+   private List<Path> getModsDirectories() {
+      List<Path> directories = new ObjectArrayList();
+      directories.add(PluginManager.MODS_PATH.toAbsolutePath());
+
+      for (Path modsPath : Options.getOptionSet().valuesOf(Options.MODS_DIRECTORIES)) {
+         directories.add(modsPath.toAbsolutePath());
+      }
+
+      return directories;
+   }
+
+   public void handleCreateAssetPack(@Nonnull EditorClient editorClient, @Nonnull AssetPackManifest packetManifest, int requestToken, int targetDirectoryIndex) {
       if (packetManifest.name == null || packetManifest.name.isEmpty()) {
          editorClient.sendFailureReply(requestToken, Messages.PACK_NAME_REQUIRED);
       } else if (packetManifest.group != null && !packetManifest.group.isEmpty()) {
@@ -843,8 +868,8 @@ public class AssetEditorPlugin extends JavaPlugin {
          if (packetManifest.version != null && !packetManifest.version.isEmpty()) {
             try {
                manifest.setVersion(Semver.fromString(packetManifest.version));
-            } catch (IllegalArgumentException var13) {
-               ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var13)).log("Invalid version format: %s", packetManifest.version);
+            } catch (IllegalArgumentException var15) {
+               ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var15)).log("Invalid version format: %s", packetManifest.version);
                editorClient.sendFailureReply(requestToken, Messages.INVALID_VERSION_FORMAT);
                return;
             }
@@ -869,39 +894,44 @@ public class AssetEditorPlugin extends JavaPlugin {
          if (this.assetPackDataSources.containsKey(packId)) {
             editorClient.sendFailureReply(requestToken, Messages.PACK_ALREADY_EXISTS);
          } else {
-            Path modsPath = PluginManager.MODS_PATH;
-            String dirName = AssetPathUtil.removeInvalidFileNameChars(
-               packetManifest.group != null ? packetManifest.group + "." + packetManifest.name : packetManifest.name
-            );
-            Path normalized = Path.of(dirName).normalize();
-            if (AssetPathUtil.isInvalidFileName(normalized)) {
-               editorClient.sendFailureReply(requestToken, Messages.INVALID_FILE_NAME);
-            } else {
-               Path packPath = modsPath.resolve(normalized).normalize();
-               if (!packPath.startsWith(modsPath)) {
-                  editorClient.sendFailureReply(requestToken, Messages.PACK_OUTSIDE_DIRECTORY);
-               } else if (Files.exists(packPath)) {
-                  editorClient.sendFailureReply(requestToken, Messages.PACK_ALREADY_EXISTS_AT_PATH);
+            List<Path> modsDirectories = this.getModsDirectories();
+            if (targetDirectoryIndex >= 0 && targetDirectoryIndex < modsDirectories.size()) {
+               Path modsPath = modsDirectories.get(targetDirectoryIndex);
+               String dirName = AssetPathUtil.removeInvalidFileNameChars(
+                  packetManifest.group != null ? packetManifest.group + "." + packetManifest.name : packetManifest.name
+               );
+               Path normalized = Path.of(dirName).normalize();
+               if (AssetPathUtil.isInvalidFileName(normalized)) {
+                  editorClient.sendFailureReply(requestToken, Messages.INVALID_FILE_NAME);
                } else {
-                  try {
-                     Files.createDirectories(packPath);
-                     Path manifestPath = packPath.resolve("manifest.json");
-                     BsonUtil.writeSync(manifestPath, PluginManifest.CODEC, manifest, this.getLogger());
-                     HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
-                     HytaleServerConfig.setBoot(serverConfig, new PluginIdentifier(manifest), true);
-                     serverConfig.markChanged();
-                     if (serverConfig.consumeHasChanged()) {
-                        HytaleServerConfig.save(serverConfig).join();
-                     }
+                  Path packPath = modsPath.resolve(normalized).normalize();
+                  if (!packPath.startsWith(modsPath)) {
+                     editorClient.sendFailureReply(requestToken, Messages.PACK_OUTSIDE_DIRECTORY);
+                  } else if (Files.exists(packPath)) {
+                     editorClient.sendFailureReply(requestToken, Messages.PACK_ALREADY_EXISTS_AT_PATH);
+                  } else {
+                     try {
+                        Files.createDirectories(packPath);
+                        Path manifestPath = packPath.resolve("manifest.json");
+                        BsonUtil.writeSync(manifestPath, PluginManifest.CODEC, manifest, this.getLogger());
+                        HytaleServerConfig serverConfig = HytaleServer.get().getConfig();
+                        HytaleServerConfig.setBoot(serverConfig, new PluginIdentifier(manifest), true);
+                        serverConfig.markChanged();
+                        if (serverConfig.consumeHasChanged()) {
+                           HytaleServerConfig.save(serverConfig).join();
+                        }
 
-                     AssetModule.get().registerPack(packId, packPath, manifest, false);
-                     editorClient.sendSuccessReply(requestToken, Messages.PACK_CREATED);
-                     this.getLogger().at(Level.INFO).log("Created new pack: %s at %s", packId, packPath);
-                  } catch (IOException var12) {
-                     ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var12)).log("Failed to create pack %s", packId);
-                     editorClient.sendFailureReply(requestToken, Messages.PACK_CREATION_FAILED);
+                        AssetModule.get().registerPack(packId, packPath, manifest, false);
+                        editorClient.sendSuccessReply(requestToken, Messages.PACK_CREATED);
+                        this.getLogger().at(Level.INFO).log("Created new pack: %s at %s", packId, packPath);
+                     } catch (IOException var14) {
+                        ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var14)).log("Failed to create pack %s", packId);
+                        editorClient.sendFailureReply(requestToken, Messages.PACK_CREATION_FAILED);
+                     }
                   }
                }
+            } else {
+               editorClient.sendFailureReply(requestToken, Messages.INVALID_TARGET_DIRECTORY);
             }
          }
       } else {

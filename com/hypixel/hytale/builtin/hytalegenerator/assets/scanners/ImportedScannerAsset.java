@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.scanners;
 
+import com.hypixel.hytale.builtin.hytalegenerator.scanners.EmptyScanner;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -20,13 +21,13 @@ public class ImportedScannerAsset extends ScannerAsset {
    @Override
    public Scanner build(@Nonnull ScannerAsset.Argument argument) {
       if (super.skip()) {
-         return Scanner.noScanner();
+         return EmptyScanner.INSTANCE;
       } else if (this.name != null && !this.name.isEmpty()) {
          ScannerAsset exportedAsset = ScannerAsset.getExportedAsset(this.name);
-         return exportedAsset == null ? Scanner.noScanner() : exportedAsset.build(argument);
+         return (Scanner)(exportedAsset == null ? EmptyScanner.INSTANCE : exportedAsset.build(argument));
       } else {
          ((HytaleLogger.Api)HytaleLogger.getLogger().atWarning()).log("An exported Pattern with the name does not exist: " + this.name);
-         return Scanner.noScanner();
+         return EmptyScanner.INSTANCE;
       }
    }
 }

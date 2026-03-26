@@ -81,9 +81,16 @@ public class Options {
    public static final OptionSpec<Void> SHUTDOWN_AFTER_VALIDATE = PARSER.accepts(
       "shutdown-after-validate", "Automatically shutdown the server after asset and/or prefab validation."
    );
-   public static final OptionSpec<Void> GENERATE_SCHEMA = PARSER.accepts(
-      "generate-schema", "Causes the server generate schema, save it into the assets directory and then exit"
-   );
+   public static final OptionSpec<Path> GENERATE_ASSET_SCHEMA = PARSER.accepts(
+         "generate-asset-schema", "Generate asset JSON schemas to the specified directory and exit"
+      )
+      .withRequiredArg()
+      .withValuesConvertedBy(new Options.PathConverter(Options.PathConverter.PathType.ANY));
+   public static final OptionSpec<Path> GENERATE_CONFIG_SCHEMA = PARSER.accepts(
+         "generate-config-schema", "Generate config JSON schemas to the specified directory and exit"
+      )
+      .withRequiredArg()
+      .withValuesConvertedBy(new Options.PathConverter(Options.PathConverter.PathType.ANY));
    public static final OptionSpec<Path> WORLD_GEN_DIRECTORY = PARSER.accepts("world-gen", "World gen directory")
       .withRequiredArg()
       .withValuesConvertedBy(new Options.PathConverter(Options.PathConverter.PathType.DIR));
@@ -131,8 +138,8 @@ public class Options {
       )
       .withRequiredArg()
       .withValuesSeparatedBy(',');
-   public static final OptionSpec<Void> SKIP_MOD_VALIDATION = PARSER.accepts(
-      "skip-mod-validation", "Skips mod validation, attempting to allow the server to boot even if one fails to load"
+   public static final OptionSpec<Void> IGNORE_BROKEN_MODS = PARSER.accepts(
+      "ignore-broken-mods", "Ignores broken mods, attempting to allow the server to boot even if one fails to load"
    );
    public static final String ALLOW_SELF_OP_COMMAND_STRING = "allow-op";
    public static final OptionSpec<Void> ALLOW_SELF_OP_COMMAND = PARSER.accepts("allow-op");
@@ -144,6 +151,13 @@ public class Options {
       .withRequiredArg()
       .ofType(String.class);
    public static final OptionSpec<String> IDENTITY_TOKEN = PARSER.accepts("identity-token", "Identity token (JWT)").withRequiredArg().ofType(String.class);
+   public static final OptionSpec<Void> VERIFY_WORLDS = PARSER.accepts("verify-worlds", "Verify all worlds and then exits");
+   public static final OptionSpec<Options.RecoveryMode> RECOVERY_MODE = PARSER.accepts(
+         "recovery-mode", "How to handle broken chunks when encountered during recovery"
+      )
+      .availableIf(VERIFY_WORLDS, new OptionSpec[0])
+      .withRequiredArg()
+      .ofType(Options.RecoveryMode.class);
    private static OptionSet optionSet;
 
    public static OptionSet getOptionSet() {
@@ -308,6 +322,11 @@ public class Options {
          DIR_OR_ZIP,
          ANY;
       }
+   }
+
+   public static enum RecoveryMode {
+      FROM_BACKUP_OR_REGENERATE,
+      REGENERATE;
    }
 
    public static class SocketAddressValueConverter implements ValueConverter<InetSocketAddress> {

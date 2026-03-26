@@ -17,12 +17,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class WeightedAction extends AnnotatedComponentBase implements Action {
-   @Nullable
    private final Action action;
    private final double weight;
 
-   public WeightedAction(@Nonnull BuilderWeightedAction builder, @Nonnull BuilderSupport support) {
-      this.action = builder.getAction(support);
+   public WeightedAction(@Nonnull BuilderWeightedAction builder, @Nonnull BuilderSupport support, @Nonnull Action action) {
+      this.action = action;
       this.weight = builder.getWeight(support);
    }
 

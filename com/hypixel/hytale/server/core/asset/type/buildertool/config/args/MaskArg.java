@@ -12,7 +12,8 @@ import javax.annotation.Nonnull;
 public class MaskArg extends ToolArg<BlockMask> {
    public static final MaskArg EMPTY = new MaskArg(BlockMask.EMPTY, false);
    public static final BuilderCodec<MaskArg> CODEC = BuilderCodec.builder(MaskArg.class, MaskArg::new, ToolArg.DEFAULT_CODEC)
-      .addField(new KeyedCodec<>("Default", BlockMask.CODEC), (maskArg, d) -> maskArg.value = d, maskArg -> maskArg.value)
+      .append(new KeyedCodec<>("Default", BlockMask.CODEC), (maskArg, d) -> maskArg.value = d, maskArg -> maskArg.value)
+      .add()
       .build();
 
    public MaskArg() {

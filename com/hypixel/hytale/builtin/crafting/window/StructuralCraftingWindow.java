@@ -2,8 +2,8 @@ package com.hypixel.hytale.builtin.crafting.window;
 
 import com.google.gson.JsonArray;
 import com.hypixel.hytale.builtin.crafting.CraftingPlugin;
+import com.hypixel.hytale.builtin.crafting.component.BenchBlock;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
-import com.hypixel.hytale.builtin.crafting.state.BenchState;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -16,6 +16,7 @@ import com.hypixel.hytale.protocol.packets.window.CraftRecipeAction;
 import com.hypixel.hytale.protocol.packets.window.SelectSlotAction;
 import com.hypixel.hytale.protocol.packets.window.WindowAction;
 import com.hypixel.hytale.protocol.packets.window.WindowType;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.StructuralCraftingBench;
 import com.hypixel.hytale.server.core.asset.type.item.config.BlockGroup;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
@@ -54,8 +55,8 @@ public class StructuralCraftingWindow extends CraftingWindow implements ItemCont
    @Nullable
    private EventRegistration inventoryRegistration;
 
-   public StructuralCraftingWindow(@Nonnull BenchState benchState) {
-      super(WindowType.StructuralCrafting, benchState);
+   public StructuralCraftingWindow(int x, int y, int z, int rotationIndex, @Nonnull BlockType blockType, @Nonnull BenchBlock benchBlock) {
+      super(WindowType.StructuralCrafting, x, y, z, rotationIndex, blockType, benchBlock);
       this.inputContainer = new SimpleItemContainer((short)1);
       this.inputContainer.registerChangeEvent(e -> this.updateRecipes());
       this.inputContainer.setSlotFilter(FilterActionType.ADD, (short)0, this::isValidInput);
@@ -157,7 +158,12 @@ public class StructuralCraftingWindow extends CraftingWindow implements ItemCont
                      }
                   }
 
-                  craftingManagerComponent.queueCraft(ref, store, this, 0, recipe, quantity, this.inputContainer, CraftingManager.InputRemovalType.ORDERED);
+                  if (craftingManagerComponent.queueCraft(ref, store, this, 0, recipe, quantity, this.inputContainer, CraftingManager.InputRemovalType.ORDERED)
+                     )
+                   {
+                     this.updateQueueSize(craftingManagerComponent.getRemainingQueueSize());
+                  }
+
                   this.invalidate();
                }
                break;

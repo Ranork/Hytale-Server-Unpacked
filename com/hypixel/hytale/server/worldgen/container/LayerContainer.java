@@ -4,12 +4,15 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
 import com.hypixel.hytale.procedurallib.supplier.IDoubleCoordinateSupplier;
 import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
 import com.hypixel.hytale.server.worldgen.util.NoiseBlockArray;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class LayerContainer {
+   public static final ListPool<LayerContainer.StaticLayer> STATIC_POOL = new ListPool<>(10, new LayerContainer.StaticLayer[0]);
+   public static final ListPool<LayerContainer.DynamicLayer> DYNAMIC_POOL = new ListPool<>(10, new LayerContainer.DynamicLayer[0]);
    @Nonnull
    protected final BlockFluidEntry filling;
    protected final int fillingEnvironment;

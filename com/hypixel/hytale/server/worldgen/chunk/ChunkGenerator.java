@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.worldgen.chunk;
 
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
+import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector2i;
@@ -35,6 +36,7 @@ import com.hypixel.hytale.server.worldgen.cave.Cave;
 import com.hypixel.hytale.server.worldgen.cave.CaveGenerator;
 import com.hypixel.hytale.server.worldgen.cave.CaveType;
 import com.hypixel.hytale.server.worldgen.container.FadeContainer;
+import com.hypixel.hytale.server.worldgen.container.PrefabContainer;
 import com.hypixel.hytale.server.worldgen.container.UniquePrefabContainer;
 import com.hypixel.hytale.server.worldgen.map.GeneratorChunkWorldMap;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabLoadingCache;
@@ -65,6 +67,8 @@ import javax.annotation.Nullable;
 
 public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldGen, MetricProvider, IWorldMapProvider {
    public static final int TINT_INTERPOLATION_RADIUS = 4;
+   private static final int CHUNK_BOUNDS_PADDING = 16;
+   private static final CompletableFuture<GeneratedChunk> NO_CHUNK = CompletableFuture.completedFuture(null);
    private static final ThreadLocal<ChunkGeneratorResource> THREAD_LOCAL = ThreadLocal.withInitial(ChunkGeneratorResource::new);
    public static final int POOL_SIZE = Math.max(2, MathUtil.fastCeil(Runtime.getRuntime().availableProcessors() * 0.75F));
    @Nonnull
@@ -86,6 +90,8 @@ public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldG
    @Nonnull
    private final Supplier<GeneratedChunk> generatedChunkSupplier;
    private final Path dataFolder;
+   private final int minChunkCoord;
+   private final int maxChunkCoord;
 
    public ChunkGenerator(ZonePatternProvider zonePatternProvider, Path dataFolder) {
       this.dataFolder = dataFolder;
@@ -110,6 +116,9 @@ public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldG
       this.prefabLoadingCache = new PrefabLoadingCache();
       this.generatedChunkSupplier = GeneratedChunk::new;
       this.benchmark = new ChunkWorldgenBenchmark();
+      int extents = getLargestFeatureChunkExtents(zonePatternProvider, 16);
+      this.minChunkCoord = -67108864 + extents;
+      this.maxChunkCoord = 67108863 - extents;
    }
 
    public ZonePatternProvider getZonePatternProvider() {
@@ -209,7 +218,7 @@ public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldG
    @Nonnull
    @Override
    public CompletableFuture<GeneratedChunk> generate(int seed, long index, int x, int z, @Nullable LongPredicate stillNeeded) {
-      return CompletableFuture.<GeneratedChunk>supplyAsync(() -> {
+      return this.isChunkOutsideGeneratableArea(x, z) ? NO_CHUNK : CompletableFuture.<GeneratedChunk>supplyAsync(() -> {
          if (stillNeeded != null && !stillNeeded.test(index)) {
             return null;
          } else {
@@ -434,6 +443,10 @@ public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldG
       return THREAD_LOCAL.get();
    }
 
+   public boolean isChunkOutsideGeneratableArea(int x, int z) {
+      return x < this.minChunkCoord || x > this.maxChunkCoord || z < this.minChunkCoord || z > this.maxChunkCoord;
+   }
+
    @Override
    public boolean validate() {
       return !ValidationUtil.isInvalid(this.zonePatternProvider, this.executor);
@@ -464,5 +477,27 @@ public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldG
    @Override
    public String toString() {
       return this.toString(true, true);
+   }
+
+   private static int getLargestFeatureChunkExtents(@Nonnull ZonePatternProvider zonePatternProvider, int padding) {
+      double max = 0.0;
+
+      for (Zone zone : zonePatternProvider.getZones()) {
+         if (zone.caveGenerator() != null) {
+            for (CaveType cave : zone.caveGenerator().getCaveTypes()) {
+               max = Math.max(max, cave.getMaximumSize());
+            }
+         }
+
+         for (Biome biome : zone.biomePatternGenerator().getBiomes()) {
+            if (biome.getPrefabContainer() != null) {
+               for (PrefabContainer.PrefabContainerEntry entry : biome.getPrefabContainer().getEntries()) {
+                  max = Math.max(max, (double)entry.getPrefabPatternGenerator().getMaxSize());
+               }
+            }
+         }
+      }
+
+      return ChunkUtil.chunkCoordinate(MathUtil.ceil(max)) + padding;
    }
 }

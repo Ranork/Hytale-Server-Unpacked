@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.universe.world.chunk.section.palette;
 
+import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.protocol.packets.world.PaletteType;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
@@ -34,7 +35,14 @@ public interface ISectionPalette {
 
    Int2ShortMap valueCounts();
 
-   void find(IntList var1, IntSet var2, IntConsumer var3);
+   void find(@Nonnull IntList var1, @Nonnull IntConsumer var2);
+
+   void find(@Nonnull IntList var1, @Nonnull BiIntConsumer var2);
+
+   @Deprecated(since = "2026-02-26", forRemoval = true)
+   default void find(@Nonnull IntList ids, @Nonnull IntSet ignoredInternalIdHolder, @Nonnull IntConsumer indexConsumer) {
+      this.find(ids, indexConsumer);
+   }
 
    boolean shouldDemote();
 
@@ -49,15 +57,15 @@ public interface ISectionPalette {
    void deserialize(ToIntFunction<ByteBuf> var1, ByteBuf var2, int var3);
 
    @Nonnull
-   static ISectionPalette from(@Nonnull int[] data, int[] unique, int count) {
-      if (count == 1 && unique[0] == 0) {
+   static ISectionPalette from(@Nonnull int[] data, @Nonnull Int2ShortMap idCounts) {
+      if (idCounts.size() == 1 && idCounts.containsKey(0)) {
          return EmptySectionPalette.INSTANCE;
-      } else if (count < 16) {
-         return new HalfByteSectionPalette(data, unique, count);
-      } else if (count < 256) {
-         return new ByteSectionPalette(data, unique, count);
-      } else if (count < 65536) {
-         return new ShortSectionPalette(data, unique, count);
+      } else if (idCounts.size() < 16) {
+         return new HalfByteSectionPalette(data, idCounts);
+      } else if (idCounts.size() < 256) {
+         return new ByteSectionPalette(data, idCounts);
+      } else if (idCounts.size() < 65536) {
+         return new ShortSectionPalette(data, idCounts);
       } else {
          throw new UnsupportedOperationException("Too many block types for palette.");
       }

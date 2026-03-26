@@ -15,12 +15,14 @@ import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
+import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.migrations.ChunkColumnMigrationSystem;
 import com.hypixel.hytale.server.core.modules.migrations.ChunkSectionMigrationSystem;
 import com.hypixel.hytale.server.core.modules.migrations.MigrationModule;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.WorldConfig;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.EntityChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
@@ -29,11 +31,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkSavingSystems;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.file.Path;
 import java.util.BitSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -136,7 +140,7 @@ public class InstanceMigrateCommand extends AbstractAsyncCommand {
                   while ((systemIndex = systemIndexes.nextSetBit(systemIndex + 1)) >= 0) {
                      ChunkColumnMigrationSystem system = data.getSystem(systemIndex, systemType);
                      if (system.test(ChunkStore.REGISTRY, holder.getArchetype())) {
-                        system.onEntityRemoved((Holder<ChunkStore>)holder, RemoveReason.REMOVE, store);
+                        system.onEntityRemoved((Holder<ChunkStore>)holder, RemoveReason.UNLOAD, store);
                      }
                   }
 
@@ -169,7 +173,42 @@ public class InstanceMigrateCommand extends AbstractAsyncCommand {
                         for (int ix = 0; ix < entities.size(); ix++) {
                            Holder<EntityStore> section = entities.get(ix);
                            if (system.test(EntityStore.REGISTRY, section.getArchetype())) {
-                              system.onEntityRemoved(section, RemoveReason.REMOVE, entityStore);
+                              system.onEntityRemoved(section, RemoveReason.UNLOAD, entityStore);
+                           }
+                        }
+                     }
+                  }
+
+                  BlockComponentChunk blockComponentChunk = holder.getComponent(BlockComponentChunk.getComponentType());
+                  if (blockComponentChunk != null && !blockComponentChunk.getEntityHolders().isEmpty()) {
+                     Int2ObjectMap<Holder<ChunkStore>> blockHolders = blockComponentChunk.getEntityHolders();
+                     SystemType<ChunkStore, BlockModule.MigrationSystem> systemTypex = BlockModule.get().getMigrationSystemType();
+                     BitSet systemIndexesx = data.getSystemIndexesForType(systemTypex);
+                     int systemIndexx = -1;
+
+                     while ((systemIndexx = systemIndexesx.nextSetBit(systemIndexx + 1)) >= 0) {
+                        BlockModule.MigrationSystem system = data.getSystem(systemIndexx, systemTypex);
+                        Iterator i$ = blockHolders.values().iterator();
+
+                        while (i$.hasNext()) {
+                           Holder<ChunkStore> blockHolder = (Holder<ChunkStore>)i$.next();
+                           if (system.test(ChunkStore.REGISTRY, blockHolder.getArchetype())) {
+                              system.onEntityAdd(blockHolder, AddReason.LOAD, store);
+                              shouldSave = true;
+                           }
+                        }
+                     }
+
+                     systemIndexx = -1;
+
+                     while ((systemIndexx = systemIndexesx.nextSetBit(systemIndexx + 1)) >= 0) {
+                        BlockModule.MigrationSystem system = data.getSystem(systemIndexx, systemTypex);
+                        Iterator i$ = blockHolders.values().iterator();
+
+                        while (i$.hasNext()) {
+                           Holder<ChunkStore> blockHolder = (Holder<ChunkStore>)i$.next();
+                           if (system.test(ChunkStore.REGISTRY, blockHolder.getArchetype())) {
+                              system.onEntityRemoved(blockHolder, RemoveReason.REMOVE, store);
                            }
                         }
                      }

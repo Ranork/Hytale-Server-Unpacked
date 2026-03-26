@@ -2,12 +2,14 @@ package com.hypixel.hytale.server.core.command.commands.utility.worldmap;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractTargetPlayerCommand;
+import com.hypixel.hytale.server.core.config.ServerWorldMapConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -43,11 +45,16 @@ public class WorldMapViewRadiusSetCommand extends AbstractTargetPlayerCommand {
       boolean bypass = this.bypassArg.get(context);
       if (viewRadius < 0) {
          context.sendMessage(Message.translation("server.commands.worldmap.viewradius.set.mustBePositive"));
-      } else if (viewRadius > 512 && !bypass) {
-         context.sendMessage(Message.translation("server.commands.worldmap.viewradius.set.noHigherThan").param("radius", 512));
       } else {
-         playerComponent.getWorldMapTracker().setViewRadiusOverride(viewRadius);
-         context.sendMessage(Message.translation("server.commands.worldmap.viewradius.set.success").param("radius", viewRadius));
+         ServerWorldMapConfig serverConfig = HytaleServer.get().getConfig().getWorldMapConfig();
+         int serverRadiusMax = serverConfig.getViewRadiusMax();
+         int effectiveMax = bypass ? serverRadiusMax : world.getWorldMapManager().getWorldMapSettings().getViewRadiusMax();
+         if (viewRadius > effectiveMax) {
+            context.sendMessage(Message.translation("server.commands.worldmap.viewradius.set.noHigherThan").param("radius", effectiveMax));
+         } else {
+            playerComponent.getWorldMapTracker().setViewRadiusOverride(viewRadius);
+            context.sendMessage(Message.translation("server.commands.worldmap.viewradius.set.success").param("radius", viewRadius));
+         }
       }
    }
 }

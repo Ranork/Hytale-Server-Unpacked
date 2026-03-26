@@ -36,6 +36,7 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
          craftingRecipe -> craftingRecipe.input
       )
       .addValidator(Validators.nonNull())
+      .addValidator(Validators.nonEmptyArray())
       .add()
       .append(
          new KeyedCodec<>("Output", new ArrayCodec<>(MaterialQuantity.CODEC, MaterialQuantity[]::new)),

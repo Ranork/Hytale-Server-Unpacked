@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.cartas;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.BiCarta;
 import com.hypixel.hytale.builtin.hytalegenerator.rangemaps.DoubleRange;
 import com.hypixel.hytale.builtin.hytalegenerator.rangemaps.DoubleRangeMap;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
+import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.BiCarta;
 import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.List;
 import javax.annotation.Nonnull;

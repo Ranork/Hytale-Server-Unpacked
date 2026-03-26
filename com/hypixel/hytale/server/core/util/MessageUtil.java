@@ -59,6 +59,53 @@ public class MessageUtil {
       }
    }
 
+   public static boolean containsControlCharacters(@Nonnull String message) {
+      for (int i = 0; i < message.length(); i++) {
+         char c = message.charAt(i);
+         if (c < ' ') {
+            return true;
+         }
+
+         if (c == 127) {
+            return true;
+         }
+
+         if (c >= 128 && c <= 159) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   @Nullable
+   public static String formatMessageToPlainString(@Nullable FormattedMessage msg) {
+      if (msg == null) {
+         return null;
+      } else {
+         StringBuilder sb = new StringBuilder();
+         if (msg.rawText != null) {
+            sb.append(msg.rawText);
+         } else if (msg.messageId != null) {
+            try {
+               I18nModule i18n = I18nModule.get();
+               String message = i18n != null ? i18n.getMessage("en-US", msg.messageId) : null;
+               sb.append(message != null ? formatText(message, msg.params, msg.messageParams) : msg.messageId);
+            } catch (Exception var6) {
+               sb.append(msg.messageId);
+            }
+         }
+
+         if (msg.children != null) {
+            for (FormattedMessage child : msg.children) {
+               sb.append(formatMessageToPlainString(child));
+            }
+         }
+
+         return sb.toString();
+      }
+   }
+
    @Deprecated
    public static void sendSuccessReply(@Nonnull PlayerRef playerRef, int token) {
       sendSuccessReply(playerRef, token, null);
@@ -148,7 +195,7 @@ public class MessageUtil {
                      } else if (replacement != null) {
                         String formattedReplacement;
                         formattedReplacement = "";
-                        label171:
+                        label179:
                         switch (format) {
                            case "upper":
                               if (replacement instanceof StringParamValue s) {
@@ -171,7 +218,7 @@ public class MessageUtil {
                                        case LongParamValue l -> Long.toString(l.value);
                                        default -> "";
                                     };
-                                    break label171;
+                                    break label179;
                                  case "decimal":
                                  case null:
                                  default:
@@ -183,12 +230,19 @@ public class MessageUtil {
                                        case LongParamValue l -> Long.toString(l.value);
                                        default -> "";
                                     };
-                                    break label171;
+                                    break label179;
                               }
                            case "plural":
                               if (options != null) {
                                  Map<String, String> pluralTexts = parsePluralOptions(options);
-                                 int value = Integer.parseInt(replacement.toString());
+
+                                 int value = switch (replacement) {
+                                    case IntParamValue iv -> iv.value;
+                                    case LongParamValue l -> (int)l.value;
+                                    case DoubleParamValue d -> (int)d.value;
+                                    case StringParamValue s -> Integer.parseInt(s.value);
+                                    default -> 0;
+                                 };
                                  String category = getPluralCategory(value, "en-US");
                                  String selected;
                                  if (pluralTexts.containsKey(category)) {

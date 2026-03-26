@@ -1,12 +1,14 @@
 package com.hypixel.hytale.builtin.buildertools.prefabeditor.commands;
 
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionManager;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditorCreationSettings;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.enums.PrefabAlignment;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.enums.PrefabRootDirectory;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.enums.PrefabRowSplitMode;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.enums.PrefabStackingAxis;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.enums.WorldGenType;
+import com.hypixel.hytale.builtin.buildertools.prefabeditor.ui.PrefabEditorLoadOptionsPage;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.ui.PrefabEditorLoadSettingsPage;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.Ref;
@@ -128,13 +130,18 @@ public class PrefabEditLoadCommand extends AbstractAsyncPlayerCommand {
                @Nonnull PlayerRef playerRef,
                @Nonnull World world
             ) {
-               if (BuilderToolsPlugin.get().getPrefabEditSessionManager().isEditingAPrefab(playerRef.getUuid())) {
-                  context.sendMessage(MESSAGE_COMMANDS_PREFAB_EDIT_SESSION_MANAGER_EXISTING_EDIT_SESSION);
+               PrefabEditSessionManager editSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
+               Player playerComponent = store.getComponent(ref, Player.getComponentType());
+
+               assert playerComponent != null;
+
+               if (editSessionManager.isEditingAPrefab(playerRef.getUuid())) {
+                  if (!editSessionManager.isInEditWorld(playerRef, store)) {
+                     playerComponent.getPageManager().openCustomPage(ref, store, new PrefabEditorLoadOptionsPage(playerRef, world));
+                  } else {
+                     context.sendMessage(MESSAGE_COMMANDS_PREFAB_EDIT_SESSION_MANAGER_EXISTING_EDIT_SESSION);
+                  }
                } else {
-                  Player playerComponent = store.getComponent(ref, Player.getComponentType());
-
-                  assert playerComponent != null;
-
                   playerComponent.getPageManager().openCustomPage(ref, store, new PrefabEditorLoadSettingsPage(playerRef));
                }
             }

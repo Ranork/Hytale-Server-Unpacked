@@ -2,35 +2,37 @@ package com.hypixel.hytale.builtin.hytalegenerator.plugin;
 
 import com.hypixel.hytale.builtin.hytalegenerator.FutureUtils;
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
-import com.hypixel.hytale.builtin.hytalegenerator.PropField;
+import com.hypixel.hytale.builtin.hytalegenerator.PropRuntime;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.AssetManager;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.SettingsAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.PositionProviderAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.worldstructures.WorldStructureAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
-import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkGenerator;
-import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.ChunkRequest;
-import com.hypixel.hytale.builtin.hytalegenerator.chunkgenerator.FallbackGenerator;
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.commands.ViewportCommand;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.CountedPixelBuffer;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.EntityBuffer;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.SimplePixelBuffer;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.VoxelBuffer;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.type.BufferType;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.type.ParametrizedBufferType;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.ChunkGenerator;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.ChunkRequest;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.FallbackGenerator;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.StagedChunkGenerator;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.TimeInstrument;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.BiomeDistanceStage;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.BiomeStage;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.EnvironmentStage;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.PropStage;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.Stage;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.TerrainStage;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.stages.TintStage;
 import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.NStagedChunkGenerator;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.bufferbundle.buffers.NCountedPixelBuffer;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.bufferbundle.buffers.NEntityBuffer;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.bufferbundle.buffers.NSimplePixelBuffer;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.bufferbundle.buffers.NVoxelBuffer;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.bufferbundle.buffers.type.NBufferType;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.bufferbundle.buffers.type.NParametrizedBufferType;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NBiomeDistanceStage;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NBiomeStage;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NEnvironmentStage;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NPropStage;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NStage;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NTerrainStage;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.stages.NTintStage;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.referencebundle.ReferenceBundle;
-import com.hypixel.hytale.builtin.hytalegenerator.seed.SeedBox;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -101,17 +103,18 @@ public class HytaleGenerator extends JavaPlugin {
             PositionProvider spawnPositionProvider = worldStructureAsset.getSpawnPositionsAsset()
                .build(new PositionProviderAsset.Argument(seed, new ReferenceBundle(), WorkerIndexer.Id.MAIN));
             List<Vector3d> positions = new ArrayList<>(maxPositionsCount);
-            PositionProvider.Context context = new PositionProvider.Context(
+            Bounds3d bounds = new Bounds3d(
                new Vector3d(Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY),
-               new Vector3d(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY),
-               position -> {
-                  if (positions.size() < maxPositionsCount) {
-                     positions.add(position);
-                  }
-               },
-               null
+               new Vector3d(Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY)
             );
-            spawnPositionProvider.positionsIn(context);
+            PositionProvider.Context context = new PositionProvider.Context(bounds, (position, control) -> {
+               if (positions.size() >= maxPositionsCount) {
+                  control.stop = true;
+               } else {
+                  positions.add(position);
+               }
+            }, null);
+            spawnPositionProvider.generate(context);
             return positions;
          }
       }
@@ -162,7 +165,7 @@ public class HytaleGenerator extends JavaPlugin {
    }
 
    @Nonnull
-   public NStagedChunkGenerator createStagedChunkGenerator(
+   public StagedChunkGenerator createStagedChunkGenerator(
       @Nonnull ChunkRequest.GeneratorProfile generatorProfile, @Nonnull WorldStructureAsset worldStructureAsset, @Nonnull SettingsAsset settingsAsset
    ) {
       WorkerIndexer workerIndexer = new WorkerIndexer(this.concurrency);
@@ -170,6 +173,7 @@ public class HytaleGenerator extends JavaPlugin {
       MaterialCache materialCache = new MaterialCache();
       WorkerIndexer.Session workerSession = workerIndexer.createSession();
       WorkerIndexer.Data<WorldStructure> worldStructure_workerData = new WorkerIndexer.Data<>(workerIndexer.getWorkerCount(), () -> null);
+      TimeInstrument.Probe assetLoad_timeProbe = new TimeInstrument.Probe("Assets Loading").start();
       List<CompletableFuture<Void>> futures = new ArrayList<>();
 
       while (workerSession.hasNext()) {
@@ -190,44 +194,47 @@ public class HytaleGenerator extends JavaPlugin {
 
       FutureUtils.allOf(futures).join();
       worldStructureAsset.cleanUp();
-      NStagedChunkGenerator.Builder generatorBuilder = new NStagedChunkGenerator.Builder();
+      assetLoad_timeProbe.stop();
+      String assetLoadingTime_ms = LoggerUtil.nsToMsDecimal(assetLoad_timeProbe.getTotalTime_ns());
+      LoggerUtil.getLogger().info("Loaded World Structure " + generatorProfile.worldStructureName() + ": " + assetLoadingTime_ms + " ms");
+      StagedChunkGenerator.Builder generatorBuilder = new StagedChunkGenerator.Builder();
       WorldStructure worldStructure_worker0 = worldStructure_workerData.get(workerIndexer.createSession().next());
       List<Biome> allBiomes = worldStructure_worker0.getBiomeRegistry().getAllValues();
       List<Integer> allRuntimes = new ArrayList<>(getAllPossibleRuntimeIndices(allBiomes));
       allRuntimes.sort(Comparator.naturalOrder());
       int bufferTypeIndexCounter = 0;
-      NParametrizedBufferType biome_bufferType = new NParametrizedBufferType(
-         "Biome", bufferTypeIndexCounter++, NBiomeStage.bufferClass, NBiomeStage.biomeClass, () -> new NCountedPixelBuffer<>(NBiomeStage.biomeClass)
+      ParametrizedBufferType biome_bufferType = new ParametrizedBufferType(
+         "Biome", bufferTypeIndexCounter++, BiomeStage.bufferClass, BiomeStage.biomeClass, () -> new CountedPixelBuffer<>(BiomeStage.biomeClass)
       );
-      NStage biomeStage = new NBiomeStage("BiomeStage", biome_bufferType, worldStructure_workerData);
+      Stage biomeStage = new BiomeStage("BiomeStage", biome_bufferType, worldStructure_workerData);
       generatorBuilder.appendStage(biomeStage);
-      NParametrizedBufferType biomeDistance_bufferType = new NParametrizedBufferType(
+      ParametrizedBufferType biomeDistance_bufferType = new ParametrizedBufferType(
          "BiomeDistance",
          bufferTypeIndexCounter++,
-         NBiomeDistanceStage.biomeDistanceBufferClass,
-         NBiomeDistanceStage.biomeDistanceClass,
-         () -> new NSimplePixelBuffer<>(NBiomeDistanceStage.biomeDistanceClass)
+         BiomeDistanceStage.biomeDistanceBufferClass,
+         BiomeDistanceStage.biomeDistanceClass,
+         () -> new SimplePixelBuffer<>(BiomeDistanceStage.biomeDistanceClass)
       );
       int MAX_BIOME_DISTANCE_RADIUS = 512;
       int interpolationRadius = Math.clamp((long)(worldStructure_worker0.getBiomeTransitionDistance() / 2), 0, 512);
       int biomeEdgeRadius = Math.clamp((long)worldStructure_worker0.getMaxBiomeEdgeDistance(), 0, 512);
       int maxDistance = Math.max(interpolationRadius, biomeEdgeRadius);
-      NStage biomeDistanceStage = new NBiomeDistanceStage("BiomeDistanceStage", biome_bufferType, biomeDistance_bufferType, maxDistance);
+      Stage biomeDistanceStage = new BiomeDistanceStage("BiomeDistanceStage", biome_bufferType, biomeDistance_bufferType, maxDistance);
       generatorBuilder.appendStage(biomeDistanceStage);
       int materialBufferIndexCounter = 0;
-      NParametrizedBufferType material0_bufferType = generatorBuilder.MATERIAL_OUTPUT_BUFFER_TYPE;
+      ParametrizedBufferType material0_bufferType = generatorBuilder.MATERIAL_OUTPUT_BUFFER_TYPE;
       if (!allRuntimes.isEmpty()) {
-         material0_bufferType = new NParametrizedBufferType(
+         material0_bufferType = new ParametrizedBufferType(
             "Material" + materialBufferIndexCounter,
             bufferTypeIndexCounter++,
-            NTerrainStage.materialBufferClass,
-            NTerrainStage.materialClass,
-            () -> new NVoxelBuffer<>(NTerrainStage.materialClass)
+            TerrainStage.materialBufferClass,
+            TerrainStage.materialClass,
+            () -> new VoxelBuffer<>(TerrainStage.materialClass)
          );
          materialBufferIndexCounter++;
       }
 
-      NStage terrainStage = new NTerrainStage(
+      Stage terrainStage = new TerrainStage(
          "TerrainStage",
          biome_bufferType,
          biomeDistance_bufferType,
@@ -238,23 +245,23 @@ public class HytaleGenerator extends JavaPlugin {
          worldStructure_workerData
       );
       generatorBuilder.appendStage(terrainStage);
-      NParametrizedBufferType materialInput_bufferType = material0_bufferType;
-      NBufferType entityInput_bufferType = null;
+      ParametrizedBufferType materialInput_bufferType = material0_bufferType;
+      BufferType entityInput_bufferType = null;
 
       for (int i = 0; i < allRuntimes.size() - 1; i++) {
          int runtime = allRuntimes.get(i);
          String runtimeString = Integer.toString(runtime);
-         NParametrizedBufferType materialOutput_bufferType = new NParametrizedBufferType(
+         ParametrizedBufferType materialOutput_bufferType = new ParametrizedBufferType(
             "Material" + materialBufferIndexCounter,
             bufferTypeIndexCounter++,
-            NTerrainStage.materialBufferClass,
-            NTerrainStage.materialClass,
-            () -> new NVoxelBuffer<>(NTerrainStage.materialClass)
+            TerrainStage.materialBufferClass,
+            TerrainStage.materialClass,
+            () -> new VoxelBuffer<>(TerrainStage.materialClass)
          );
-         NBufferType entityOutput_bufferType = new NBufferType(
-            "Entity" + materialBufferIndexCounter, bufferTypeIndexCounter++, NEntityBuffer.class, NEntityBuffer::new
+         BufferType entityOutput_bufferType = new BufferType(
+            "Entity" + materialBufferIndexCounter, bufferTypeIndexCounter++, EntityBuffer.class, EntityBuffer::new
          );
-         NStage propStage = new NPropStage(
+         Stage propStage = new PropStage(
             "PropStage" + runtimeString,
             biome_bufferType,
             biomeDistance_bufferType,
@@ -275,7 +282,7 @@ public class HytaleGenerator extends JavaPlugin {
       if (!allRuntimes.isEmpty()) {
          int runtime = allRuntimes.getLast();
          String runtimeString = Integer.toString(runtime);
-         NStage propStage = new NPropStage(
+         Stage propStage = new PropStage(
             "PropStage" + runtimeString,
             biome_bufferType,
             biomeDistance_bufferType,
@@ -290,9 +297,9 @@ public class HytaleGenerator extends JavaPlugin {
          generatorBuilder.appendStage(propStage);
       }
 
-      NStage tintStage = new NTintStage("TintStage", biome_bufferType, generatorBuilder.TINT_OUTPUT_BUFFER_TYPE, worldStructure_workerData);
+      Stage tintStage = new TintStage("TintStage", biome_bufferType, generatorBuilder.TINT_OUTPUT_BUFFER_TYPE, worldStructure_workerData);
       generatorBuilder.appendStage(tintStage);
-      NStage environmentStage = new NEnvironmentStage(
+      Stage environmentStage = new EnvironmentStage(
          "EnvironmentStage", biome_bufferType, generatorBuilder.ENVIRONMENT_OUTPUT_BUFFER_TYPE, worldStructure_workerData
       );
       generatorBuilder.appendStage(environmentStage);
@@ -313,8 +320,8 @@ public class HytaleGenerator extends JavaPlugin {
       Set<Integer> allRuntimes = new HashSet<>();
 
       for (Biome biome : biomes) {
-         for (PropField propField : biome.getPropFields()) {
-            allRuntimes.add(propField.getRuntime());
+         for (PropRuntime propRuntime : biome.getPropRuntimes()) {
+            allRuntimes.add(propRuntime.getRuntimeIndex());
          }
       }
 

@@ -4,19 +4,14 @@ import com.hypixel.hytale.server.worldgen.prefab.PrefabCategory;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 
-public class FileLoadingContext extends FileContext<FileLoadingContext> {
+public class FileLoadingContext extends FileContext<FileContext.RootContext> {
    private final FileContext.Registry<ZoneFileContext> zones = new FileContext.Registry<>("Zone");
    private final FileContext.Registry<PrefabCategory> prefabCategories = new FileContext.Registry<>("Category");
    private int zoneIdCounter = -1;
    private int biomeIdCounter = -1;
 
-   public FileLoadingContext(@Nonnull Path filepath) {
-      super(-1, filepath.getFileName().toString(), filepath, null);
-   }
-
-   @Nonnull
-   public FileLoadingContext getParentContext() {
-      return this;
+   public FileLoadingContext(@Nonnull String name, @Nonnull Path filepath) {
+      super(-1, name, filepath, FileContext.RootContext.INSTANCE);
    }
 
    @Nonnull

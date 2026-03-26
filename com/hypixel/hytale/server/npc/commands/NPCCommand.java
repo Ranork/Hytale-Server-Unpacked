@@ -85,5 +85,6 @@ public class NPCCommand extends AbstractCommandCollection {
       this.addSubCommand(new NPCTestCommand());
       this.addSubCommand(new NPCThawCommand());
       this.addSubCommand(new NPCMessageCommand());
+      this.addSubCommand(new NPCDescriptorsCommand());
    }
 }

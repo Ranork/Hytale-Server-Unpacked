@@ -24,6 +24,8 @@ public class ParserContext {
    @Nonnull
    private final String inputString;
    @Nonnull
+   private final String rawInput;
+   @Nonnull
    private final BooleanArrayList parameterForwardingMap;
    @Nonnull
    private final Int2ObjectMap<String> preOptionalSingleValueTokens;
@@ -34,13 +36,12 @@ public class ParserContext {
    private String lastInsertedOptionalArgName;
    private int numPreOptSingleValueTokensBeforeListTokens;
    private int subCommandIndex;
-   private static final Pattern ARG_NAME_PATTERN = Pattern.compile("--(\\w*)");
-   private static final Matcher ARG_NAME_MATCHER = ARG_NAME_PATTERN.matcher("");
+   private static final Pattern ARG_NAME_PATTERN = Pattern.compile("--([\\w-]*)");
    private static final Pattern ARG_NAME_AND_VALUE_PATTERN = Pattern.compile("--(\\w+)=\"*(.*)\"*");
-   private static final Matcher ARG_NAME_AND_VALUE_MATCHER = ARG_NAME_AND_VALUE_PATTERN.matcher("");
 
-   public ParserContext(@Nonnull List<String> tokens, @Nonnull ParseResult parseResult) {
+   public ParserContext(@Nonnull List<String> tokens, @Nonnull String rawInput, @Nonnull ParseResult parseResult) {
       this.inputString = String.join(" ", tokens);
+      this.rawInput = rawInput;
       this.parameterForwardingMap = new BooleanArrayList();
       this.preOptionalSingleValueTokens = new Int2ObjectOpenHashMap();
       this.preOptionalListTokens = new Int2ObjectOpenHashMap();
@@ -49,8 +50,8 @@ public class ParserContext {
    }
 
    @Nonnull
-   public static ParserContext of(@Nonnull List<String> tokens, @Nonnull ParseResult parseResult) {
-      return new ParserContext(tokens, parseResult);
+   public static ParserContext of(@Nonnull List<String> tokens, @Nonnull String rawInput, @Nonnull ParseResult parseResult) {
+      return new ParserContext(tokens, rawInput, parseResult);
    }
 
    private void contextualizeTokens(@Nonnull List<String> tokens, @Nonnull ParseResult parseResult) {
@@ -59,6 +60,8 @@ public class ParserContext {
       boolean isSingleValueList = false;
       boolean wasLastTokenASpecialValue = false;
       boolean hasEnteredListBefore = false;
+      Matcher argMatcher = ARG_NAME_PATTERN.matcher("");
+      Matcher argNameAndValueMatcher = ARG_NAME_AND_VALUE_PATTERN.matcher("");
 
       for (int i = 0; i < tokens.size(); i++) {
          String token = tokens.get(i);
@@ -87,13 +90,13 @@ public class ParserContext {
             wasLastTokenASpecialValue = false;
          }
 
-         ARG_NAME_MATCHER.reset(token);
-         if (ARG_NAME_MATCHER.lookingAt()) {
+         argMatcher.reset(token);
+         if (argMatcher.lookingAt()) {
             beganParsingOptionals = true;
-            this.addNewOptionalArg(ARG_NAME_MATCHER.group(1));
-            ARG_NAME_AND_VALUE_MATCHER.reset(token);
-            if (ARG_NAME_AND_VALUE_MATCHER.matches()) {
-               this.appendOptionalParameter(ARG_NAME_AND_VALUE_MATCHER.group(2), parseResult);
+            this.addNewOptionalArg(argMatcher.group(1));
+            argNameAndValueMatcher.reset(token);
+            if (argNameAndValueMatcher.matches()) {
+               this.appendOptionalParameter(argNameAndValueMatcher.group(2), parseResult);
                if (parseResult.failed()) {
                   return;
                }
@@ -170,6 +173,15 @@ public class ParserContext {
    @Nonnull
    public String getInputString() {
       return this.inputString;
+   }
+
+   @Nonnull
+   public String getRawInput() {
+      return this.rawInput;
+   }
+
+   public int getSubCommandIndex() {
+      return this.subCommandIndex;
    }
 
    public boolean isListToken(int index) {

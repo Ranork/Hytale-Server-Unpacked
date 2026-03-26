@@ -274,7 +274,7 @@ public class EventBus implements IEventBus {
       @Nonnull Class<? super EventType> eventClass, KeyType key
    ) {
       SyncEventBusRegistry<KeyType, EventType> registry = (SyncEventBusRegistry<KeyType, EventType>)this.registryMap.get(eventClass);
-      return registry == null ? SyncEventBusRegistry.NO_OP : registry.dispatchFor(key);
+      return registry != null && registry.isAlive() ? registry.dispatchFor(key) : SyncEventBusRegistry.NO_OP;
    }
 
    @Nonnull
@@ -283,6 +283,6 @@ public class EventBus implements IEventBus {
       @Nonnull Class<? super EventType> eventClass, KeyType key
    ) {
       AsyncEventBusRegistry<KeyType, EventType> registry = (AsyncEventBusRegistry<KeyType, EventType>)this.registryMap.get(eventClass);
-      return registry == null ? AsyncEventBusRegistry.NO_OP : registry.dispatchFor(key);
+      return registry != null && registry.isAlive() ? registry.dispatchFor(key) : AsyncEventBusRegistry.NO_OP;
    }
 }

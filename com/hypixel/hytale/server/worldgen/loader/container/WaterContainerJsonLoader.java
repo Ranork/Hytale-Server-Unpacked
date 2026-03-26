@@ -2,6 +2,8 @@ package com.hypixel.hytale.server.worldgen.loader.container;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
 import com.hypixel.hytale.procedurallib.json.DoubleRangeJsonLoader;
@@ -18,24 +20,33 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.container.WaterContainer;
+import com.hypixel.hytale.server.worldgen.loader.context.BiomeFileContext;
 import com.hypixel.hytale.server.worldgen.util.ConstantNoiseProperty;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class WaterContainerJsonLoader extends JsonLoader<SeedStringResource, WaterContainer> {
-   public WaterContainerJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json) {
+   @Nonnull
+   private final BiomeFileContext biomeContext;
+
+   public WaterContainerJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json, @Nonnull BiomeFileContext biomeContext) {
       super(seed.append(".WaterContainer"), dataFolder, json);
+      this.biomeContext = biomeContext;
    }
 
    @Nonnull
    public WaterContainer load() {
-      if (this.has("Block")) {
-         String blockString = this.get("Block").getAsString();
-         int index = BlockType.getAssetMap().getIndex(blockString);
-         if (index == Integer.MIN_VALUE) {
-            throw new Error(String.format("Could not find Fluid for fluid: %s", blockString.toString()));
-         } else {
+      WaterContainer var15;
+      try (ListPool.Resource<WaterContainer.Entry> entries = WaterContainer.ENTRY_POOL.acquire()) {
+         if (this.has("Block")) {
+            String blockString = this.get("Block").getAsString();
+            int index = BlockType.getAssetMap().getIndex(blockString);
+            if (index == Integer.MIN_VALUE) {
+               throw new Error(String.format("Could not find Fluid for fluid: %s", blockString.toString()));
+            }
+
             IDoubleRange array = new DoubleRangeJsonLoader<>(this.seed, this.dataFolder, this.get("Height"), 0.0).load();
             NoiseProperty heightmapNoise = ConstantNoiseProperty.DEFAULT_ZERO;
             if (this.has("Heightmap")) {
@@ -43,24 +54,18 @@ public class WaterContainerJsonLoader extends JsonLoader<SeedStringResource, Wat
             }
 
             DoubleRangeNoiseSupplier height = new DoubleRangeNoiseSupplier(array, heightmapNoise);
-            return new WaterContainer(
-               new WaterContainer.Entry[]{
-                  new WaterContainer.Entry(
-                     index,
-                     0,
-                     new DoubleRangeNoiseSupplier(DoubleRange.ZERO, ConstantNoiseProperty.DEFAULT_ZERO),
-                     height,
-                     DefaultCoordinateCondition.DEFAULT_TRUE
-                  )
-               }
+            entries.add(
+               new WaterContainer.Entry(
+                  index, 0, new DoubleRangeNoiseSupplier(DoubleRange.ZERO, ConstantNoiseProperty.DEFAULT_ZERO), height, DefaultCoordinateCondition.DEFAULT_TRUE
+               )
             );
-         }
-      } else if (this.has("Fluid")) {
-         String fluidString = this.get("Fluid").getAsString();
-         int index = Fluid.getAssetMap().getIndex(fluidString);
-         if (index == Integer.MIN_VALUE) {
-            throw new Error(String.format("Could not find Fluid for fluid: %s", fluidString));
-         } else {
+         } else if (this.has("Fluid")) {
+            String fluidString = this.get("Fluid").getAsString();
+            int indexx = Fluid.getAssetMap().getIndex(fluidString);
+            if (indexx == Integer.MIN_VALUE) {
+               throw new Error(String.format("Could not find Fluid for fluid: %s", fluidString));
+            }
+
             IDoubleRange array = new DoubleRangeJsonLoader<>(this.seed, this.dataFolder, this.get("Height"), 0.0).load();
             NoiseProperty heightmapNoise = ConstantNoiseProperty.DEFAULT_ZERO;
             if (this.has("Heightmap")) {
@@ -68,48 +73,43 @@ public class WaterContainerJsonLoader extends JsonLoader<SeedStringResource, Wat
             }
 
             DoubleRangeNoiseSupplier height = new DoubleRangeNoiseSupplier(array, heightmapNoise);
-            return new WaterContainer(
-               new WaterContainer.Entry[]{
-                  new WaterContainer.Entry(
-                     0,
-                     index,
-                     new DoubleRangeNoiseSupplier(DoubleRange.ZERO, ConstantNoiseProperty.DEFAULT_ZERO),
-                     height,
-                     DefaultCoordinateCondition.DEFAULT_TRUE
-                  )
-               }
+            entries.add(
+               new WaterContainer.Entry(
+                  0,
+                  indexx,
+                  new DoubleRangeNoiseSupplier(DoubleRange.ZERO, ConstantNoiseProperty.DEFAULT_ZERO),
+                  height,
+                  DefaultCoordinateCondition.DEFAULT_TRUE
+               )
             );
-         }
-      } else {
-         return new WaterContainer(this.loadEntries());
-      }
-   }
-
-   @Nonnull
-   private WaterContainer.Entry[] loadEntries() {
-      if (!this.has("Entries")) {
-         return WaterContainer.Entry.EMPTY_ARRAY;
-      } else {
-         JsonArray arr = this.get("Entries").getAsJsonArray();
-         if (arr.isEmpty()) {
-            return WaterContainer.Entry.EMPTY_ARRAY;
          } else {
-            WaterContainer.Entry[] entries = new WaterContainer.Entry[arr.size()];
+            JsonArray fluidArray = this.mustGetArray("Entries", EMPTY_ARRAY);
 
-            for (int i = 0; i < arr.size(); i++) {
+            for (int i = 0; i < fluidArray.size(); i++) {
                try {
-                  entries[i] = new WaterContainerJsonLoader.WaterContainerEntryJsonLoader(
-                        this.seed.append(String.format("-%s", i)), this.dataFolder, arr.get(i)
-                     )
-                     .load();
-               } catch (Throwable var5) {
-                  throw new Error(String.format("Failed to load TintContainerEntry #%s", i), var5);
+                  entries.add(
+                     new WaterContainerJsonLoader.WaterContainerEntryJsonLoader(this.seed.append(String.format("-%s", i)), this.dataFolder, fluidArray.get(i))
+                        .load()
+                  );
+               } catch (Throwable var9) {
+                  throw new Error(String.format("Failed to load TintContainerEntry #%s", i), var9);
                }
             }
-
-            return entries;
          }
+
+         ModifyEvent.SeedGenerator<SeedStringResource> seed = new ModifyEvent.SeedGenerator<>(this.seed);
+         ModifyEvent.dispatch(
+            ModifyEvents.BiomeFluids.class,
+            new ModifyEvents.BiomeFluids(
+               this.biomeContext,
+               entries,
+               content -> new WaterContainerJsonLoader.WaterContainerEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+            )
+         );
+         var15 = new WaterContainer(entries.toArray());
       }
+
+      return var15;
    }
 
    public interface Constants {

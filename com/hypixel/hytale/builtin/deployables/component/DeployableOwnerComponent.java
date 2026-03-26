@@ -18,6 +18,7 @@ import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 
@@ -27,7 +28,7 @@ public class DeployableOwnerComponent implements Component<EntityStore> {
    @Nonnull
    private final Object2IntMap<String> deployableCountPerId = new Object2IntOpenHashMap();
    @Nonnull
-   private final List<Ref<EntityStore>> deployablesForDestruction = new ObjectArrayList();
+   private final List<Ref<EntityStore>> deployablesForDestruction = new ReferenceArrayList();
    @Nonnull
    private final List<Pair<String, Ref<EntityStore>>> tempDestructionList = new ObjectArrayList();
 

@@ -19,7 +19,7 @@ public class SharedMarkersProvider implements WorldMapManager.MarkerProvider {
       WorldMarkersResource worldMarkersResource = world.getChunkStore().getStore().getResource(WorldMarkersResource.getResourceType());
 
       for (UserMapMarker userMapMarker : worldMarkersResource.getUserMapMarkers()) {
-         collector.add(userMapMarker.toProtocolMarker());
+         collector.addIgnoreViewDistance(userMapMarker.toProtocolMarker());
       }
    }
 }

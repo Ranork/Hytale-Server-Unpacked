@@ -60,6 +60,7 @@ public class Environment implements JsonAssetWithMap<String, IndexedLookupTableA
    protected Int2ObjectMap<IWeightedMap<WeatherForecast>> weatherForecasts;
    protected double spawnDensity;
    protected boolean blockModificationAllowed = true;
+   private String weatherSeedKey;
    private SoftReference<WorldEnvironment> cachedPacket;
 
    public static AssetStore<String, Environment, IndexedLookupTableAssetMap<String, Environment>> getAssetStore() {
@@ -78,6 +79,7 @@ public class Environment implements JsonAssetWithMap<String, IndexedLookupTableA
       String id, Color waterTint, Map<String, FluidParticle> fluidParticles, Int2ObjectMap<IWeightedMap<WeatherForecast>> weatherForecasts, double spawnDensity
    ) {
       this.id = id;
+      this.weatherSeedKey = id;
       this.waterTint = waterTint;
       this.fluidParticles = fluidParticles;
       this.weatherForecasts = weatherForecasts;
@@ -109,6 +111,10 @@ public class Environment implements JsonAssetWithMap<String, IndexedLookupTableA
       } else {
          return this.weatherForecasts == null ? DEFAULT_WEATHER_FORECAST : (IWeightedMap)this.weatherForecasts.getOrDefault(hour, DEFAULT_WEATHER_FORECAST);
       }
+   }
+
+   public String getWeatherSeedKey() {
+      return this.weatherSeedKey != null ? this.weatherSeedKey : this.id;
    }
 
    public double getSpawnDensity() {
@@ -280,6 +286,13 @@ public class Environment implements JsonAssetWithMap<String, IndexedLookupTableA
          .metadata(new UIEditor(UIEditor.WEIGHTED_TIMELINE))
          .metadata(new UIEditorSectionStart("Weather"))
          .metadata(UIDefaultCollapsedState.UNCOLLAPSED)
+         .add()
+         .appendInherited(
+            new KeyedCodec<>("WeatherForecastSeed", Codec.STRING, true),
+            (environment, seed) -> environment.weatherSeedKey = seed,
+            environment -> environment.weatherSeedKey,
+            (environment, parent) -> environment.weatherSeedKey = parent.getWeatherSeedKey()
+         )
          .add()
          .build();
       VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(Environment::getAssetStore));

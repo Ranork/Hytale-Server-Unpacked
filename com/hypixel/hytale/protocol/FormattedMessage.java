@@ -16,8 +16,8 @@ import javax.annotation.Nullable;
 public class FormattedMessage {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 6;
-   public static final int VARIABLE_FIELD_COUNT = 7;
-   public static final int VARIABLE_BLOCK_START = 34;
+   public static final int VARIABLE_FIELD_COUNT = 8;
+   public static final int VARIABLE_BLOCK_START = 38;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String rawText;
@@ -42,6 +42,8 @@ public class FormattedMessage {
    @Nullable
    public String link;
    public boolean markupEnabled;
+   @Nullable
+   public FormattedMessageImage image;
 
    public FormattedMessage() {
    }
@@ -58,7 +60,8 @@ public class FormattedMessage {
       @Nonnull MaybeBool monospace,
       @Nonnull MaybeBool underlined,
       @Nullable String link,
-      boolean markupEnabled
+      boolean markupEnabled,
+      @Nullable FormattedMessageImage image
    ) {
       this.rawText = rawText;
       this.messageId = messageId;
@@ -72,6 +75,7 @@ public class FormattedMessage {
       this.underlined = underlined;
       this.link = link;
       this.markupEnabled = markupEnabled;
+      this.image = image;
    }
 
    public FormattedMessage(@Nonnull FormattedMessage other) {
@@ -87,6 +91,7 @@ public class FormattedMessage {
       this.underlined = other.underlined;
       this.link = other.link;
       this.markupEnabled = other.markupEnabled;
+      this.image = other.image;
    }
 
    @Nonnull
@@ -99,7 +104,7 @@ public class FormattedMessage {
       obj.underlined = MaybeBool.fromValue(buf.getByte(offset + 4));
       obj.markupEnabled = buf.getByte(offset + 5) != 0;
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 34 + buf.getIntLE(offset + 6);
+         int varPos0 = offset + 38 + buf.getIntLE(offset + 6);
          int rawTextLen = VarInt.peek(buf, varPos0);
          if (rawTextLen < 0) {
             throw ProtocolException.negativeLength("RawText", rawTextLen);
@@ -113,7 +118,7 @@ public class FormattedMessage {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 34 + buf.getIntLE(offset + 10);
+         int varPos1 = offset + 38 + buf.getIntLE(offset + 10);
          int messageIdLen = VarInt.peek(buf, varPos1);
          if (messageIdLen < 0) {
             throw ProtocolException.negativeLength("MessageId", messageIdLen);
@@ -127,7 +132,7 @@ public class FormattedMessage {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 34 + buf.getIntLE(offset + 14);
+         int varPos2 = offset + 38 + buf.getIntLE(offset + 14);
          int childrenCount = VarInt.peek(buf, varPos2);
          if (childrenCount < 0) {
             throw ProtocolException.negativeLength("Children", childrenCount);
@@ -152,7 +157,7 @@ public class FormattedMessage {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 34 + buf.getIntLE(offset + 18);
+         int varPos3 = offset + 38 + buf.getIntLE(offset + 18);
          int paramsCount = VarInt.peek(buf, varPos3);
          if (paramsCount < 0) {
             throw ProtocolException.negativeLength("Params", paramsCount);
@@ -188,7 +193,7 @@ public class FormattedMessage {
       }
 
       if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 34 + buf.getIntLE(offset + 22);
+         int varPos4 = offset + 38 + buf.getIntLE(offset + 22);
          int messageParamsCount = VarInt.peek(buf, varPos4);
          if (messageParamsCount < 0) {
             throw ProtocolException.negativeLength("MessageParams", messageParamsCount);
@@ -224,7 +229,7 @@ public class FormattedMessage {
       }
 
       if ((nullBits & 32) != 0) {
-         int varPos5 = offset + 34 + buf.getIntLE(offset + 26);
+         int varPos5 = offset + 38 + buf.getIntLE(offset + 26);
          int colorLen = VarInt.peek(buf, varPos5);
          if (colorLen < 0) {
             throw ProtocolException.negativeLength("Color", colorLen);
@@ -238,7 +243,7 @@ public class FormattedMessage {
       }
 
       if ((nullBits & 64) != 0) {
-         int varPos6 = offset + 34 + buf.getIntLE(offset + 30);
+         int varPos6 = offset + 38 + buf.getIntLE(offset + 30);
          int linkLen = VarInt.peek(buf, varPos6);
          if (linkLen < 0) {
             throw ProtocolException.negativeLength("Link", linkLen);
@@ -251,15 +256,20 @@ public class FormattedMessage {
          obj.link = PacketIO.readVarString(buf, varPos6, PacketIO.UTF8);
       }
 
+      if ((nullBits & 128) != 0) {
+         int varPos7 = offset + 38 + buf.getIntLE(offset + 34);
+         obj.image = FormattedMessageImage.deserialize(buf, varPos7);
+      }
+
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 34;
+      int maxEnd = 38;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 6);
-         int pos0 = offset + 34 + fieldOffset0;
+         int pos0 = offset + 38 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.length(buf, pos0) + sl;
          if (pos0 - offset > maxEnd) {
@@ -269,7 +279,7 @@ public class FormattedMessage {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 10);
-         int pos1 = offset + 34 + fieldOffset1;
+         int pos1 = offset + 38 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
          pos1 += VarInt.length(buf, pos1) + sl;
          if (pos1 - offset > maxEnd) {
@@ -279,7 +289,7 @@ public class FormattedMessage {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 14);
-         int pos2 = offset + 34 + fieldOffset2;
+         int pos2 = offset + 38 + fieldOffset2;
          int arrLen = VarInt.peek(buf, pos2);
          pos2 += VarInt.length(buf, pos2);
 
@@ -294,7 +304,7 @@ public class FormattedMessage {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 18);
-         int pos3 = offset + 34 + fieldOffset3;
+         int pos3 = offset + 38 + fieldOffset3;
          int dictLen = VarInt.peek(buf, pos3);
          pos3 += VarInt.length(buf, pos3);
 
@@ -311,7 +321,7 @@ public class FormattedMessage {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 22);
-         int pos4 = offset + 34 + fieldOffset4;
+         int pos4 = offset + 38 + fieldOffset4;
          int dictLen = VarInt.peek(buf, pos4);
          pos4 += VarInt.length(buf, pos4);
 
@@ -328,7 +338,7 @@ public class FormattedMessage {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 26);
-         int pos5 = offset + 34 + fieldOffset5;
+         int pos5 = offset + 38 + fieldOffset5;
          int sl = VarInt.peek(buf, pos5);
          pos5 += VarInt.length(buf, pos5) + sl;
          if (pos5 - offset > maxEnd) {
@@ -338,11 +348,20 @@ public class FormattedMessage {
 
       if ((nullBits & 64) != 0) {
          int fieldOffset6 = buf.getIntLE(offset + 30);
-         int pos6 = offset + 34 + fieldOffset6;
+         int pos6 = offset + 38 + fieldOffset6;
          int sl = VarInt.peek(buf, pos6);
          pos6 += VarInt.length(buf, pos6) + sl;
          if (pos6 - offset > maxEnd) {
             maxEnd = pos6 - offset;
+         }
+      }
+
+      if ((nullBits & 128) != 0) {
+         int fieldOffset7 = buf.getIntLE(offset + 34);
+         int pos7 = offset + 38 + fieldOffset7;
+         pos7 += FormattedMessageImage.computeBytesConsumed(buf, pos7);
+         if (pos7 - offset > maxEnd) {
+            maxEnd = pos7 - offset;
          }
       }
 
@@ -380,6 +399,10 @@ public class FormattedMessage {
          nullBits = (byte)(nullBits | 64);
       }
 
+      if (this.image != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
       buf.writeByte(nullBits);
       buf.writeByte(this.bold.getValue());
       buf.writeByte(this.italic.getValue());
@@ -399,6 +422,8 @@ public class FormattedMessage {
       int colorOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int linkOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
+      int imageOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
       if (this.rawText != null) {
@@ -475,10 +500,17 @@ public class FormattedMessage {
       } else {
          buf.setIntLE(linkOffsetSlot, -1);
       }
+
+      if (this.image != null) {
+         buf.setIntLE(imageOffsetSlot, buf.writerIndex() - varBlockStart);
+         this.image.serialize(buf);
+      } else {
+         buf.setIntLE(imageOffsetSlot, -1);
+      }
    }
 
    public int computeSize() {
-      int size = 34;
+      int size = 38;
       if (this.rawText != null) {
          size += PacketIO.stringSize(this.rawText);
       }
@@ -525,12 +557,16 @@ public class FormattedMessage {
          size += PacketIO.stringSize(this.link);
       }
 
+      if (this.image != null) {
+         size += this.image.computeSize();
+      }
+
       return size;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 34) {
-         return ValidationResult.error("Buffer too small: expected at least 34 bytes");
+      if (buffer.readableBytes() - offset < 38) {
+         return ValidationResult.error("Buffer too small: expected at least 38 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 1) != 0) {
@@ -539,7 +575,7 @@ public class FormattedMessage {
                return ValidationResult.error("Invalid offset for RawText");
             }
 
-            int pos = offset + 34 + rawTextOffset;
+            int pos = offset + 38 + rawTextOffset;
             if (pos >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for RawText");
             }
@@ -566,7 +602,7 @@ public class FormattedMessage {
                return ValidationResult.error("Invalid offset for MessageId");
             }
 
-            int posx = offset + 34 + messageIdOffset;
+            int posx = offset + 38 + messageIdOffset;
             if (posx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for MessageId");
             }
@@ -593,7 +629,7 @@ public class FormattedMessage {
                return ValidationResult.error("Invalid offset for Children");
             }
 
-            int posxx = offset + 34 + childrenOffset;
+            int posxx = offset + 38 + childrenOffset;
             if (posxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Children");
             }
@@ -625,7 +661,7 @@ public class FormattedMessage {
                return ValidationResult.error("Invalid offset for Params");
             }
 
-            int posxxx = offset + 34 + paramsOffset;
+            int posxxx = offset + 38 + paramsOffset;
             if (posxxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Params");
             }
@@ -667,7 +703,7 @@ public class FormattedMessage {
                return ValidationResult.error("Invalid offset for MessageParams");
             }
 
-            int posxxxx = offset + 34 + messageParamsOffset;
+            int posxxxx = offset + 38 + messageParamsOffset;
             if (posxxxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for MessageParams");
             }
@@ -709,7 +745,7 @@ public class FormattedMessage {
                return ValidationResult.error("Invalid offset for Color");
             }
 
-            int posxxxxx = offset + 34 + colorOffset;
+            int posxxxxx = offset + 38 + colorOffset;
             if (posxxxxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Color");
             }
@@ -736,7 +772,7 @@ public class FormattedMessage {
                return ValidationResult.error("Invalid offset for Link");
             }
 
-            int posxxxxxx = offset + 34 + linkOffset;
+            int posxxxxxx = offset + 38 + linkOffset;
             if (posxxxxxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Link");
             }
@@ -755,6 +791,25 @@ public class FormattedMessage {
             if (posxxxxxx > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Link");
             }
+         }
+
+         if ((nullBits & 128) != 0) {
+            int imageOffset = buffer.getIntLE(offset + 34);
+            if (imageOffset < 0) {
+               return ValidationResult.error("Invalid offset for Image");
+            }
+
+            int posxxxxxxx = offset + 38 + imageOffset;
+            if (posxxxxxxx >= buffer.writerIndex()) {
+               return ValidationResult.error("Offset out of bounds for Image");
+            }
+
+            ValidationResult imageResult = FormattedMessageImage.validateStructure(buffer, posxxxxxxx);
+            if (!imageResult.isValid()) {
+               return ValidationResult.error("Invalid Image: " + imageResult.error());
+            }
+
+            posxxxxxxx += FormattedMessageImage.computeBytesConsumed(buffer, posxxxxxxx);
          }
 
          return ValidationResult.OK;
@@ -784,6 +839,7 @@ public class FormattedMessage {
       copy.underlined = this.underlined;
       copy.link = this.link;
       copy.markupEnabled = this.markupEnabled;
+      copy.image = this.image != null ? this.image.clone() : null;
       return copy;
    }
 
@@ -805,7 +861,8 @@ public class FormattedMessage {
                && Objects.equals(this.monospace, other.monospace)
                && Objects.equals(this.underlined, other.underlined)
                && Objects.equals(this.link, other.link)
-               && this.markupEnabled == other.markupEnabled;
+               && this.markupEnabled == other.markupEnabled
+               && Objects.equals(this.image, other.image);
       }
    }
 
@@ -823,6 +880,7 @@ public class FormattedMessage {
       result = 31 * result + Objects.hashCode(this.monospace);
       result = 31 * result + Objects.hashCode(this.underlined);
       result = 31 * result + Objects.hashCode(this.link);
-      return 31 * result + Boolean.hashCode(this.markupEnabled);
+      result = 31 * result + Boolean.hashCode(this.markupEnabled);
+      return 31 * result + Objects.hashCode(this.image);
    }
 }

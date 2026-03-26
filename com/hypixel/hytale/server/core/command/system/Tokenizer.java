@@ -33,7 +33,7 @@ public class Tokenizer {
             boolean extractToken;
             char c = argsStr.charAt(i);
             extractToken = false;
-            label88:
+            label99:
             switch (c) {
                case ' ':
                   if (quote == 0) {
@@ -58,7 +58,7 @@ public class Tokenizer {
                   }
                   break;
                case '\'':
-                  if (quote == 0) {
+                  if (quote == 0 && tokenStart == i) {
                      quote = '\'';
                   } else if (quote == '\'') {
                      quote = 0;
@@ -109,7 +109,7 @@ public class Tokenizer {
                      case ']':
                         argsStr = argsStr.substring(0, i) + argsStr.substring(i + 1);
                         i++;
-                        break label88;
+                        break label99;
                      default:
                         parseResult.fail(
                            Message.translation("server.commands.parsing.error.invalidEscapeForSymbol")

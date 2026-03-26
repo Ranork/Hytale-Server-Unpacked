@@ -11,10 +11,10 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.arguments.types.RelativeIntPosition;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractWorldCommand;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
-import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerState;
+import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerBlock;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
@@ -54,13 +54,18 @@ public abstract class TargetPrefabSpawnerCommand extends AbstractWorldCommand {
       }
 
       WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(target.x, target.z));
-      BlockState state = chunk.getState(target.x, target.y, target.z);
-      if (!(state instanceof PrefabSpawnerState)) {
+      Ref<ChunkStore> blockEntityRef = chunk.getBlockComponentEntity(target.x, target.y, target.z);
+      if (blockEntityRef == null) {
          context.sendMessage(Message.translation("server.commands.prefabspawner.spawnerNotFoundAtTarget").param("pos", target.toString()));
       } else {
-         this.execute(context, chunk, (PrefabSpawnerState)state);
+         PrefabSpawnerBlock prefabSpawnerBlock = blockEntityRef.getStore().getComponent(blockEntityRef, PrefabSpawnerBlock.getComponentType());
+         if (prefabSpawnerBlock == null) {
+            context.sendMessage(Message.translation("server.commands.prefabspawner.spawnerNotFoundAtTarget").param("pos", target.toString()));
+         } else {
+            this.execute(context, chunk, prefabSpawnerBlock);
+         }
       }
    }
 
-   protected abstract void execute(@Nonnull CommandContext var1, @Nonnull WorldChunk var2, @Nonnull PrefabSpawnerState var3);
+   protected abstract void execute(@Nonnull CommandContext var1, @Nonnull WorldChunk var2, @Nonnull PrefabSpawnerBlock var3);
 }

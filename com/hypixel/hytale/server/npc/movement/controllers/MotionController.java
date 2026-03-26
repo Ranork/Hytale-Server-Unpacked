@@ -74,6 +74,9 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    boolean canAct(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 
+   @Nullable
+   String canActFailReason(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+
    boolean isInProgress();
 
    boolean isObstructed();
@@ -190,32 +193,36 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
       if (!<unrepresentable>.$assertionsDisabled && movementStatesComponent == null) {
          throw new AssertionError();
       } else {
-         Velocity velocityComponent = componentAccessor.getComponent(ref, Velocity.getComponentType());
-         if (!<unrepresentable>.$assertionsDisabled && velocityComponent == null) {
-            throw new AssertionError();
-         } else {
-            MovementStates states = movementStatesComponent.getMovementStates();
+         MovementStates states = movementStatesComponent.getMovementStates();
 
-            return switch (state) {
-               case CLIMBING -> states.climbing;
-               case FALLING -> states.falling;
-               case CROUCHING -> states.crouching;
-               case FLYING -> states.flying;
-               case JUMPING -> states.jumping;
-               case SPRINTING -> states.sprinting;
-               case RUNNING -> states.running;
-               case IDLE -> velocityComponent.getVelocity().closeToZero(0.001);
-               case WALKING -> !velocityComponent.getVelocity().closeToZero(0.001)
-                  && !states.falling
-                  && !states.climbing
-                  && !states.flying
-                  && !states.running
-                  && !states.sprinting
-                  && !states.jumping
-                  && !states.crouching;
-               case ANY -> true;
-            };
-         }
+         return switch (state) {
+            case CLIMBING -> states.climbing;
+            case FALLING -> states.falling;
+            case CROUCHING -> states.crouching;
+            case FLYING -> states.flying;
+            case JUMPING -> states.jumping;
+            case SPRINTING -> states.sprinting;
+            case RUNNING -> states.running;
+            case IDLE, WALKING -> {
+               Velocity velocityComponent = componentAccessor.getComponent(ref, Velocity.getComponentType());
+               if (!<unrepresentable>.$assertionsDisabled && velocityComponent == null) {
+                  throw new AssertionError();
+               }
+
+               boolean isIdle = velocityComponent.getVelocity().closeToZero(0.001);
+               yield state == MovementState.IDLE
+                  ? isIdle
+                  : !isIdle
+                     && !states.falling
+                     && !states.climbing
+                     && !states.flying
+                     && !states.running
+                     && !states.sprinting
+                     && !states.jumping
+                     && !states.crouching;
+            }
+            case ANY -> true;
+         };
       }
    }
 

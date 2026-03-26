@@ -48,6 +48,16 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
          ambienceFXSound -> ambienceFXSound.frequency
       )
       .addField(new KeyedCodec<>("Radius", ProtocolCodecs.RANGE), (ambienceFXSound, o) -> ambienceFXSound.radius = o, ambienceFXSound -> ambienceFXSound.radius)
+      .<Integer>append(
+         new KeyedCodec<>("MaxBodiesPerEmitter", Codec.INTEGER),
+         (ambienceFXSound, o) -> ambienceFXSound.maxBodiesPerEmitter = o,
+         ambienceFXSound -> ambienceFXSound.maxBodiesPerEmitter
+      )
+      .addValidator(Validators.greaterThan(0))
+      .add()
+      .documentation(
+         "Random radius within which to play the sound. When used in conjunction with LocationNameRandom for Play3D, acts as a distance bound on position selection. Ignored when Play3D is set to LocationName."
+      )
       .afterDecode(AmbienceFXSound::processConfig)
       .build();
    public static final Rangef DEFAULT_FREQUENCY = new Rangef(1.0F, 10.0F);
@@ -60,9 +70,16 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
    protected AmbienceFXAltitude altitude = AmbienceFXAltitude.Normal;
    protected Rangef frequency = DEFAULT_FREQUENCY;
    protected Range radius = DEFAULT_RADIUS;
+   protected int maxBodiesPerEmitter = 8;
 
    public AmbienceFXSound(
-      String soundEventId, AmbienceFXSoundPlay3D play3D, String blockSoundSetId, AmbienceFXAltitude altitude, Rangef frequency, Range radius
+      String soundEventId,
+      AmbienceFXSoundPlay3D play3D,
+      String blockSoundSetId,
+      AmbienceFXAltitude altitude,
+      Rangef frequency,
+      Range radius,
+      int maxBodiesPerEmitter
    ) {
       this.soundEventId = soundEventId;
       this.play3D = play3D;
@@ -70,6 +87,7 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
       this.altitude = altitude;
       this.frequency = frequency;
       this.radius = radius;
+      this.maxBodiesPerEmitter = maxBodiesPerEmitter;
    }
 
    protected AmbienceFXSound() {
@@ -84,6 +102,7 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
       packet.altitude = this.altitude;
       packet.frequency = this.frequency;
       packet.radius = this.radius;
+      packet.maxBodiesPerEmitter = this.maxBodiesPerEmitter;
       return packet;
    }
 
@@ -115,6 +134,10 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
       return this.radius;
    }
 
+   public int getMaxBodiesPerEmitter() {
+      return this.maxBodiesPerEmitter;
+   }
+
    protected void processConfig() {
       if (this.soundEventId != null) {
          this.soundEventIndex = SoundEvent.getAssetMap().getIndex(this.soundEventId);
@@ -144,6 +167,8 @@ public class AmbienceFXSound implements NetworkSerializable<com.hypixel.hytale.p
          + this.frequency
          + ", radius="
          + this.radius
+         + ", maxBodiesPerEmitter="
+         + this.maxBodiesPerEmitter
          + "}";
    }
 }

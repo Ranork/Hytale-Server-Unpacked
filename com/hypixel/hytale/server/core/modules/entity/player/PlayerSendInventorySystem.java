@@ -6,8 +6,9 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.protocol.packets.inventory.UpdatePlayerInventory;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -48,13 +49,34 @@ public class PlayerSendInventorySystem extends EntityTickingSystem<EntityStore> 
 
       assert playerComponent != null;
 
-      Inventory inventory = playerComponent.getInventory();
-      if (inventory.consumeIsDirty()) {
+      InventoryComponent.Storage storage = archetypeChunk.getComponent(index, InventoryComponent.Storage.getComponentType());
+      InventoryComponent.Armor armor = archetypeChunk.getComponent(index, InventoryComponent.Armor.getComponentType());
+      InventoryComponent.Hotbar hotbar = archetypeChunk.getComponent(index, InventoryComponent.Hotbar.getComponentType());
+      InventoryComponent.Utility utility = archetypeChunk.getComponent(index, InventoryComponent.Utility.getComponentType());
+      InventoryComponent.Tool tool = archetypeChunk.getComponent(index, InventoryComponent.Tool.getComponentType());
+      InventoryComponent.Backpack backpack = archetypeChunk.getComponent(index, InventoryComponent.Backpack.getComponentType());
+      boolean isStorageDirty = storage != null && storage.consumeIsDirty();
+      boolean isArmorDirty = armor != null && armor.consumeIsDirty();
+      boolean isHotbarDirty = hotbar != null && hotbar.consumeIsDirty();
+      boolean isUtilityDirty = utility != null && utility.consumeIsDirty();
+      boolean isToolDirty = tool != null && tool.consumeIsDirty();
+      boolean isBackpackDirty = backpack != null && backpack.consumeIsDirty();
+      if (isStorageDirty || isArmorDirty || isHotbarDirty || isUtilityDirty || isToolDirty || isBackpackDirty) {
          PlayerRef playerRefComponent = archetypeChunk.getComponent(index, this.refComponentType);
 
          assert playerRefComponent != null;
 
-         playerRefComponent.getPacketHandler().write(inventory.toPacket());
+         playerRefComponent.getPacketHandler()
+            .writeNoCache(
+               new UpdatePlayerInventory(
+                  isStorageDirty ? storage.getInventory().toPacket() : null,
+                  isArmorDirty ? armor.getInventory().toPacket() : null,
+                  isHotbarDirty ? hotbar.getInventory().toPacket() : null,
+                  isUtilityDirty ? utility.getInventory().toPacket() : null,
+                  isToolDirty ? tool.getInventory().toPacket() : null,
+                  isBackpackDirty ? backpack.getInventory().toPacket() : null
+               )
+            );
       }
 
       playerComponent.getWindowManager().updateWindows();

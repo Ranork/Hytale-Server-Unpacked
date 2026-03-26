@@ -5,11 +5,13 @@ import com.google.gson.JsonParser;
 import com.hypixel.hytale.codec.lookup.Priority;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthBrowserFlow;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthClient;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthDeviceFlow;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
@@ -17,6 +19,7 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,6 +34,8 @@ import joptsimple.OptionSet;
 public class ServerAuthManager {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final int REFRESH_BUFFER_SECONDS = 300;
+   private static final int REFRESH_MAX_RETRIES = 3;
+   private static final int REFRESH_RETRY_BASE_DELAY_SECONDS = 30;
    private static volatile ServerAuthManager instance;
    private volatile ServerAuthManager.AuthMode authMode = ServerAuthManager.AuthMode.NONE;
    private volatile Instant tokenExpiry;
@@ -97,72 +102,90 @@ public class ServerAuthManager {
             LOGGER.at(Level.INFO).log("Singleplayer mode, owner: %s (%s)", ownerProfile.username, ownerProfile.uuid);
          }
 
-         boolean hasCliTokens = false;
-         String sessionTokenValue = null;
-         String identityTokenValue = null;
-         if (optionSet.has(Options.SESSION_TOKEN)) {
-            sessionTokenValue = (String)optionSet.valueOf(Options.SESSION_TOKEN);
-            LOGGER.at(Level.INFO).log("Session token loaded from CLI");
-         } else {
-            String envToken = System.getenv("HYTALE_SERVER_SESSION_TOKEN");
-            if (envToken != null && !envToken.isEmpty()) {
-               sessionTokenValue = envToken;
-               LOGGER.at(Level.INFO).log("Session token loaded from environment");
-            }
-         }
-
-         if (optionSet.has(Options.IDENTITY_TOKEN)) {
-            identityTokenValue = (String)optionSet.valueOf(Options.IDENTITY_TOKEN);
-            LOGGER.at(Level.INFO).log("Identity token loaded from CLI");
-         } else {
-            String envTokenx = System.getenv("HYTALE_SERVER_IDENTITY_TOKEN");
-            if (envTokenx != null && !envTokenx.isEmpty()) {
-               identityTokenValue = envTokenx;
-               LOGGER.at(Level.INFO).log("Identity token loaded from environment");
-            }
-         }
-
-         if (sessionTokenValue != null || identityTokenValue != null) {
-            if (this.validateInitialTokens(sessionTokenValue, identityTokenValue)) {
-               SessionServiceClient.GameSessionResponse session = new SessionServiceClient.GameSessionResponse();
-               session.sessionToken = sessionTokenValue;
-               session.identityToken = identityTokenValue;
-               this.gameSession.set(session);
-               hasCliTokens = true;
+         if (this.isSingleplayer && optionSet.valueOf(Options.AUTH_MODE) == Options.AuthMode.OFFLINE) {
+            String offlineTokenValue = System.getenv("HYTALE_SERVER_OFFLINE_TOKEN");
+            if (offlineTokenValue != null && !offlineTokenValue.isEmpty()) {
+               LOGGER.at(Level.INFO).log("Offline token loaded from environment");
+               if (this.validateOfflineToken(offlineTokenValue)) {
+                  LOGGER.at(Level.INFO).log("Offline token validated, singleplayer offline mode");
+                  LOGGER.at(Level.INFO).log("Server session ID: %s", this.serverSessionId);
+               } else {
+                  this.pendingFatalError = "Offline token validation failed. The token may be expired, tampered, or malformed.";
+                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
+               }
             } else {
-               this.pendingFatalError = "Token validation failed. Provided tokens may be expired, tampered, or malformed. Remove invalid tokens or provide valid ones.";
+               this.pendingFatalError = "Offline singleplayer mode requires the game must be launched through the official launcher.";
                LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
             }
-         }
-
-         if (hasCliTokens) {
-            if (this.isSingleplayer) {
-               this.authMode = ServerAuthManager.AuthMode.SINGLEPLAYER;
-               LOGGER.at(Level.INFO).log("Auth mode: SINGLEPLAYER");
+         } else {
+            boolean hasCliTokens = false;
+            String sessionTokenValue = null;
+            String identityTokenValue = null;
+            if (optionSet.has(Options.SESSION_TOKEN)) {
+               sessionTokenValue = (String)optionSet.valueOf(Options.SESSION_TOKEN);
+               LOGGER.at(Level.INFO).log("Session token loaded from CLI");
             } else {
-               this.authMode = ServerAuthManager.AuthMode.EXTERNAL_SESSION;
-               LOGGER.at(Level.INFO).log("Auth mode: EXTERNAL_SESSION");
+               String envToken = System.getenv("HYTALE_SERVER_SESSION_TOKEN");
+               if (envToken != null && !envToken.isEmpty()) {
+                  sessionTokenValue = envToken;
+                  LOGGER.at(Level.INFO).log("Session token loaded from environment");
+               }
             }
 
-            this.parseAndScheduleRefresh();
-         } else {
-            LOGGER.at(Level.INFO).log("No server tokens configured. Use /auth login to authenticate, or provide tokens via CLI/environment.");
-         }
+            if (optionSet.has(Options.IDENTITY_TOKEN)) {
+               identityTokenValue = (String)optionSet.valueOf(Options.IDENTITY_TOKEN);
+               LOGGER.at(Level.INFO).log("Identity token loaded from CLI");
+            } else {
+               String envTokenx = System.getenv("HYTALE_SERVER_IDENTITY_TOKEN");
+               if (envTokenx != null && !envTokenx.isEmpty()) {
+                  identityTokenValue = envTokenx;
+                  LOGGER.at(Level.INFO).log("Identity token loaded from environment");
+               }
+            }
 
-         LOGGER.at(Level.INFO).log("Server session ID: %s", this.serverSessionId);
-         LOGGER.at(Level.FINE)
-            .log(
-               "ServerAuthManager initialized - session token: %s, identity token: %s, auth mode: %s",
-               this.hasSessionToken() ? "present" : "missing",
-               this.hasIdentityToken() ? "present" : "missing",
-               this.authMode
-            );
+            if (sessionTokenValue != null || identityTokenValue != null) {
+               if (this.validateInitialTokens(sessionTokenValue, identityTokenValue)) {
+                  SessionServiceClient.GameSessionResponse session = new SessionServiceClient.GameSessionResponse();
+                  session.sessionToken = sessionTokenValue;
+                  session.identityToken = identityTokenValue;
+                  this.gameSession.set(session);
+                  hasCliTokens = true;
+               } else {
+                  this.pendingFatalError = "Token validation failed. Provided tokens may be expired, tampered, or malformed. Remove invalid tokens or provide valid ones.";
+                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
+               }
+            }
+
+            if (hasCliTokens) {
+               if (this.isSingleplayer) {
+                  this.authMode = ServerAuthManager.AuthMode.SINGLEPLAYER;
+                  LOGGER.at(Level.INFO).log("Auth mode: SINGLEPLAYER");
+               } else {
+                  this.authMode = ServerAuthManager.AuthMode.EXTERNAL_SESSION;
+                  LOGGER.at(Level.INFO).log("Auth mode: EXTERNAL_SESSION");
+               }
+
+               this.parseAndScheduleRefresh();
+            } else {
+               LOGGER.at(Level.INFO).log("No server tokens configured. Use /auth login to authenticate, or provide tokens via CLI/environment.");
+            }
+
+            LOGGER.at(Level.INFO).log("Server session ID: %s", this.serverSessionId);
+            LOGGER.at(Level.FINE)
+               .log(
+                  "ServerAuthManager initialized - session token: %s, identity token: %s, auth mode: %s",
+                  this.hasSessionToken() ? "present" : "missing",
+                  this.hasIdentityToken() ? "present" : "missing",
+                  this.authMode
+               );
+         }
       }
    }
 
    public void checkPendingFatalError() {
       if (this.pendingFatalError != null) {
-         HytaleServer.get().shutdownServer(ShutdownReason.AUTH_FAILED.withMessage(this.pendingFatalError));
+         Message reasonMessage = Message.translation("client.disconnection.shutdownReason.authFailed.detail").param("detail", this.pendingFatalError);
+         HytaleServer.get().shutdownServer(ShutdownReason.AUTH_FAILED.withMessage(reasonMessage));
       }
    }
 
@@ -188,11 +211,7 @@ public class ServerAuthManager {
 
    public void shutdown() {
       this.cancelActiveFlow();
-      if (this.refreshTask != null) {
-         this.refreshTask.cancel(false);
-      }
-
-      this.refreshScheduler.shutdown();
+      this.refreshScheduler.shutdownNow();
       if (this.isSingleplayer()) {
          String currentSessionToken = this.getSessionToken();
          if (currentSessionToken != null && !currentSessionToken.isEmpty()) {
@@ -477,6 +496,36 @@ public class ServerAuthManager {
       this.pendingAuthMode = null;
    }
 
+   private boolean validateOfflineToken(@Nonnull String offlineToken) {
+      if (this.sessionServiceClient == null) {
+         this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
+      }
+
+      JWTValidator validator = new JWTValidator(this.sessionServiceClient, "https://sessions.hytale.com", "");
+      JWTValidator.IdentityTokenClaims claims = validator.validateOfflineToken(offlineToken);
+      if (claims == null) {
+         LOGGER.at(Level.WARNING).log("Offline token validation failed");
+         return false;
+      } else {
+         OptionSet optionSet = Options.getOptionSet();
+         UUID expectedOwnerUuid = optionSet != null && optionSet.has(Options.OWNER_UUID) ? (UUID)optionSet.valueOf(Options.OWNER_UUID) : null;
+         String expectedOwnerName = optionSet != null && optionSet.has(Options.OWNER_NAME) ? (String)optionSet.valueOf(Options.OWNER_NAME) : null;
+         UUID tokenUuid = claims.getSubjectAsUUID();
+         if (expectedOwnerUuid == null || tokenUuid != null && tokenUuid.equals(expectedOwnerUuid)) {
+            if (expectedOwnerName != null && claims.username != null && !claims.username.equals(expectedOwnerName)) {
+               LOGGER.at(Level.WARNING).log("Offline token username mismatch: token has '%s', expected '%s'", claims.username, expectedOwnerName);
+               return false;
+            } else {
+               LOGGER.at(Level.INFO).log("Offline token validated for %s (%s)", claims.username, claims.subject);
+               return true;
+            }
+         } else {
+            LOGGER.at(Level.WARNING).log("Offline token UUID mismatch: token has %s, expected %s", claims.subject, expectedOwnerUuid);
+            return false;
+         }
+      }
+   }
+
    private boolean validateInitialTokens(@Nullable String sessionToken, @Nullable String identityToken) {
       if (sessionToken == null && identityToken == null) {
          return false;
@@ -604,17 +653,49 @@ public class ServerAuthManager {
             LOGGER.at(Level.WARNING).log("No refresh token present to refresh OAuth tokens");
             return false;
          } else {
-            LOGGER.at(Level.INFO).log("Refreshing OAuth tokens...");
-            OAuthClient.TokenResponse newTokens = this.oauthClient.refreshTokens(refreshToken);
-            if (newTokens != null && newTokens.isSuccess()) {
-               store.setTokens(
-                  new IAuthCredentialStore.OAuthTokens(newTokens.accessToken(), newTokens.refreshToken(), Instant.now().plusSeconds(newTokens.expiresIn()))
-               );
-               return true;
-            } else {
-               LOGGER.at(Level.WARNING).log("OAuth token refresh failed");
-               return false;
+            for (int attempt = 1; attempt <= 3; attempt++) {
+               if (attempt > 1) {
+                  LOGGER.at(Level.INFO).log("Refreshing OAuth tokens (attempt %d/%d)...", attempt, 3);
+               } else {
+                  LOGGER.at(Level.INFO).log("Refreshing OAuth tokens...");
+               }
+
+               try {
+                  OAuthClient.TokenResponse newTokens = this.oauthClient.refreshTokens(refreshToken);
+                  if (newTokens != null && newTokens.isSuccess()) {
+                     store.setTokens(
+                        new IAuthCredentialStore.OAuthTokens(
+                           newTokens.accessToken(), newTokens.refreshToken(), Instant.now().plusSeconds(newTokens.expiresIn())
+                        )
+                     );
+                     return true;
+                  }
+
+                  LOGGER.at(Level.WARNING).log("OAuth token refresh rejected by server");
+                  return false;
+               } catch (InterruptedException var12) {
+                  Thread.currentThread().interrupt();
+                  LOGGER.at(Level.WARNING).log("OAuth token refresh interrupted");
+                  return false;
+               } catch (IOException var13) {
+                  if (attempt < 3) {
+                     long delay = 30L * (1L << attempt - 1);
+                     LOGGER.at(Level.WARNING).log("OAuth token refresh IO error (attempt %d/%d), retrying in %d seconds...", attempt, 3, delay);
+
+                     try {
+                        Thread.sleep(delay * 1000L);
+                     } catch (InterruptedException var11) {
+                        Thread.currentThread().interrupt();
+                        LOGGER.at(Level.WARNING).log("OAuth token refresh retry interrupted");
+                        return false;
+                     }
+                  } else {
+                     LOGGER.at(Level.WARNING).log("OAuth token refresh failed after %d attempts due to IO errors", 3);
+                  }
+               }
             }
+
+            return false;
          }
       }
    }
@@ -758,43 +839,66 @@ public class ServerAuthManager {
       if (secondsUntilExpiry > 300L) {
          long refreshDelay = Math.max(secondsUntilExpiry - 300L, 60L);
          LOGGER.at(Level.INFO).log("Token refresh scheduled in %d seconds", refreshDelay);
-         this.refreshTask = this.refreshScheduler.schedule(this::doRefresh, refreshDelay, TimeUnit.SECONDS);
+         this.refreshTask = this.refreshScheduler.schedule(() -> this.attemptSessionRefresh(1), refreshDelay, TimeUnit.SECONDS);
       }
    }
 
-   private void doRefresh() {
+   private void attemptSessionRefresh(int attempt) {
       String currentSessionToken = this.getSessionToken();
-      if (currentSessionToken == null || !this.refreshGameSession(currentSessionToken)) {
-         LOGGER.at(Level.INFO).log("Game session refresh failed, attempting OAuth refresh...");
-         if (!this.refreshGameSessionViaOAuth()) {
-            LOGGER.at(Level.WARNING).log("All refresh attempts failed. Server may lose authentication.");
+      if (currentSessionToken != null) {
+         if (attempt > 1) {
+            LOGGER.at(Level.INFO).log("Refreshing game session with Session Service (attempt %d/%d)...", attempt, 3);
+         } else {
+            LOGGER.at(Level.INFO).log("Refreshing game session with Session Service...");
          }
+
+         try {
+            if (this.refreshGameSession(currentSessionToken)) {
+               return;
+            }
+         } catch (CompletionException var6) {
+            if (var6.getCause() instanceof IOException && attempt < 3) {
+               long delay = 30L * (1L << attempt - 1);
+               LOGGER.at(Level.WARNING).log("Game session refresh IO error (attempt %d/%d), retrying in %d seconds...", attempt, 3, delay);
+               this.refreshTask = this.refreshScheduler.schedule(() -> this.attemptSessionRefresh(attempt + 1), delay, TimeUnit.SECONDS);
+               return;
+            }
+
+            if (var6.getCause() instanceof IOException) {
+               LOGGER.at(Level.WARNING).log("Game session refresh failed after %d attempts due to IO errors", 3);
+            } else {
+               LOGGER.at(Level.WARNING).log("Session Service refresh failed: %s", var6.getMessage());
+            }
+         } catch (Exception var7) {
+            LOGGER.at(Level.WARNING).log("Session Service refresh failed: %s", var7.getMessage());
+         }
+      }
+
+      LOGGER.at(Level.INFO).log("Game session refresh failed, attempting OAuth refresh...");
+      if (!this.refreshGameSessionViaOAuth()) {
+         LOGGER.at(Level.WARNING).log("All refresh attempts failed. Server may lose authentication.");
       }
    }
 
    private boolean refreshGameSession(String currentSessionToken) {
-      LOGGER.at(Level.INFO).log("Refreshing game session with Session Service...");
       if (this.sessionServiceClient == null) {
          this.sessionServiceClient = new SessionServiceClient("https://sessions.hytale.com");
       }
 
-      try {
-         SessionServiceClient.GameSessionResponse response = this.sessionServiceClient.refreshSessionAsync(currentSessionToken).join();
-         if (response != null) {
-            this.gameSession.set(response);
-            Instant effectiveExpiry = this.getEffectiveExpiry(response);
-            if (effectiveExpiry != null) {
-               this.setExpiryAndScheduleRefresh(effectiveExpiry);
-            }
-
-            LOGGER.at(Level.INFO).log("Game session refresh successful");
-            return true;
+      SessionServiceClient.GameSessionResponse response = this.sessionServiceClient.refreshSessionAsync(currentSessionToken).join();
+      if (response == null) {
+         LOGGER.at(Level.WARNING).log("Game session refresh rejected by server");
+         return false;
+      } else {
+         this.gameSession.set(response);
+         Instant effectiveExpiry = this.getEffectiveExpiry(response);
+         if (effectiveExpiry != null) {
+            this.setExpiryAndScheduleRefresh(effectiveExpiry);
          }
-      } catch (Exception var4) {
-         LOGGER.at(Level.WARNING).log("Session Service refresh failed: %s", var4.getMessage());
-      }
 
-      return false;
+         LOGGER.at(Level.INFO).log("Game session refresh successful");
+         return true;
+      }
    }
 
    private boolean refreshGameSessionViaOAuth() {

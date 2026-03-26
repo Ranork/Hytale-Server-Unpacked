@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.core.asset.type.particle.config.WorldParticle;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -24,7 +23,7 @@ public class ParticleUtil {
 
    public static void spawnParticleEffect(@Nonnull String name, @Nonnull Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
-      ObjectList<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
       playerSpatialResource.getSpatialStructure().collect(position, 75.0, playerRefs);
       spawnParticleEffect(name, position.getX(), position.getY(), position.getZ(), null, playerRefs, componentAccessor);
    }

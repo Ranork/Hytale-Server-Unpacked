@@ -16,10 +16,12 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.entity.reference.PersistentRef;
+import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
 import com.hypixel.hytale.server.core.modules.entity.component.FromWorldGen;
 import com.hypixel.hytale.server.core.modules.entity.component.HiddenFromAdventurePlayers;
@@ -27,8 +29,8 @@ import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
@@ -40,46 +42,68 @@ public class SpawnMarkerBlockStateSystems {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
 
    private static void createMarker(
-      @Nonnull Ref<ChunkStore> ref, @Nonnull SpawnMarkerBlockState state, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
+      @Nonnull Ref<ChunkStore> ref,
+      @Nonnull SpawnMarkerBlock state,
+      @Nonnull BlockModule.BlockStateInfo info,
+      @Nonnull Store<EntityStore> store,
+      @Nonnull CommandBuffer<ChunkStore> commandBuffer
    ) {
-      if (state.getBlockType().getState() instanceof SpawnMarkerBlockState.Data stateData) {
-         SpawnMarker marker = SpawnMarker.getAssetMap().getAsset(stateData.getSpawnMarker());
-         if (marker == null) {
-            LOGGER.at(Level.SEVERE).log(String.format("Marker %s does not exist!", stateData.getSpawnMarker()));
-            commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
-         } else {
-            Vector3i pos = state.getBlockPosition();
-            Vector3i offset = stateData.getMarkerOffset();
-            if (offset != null) {
-               pos.add(offset);
-            }
+      if (info.getChunkRef().isValid()) {
+         BlockChunk blockChunk = commandBuffer.getComponent(info.getChunkRef(), BlockChunk.getComponentType());
+         if (blockChunk != null) {
+            int bx = ChunkUtil.xFromBlockInColumn(info.getIndex());
+            int by = ChunkUtil.yFromBlockInColumn(info.getIndex());
+            int bz = ChunkUtil.zFromBlockInColumn(info.getIndex());
+            BlockType blockType = BlockType.getAssetMap().getAsset(blockChunk.getBlock(bx, by, bz));
+            if (blockType != null && blockType.getBlockEntity() != null) {
+               SpawnMarkerBlock configType = blockType.getBlockEntity().getComponent(SpawnMarkerBlock.getComponentType());
+               if (configType != null) {
+                  SpawnMarkerBlock.Data data = configType.getConfig();
+                  if (data != null) {
+                     SpawnMarker marker = SpawnMarker.getAssetMap().getAsset(data.getSpawnMarker());
+                     if (marker == null) {
+                        LOGGER.at(Level.SEVERE).log(String.format("Marker %s does not exist!", data.getSpawnMarker()));
+                        commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
+                     } else {
+                        Vector3i pos = new Vector3i(
+                           ChunkUtil.worldCoordFromLocalCoord(blockChunk.getX(), bx), by, ChunkUtil.worldCoordFromLocalCoord(blockChunk.getZ(), bz)
+                        );
+                        Vector3i blockPos = pos.clone();
+                        Vector3i offset = data.getMarkerOffset();
+                        if (offset != null) {
+                           pos.add(offset);
+                        }
 
-            SpawnMarkerEntity spawnMarker = new SpawnMarkerEntity();
-            spawnMarker.setSpawnMarker(marker);
-            Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
-            holder.addComponent(SpawnMarkerEntity.getComponentType(), spawnMarker);
-            holder.addComponent(SpawnMarkerBlockReference.getComponentType(), new SpawnMarkerBlockReference(state.getBlockPosition()));
-            Vector3d markerPos = pos.toVector3d();
-            markerPos.add(0.5, 0.0, 0.5);
-            holder.addComponent(Nameplate.getComponentType(), new Nameplate(marker.getId()));
-            holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(markerPos, Vector3f.ZERO));
-            UUIDComponent uuidComponent = holder.ensureAndGetComponent(UUIDComponent.getComponentType());
-            Model model = SpawnMarkerEntity.getModel(marker);
-            holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
-            holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
-            holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
-            Ref<EntityStore> markerRef = store.addEntity(holder, AddReason.SPAWN);
-            PersistentRef persistentRef = new PersistentRef();
-            persistentRef.setEntity(markerRef, uuidComponent.getUuid());
-            state.setSpawnMarkerReference(persistentRef);
+                        SpawnMarkerEntity spawnMarker = new SpawnMarkerEntity();
+                        spawnMarker.setSpawnMarker(marker);
+                        Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
+                        holder.addComponent(SpawnMarkerEntity.getComponentType(), spawnMarker);
+                        holder.addComponent(SpawnMarkerBlockReference.getComponentType(), new SpawnMarkerBlockReference(blockPos));
+                        Vector3d markerPos = pos.toVector3d();
+                        markerPos.add(0.5, 0.0, 0.5);
+                        holder.addComponent(Nameplate.getComponentType(), new Nameplate(marker.getId()));
+                        holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(markerPos, Vector3f.ZERO));
+                        UUIDComponent uuidComponent = holder.ensureAndGetComponent(UUIDComponent.getComponentType());
+                        Model model = SpawnMarkerEntity.getModel(marker);
+                        holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
+                        holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
+                        holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
+                        Ref<EntityStore> markerRef = store.addEntity(holder, AddReason.SPAWN);
+                        PersistentRef persistentRef = new PersistentRef();
+                        persistentRef.setEntity(markerRef, uuidComponent.getUuid());
+                        state.setSpawnMarkerReference(persistentRef);
+                     }
+                  }
+               }
+            }
          }
       }
    }
 
    public static class AddOrRemove extends RefSystem<ChunkStore> {
-      private final ComponentType<ChunkStore, SpawnMarkerBlockState> componentType;
+      private final ComponentType<ChunkStore, SpawnMarkerBlock> componentType;
 
-      public AddOrRemove(ComponentType<ChunkStore, SpawnMarkerBlockState> componentType) {
+      public AddOrRemove(ComponentType<ChunkStore, SpawnMarkerBlock> componentType) {
          this.componentType = componentType;
       }
 
@@ -99,7 +123,7 @@ public class SpawnMarkerBlockStateSystems {
          @Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          if (reason == RemoveReason.REMOVE) {
-            SpawnMarkerBlockState state = store.getComponent(ref, this.componentType);
+            SpawnMarkerBlock state = store.getComponent(ref, this.componentType);
             PersistentRef markerReference = state.getSpawnMarkerReference();
             if (markerReference == null) {
                return;
@@ -174,8 +198,8 @@ public class SpawnMarkerBlockStateSystems {
          Vector3i pos = marker.getBlockPosition();
          WorldChunk chunk = store.getExternalData().getWorld().getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(pos.x, pos.z));
          if (chunk != null) {
-            BlockState state = chunk.getState(pos.x, pos.y, pos.z);
-            if (!(state instanceof SpawnMarkerBlockState)) {
+            Ref<ChunkStore> blockEntityRef = chunk.getBlockComponentEntity(pos.x, pos.y, pos.z);
+            if (blockEntityRef != null && blockEntityRef.getStore().getComponent(blockEntityRef, SpawnMarkerBlock.getComponentType()) == null) {
                Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
                SpawnMarkerBlockStateSystems.LOGGER.at(Level.SEVERE).log("Removing block spawn marker due to blockstate mismatch: %s", ref);
@@ -191,10 +215,13 @@ public class SpawnMarkerBlockStateSystems {
    }
 
    public static class TickHeartbeat extends EntityTickingSystem<ChunkStore> {
-      private final ComponentType<ChunkStore, SpawnMarkerBlockState> componentType;
+      private final ComponentType<ChunkStore, SpawnMarkerBlock> componentType;
+      private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType = BlockModule.BlockStateInfo.getComponentType();
+      private final Query<ChunkStore> query;
 
-      public TickHeartbeat(ComponentType<ChunkStore, SpawnMarkerBlockState> componentType) {
+      public TickHeartbeat(ComponentType<ChunkStore, SpawnMarkerBlock> componentType) {
          this.componentType = componentType;
+         this.query = Query.and(componentType, this.blockStateInfoComponentType);
       }
 
       @Override
@@ -204,7 +231,7 @@ public class SpawnMarkerBlockStateSystems {
 
       @Override
       public Query<ChunkStore> getQuery() {
-         return this.componentType;
+         return this.query;
       }
 
       @Override
@@ -215,10 +242,17 @@ public class SpawnMarkerBlockStateSystems {
          @Nonnull Store<ChunkStore> store,
          @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         SpawnMarkerBlockState state = archetypeChunk.getComponent(index, this.componentType);
+         SpawnMarkerBlock state = archetypeChunk.getComponent(index, this.componentType);
+
+         assert state != null;
+
+         BlockModule.BlockStateInfo info = archetypeChunk.getComponent(index, this.blockStateInfoComponentType);
+
+         assert info != null;
+
          if (state.getSpawnMarkerReference() == null) {
             Ref<ChunkStore> ref = archetypeChunk.getReferenceTo(index);
-            SpawnMarkerBlockStateSystems.createMarker(ref, state, store.getExternalData().getWorld().getEntityStore().getStore(), commandBuffer);
+            SpawnMarkerBlockStateSystems.createMarker(ref, state, info, store.getExternalData().getWorld().getEntityStore().getStore(), commandBuffer);
          }
 
          if (state.getSpawnMarkerReference().getEntity(store.getExternalData().getWorld().getEntityStore().getStore()) != null) {
@@ -226,7 +260,7 @@ public class SpawnMarkerBlockStateSystems {
          } else if (state.tickMarkerLostTimeout(dt)) {
             Ref<ChunkStore> ref = archetypeChunk.getReferenceTo(index);
             SpawnMarkerBlockStateSystems.LOGGER.at(Level.SEVERE).log("Creating new spawn marker due to desync with entity: %s", ref);
-            SpawnMarkerBlockStateSystems.createMarker(ref, state, store.getExternalData().getWorld().getEntityStore().getStore(), commandBuffer);
+            SpawnMarkerBlockStateSystems.createMarker(ref, state, info, store.getExternalData().getWorld().getEntityStore().getStore(), commandBuffer);
          }
       }
    }

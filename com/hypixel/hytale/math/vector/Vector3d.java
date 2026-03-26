@@ -147,6 +147,15 @@ public class Vector3d {
    }
 
    @Nonnull
+   public Vector3d assign(@Nonnull Vector3i v) {
+      this.x = v.x;
+      this.y = v.y;
+      this.z = v.z;
+      this.dropHash();
+      return this;
+   }
+
+   @Nonnull
    public Vector3d assign(double v) {
       this.x = v;
       this.y = v;

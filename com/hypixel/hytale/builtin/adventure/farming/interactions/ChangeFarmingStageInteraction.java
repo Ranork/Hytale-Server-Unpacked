@@ -277,8 +277,7 @@ public class ChangeFarmingStageInteraction extends SimpleBlockInteraction {
                                     stageIndex,
                                     farmingBlock.getGeneration()
                                  );
-                              Ref<ChunkStore> sectionRef = world.getChunkStore()
-                                 .getChunkSectionReference(ChunkUtil.chunkCoordinate(x), ChunkUtil.chunkCoordinate(y), ChunkUtil.chunkCoordinate(z));
+                              Ref<ChunkStore> sectionRef = world.getChunkStore().getChunkSectionReferenceAtBlock(x, y, z);
                               if (sectionRef != null && sectionRef.isValid()) {
                                  BlockSection blockSectionComponent = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
                                  if (blockSectionComponent != null) {

@@ -10,7 +10,8 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.mountpoints.BlockMountPoint;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2ReferenceOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import java.util.Collection;
 import java.util.Map;
 import javax.annotation.Nonnull;
@@ -22,9 +23,9 @@ public class BlockMountComponent implements Component<ChunkStore> {
    private BlockType expectedBlockType;
    private int expectedRotation;
    @Nonnull
-   private Map<BlockMountPoint, Ref<EntityStore>> entitiesByMountPoint = new Object2ObjectOpenHashMap();
+   private Map<BlockMountPoint, Ref<EntityStore>> entitiesByMountPoint = new Object2ReferenceOpenHashMap();
    @Nonnull
-   private Map<Ref<EntityStore>, BlockMountPoint> mountPointByEntity = new Object2ObjectOpenHashMap();
+   private Map<Ref<EntityStore>, BlockMountPoint> mountPointByEntity = new Reference2ObjectOpenHashMap();
 
    public static ComponentType<ChunkStore, BlockMountComponent> getComponentType() {
       return MountPlugin.getInstance().getBlockMountComponentType();
@@ -115,8 +116,8 @@ public class BlockMountComponent implements Component<ChunkStore> {
       seat.type = this.type;
       seat.blockPos = this.blockPos;
       seat.expectedBlockType = this.expectedBlockType;
-      seat.entitiesByMountPoint = new Object2ObjectOpenHashMap(this.entitiesByMountPoint);
-      seat.mountPointByEntity = new Object2ObjectOpenHashMap(this.mountPointByEntity);
+      seat.entitiesByMountPoint = new Object2ReferenceOpenHashMap(this.entitiesByMountPoint);
+      seat.mountPointByEntity = new Reference2ObjectOpenHashMap(this.mountPointByEntity);
       return seat;
    }
 }

@@ -9,6 +9,7 @@ import com.hypixel.hytale.builtin.portals.components.PortalDeviceConfig;
 import com.hypixel.hytale.builtin.portals.integrations.PortalGameplayConfig;
 import com.hypixel.hytale.builtin.portals.integrations.PortalRemovalCondition;
 import com.hypixel.hytale.builtin.portals.resources.PortalWorld;
+import com.hypixel.hytale.builtin.portals.utils.BlockTypeUtils;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -30,6 +31,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.PortalKey;
 import com.hypixel.hytale.server.core.asset.type.portalworld.PillTag;
 import com.hypixel.hytale.server.core.asset.type.portalworld.PortalDescription;
+import com.hypixel.hytale.server.core.asset.type.portalworld.PortalSpawnConfig;
 import com.hypixel.hytale.server.core.asset.type.portalworld.PortalType;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -218,7 +220,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                   int rotation = worldChunk.getRotationIndex(x, y, z);
                   BlockType spawningType = blockType.getBlockForState(this.config.getSpawningState());
                   BlockType onType = blockType.getBlockForState(this.config.getOnState());
-                  BlockType offType = blockType.getBlockForState(this.config.getOffState());
+                  BlockType offType = BlockTypeUtils.getBlockForState(blockType, this.config.getOffState());
                   int setting = 6;
                   worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(spawningType.getId()), spawningType, rotation, 0, 6);
                   double worldX = ChunkUtil.worldCoordFromLocalCoord(worldChunk.getX(), x) + 0.5;
@@ -228,7 +230,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                      SoundUtil.playSoundEvent3d(spawningType.getInteractionSoundEventIndex(), SoundCategory.SFX, worldX, worldY, worldZ, store);
                   }
 
-                  decrementItemInHand(playerComponent.getInventory(), 1);
+                  ItemStack removedItem = decrementItemInHand(playerComponent.getInventory(), 1);
                   Transform transform = new Transform(x + 0.5, y + 1.0, z + 0.5);
                   UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
 
@@ -237,7 +239,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                   PortalType portalType = canSpawn.portalType;
                   UUID playerUUID = uuidComponent.getUuid();
                   PortalGameplayConfig gameplayConfig = canSpawn.portalGameplayConfig;
-                  InstancesPlugin.get()
+                  CompletableFuture<Void> future = InstancesPlugin.get()
                      .spawnInstance(portalType.getInstanceId(), originWorld, transform)
                      .thenCompose(spawnedWorld -> {
                         WorldConfig worldConfig = spawnedWorld.getWorldConfig();
@@ -262,6 +264,11 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                         if (returnBlockType == null) {
                            throw new RuntimeException("Return block type on PortalDevice is misconfigured");
                         } else {
+                           BlockType overrideFromPortalType = portalType.getSpawn().getReturnBlockOverride();
+                           if (overrideFromPortalType != null) {
+                              returnBlockType = overrideFromPortalType.getId();
+                           }
+
                            return spawnReturnPortal(spawnedWorld, portalWorld, playerUUID, returnBlockType);
                         }
                      })
@@ -271,14 +278,23 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                      }, originWorld)
                      .exceptionallyAsync(
                         t -> {
-                           playerComponent.sendMessage(Message.translation("server.portals.device.internalErrorSpawning"));
                            ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(t))
                               .log("Error creating instance for Portal Device " + portalKey, t);
-                           worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(offType.getId()), offType, rotation, 0, 6);
+
+                           try {
+                              playerComponent.sendMessage(Message.translation("server.portals.device.internalErrorSpawning"));
+                              playerComponent.getInventory().getCombinedHotbarFirst().addItemStack(removedItem);
+                              worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(offType.getId()), offType, rotation, 0, 6);
+                           } catch (Throwable var11x) {
+                              ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var11x)).log("Error while resolving portal device error");
+                           }
+
                            return null;
                         },
                         originWorld
-                     );
+                     )
+                     .whenComplete((unused, throwable) -> portalDevice.setPendingWorld(null));
+                  portalDevice.setPendingWorld(future);
                }
             }
          }
@@ -289,29 +305,57 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    private static CompletableFuture<World> spawnReturnPortal(
       @Nonnull World world, @Nonnull PortalWorld portalWorld, @Nonnull UUID sampleUuid, @Nonnull String portalBlockType
    ) {
-      return getSpawnTransform(world, sampleUuid)
+      PortalType portalType = portalWorld.getPortalType();
+      PortalSpawnConfig spawnConfig = portalType.getSpawn();
+      return getSpawnTransform(portalType, world, sampleUuid)
          .thenCompose(
             spawnTransform -> {
                Vector3d spawnPoint = spawnTransform.getPosition();
+               Transform playerSpawnTransform = spawnTransform.clone();
                return world.getChunkAsync(ChunkUtil.indexChunkFromBlock((int)spawnPoint.x, (int)spawnPoint.z))
                   .thenAccept(
                      chunk -> {
-                        for (int dy = 0; dy < 3; dy++) {
-                           for (int dx = -1; dx <= 1; dx++) {
-                              for (int dz = -1; dz <= 1; dz++) {
-                                 chunk.setBlock((int)spawnPoint.x + dx, (int)spawnPoint.y + dy, (int)spawnPoint.z + dz, BlockType.EMPTY);
+                        if (spawnConfig.isSpawningReturnPortal()) {
+                           for (int dy = 0; dy < 3; dy++) {
+                              for (int dx = -1; dx <= 1; dx++) {
+                                 for (int dz = -1; dz <= 1; dz++) {
+                                    chunk.setBlock((int)spawnPoint.x + dx, (int)spawnPoint.y + dy, (int)spawnPoint.z + dz, BlockType.EMPTY);
+                                 }
                               }
                            }
+
+                           chunk.setBlock((int)spawnPoint.x, (int)spawnPoint.y, (int)spawnPoint.z, portalBlockType);
+                           playerSpawnTransform.getPosition().add(0.0, 0.5, 0.0);
+                           HytaleLogger.getLogger()
+                              .at(Level.INFO)
+                              .log(
+                                 "Spawned return portal for "
+                                    + world.getName()
+                                    + " at "
+                                    + (int)spawnPoint.x
+                                    + ", "
+                                    + (int)spawnPoint.y
+                                    + ", "
+                                    + (int)spawnPoint.z
+                              );
                         }
 
-                        chunk.setBlock((int)spawnPoint.x, (int)spawnPoint.y, (int)spawnPoint.z, portalBlockType);
-                        portalWorld.setSpawnPoint(spawnTransform);
-                        world.getWorldConfig().setSpawnProvider(new IndividualSpawnProvider(spawnTransform));
-                        HytaleLogger.getLogger()
-                           .at(Level.INFO)
-                           .log(
-                              "Spawned return portal for " + world.getName() + " at " + (int)spawnPoint.x + ", " + (int)spawnPoint.y + ", " + (int)spawnPoint.z
-                           );
+                        portalWorld.setSpawnPoint(playerSpawnTransform);
+                        world.getWorldConfig().setSpawnProvider(new IndividualSpawnProvider(playerSpawnTransform));
+                        if (!spawnConfig.isSpawningReturnPortal()) {
+                           HytaleLogger.getLogger()
+                              .at(Level.INFO)
+                              .log(
+                                 "Fragment spawn point for "
+                                    + world.getName()
+                                    + " at "
+                                    + (int)spawnPoint.x
+                                    + ", "
+                                    + (int)spawnPoint.y
+                                    + ", "
+                                    + (int)spawnPoint.z
+                              );
+                        }
                      }
                   )
                   .thenApply(nothing -> world);
@@ -320,11 +364,18 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    }
 
    @Nonnull
-   private static CompletableFuture<Transform> getSpawnTransform(@Nonnull World world, @Nonnull UUID sampleUuid) {
-      return CompletableFuture.supplyAsync(() -> {
-         List<Vector3d> hintedSpawns = fetchHintedSpawns(world, sampleUuid);
-         return PortalSpawnFinder.computeSpawnTransform(world, hintedSpawns);
-      }, world);
+   private static CompletableFuture<Transform> getSpawnTransform(@Nonnull PortalType portalType, @Nonnull World world, @Nonnull UUID sampleUuid) {
+      PortalSpawnConfig spawnConfig = portalType.getSpawn();
+      ISpawnProvider override = spawnConfig.getSpawnProviderOverride();
+      if (override != null) {
+         Transform spawnPoint = override.getSpawnPoint(world, sampleUuid);
+         return CompletableFuture.completedFuture(spawnPoint);
+      } else {
+         return CompletableFuture.supplyAsync(() -> {
+            List<Vector3d> hintedSpawns = fetchHintedSpawns(world, sampleUuid);
+            return PortalSpawnFinder.computeSpawnTransform(world, hintedSpawns);
+         }, world);
+      }
    }
 
    private static List<Vector3d> fetchHintedSpawns(World world, UUID sampleUuid) {
@@ -364,7 +415,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                      return PortalDeviceSummonPage.Error.INVALID_BLOCK;
                   } else {
                      World existingDestinationWorld = portalDevice.getDestinationWorld();
-                     if (existingDestinationWorld != null) {
+                     if (existingDestinationWorld != null || portalDevice.isLoadingWorld()) {
                         return PortalDeviceSummonPage.Error.INVALID_DESTINATION;
                      } else if (this.offeredItemStack == null) {
                         return PortalDeviceSummonPage.Error.NOTHING_OFFERED;
@@ -418,14 +469,21 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       }
    }
 
-   private static void decrementItemInHand(@Nonnull Inventory inventory, int amount) {
-      if (!inventory.usingToolsItem()) {
+   private static ItemStack decrementItemInHand(@Nonnull Inventory inventory, int amount) {
+      if (inventory.usingToolsItem()) {
+         return ItemStack.EMPTY;
+      } else {
          byte hotbarSlot = inventory.getActiveHotbarSlot();
-         if (hotbarSlot != -1) {
+         if (hotbarSlot == -1) {
+            return ItemStack.EMPTY;
+         } else {
             ItemContainer hotbar = inventory.getHotbar();
             ItemStack inHand = hotbar.getItemStack(hotbarSlot);
-            if (inHand != null) {
+            if (inHand == null) {
+               return ItemStack.EMPTY;
+            } else {
                hotbar.removeItemStackFromSlot(hotbarSlot, inHand, amount, false, true);
+               return inHand.withQuantity(amount);
             }
          }
       }

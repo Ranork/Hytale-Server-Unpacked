@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderAction
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.spawning.spawnmarkers.SpawnMarkerEntity;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -35,7 +35,7 @@ public class ActionTriggerSpawners extends ActionBase {
       this.range = builder.getRange(support);
       this.rangeSquared = this.range * this.range;
       this.count = builder.getCount(support);
-      this.triggerList = this.count > 0 ? new ObjectArrayList(this.count) : null;
+      this.triggerList = this.count > 0 ? new ReferenceArrayList(this.count) : null;
    }
 
    @Override

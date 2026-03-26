@@ -33,7 +33,7 @@ public class OtherPlayersMarkerProvider implements WorldMapManager.MarkerProvide
             if (!otherPlayer.getUuid().equals(player.getUuid())) {
                Transform otherPlayerTransform = otherPlayer.getTransform();
                Vector3d otherPos = otherPlayerTransform.getPosition();
-               if (collector.isInViewDistance(otherPos) && (playerMapFilter == null || !playerMapFilter.test(otherPlayer))) {
+               if (playerMapFilter == null || !playerMapFilter.test(otherPlayer)) {
                   PlayerMarkerComponent playerMarker = new PlayerMarkerComponent(otherPlayer.getUuid());
                   HeightDeltaIconComponent heightDeltaComponent = new HeightDeltaIconComponent(
                      playersMapConfig.getIconSwapHeightDelta(),

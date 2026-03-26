@@ -45,38 +45,114 @@ public class CombinedItemContainer extends ItemContainer {
 
    @Override
    protected <V> V readAction(@Nonnull Supplier<V> action) {
-      return this.readAction0(0, action);
-   }
+      this.lockForRead();
 
-   private <V> V readAction0(int i, @Nonnull Supplier<V> action) {
-      return i >= this.containers.length ? action.get() : this.containers[i].readAction(() -> this.readAction0(i + 1, action));
+      Object var2;
+      try {
+         var2 = action.get();
+      } finally {
+         this.unlockForRead();
+      }
+
+      return (V)var2;
    }
 
    @Override
    protected <X, V> V readAction(@Nonnull Function<X, V> action, X x) {
-      return this.readAction0(0, action, x);
-   }
+      this.lockForRead();
 
-   private <X, V> V readAction0(int i, @Nonnull Function<X, V> action, X x) {
-      return i >= this.containers.length ? action.apply(x) : this.containers[i].readAction(() -> this.readAction0(i + 1, action, x));
+      Object var3;
+      try {
+         var3 = action.apply(x);
+      } finally {
+         this.unlockForRead();
+      }
+
+      return (V)var3;
    }
 
    @Override
    protected <V> V writeAction(@Nonnull Supplier<V> action) {
-      return this.writeAction0(0, action);
-   }
+      this.lockForWrite();
 
-   private <V> V writeAction0(int i, @Nonnull Supplier<V> action) {
-      return i >= this.containers.length ? action.get() : this.containers[i].writeAction(() -> this.writeAction0(i + 1, action));
+      Object var2;
+      try {
+         var2 = action.get();
+      } finally {
+         this.unlockForWrite();
+      }
+
+      return (V)var2;
    }
 
    @Override
    protected <X, V> V writeAction(@Nonnull Function<X, V> action, X x) {
-      return this.writeAction0(0, action, x);
+      this.lockForWrite();
+
+      Object var3;
+      try {
+         var3 = action.apply(x);
+      } finally {
+         this.unlockForWrite();
+      }
+
+      return (V)var3;
    }
 
-   private <X, V> V writeAction0(int i, @Nonnull Function<X, V> action, X x) {
-      return i >= this.containers.length ? action.apply(x) : this.containers[i].writeAction(() -> this.writeAction0(i + 1, action, x));
+   @Override
+   protected void lockForRead() {
+      for (int i = 0; i < this.containers.length; i++) {
+         try {
+            this.containers[i].lockForRead();
+         } catch (Throwable var6) {
+            Throwable t = var6;
+
+            for (int j = i - 1; j >= 0; j--) {
+               try {
+                  this.containers[j].unlockForRead();
+               } catch (Throwable var5) {
+                  t.addSuppressed(var5);
+               }
+            }
+
+            throw t;
+         }
+      }
+   }
+
+   @Override
+   protected void unlockForRead() {
+      for (int i = this.containers.length - 1; i >= 0; i--) {
+         this.containers[i].unlockForRead();
+      }
+   }
+
+   @Override
+   protected void lockForWrite() {
+      for (int i = 0; i < this.containers.length; i++) {
+         try {
+            this.containers[i].lockForWrite();
+         } catch (Throwable var6) {
+            Throwable t = var6;
+
+            for (int j = i - 1; j >= 0; j--) {
+               try {
+                  this.containers[j].unlockForWrite();
+               } catch (Throwable var5) {
+                  t.addSuppressed(var5);
+               }
+            }
+
+            throw t;
+         }
+      }
+   }
+
+   @Override
+   protected void unlockForWrite() {
+      for (int i = this.containers.length - 1; i >= 0; i--) {
+         this.containers[i].unlockForWrite();
+      }
    }
 
    @Nonnull
@@ -89,7 +165,7 @@ public class CombinedItemContainer extends ItemContainer {
          ClearTransaction clear = container.internal_clear();
          ItemStack[] items = clear.getItems();
 
-         for (short slot = 0; slot < itemStacks.length; slot++) {
+         for (short slot = 0; slot < items.length; slot++) {
             itemStacks[(short)(start + slot)] = items[slot];
          }
 
@@ -219,20 +295,19 @@ public class CombinedItemContainer extends ItemContainer {
 
    @Nonnull
    @Override
-   public EventRegistration registerChangeEvent(short priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer) {
-      EventRegistration thisRegistration = super.registerChangeEvent(priority, consumer);
-      EventRegistration[] containerRegistrations = new EventRegistration[this.containers.length];
+   public EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> registerChangeEvent(
+      short priority, @Nonnull Consumer<ItemContainer.ItemContainerChangeEvent> consumer
+   ) {
+      EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> thisRegistration = super.registerChangeEvent(priority, consumer);
+      EventRegistration<Void, ItemContainer.ItemContainerChangeEvent>[] containerRegistrations = new EventRegistration[this.containers.length];
       short start = 0;
 
       for (int i = 0; i < this.containers.length; i++) {
          ItemContainer container = this.containers[i];
          short finalStart = start;
-         containerRegistrations[i] = container.internalChangeEventRegistry
-            .register(
-               priority,
-               null,
-               event -> consumer.accept(new ItemContainer.ItemContainerChangeEvent(this, event.transaction().toParent(this, finalStart, container)))
-            );
+         containerRegistrations[i] = container.registerChangeEvent(
+            priority, event -> consumer.accept(new ItemContainer.ItemContainerChangeEvent(this, event.transaction().toParent(this, finalStart, container)))
+         );
          start += container.getCapacity();
       }
 

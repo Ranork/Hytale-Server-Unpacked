@@ -53,7 +53,7 @@ public class SpawnStatsCommand extends AbstractWorldCommand {
                   String name = Environment.getAssetMap().getAsset(environmentIndex).getId();
                   Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
                   double[] chunkExpected = new double[]{0.0};
-                  worldEnvironmentSpawnData.getChunkRefSet()
+                  worldEnvironmentSpawnData.getChunkRefList()
                      .forEach(
                         ref -> {
                            ChunkEnvironmentSpawnData chunkEnvironmentSpawnData = chunkStore.getComponent(

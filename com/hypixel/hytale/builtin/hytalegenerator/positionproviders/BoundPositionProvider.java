@@ -7,17 +7,19 @@ public class BoundPositionProvider extends PositionProvider {
    @Nonnull
    private final PositionProvider positionProvider;
    private final Bounds3d bounds;
+   @Nonnull
+   private final PositionProvider.Context rChildContext;
 
    public BoundPositionProvider(@Nonnull PositionProvider positionProvider, @Nonnull Bounds3d bounds) {
       this.positionProvider = positionProvider;
       this.bounds = bounds;
+      this.rChildContext = new PositionProvider.Context();
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
-      PositionProvider.Context childContext = new PositionProvider.Context(context);
-      childContext.minInclusive = this.bounds.min;
-      childContext.maxExclusive = this.bounds.max;
-      this.positionProvider.positionsIn(childContext);
+   public void generate(@Nonnull PositionProvider.Context context) {
+      this.rChildContext.assign(context);
+      this.rChildContext.bounds.assign(this.bounds);
+      this.positionProvider.generate(this.rChildContext);
    }
 }

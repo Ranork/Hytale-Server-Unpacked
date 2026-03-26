@@ -1,15 +1,16 @@
 package com.hypixel.hytale.builtin.adventure.objectives.transaction;
 
-import com.hypixel.hytale.builtin.adventure.objectives.blockstates.TreasureChestState;
+import com.hypixel.hytale.builtin.adventure.objectives.blockstates.TreasureChestBlock;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 
@@ -47,9 +48,12 @@ public class SpawnTreasureChestTransactionRecord extends TransactionRecord {
       World world = Universe.get().getWorld(this.worldUUID);
       if (world != null) {
          WorldChunk worldChunk = world.getChunk(ChunkUtil.indexChunkFromBlock(this.blockPosition.x, this.blockPosition.z));
-         BlockState blockState = worldChunk.getState(this.blockPosition.x, this.blockPosition.y, this.blockPosition.z);
-         if (blockState instanceof TreasureChestState) {
-            ((TreasureChestState)blockState).setOpened(true);
+         Ref<ChunkStore> blockEntityRef = worldChunk.getBlockComponentEntity(this.blockPosition.x, this.blockPosition.y, this.blockPosition.z);
+         if (blockEntityRef != null) {
+            TreasureChestBlock treasureChest = blockEntityRef.getStore().getComponent(blockEntityRef, TreasureChestBlock.getComponentType());
+            if (treasureChest != null) {
+               treasureChest.setOpened(true);
+            }
          }
       }
    }

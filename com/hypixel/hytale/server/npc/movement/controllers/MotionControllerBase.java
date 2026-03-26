@@ -48,6 +48,7 @@ import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotion
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
+import com.hypixel.hytale.server.npc.util.VisHelper;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -61,7 +62,7 @@ public abstract class MotionControllerBase implements MotionController {
    public static final double FORCE_SCALE = 5.0;
    public static final double BISECT_DIST = 0.05;
    public static final double FILTER_COEFFICIENT = 0.7;
-   public static final double DOT_PRODUCT_EPSILON = 0.001;
+   public static final double DOT_PRODUCT_EPSILON = 0.1;
    public static final double DEFAULT_BLOCK_DRAG = 0.82;
    protected static final HytaleLogger LOGGER = NPCPlugin.get().getLogger();
    public static final boolean DEBUG_APPLIED_FORCES = false;
@@ -416,13 +417,14 @@ public abstract class MotionControllerBase implements MotionController {
          double v = t > 0.0 ? l / t : 0.0;
          LOGGER.at(Level.INFO)
             .log(
-               "==  Steer %s  = t =%.4f dt=%.4f h =%.4f l =%.4f v =%.4f motion=%s",
+               "==  Steer %s  = t =%.4f dt=%.4f h =%.4f l =%.4f v =%.4f obstr=%s motion=%s",
                this.getType(),
                interval,
                t,
                (180.0F / (float)Math.PI) * this.yaw,
                l,
                v,
+               this.isObstructed ? "yes" : "no",
                role.getSteeringMotionName()
             );
          return st;
@@ -449,101 +451,119 @@ public abstract class MotionControllerBase implements MotionController {
       this.translation.assign(0.0);
       this.cachedMovementBlocked = this.isMovementBlocked(ref, componentAccessor);
       this.computeMove(ref, role, bodySteering, interval, this.translation, componentAccessor);
-      if (this.debugModeValidateMath && !NPCPhysicsMath.isValid(this.translation)) {
-         throw new IllegalArgumentException(String.valueOf(this.translation));
-      } else {
-         if (this.translation.squaredLength() > 1000000.0) {
-            if (this.debugModeValidateMath) {
-               LOGGER.at(Level.WARNING)
-                  .log("NPC with role %s has abnormal high speed! (Distance=%s, MotionController=%s)", role.getRoleName(), this.translation.length(), this.type);
-            }
-
-            this.translation.assign(Vector3d.ZERO);
-         }
-
-         this.executeMove(ref, role, interval, this.translation, componentAccessor);
-         this.postExecuteMove();
-         this.clearRequirePreciseMovement();
-         this.clearRequireDepthProbing();
-         this.clearBlendHeading();
-         this.setAvoidingBlockDamage(!this.isReceivingBlockDamage);
-         this.setRelaxedMoveConstraints(false);
-         float maxBodyRotation = (float)(interval * this.getCurrentMaxBodyRotationSpeed() * bodySteering.getRelativeTurnSpeed());
-         float maxHeadRotation = (float)(interval * this.maxHeadRotationSpeed * headSteering.getRelativeTurnSpeed() * this.effectHorizontalSpeedMultiplier);
-         this.calculateYaw(ref, bodySteering, headSteering, maxHeadRotation, maxBodyRotation, componentAccessor);
-         this.calculatePitch(ref, bodySteering, headSteering, maxHeadRotation, componentAccessor);
-         this.calculateRoll(bodySteering, headSteering);
-         this.moveEntity(ref, interval, componentAccessor);
-         HeadRotation headRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
-
-         assert headRotationComponent != null;
-
-         Vector3f headRotation = headRotationComponent.getRotation();
-         headRotation.setYaw(headSteering.getYaw());
-         headRotation.setPitch(headSteering.getPitch());
-         headRotation.setRoll(headSteering.getRoll());
-         if (!this.forceVelocity.equals(Vector3d.ZERO) && !this.ignoreDamping) {
-            double movementThresholdSquared = 1.0000000000000002E-10;
-            if (this.forceVelocity.squaredLength() >= movementThresholdSquared) {
-               this.dampForceVelocity(this.forceVelocity, this.forceVelocityDamping, interval, componentAccessor);
-            } else {
-               this.forceVelocity.assign(Vector3d.ZERO);
-            }
-         }
-
-         double clientTps = 60.0;
-         int serverTps = world.getTps();
-         double rate = clientTps / serverTps;
-         boolean dampenY = this.shouldDampenAppliedVelocitiesY();
-         boolean useGroundResistance = this.shouldAlwaysUseGroundResistance() || this.onGround();
-
-         for (int i = 0; i < this.appliedVelocities.size(); i++) {
-            MotionControllerBase.AppliedVelocity entry = this.appliedVelocities.get(i);
-            float min;
-            float max;
-            if (useGroundResistance) {
-               min = entry.config.getGroundResistance();
-               max = entry.config.getGroundResistanceMax();
-            } else {
-               min = entry.config.getAirResistance();
-               max = entry.config.getAirResistanceMax();
-            }
-
-            float resistance = min;
-            if (max >= 0.0F) {
-               resistance = switch (entry.config.getStyle()) {
-                  case Linear -> {
-                     float len = (float)entry.velocity.length();
-                     if (len < entry.config.getThreshold()) {
-                        float mul = len / entry.config.getThreshold();
-                        yield min * mul + max * (1.0F - mul);
-                     } else {
-                        yield min;
-                     }
-                  }
-                  case Exp -> {
-                     float len = (float)entry.velocity.squaredLength();
-                     if (len < entry.config.getThreshold() * entry.config.getThreshold()) {
-                        float mul = len / (entry.config.getThreshold() * entry.config.getThreshold());
-                        yield min * mul + max * (1.0F - mul);
-                     } else {
-                        yield min;
-                     }
-                  }
-               };
-            }
-
-            double resistanceScale = Math.pow(resistance, rate);
-            entry.velocity.x *= resistanceScale;
-            entry.velocity.z *= resistanceScale;
-            if (dampenY) {
-               entry.velocity.y *= resistanceScale;
-            }
-         }
-
-         this.appliedVelocities.removeIf(v -> v.velocity.squaredLength() < 0.001);
-         return interval;
+      if (this.debugModeMove) {
+         LOGGER.at(Level.INFO)
+            .log(
+               "==  Move  %s  = t =%.4f pos=%s motion=%s obstr=%s",
+               this.type,
+               Vector3d.formatShortString(this.position),
+               role.getSteeringMotionName(),
+               this.isObstructed ? "yes" : "no"
+            );
       }
+
+      if (this.debugModeValidateMath) {
+         if (!NPCPhysicsMath.isValid(this.translation)) {
+            throw new IllegalArgumentException(String.valueOf(this.translation));
+         }
+
+         if (this.translation.squaredLength() > 1000000.0) {
+            throw new IllegalStateException(
+               String.format(
+                  "NPC with role %s has abnormal high speed! (Distance=%s, MotionController=%s)", role.getRoleName(), this.translation.length(), this.type
+               )
+            );
+         }
+      } else if (this.translation.squaredLength() > 1000000.0) {
+         this.translation.assign(Vector3d.ZERO);
+      }
+
+      this.executeMove(ref, role, interval, this.translation, componentAccessor);
+      if (role.getDebugSupport().isDebugFlagSet(RoleDebugFlags.VisTranslation)) {
+         VisHelper.renderDebugVectorTo(this.position, this.translation, VisHelper.DEBUG_COLOR_STEERING_PRE, world);
+      }
+
+      this.postExecuteMove();
+      this.clearRequirePreciseMovement();
+      this.clearRequireDepthProbing();
+      this.clearBlendHeading();
+      this.setAvoidingBlockDamage(!this.isReceivingBlockDamage);
+      this.setRelaxedMoveConstraints(false);
+      float maxBodyRotation = (float)(interval * this.getCurrentMaxBodyRotationSpeed() * bodySteering.getRelativeTurnSpeed());
+      float maxHeadRotation = (float)(interval * this.maxHeadRotationSpeed * headSteering.getRelativeTurnSpeed() * this.effectHorizontalSpeedMultiplier);
+      this.calculateYaw(ref, bodySteering, headSteering, maxHeadRotation, maxBodyRotation, componentAccessor);
+      this.calculatePitch(ref, bodySteering, headSteering, maxHeadRotation, componentAccessor);
+      this.calculateRoll(bodySteering, headSteering);
+      this.moveEntity(ref, interval, componentAccessor);
+      HeadRotation headRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
+
+      assert headRotationComponent != null;
+
+      Vector3f headRotation = headRotationComponent.getRotation();
+      headRotation.setYaw(headSteering.getYaw());
+      headRotation.setPitch(headSteering.getPitch());
+      headRotation.setRoll(headSteering.getRoll());
+      if (!this.forceVelocity.equals(Vector3d.ZERO) && !this.ignoreDamping) {
+         double movementThresholdSquared = 1.0000000000000002E-10;
+         if (this.forceVelocity.squaredLength() >= movementThresholdSquared) {
+            this.dampForceVelocity(this.forceVelocity, this.forceVelocityDamping, interval, componentAccessor);
+         } else {
+            this.forceVelocity.assign(Vector3d.ZERO);
+         }
+      }
+
+      double clientTps = 60.0;
+      int serverTps = world.getTps();
+      double rate = clientTps / serverTps;
+      boolean dampenY = this.shouldDampenAppliedVelocitiesY();
+      boolean useGroundResistance = this.shouldAlwaysUseGroundResistance() || this.onGround();
+
+      for (int i = 0; i < this.appliedVelocities.size(); i++) {
+         MotionControllerBase.AppliedVelocity entry = this.appliedVelocities.get(i);
+         float min;
+         float max;
+         if (useGroundResistance) {
+            min = entry.config.getGroundResistance();
+            max = entry.config.getGroundResistanceMax();
+         } else {
+            min = entry.config.getAirResistance();
+            max = entry.config.getAirResistanceMax();
+         }
+
+         float resistance = min;
+         if (max >= 0.0F) {
+            resistance = switch (entry.config.getStyle()) {
+               case Linear -> {
+                  float len = (float)entry.velocity.length();
+                  if (len < entry.config.getThreshold()) {
+                     float mul = len / entry.config.getThreshold();
+                     yield min * mul + max * (1.0F - mul);
+                  } else {
+                     yield min;
+                  }
+               }
+               case Exp -> {
+                  float len = (float)entry.velocity.squaredLength();
+                  if (len < entry.config.getThreshold() * entry.config.getThreshold()) {
+                     float mul = len / (entry.config.getThreshold() * entry.config.getThreshold());
+                     yield min * mul + max * (1.0F - mul);
+                  } else {
+                     yield min;
+                  }
+               }
+            };
+         }
+
+         double resistanceScale = Math.pow(resistance, rate);
+         entry.velocity.x *= resistanceScale;
+         entry.velocity.z *= resistanceScale;
+         if (dampenY) {
+            entry.velocity.y *= resistanceScale;
+         }
+      }
+
+      this.appliedVelocities.removeIf(v -> v.velocity.squaredLength() < 0.001);
+      return interval;
    }
 
    protected boolean shouldDampenAppliedVelocitiesY() {
@@ -562,9 +582,9 @@ public abstract class MotionControllerBase implements MotionController {
       float maxBodyRotation,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (bodySteering.hasYaw()) {
-         this.yaw = bodySteering.getYaw();
-      } else if (NPCPhysicsMath.dotProduct(this.translation.x, 0.0, this.translation.z) > 0.001) {
+      if (bodySteering.hasYawOrDirection()) {
+         this.yaw = bodySteering.getYawOrDirection();
+      } else if (NPCPhysicsMath.dotProduct(this.translation.x, 0.0, this.translation.z) > 0.1) {
          this.yaw = PhysicsMath.headingFromDirection(this.translation.x, this.translation.z);
       }
 
@@ -639,9 +659,9 @@ public abstract class MotionControllerBase implements MotionController {
       float maxHeadRotation,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (bodySteering.hasPitch()) {
-         this.pitch = bodySteering.getPitch();
-      } else if (NPCPhysicsMath.dotProduct(this.translation.x, this.translation.y, this.translation.z) > 0.001) {
+      if (bodySteering.hasPitchOrDirection()) {
+         this.pitch = bodySteering.getPitchOrDirection();
+      } else if (NPCPhysicsMath.dotProduct(this.translation.x, this.translation.y, this.translation.z) > 0.1) {
          this.pitch = PhysicsMath.pitchFromDirection(this.translation.x, this.translation.y, this.translation.z);
       }
 
@@ -835,6 +855,18 @@ public abstract class MotionControllerBase implements MotionController {
          && this.appliedVelocities.isEmpty();
    }
 
+   @Nullable
+   @Override
+   public String canActFailReason(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      if (!this.isAlive(ref, componentAccessor)) {
+         return "DEAD";
+      } else if (!this.role.couldBreatheCached()) {
+         return "SUFFOCATING";
+      } else {
+         return !this.forceVelocity.equals(Vector3d.ZERO) && !this.appliedVelocities.isEmpty() ? "EXT_FORCE" : null;
+      }
+   }
+
    public boolean isMovementBlocked(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       InteractionManager interactionManager = componentAccessor.getComponent(ref, InteractionModule.get().getInteractionManagerComponent());
       if (interactionManager != null) {
@@ -890,11 +922,19 @@ public abstract class MotionControllerBase implements MotionController {
          if (validate.test(t, result)) {
             validDistance = distance;
             this.bisectValidPosition.assign(result);
+            if (this.debugModeMove) {
+               LOGGER.at(Level.INFO)
+                  .log("  Bisect valid: d=[%f %f] w=[%f %f] pos=%s", distance, invalidDistance, validWeight, invalidWeight, Vector3d.formatShortString(result));
+            }
          } else {
             invalidDistance = distance;
             this.bisectInvalidPosition.assign(result);
             validWeight = 0.5;
             invalidWeight = 0.5;
+            if (this.debugModeMove) {
+               LOGGER.at(Level.INFO)
+                  .log("  Bisect invalid: d=[%f %f] w=[%f %f] pos=%s", validDistance, distance, validWeight, invalidWeight, Vector3d.formatShortString(result));
+            }
          }
       }
 

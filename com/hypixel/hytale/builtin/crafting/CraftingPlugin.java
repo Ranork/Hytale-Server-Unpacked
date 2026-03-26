@@ -5,14 +5,16 @@ import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.builtin.crafting.commands.RecipeCommand;
+import com.hypixel.hytale.builtin.crafting.component.BenchBlock;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
+import com.hypixel.hytale.builtin.crafting.component.ProcessingBenchBlock;
 import com.hypixel.hytale.builtin.crafting.interaction.LearnRecipeInteraction;
 import com.hypixel.hytale.builtin.crafting.interaction.OpenBenchPageInteraction;
 import com.hypixel.hytale.builtin.crafting.interaction.OpenProcessingBenchInteraction;
-import com.hypixel.hytale.builtin.crafting.state.BenchState;
-import com.hypixel.hytale.builtin.crafting.state.ProcessingBenchState;
+import com.hypixel.hytale.builtin.crafting.system.BenchSystems;
 import com.hypixel.hytale.builtin.crafting.system.PlayerCraftingSystems;
 import com.hypixel.hytale.builtin.crafting.window.FieldCraftingWindow;
+import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Archetype;
@@ -20,9 +22,11 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentRegistryProxy;
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.data.unknown.UnknownComponents;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.event.EventRegistry;
@@ -41,12 +45,13 @@ import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigDa
 import com.hypixel.hytale.server.core.entity.entities.player.windows.Window;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
+import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateRegistry;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
@@ -57,6 +62,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.bson.BsonDocument;
 
 public class CraftingPlugin extends JavaPlugin {
    private static CraftingPlugin instance;
@@ -65,6 +71,8 @@ public class CraftingPlugin extends JavaPlugin {
    @Nonnull
    private static final Map<String, String[]> itemGeneratedRecipes = new Object2ObjectOpenHashMap();
    private ComponentType<EntityStore, CraftingManager> craftingManagerComponentType;
+   private ComponentType<ChunkStore, BenchBlock> benchBlockComponentType;
+   private ComponentType<ChunkStore, ProcessingBenchBlock> processingBenchBlockComponentType;
 
    public CraftingPlugin(@Nonnull JavaPluginInit init) {
       super(init);
@@ -77,17 +85,17 @@ public class CraftingPlugin extends JavaPlugin {
       return benchRecipeRegistry == null ? null : benchRecipeRegistry.getRecipesForCategory(benchCategoryId);
    }
 
-   public static boolean isValidCraftingMaterialForBench(@Nonnull BenchState benchState, @Nonnull ItemStack itemStack) {
-      BenchRecipeRegistry benchRecipeRegistry = registries.get(benchState.getBench().getId());
+   public static boolean isValidCraftingMaterialForBench(@Nonnull Bench bench, @Nonnull ItemStack itemStack) {
+      BenchRecipeRegistry benchRecipeRegistry = registries.get(bench.getId());
       return benchRecipeRegistry == null ? false : benchRecipeRegistry.isValidCraftingMaterial(itemStack);
    }
 
-   public static boolean isValidUpgradeMaterialForBench(@Nonnull BenchState benchState, @Nonnull ItemStack itemStack) {
-      BenchUpgradeRequirement nextLevelUpgradeMaterials = benchState.getNextLevelUpgradeMaterials();
-      if (nextLevelUpgradeMaterials == null) {
+   public static boolean isValidUpgradeMaterialForBench(@Nonnull Bench bench, int tierLevel, @Nonnull ItemStack itemStack) {
+      BenchUpgradeRequirement upgradeRequirement = bench.getUpgradeRequirement(tierLevel);
+      if (upgradeRequirement == null) {
          return false;
       } else {
-         for (MaterialQuantity upgradeMaterial : nextLevelUpgradeMaterials.getInput()) {
+         for (MaterialQuantity upgradeMaterial : upgradeRequirement.getInput()) {
             if (itemStack.getItemId().equals(upgradeMaterial.getItemId())) {
                return true;
             }
@@ -129,9 +137,14 @@ public class CraftingPlugin extends JavaPlugin {
       Bench.registerRootInteraction(BenchType.Crafting, OpenBenchPageInteraction.SIMPLE_CRAFTING_ROOT);
       Bench.registerRootInteraction(BenchType.DiagramCrafting, OpenBenchPageInteraction.DIAGRAM_CRAFTING_ROOT);
       Bench.registerRootInteraction(BenchType.StructuralCrafting, OpenBenchPageInteraction.STRUCTURAL_CRAFTING_ROOT);
-      BlockStateRegistry blockStateRegistry = this.getBlockStateRegistry();
-      blockStateRegistry.registerBlockState(ProcessingBenchState.class, "processingBench", ProcessingBenchState.CODEC);
-      blockStateRegistry.registerBlockState(BenchState.class, "crafting", BenchState.CODEC);
+      this.benchBlockComponentType = this.getChunkStoreRegistry().registerComponent(BenchBlock.class, "BenchBlock", BenchBlock.CODEC);
+      this.processingBenchBlockComponentType = this.getChunkStoreRegistry()
+         .registerComponent(ProcessingBenchBlock.class, "ProcessingBenchBlock", ProcessingBenchBlock.CODEC);
+      this.getChunkStoreRegistry().registerSystem(new CraftingPlugin.MigrateCrafting());
+      this.getChunkStoreRegistry().registerSystem(new BenchSystems.OnAddOrRemoved());
+      this.getChunkStoreRegistry().registerSystem(new BenchSystems.ProcessingBenchTick(this.processingBenchBlockComponentType, this.benchBlockComponentType));
+      this.getChunkStoreRegistry()
+         .registerSystem(new BenchSystems.ProcessingBenchLifecycle(this.processingBenchBlockComponentType, this.benchBlockComponentType));
       Window.CLIENT_REQUESTABLE_WINDOW_TYPES.put(WindowType.PocketCrafting, FieldCraftingWindow::new);
       eventRegistry.register(LoadedAssetsEvent.class, CraftingRecipe.class, CraftingPlugin::onRecipeLoad);
       eventRegistry.register(RemovedAssetsEvent.class, CraftingRecipe.class, CraftingPlugin::onRecipeRemove);
@@ -323,8 +336,58 @@ public class CraftingPlugin extends JavaPlugin {
       return this.craftingManagerComponentType;
    }
 
+   public ComponentType<ChunkStore, BenchBlock> getBenchBlockComponentType() {
+      return this.benchBlockComponentType;
+   }
+
+   public ComponentType<ChunkStore, ProcessingBenchBlock> getProcessingBenchBlockComponentType() {
+      return this.processingBenchBlockComponentType;
+   }
+
    public static CraftingPlugin get() {
       return instance;
+   }
+
+   public static class MigrateCrafting extends BlockModule.MigrationSystem {
+      @Override
+      public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
+         UnknownComponents<ChunkStore> unknownComponents = holder.getComponent(ChunkStore.REGISTRY.getUnknownComponentType());
+
+         assert unknownComponents != null;
+
+         Map<String, BsonDocument> unknown = unknownComponents.getUnknownComponents();
+         if (unknown.containsKey("crafting")) {
+            BenchBlock benchBlock = unknownComponents.removeComponent("crafting", BenchBlock.CODEC);
+
+            assert benchBlock != null;
+
+            holder.putComponent(BenchBlock.getComponentType(), benchBlock);
+         } else if (unknown.containsKey("processingBench")) {
+            BsonDocument bsonDocument = unknown.remove("processingBench");
+            ExtraInfo extraInfo = ExtraInfo.THREAD_LOCAL.get();
+            BenchBlock benchBlock = BenchBlock.CODEC.decode(bsonDocument, extraInfo);
+            extraInfo.getValidationResults().logOrThrowValidatorExceptions(CraftingPlugin.get().getLogger());
+            ProcessingBenchBlock processingBenchBlock = ProcessingBenchBlock.CODEC.decode(bsonDocument, extraInfo);
+            extraInfo.getValidationResults().logOrThrowValidatorExceptions(CraftingPlugin.get().getLogger());
+
+            assert processingBenchBlock != null;
+
+            assert benchBlock != null;
+
+            holder.putComponent(ProcessingBenchBlock.getComponentType(), processingBenchBlock);
+            holder.putComponent(BenchBlock.getComponentType(), benchBlock);
+         }
+      }
+
+      @Override
+      public void onEntityRemoved(@Nonnull Holder<ChunkStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
+      }
+
+      @Nullable
+      @Override
+      public Query<ChunkStore> getQuery() {
+         return ChunkStore.REGISTRY.getUnknownComponentType();
+      }
    }
 
    public static class PlayerAddedSystem extends RefSystem<EntityStore> {

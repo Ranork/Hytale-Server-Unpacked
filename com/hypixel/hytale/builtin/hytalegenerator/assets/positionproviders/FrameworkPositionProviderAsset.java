@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.PositionsFrameworkAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -22,12 +23,12 @@ public class FrameworkPositionProviderAsset extends PositionProviderAsset {
    @Override
    public PositionProvider build(@Nonnull PositionProviderAsset.Argument argument) {
       if (super.skip()) {
-         return PositionProvider.noPositionProvider();
+         return EmptyPositionProvider.INSTANCE;
       } else {
          PositionProviderAsset baseAsset = PositionsFrameworkAsset.Entries.get(this.name, argument.referenceBundle);
          if (baseAsset == null) {
             LoggerUtil.getLogger().log(Level.WARNING, "Couldn't find WorldFramework Positions with name " + this.name);
-            return PositionProvider.noPositionProvider();
+            return EmptyPositionProvider.INSTANCE;
          } else {
             return baseAsset.build(argument);
          }

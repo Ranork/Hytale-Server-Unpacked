@@ -11,11 +11,11 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 
 public class ActionToggleStateEvaluator extends ActionBase {
-   protected final boolean enable;
+   protected final boolean on;
 
    public ActionToggleStateEvaluator(@Nonnull BuilderActionToggleStateEvaluator builder) {
       super(builder);
-      this.enable = builder.isEnable();
+      this.on = builder.isOn();
    }
 
    @Override
@@ -25,7 +25,7 @@ public class ActionToggleStateEvaluator extends ActionBase {
 
       assert stateEvaluatorComponent != null;
 
-      stateEvaluatorComponent.setActive(this.enable);
+      stateEvaluatorComponent.setActive(this.on);
       return true;
    }
 }

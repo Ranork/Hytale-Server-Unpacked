@@ -7,6 +7,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
@@ -14,10 +15,12 @@ import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public interface IChunkStorageProvider<Data> {
    @Nonnull
@@ -38,7 +41,7 @@ public interface IChunkStorageProvider<Data> {
          LongSet chunks = oldLoader.getIndexes();
          LongIterator iterator = chunks.iterator();
          ((HytaleLogger.Api)logger.atInfo()).log("Migrating %d chunks", chunks.size());
-         HytaleServer.get().reportSingleplayerStatus(String.format("Migrating chunks for %s", world.getName()), 0.0);
+         HytaleServer.get().reportSingleplayerStatus(Message.translation("client.gameLoadingView.status.migratingChunks").param("name", world.getName()), 0.0);
          int count = 0;
          ArrayList<CompletableFuture<Void>> inFlight = new ArrayList<>();
 
@@ -53,7 +56,8 @@ public interface IChunkStorageProvider<Data> {
             if (++count % 100 == 0) {
                ((HytaleLogger.Api)logger.atInfo()).log("Migrated %d/%d chunks", count, chunks.size());
                double progress = MathUtil.round((double)count / chunks.size(), 2) * 100.0;
-               HytaleServer.get().reportSingleplayerStatus(String.format("Migrating chunks for %s", world.getName()), progress);
+               HytaleServer.get()
+                  .reportSingleplayerStatus(Message.translation("client.gameLoadingView.status.migratingChunks").param("name", world.getName()), progress);
             }
 
             inFlight.removeIf(CompletableFuture::isDone);
@@ -80,6 +84,19 @@ public interface IChunkStorageProvider<Data> {
 
    @Nonnull
    IChunkSaver getSaver(@Nonnull Data var1, @Nonnull Store<ChunkStore> var2) throws IOException;
+
+   @Nullable
+   default IChunkLoader getRecoveryLoader(@Nonnull Store<ChunkStore> store, Path backupPath) {
+      return null;
+   }
+
+   default void beginRecovery(Path file, Path recoveryPath) throws IOException {
+      throw new UnsupportedOperationException();
+   }
+
+   default void revertRecovery(Path file, Path recoveryPath) throws IOException {
+      throw new UnsupportedOperationException();
+   }
 
    default boolean isSame(IChunkStorageProvider<?> other) {
       return other.getClass().equals(this.getClass());

@@ -1,6 +1,7 @@
 package com.hypixel.hytale.builtin.buildertools.prefabeditor;
 
 import com.hypixel.hytale.assetstore.AssetExtraInfo;
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
@@ -223,7 +224,7 @@ public class PrefabEditorCreationSettings
             }
 
             try (Stream<Path> walk = Files.walk(resolvedDir, this.recursive ? 10 : 1)) {
-               walk.filter(x$0 -> Files.isRegularFile(x$0)).filter(path -> path.toString().endsWith(".prefab.json")).forEach(this.prefabPaths::add);
+               walk.filter(x$0 -> Files.isRegularFile(x$0)).filter(path -> path.toString().endsWith(".prefab.json")).sorted().forEach(this.prefabPaths::add);
             } catch (IOException var15) {
                var15.printStackTrace();
             }
@@ -304,11 +305,16 @@ public class PrefabEditorCreationSettings
 
    @Nonnull
    public static CompletableFuture<Void> save(@Nonnull String name, PrefabEditorCreationSettings settings) {
+      return save(name, settings, AssetModule.get().getBaseAssetPack());
+   }
+
+   @Nonnull
+   public static CompletableFuture<Void> save(@Nonnull String name, PrefabEditorCreationSettings settings, @Nonnull AssetPack pack) {
       return CompletableFuture.runAsync(() -> {
          try {
-            getAssetStore().writeAssetToDisk(AssetModule.get().getBaseAssetPack(), Map.of(Path.of(name + ".json"), settings));
-         } catch (IOException var3) {
-            var3.printStackTrace();
+            getAssetStore().writeAssetToDisk(pack, Map.of(Path.of(name + ".json"), settings));
+         } catch (IOException var4) {
+            var4.printStackTrace();
          }
       });
    }

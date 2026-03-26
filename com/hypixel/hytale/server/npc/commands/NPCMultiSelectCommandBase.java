@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
-import java.util.ArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -138,7 +138,7 @@ public abstract class NPCMultiSelectCommandBase extends NPCWorldCommandBase {
                if (coneAngleDeg == 0.0F) {
                   Ref<EntityStore> ref = TargetUtil.getTargetEntity(playerRef, range, store);
                   if (ref != null && store.getComponent(ref, npcEntityComponentType) != null) {
-                     refs = new ArrayList<>();
+                     refs = new ReferenceArrayList();
                      refs.add(ref);
                   }
 

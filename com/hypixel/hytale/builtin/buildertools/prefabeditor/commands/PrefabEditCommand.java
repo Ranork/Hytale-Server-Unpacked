@@ -18,5 +18,6 @@ public class PrefabEditCommand extends AbstractCommandCollection {
       this.addSubCommand(new PrefabEditInfoCommand());
       this.addSubCommand(new PrefabEditTeleportCommand());
       this.addSubCommand(new PrefabEditModifiedCommand());
+      this.addSubCommand(new PrefabEditBackCommand());
    }
 }

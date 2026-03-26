@@ -16,7 +16,7 @@ import com.hypixel.hytale.protocol.RootInteractionSettings;
 import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemContext;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -464,16 +464,21 @@ public class InteractionContext {
    }
 
    @Nonnull
-   public static InteractionContext forProxyEntity(InteractionManager manager, @Nonnull LivingEntity entity, Ref<EntityStore> runningForEntity) {
-      Inventory entityInventory = entity.getInventory();
+   public static InteractionContext forProxyEntity(
+      @Nonnull InteractionManager manager,
+      @Nonnull Ref<EntityStore> entityRef,
+      @Nonnull Ref<EntityStore> runningForEntity,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      InventoryComponent.Hotbar hotbarComp = componentAccessor.getComponent(entityRef, InventoryComponent.Hotbar.getComponentType());
       return new InteractionContext(
          manager,
-         entity.getReference(),
+         entityRef,
          runningForEntity,
          -1,
-         entityInventory.getHotbar(),
-         entityInventory.getActiveHotbarSlot(),
-         entityInventory.getItemInHand()
+         hotbarComp != null ? hotbarComp.getInventory() : null,
+         hotbarComp != null ? hotbarComp.getActiveSlot() : -1,
+         hotbarComp != null ? hotbarComp.getActiveItem() : null
       );
    }
 
@@ -499,16 +504,28 @@ public class InteractionContext {
       int equipSlot,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      LivingEntity entity = (LivingEntity)EntityUtils.getEntity(ref, componentAccessor);
-      Inventory entityInventory = entity.getInventory();
+      InventoryComponent.Hotbar hotbarComp = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      InventoryComponent.Utility utilityComp = componentAccessor.getComponent(ref, InventoryComponent.Utility.getComponentType());
+      InventoryComponent.Armor armorComp = componentAccessor.getComponent(ref, InventoryComponent.Armor.getComponentType());
+      InventoryComponent.Tool toolComp = componentAccessor.getComponent(ref, InventoryComponent.Tool.getComponentType());
       switch (type) {
          case Equipped:
             return new InteractionContext(
-               manager, ref, -3, entityInventory.getArmor(), (byte)equipSlot, entityInventory.getArmor().getItemStack((short)equipSlot)
+               manager,
+               ref,
+               -3,
+               armorComp != null ? armorComp.getInventory() : null,
+               (byte)equipSlot,
+               armorComp != null ? armorComp.getInventory().getItemStack((short)equipSlot) : null
             );
          case HeldOffhand:
             return new InteractionContext(
-               manager, ref, -5, entityInventory.getUtility(), entityInventory.getActiveUtilitySlot(), entityInventory.getUtilityItem()
+               manager,
+               ref,
+               -5,
+               utilityComp != null ? utilityComp.getInventory() : null,
+               utilityComp != null ? utilityComp.getActiveSlot() : -1,
+               utilityComp != null ? utilityComp.getActiveItem() : null
             );
          case Ability1:
          case Ability2:
@@ -516,11 +533,11 @@ public class InteractionContext {
          case Pick:
          case Primary:
          case Secondary:
-            if (entityInventory.usingToolsItem()) {
-               return new InteractionContext(manager, ref, -8, entityInventory.getTools(), entityInventory.getActiveToolsSlot(), entityInventory.getToolsItem());
+            if (toolComp != null && toolComp.isUsingToolsItem()) {
+               return new InteractionContext(manager, ref, -8, toolComp.getInventory(), toolComp.getActiveSlot(), toolComp.getActiveItem());
             } else {
-               ItemStack primary = entityInventory.getItemInHand();
-               ItemStack secondary = entityInventory.getUtilityItem();
+               ItemStack primary = hotbarComp != null ? hotbarComp.getActiveItem() : null;
+               ItemStack secondary = utilityComp != null ? utilityComp.getActiveItem() : null;
                int selectedInventory = -1;
                if (primary == null && secondary != null) {
                   selectedInventory = -5;
@@ -544,19 +561,34 @@ public class InteractionContext {
                   }
                }
 
-               if (selectedInventory == -5) {
-                  return new InteractionContext(
-                     manager, ref, -5, entityInventory.getUtility(), entityInventory.getActiveUtilitySlot(), entityInventory.getUtilityItem()
+               return selectedInventory == -5
+                  ? new InteractionContext(
+                     manager,
+                     ref,
+                     -5,
+                     utilityComp != null ? utilityComp.getInventory() : null,
+                     utilityComp != null ? utilityComp.getActiveSlot() : -1,
+                     utilityComp != null ? utilityComp.getActiveItem() : null
+                  )
+                  : new InteractionContext(
+                     manager,
+                     ref,
+                     -1,
+                     hotbarComp != null ? hotbarComp.getInventory() : null,
+                     hotbarComp != null ? hotbarComp.getActiveSlot() : -1,
+                     hotbarComp != null ? hotbarComp.getActiveItem() : null
                   );
-               }
-
-               return new InteractionContext(
-                  manager, ref, -1, entityInventory.getHotbar(), entityInventory.getActiveHotbarSlot(), entityInventory.getItemInHand()
-               );
             }
          case Held:
          default:
-            return new InteractionContext(manager, ref, -1, entityInventory.getHotbar(), entityInventory.getActiveHotbarSlot(), entityInventory.getItemInHand());
+            return new InteractionContext(
+               manager,
+               ref,
+               -1,
+               hotbarComp != null ? hotbarComp.getInventory() : null,
+               hotbarComp != null ? hotbarComp.getActiveSlot() : -1,
+               hotbarComp != null ? hotbarComp.getActiveItem() : null
+            );
       }
    }
 

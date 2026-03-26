@@ -25,9 +25,13 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ReferenceSet;
+import it.unimi.dsi.fastutil.objects.ReferenceSets;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -48,8 +52,10 @@ public class EntityChunk implements Component<ChunkStore> {
             Holder<EntityStore>[] array = new Holder[entityChunk.entityHolders.size() + entityChunk.entityReferences.size()];
             array = entityChunk.entityHolders.toArray(array);
             int index = entityChunk.entityHolders.size();
+            Iterator i$ = entityChunk.entityReferences.iterator();
 
-            for (Ref<EntityStore> reference : entityChunk.entityReferences) {
+            while (i$.hasNext()) {
+               Ref<EntityStore> reference = (Ref<EntityStore>)i$.next();
                Store<EntityStore> store = reference.getStore();
                if (store.getArchetype(reference).hasSerializableComponents(store.getRegistry().getData())) {
                   array[index++] = store.copyEntity(reference);
@@ -63,7 +69,7 @@ public class EntityChunk implements Component<ChunkStore> {
    @Nonnull
    private final List<Holder<EntityStore>> entityHolders;
    @Nonnull
-   private final Set<Ref<EntityStore>> entityReferences;
+   private final ReferenceSet<Ref<EntityStore>> entityReferences;
    @Nonnull
    private final List<Holder<EntityStore>> entityHoldersUnmodifiable;
    @Nonnull
@@ -77,16 +83,16 @@ public class EntityChunk implements Component<ChunkStore> {
 
    public EntityChunk() {
       this.entityHolders = new ObjectArrayList();
-      this.entityReferences = new HashSet<>();
+      this.entityReferences = new ReferenceOpenHashSet();
       this.entityHoldersUnmodifiable = Collections.unmodifiableList(this.entityHolders);
-      this.entityReferencesUnmodifiable = Collections.unmodifiableSet(this.entityReferences);
+      this.entityReferencesUnmodifiable = ReferenceSets.unmodifiable(this.entityReferences);
    }
 
-   public EntityChunk(@Nonnull List<Holder<EntityStore>> entityHolders, @Nonnull Set<Ref<EntityStore>> entityReferences) {
+   public EntityChunk(@Nonnull List<Holder<EntityStore>> entityHolders, @Nonnull ReferenceSet<Ref<EntityStore>> entityReferences) {
       this.entityHolders = entityHolders;
       this.entityReferences = entityReferences;
       this.entityHoldersUnmodifiable = Collections.unmodifiableList(entityHolders);
-      this.entityReferencesUnmodifiable = Collections.unmodifiableSet(entityReferences);
+      this.entityReferencesUnmodifiable = ReferenceSets.unmodifiable(entityReferences);
    }
 
    @Nonnull
@@ -98,11 +104,14 @@ public class EntityChunk implements Component<ChunkStore> {
          entityHoldersClone.add(entityHolder.clone());
       }
 
-      for (Ref<EntityStore> reference : this.entityReferences) {
+      ObjectIterator var4 = this.entityReferences.iterator();
+
+      while (var4.hasNext()) {
+         Ref<EntityStore> reference = (Ref<EntityStore>)var4.next();
          entityHoldersClone.add(reference.getStore().copyEntity(reference));
       }
 
-      return new EntityChunk(entityHoldersClone, new HashSet<>());
+      return new EntityChunk(entityHoldersClone, new ReferenceOpenHashSet());
    }
 
    @Nonnull
@@ -117,14 +126,17 @@ public class EntityChunk implements Component<ChunkStore> {
          }
       }
 
-      for (Ref<EntityStore> reference : this.entityReferences) {
+      ObjectIterator var6 = this.entityReferences.iterator();
+
+      while (var6.hasNext()) {
+         Ref<EntityStore> reference = (Ref<EntityStore>)var6.next();
          Store<EntityStore> store = reference.getStore();
          if (store.getArchetype(reference).hasSerializableComponents(data)) {
             entityHoldersClone.add(store.copySerializableEntity(reference));
          }
       }
 
-      return new EntityChunk(entityHoldersClone, new HashSet<>());
+      return new EntityChunk(entityHoldersClone, new ReferenceOpenHashSet());
    }
 
    @Nonnull
@@ -180,7 +192,7 @@ public class EntityChunk implements Component<ChunkStore> {
       if (this.entityReferences.isEmpty()) {
          return null;
       } else {
-         Ref<EntityStore>[] holders = this.entityReferences.toArray(Ref[]::new);
+         Ref<EntityStore>[] holders = (Ref<EntityStore>[])this.entityReferences.toArray(Ref[]::new);
          this.entityReferences.clear();
          return holders;
       }

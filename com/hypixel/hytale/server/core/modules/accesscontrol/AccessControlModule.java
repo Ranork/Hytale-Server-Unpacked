@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.core.modules.accesscontrol;
 
 import com.google.gson.JsonObject;
 import com.hypixel.hytale.common.plugin.PluginManifest;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.event.events.player.PlayerSetupConnectEvent;
 import com.hypixel.hytale.server.core.modules.accesscontrol.ban.Ban;
 import com.hypixel.hytale.server.core.modules.accesscontrol.ban.BanParser;
@@ -54,8 +55,8 @@ public class AccessControlModule extends JavaPlugin {
       this.registerBanParser("timed", TimedBan::fromJsonObject);
       this.registerBanParser("infinite", InfiniteBan::fromJsonObject);
       this.getEventRegistry().register(PlayerSetupConnectEvent.class, event -> {
-         CompletableFuture<Optional<String>> completableFuture = this.getDisconnectReason(event.getUuid());
-         Optional<String> disconnectReason = completableFuture.join();
+         CompletableFuture<Optional<Message>> completableFuture = this.getDisconnectReason(event.getUuid());
+         Optional<Message> disconnectReason = completableFuture.join();
          if (disconnectReason.isPresent()) {
             event.setReason(disconnectReason.get());
             event.setCancelled(true);
@@ -98,7 +99,7 @@ public class AccessControlModule extends JavaPlugin {
    }
 
    @Nonnull
-   private CompletableFuture<Optional<String>> getDisconnectReason(UUID uuid) {
+   private CompletableFuture<Optional<Message>> getDisconnectReason(@Nonnull UUID uuid) {
       return this.providerRegistry
          .stream()
          .map(p -> p.getDisconnectReason(uuid))

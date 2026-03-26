@@ -22,6 +22,7 @@ import com.hypixel.hytale.server.core.entity.ExplosionConfig;
 import com.hypixel.hytale.server.core.entity.ExplosionUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
+import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
@@ -29,6 +30,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageSystems;
+import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.physics.SimplePhysicsProvider;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
@@ -38,7 +40,7 @@ import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -139,6 +141,10 @@ public class ProjectileComponent implements Component<EntityStore> {
          holder.putComponent(TransformComponent.getComponentType(), new TransformComponent(position.clone(), rotation));
          holder.ensureComponent(Velocity.getComponentType());
          holder.ensureComponent(UUIDComponent.getComponentType());
+         MovementStatesComponent movementStatesComponent = holder.ensureAndGetComponent(MovementStatesComponent.getComponentType());
+         movementStatesComponent.getMovementStates().flying = true;
+         movementStatesComponent.getMovementStates().idle = true;
+         holder.ensureComponent(EntityTrackerSystems.Visible.getComponentType());
          return holder;
       }
    }
@@ -166,7 +172,7 @@ public class ProjectileComponent implements Component<EntityStore> {
       WorldParticle bounceParticles = this.projectile.getBounceParticles();
       if (bounceParticles != null) {
          SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
-         ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+         List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
          playerSpatialResource.getSpatialStructure().collect(position, 75.0, results);
          ParticleUtil.spawnParticleEffect(bounceParticles, position, results, componentAccessor);
       }
@@ -180,7 +186,7 @@ public class ProjectileComponent implements Component<EntityStore> {
       WorldParticle hitParticles = this.projectile.getHitParticles();
       if (hitParticles != null) {
          SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
-         ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+         List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
          playerSpatialResource.getSpatialStructure().collect(position, 75.0, results);
          ParticleUtil.spawnParticleEffect(hitParticles, position, results, componentAccessor);
       }
@@ -238,13 +244,18 @@ public class ProjectileComponent implements Component<EntityStore> {
       } else {
          this.onProjectileMissEvent(position, componentAccessor);
       }
+
+      MovementStatesComponent movementStatesComponent = componentAccessor.getComponent(ref, MovementStatesComponent.getComponentType());
+      if (movementStatesComponent != null) {
+         movementStatesComponent.getMovementStates().flying = false;
+      }
    }
 
    private void onProjectileMissEvent(@Nonnull Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       WorldParticle missParticles = this.projectile.getMissParticles();
       if (missParticles != null) {
          SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(EntityModule.get().getPlayerSpatialResourceType());
-         ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+         List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
          playerSpatialResource.getSpatialStructure().collect(position, 75.0, results);
          ParticleUtil.spawnParticleEffect(missParticles, position, results, componentAccessor);
       }
@@ -268,7 +279,7 @@ public class ProjectileComponent implements Component<EntityStore> {
          WorldParticle deathParticles = this.projectile.getDeathParticles();
          if (deathParticles != null) {
             SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(EntityModule.get().getPlayerSpatialResourceType());
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             playerSpatialResource.getSpatialStructure().collect(position, 75.0, results);
             ParticleUtil.spawnParticleEffect(deathParticles, position, results, commandBuffer);
          }

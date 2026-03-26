@@ -20,6 +20,8 @@ public abstract class JsonLoader<K extends SeedResource, T> extends Loader<K, T>
    public static final JsonResourceLoader<JsonObject> JSON_OBJ_LOADER = new JsonResourceLoader(
       (Class<T>)JsonObject.class, JsonElement::isJsonObject, JsonElement::getAsJsonObject
    );
+   protected static final JsonObject EMPTY_OBJECT = new JsonObject();
+   protected static final JsonArray EMPTY_ARRAY = new JsonArray();
    @Nullable
    protected final JsonElement json;
 

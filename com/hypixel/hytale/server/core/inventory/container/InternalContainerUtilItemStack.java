@@ -328,12 +328,6 @@ public class InternalContainerUtilItemStack {
    }
 
    protected static int testRemoveItemStackFromSlot(
-      @Nonnull ItemContainer container, short slot, ItemStack itemStack, int testQuantityRemaining, boolean filter
-   ) {
-      return testRemoveItemStackFromSlot(container, slot, itemStack, testQuantityRemaining, filter, (a, b) -> ItemStack.isStackableWith(a, b));
-   }
-
-   protected static int testRemoveItemStackFromSlot(
       @Nonnull ItemContainer container, short slot, ItemStack itemStack, int testQuantityRemaining, boolean filter, BiPredicate<ItemStack, ItemStack> predicate
    ) {
       if (filter && container.cantRemoveFromSlot(slot)) {
@@ -564,10 +558,16 @@ public class InternalContainerUtilItemStack {
    }
 
    protected static int testRemoveItemStackFromItems(@Nonnull ItemContainer container, ItemStack itemStack, int testQuantityRemaining, boolean filter) {
+      return testRemoveItemStackFromItems(container, itemStack, testQuantityRemaining, filter, (a, b) -> ItemStack.isStackableWith(a, b));
+   }
+
+   protected static int testRemoveItemStackFromItems(
+      @Nonnull ItemContainer container, ItemStack itemStack, int testQuantityRemaining, boolean filter, BiPredicate<ItemStack, ItemStack> predicate
+   ) {
       for (short i = 0; i < container.getCapacity() && testQuantityRemaining > 0; i++) {
          if (!filter || !container.cantRemoveFromSlot(i)) {
             ItemStack slotItemStack = container.internal_getSlot(i);
-            if (!ItemStack.isEmpty(slotItemStack) && slotItemStack.isStackableWith(itemStack)) {
+            if (!ItemStack.isEmpty(slotItemStack) && predicate.test(slotItemStack, itemStack)) {
                int quantity = slotItemStack.getQuantity();
                int quantityAdjustment = Math.min(quantity, testQuantityRemaining);
                testQuantityRemaining -= quantityAdjustment;

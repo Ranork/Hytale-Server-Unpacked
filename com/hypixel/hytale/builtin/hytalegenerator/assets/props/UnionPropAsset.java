@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.props;
 
+import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.props.UnionProp;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -22,15 +23,15 @@ public class UnionPropAsset extends PropAsset {
    @Override
    public Prop build(@Nonnull PropAsset.Argument argument) {
       if (super.skip()) {
-         return Prop.noProp();
+         return EmptyProp.INSTANCE;
       } else {
-         ArrayList<Prop> chainedProps = new ArrayList<>(this.propAssets.length);
+         ArrayList<Prop> props = new ArrayList<>(this.propAssets.length);
 
          for (PropAsset asset : this.propAssets) {
-            chainedProps.add(asset.build(argument));
+            props.add(asset.build(argument));
          }
 
-         return new UnionProp(chainedProps);
+         return new UnionProp(props);
       }
    }
 

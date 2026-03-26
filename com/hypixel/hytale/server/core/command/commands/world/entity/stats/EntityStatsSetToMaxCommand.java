@@ -15,7 +15,6 @@ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsModule;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.List;
 import javax.annotation.Nonnull;
 
@@ -30,9 +29,7 @@ public class EntityStatsSetToMaxCommand extends AbstractTargetEntityCommand {
    }
 
    @Override
-   protected void execute(
-      @Nonnull CommandContext context, @Nonnull ObjectList<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store
-   ) {
+   protected void execute(@Nonnull CommandContext context, @Nonnull List<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       String entityStatName = this.entityStatNameArg.get(context);
       setEntityStatMax(context, entities, entityStatName, store);
    }

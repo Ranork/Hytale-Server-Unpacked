@@ -12,12 +12,14 @@ import com.hypixel.hytale.server.worldgen.biome.Biome;
 import com.hypixel.hytale.server.worldgen.cave.CavePrefabPlacement;
 import com.hypixel.hytale.server.worldgen.cave.element.CaveNode;
 import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabSupplier;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class CavePrefabContainer {
+   public static final ListPool<CavePrefabContainer.CavePrefabEntry> ENTRY_POOL = new ListPool<>(10, new CavePrefabContainer.CavePrefabEntry[0]);
    protected final CavePrefabContainer.CavePrefabEntry[] entries;
 
    public CavePrefabContainer(CavePrefabContainer.CavePrefabEntry[] entries) {

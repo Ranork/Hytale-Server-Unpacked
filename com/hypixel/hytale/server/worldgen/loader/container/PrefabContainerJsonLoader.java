@@ -2,6 +2,8 @@ package com.hypixel.hytale.server.worldgen.loader.container;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
@@ -9,19 +11,25 @@ import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.container.PrefabContainer;
 import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabSupplier;
+import com.hypixel.hytale.server.worldgen.loader.context.BiomeFileContext;
 import com.hypixel.hytale.server.worldgen.loader.context.FileLoadingContext;
 import com.hypixel.hytale.server.worldgen.loader.prefab.PrefabPatternGeneratorJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.prefab.WeightedPrefabMapJsonLoader;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabPatternGenerator;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 
 public class PrefabContainerJsonLoader extends JsonLoader<SeedStringResource, PrefabContainer> {
-   private final FileLoadingContext context;
+   @Nonnull
+   protected final BiomeFileContext biomeContext;
+   @Nonnull
+   protected final FileLoadingContext fileContext;
 
-   public PrefabContainerJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json, FileLoadingContext context) {
+   public PrefabContainerJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json, @Nonnull BiomeFileContext biomeContext) {
       super(seed.append(".PrefabContainer"), dataFolder, json);
-      this.context = context;
+      this.biomeContext = biomeContext;
+      this.fileContext = biomeContext.getParentContext().getParentContext();
    }
 
    @Nonnull
@@ -31,25 +39,35 @@ public class PrefabContainerJsonLoader extends JsonLoader<SeedStringResource, Pr
 
    @Nonnull
    protected PrefabContainer.PrefabContainerEntry[] loadEntries() {
-      if (!this.has("Entries")) {
-         return new PrefabContainer.PrefabContainerEntry[0];
-      } else {
-         JsonArray entryArray = this.get("Entries").getAsJsonArray();
-         PrefabContainer.PrefabContainerEntry[] entries = new PrefabContainer.PrefabContainerEntry[entryArray.size()];
+      JsonArray prefabArray = this.mustGetArray("Entries", EMPTY_ARRAY);
 
-         for (int i = 0; i < entries.length; i++) {
+      PrefabContainer.PrefabContainerEntry[] e;
+      try (ListPool.Resource<PrefabContainer.PrefabContainerEntry> entries = PrefabContainer.ENTRY_POOL.acquire()) {
+         for (int i = 0; i < prefabArray.size(); i++) {
             try {
-               entries[i] = new PrefabContainerJsonLoader.PrefabContainerEntryJsonLoader(
-                     this.seed.append("-" + i), this.dataFolder, entryArray.get(i), this.context
-                  )
-                  .load();
-            } catch (Throwable var5) {
-               throw new Error(String.format("Failed to load prefab container entry #%s.", i), var5);
+               entries.add(
+                  new PrefabContainerJsonLoader.PrefabContainerEntryJsonLoader(this.seed.append("-" + i), this.dataFolder, prefabArray.get(i), this.fileContext)
+                     .load()
+               );
+            } catch (Throwable var6) {
+               throw new Error(String.format("Failed to load prefab container entry #%s.", i), var6);
             }
          }
 
-         return entries;
+         ModifyEvent.SeedGenerator<SeedStringResource> seed = new ModifyEvent.SeedGenerator<>(this.seed);
+         ModifyEvent.dispatch(
+            ModifyEvents.BiomePrefabs.class,
+            new ModifyEvents.BiomePrefabs(
+               this.biomeContext,
+               entries,
+               content -> new PrefabContainerJsonLoader.PrefabContainerEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content), this.fileContext)
+                  .load()
+            )
+         );
+         e = entries.toArray();
       }
+
+      return e;
    }
 
    public interface Constants {

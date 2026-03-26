@@ -3,6 +3,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.ConstantDensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.density.DensityAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.FieldFunctionOccurrencePositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.codec.Codec;
@@ -32,7 +33,7 @@ public class FieldFunctionOccurrencePositionProviderAsset extends PositionProvid
    @Override
    public PositionProvider build(@Nonnull PositionProviderAsset.Argument argument) {
       if (super.skip()) {
-         return PositionProvider.noPositionProvider();
+         return EmptyPositionProvider.INSTANCE;
       } else {
          Density functionTree = this.densityAsset.build(DensityAsset.from(argument));
          PositionProvider positionProvider = this.positionProviderAsset.build(argument);

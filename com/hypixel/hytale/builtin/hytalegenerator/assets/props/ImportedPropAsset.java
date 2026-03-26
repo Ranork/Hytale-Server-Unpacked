@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.props;
 
+import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -18,13 +19,13 @@ public class ImportedPropAsset extends PropAsset {
    @Override
    public Prop build(@Nonnull PropAsset.Argument argument) {
       if (super.skip()) {
-         return Prop.noProp();
+         return EmptyProp.INSTANCE;
       } else if (this.name != null && !this.name.isEmpty()) {
          PropAsset exportedAsset = PropAsset.getExportedAsset(this.name);
-         return exportedAsset == null ? Prop.noProp() : exportedAsset.build(argument);
+         return (Prop)(exportedAsset == null ? EmptyProp.INSTANCE : exportedAsset.build(argument));
       } else {
          ((HytaleLogger.Api)HytaleLogger.getLogger().atWarning()).log("An exported Pattern with the name does not exist: " + this.name);
-         return Prop.noProp();
+         return EmptyProp.INSTANCE;
       }
    }
 }

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders;
 
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.UnionPositionProvider;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -26,7 +27,7 @@ public class UnionPositionProviderAsset extends PositionProviderAsset {
    @Override
    public PositionProvider build(@Nonnull PositionProviderAsset.Argument argument) {
       if (super.skip()) {
-         return PositionProvider.noPositionProvider();
+         return EmptyPositionProvider.INSTANCE;
       } else {
          ArrayList<PositionProvider> list = new ArrayList<>();
 

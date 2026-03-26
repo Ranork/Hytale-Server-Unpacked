@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.buildertools.prefabeditor.ui;
 
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
+import com.hypixel.hytale.builtin.buildertools.BuilderToolsUserData;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionManager;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditorCreationSettings;
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabLoadingState;
@@ -33,6 +34,9 @@ import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
 import com.hypixel.hytale.server.core.ui.LocalizableString;
 import com.hypixel.hytale.server.core.ui.Value;
+import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowser;
+import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowserConfig;
+import com.hypixel.hytale.server.core.ui.browser.AssetPackSaveBrowserEventData;
 import com.hypixel.hytale.server.core.ui.browser.FileListProvider;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -55,6 +59,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final Value<String> BUTTON_HIGHLIGHTED = Value.ref("Pages/BasicTextButton.ui", "SelectedLabelStyle");
    private static final String ASSETS_ROOT_KEY = "Assets";
+   private final AssetPackSaveBrowser packBrowser = new AssetPackSaveBrowser(AssetPackSaveBrowserConfig.defaults());
    private final List<DropdownEntryInfo> savedConfigsDropdown = new ObjectArrayList();
    private volatile boolean isLoading;
    private volatile boolean loadingCancelled;
@@ -82,6 +87,11 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
       @Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store
    ) {
       commandBuilder.append("Pages/PrefabEditorSettings.ui");
+      Player playerComponent = store.getComponent(ref, Player.getComponentType());
+      if (playerComponent != null) {
+         this.packBrowser.setSelectedPackKey(BuilderToolsUserData.get(playerComponent).getLastSavePack());
+      }
+
       this.savedConfigsDropdown.add(new DropdownEntryInfo(LocalizableString.fromMessageId("server.commands.editprefab.ui.savedConfigs.noneSelected"), ""));
 
       for (String assetId : PrefabEditorCreationSettings.getAssetMap().getAssetMap().keySet()) {
@@ -221,6 +231,14 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
             .append("@AlignmentMethod", "#MainPage #AlignmentMethod #Input.Value")
             .append("@RowSplitMode", "#MainPage #RowSplitMode #Input.Value")
       );
+      commandBuilder.set("#PackBrowserPage.Visible", false);
+      commandBuilder.set("#CreatePackPage.Visible", false);
+      if (this.packBrowser.hasSelectedPack()) {
+         commandBuilder.set("#SaveConfigPage #SelectedPackLabel.Text", this.packBrowser.getSelectedPackDisplayName());
+      }
+
+      this.packBrowser.buildEventBindings(eventBuilder, "#SaveConfigPage #BrowsePackButton");
+      this.packBrowser.buildUI(commandBuilder, eventBuilder);
       eventBuilder.addEventBinding(
          CustomUIEventBindingType.Activating,
          "#LoadingPage #CancelButton",
@@ -275,284 +293,314 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
 
       assert playerRefComponent != null;
 
-      switch (data.uiAction) {
-         case Load:
-            if (this.isLoading || this.isShuttingDown) {
-               return;
-            }
+      AssetPackSaveBrowser.ActionResult packResult = this.packBrowser
+         .handleAction(data.uiAction != null ? data.uiAction.name() : null, data.packBrowserData, "#SaveConfigPage #SelectedPackLabel");
+      if (packResult != null) {
+         if (packResult.errorKey() != null) {
+            this.playerRef.sendMessage(Message.translation(packResult.errorKey()));
+         }
 
-            this.isLoading = true;
-            this.loadingCancelled = false;
-            this.currentLoadingState = new PrefabLoadingState();
-            this.loadingWorldName = "prefabEditor-" + playerRefComponent.getUsername();
-            UICommandBuilder showLoadingBuilder = new UICommandBuilder();
-            showLoadingBuilder.set("#MainPage.Visible", false);
-            showLoadingBuilder.set("#SaveConfigPage.Visible", false);
-            showLoadingBuilder.set("#LoadingPage.Visible", true);
-            showLoadingBuilder.set("#LoadingPage #ProgressBar.Value", 0.0F);
-            showLoadingBuilder.set("#LoadingPage #StatusText.TextSpans", Message.translation("server.commands.editprefab.loading.phase.initializing"));
-            showLoadingBuilder.set("#LoadingPage #ErrorText.Visible", false);
-            showLoadingBuilder.set("#LoadingPage #CancelButton.Visible", true);
-            this.sendUpdate(showLoadingBuilder);
-            this.playerRef.sendMessage(Message.translation("server.commands.editprefab.loading"));
-            CompletableFuture<Void> result = BuilderToolsPlugin.get()
-               .getPrefabEditSessionManager()
-               .loadPrefabAndCreateEditSession(ref, playerComponent, data.toCreationSettings(), store, this::onLoadingProgress);
-            if (result == null) {
-               this.onLoadingFailed(Message.translation("server.commands.editprefab.error.failedToStart"));
-               return;
-            }
+         if (packResult.packConfirmed() && this.packBrowser.hasSelectedPack()) {
+            BuilderToolsUserData.get(playerComponent).setLastSavePack(this.packBrowser.getSelectedPack().getName());
+         }
 
-            result.whenComplete((unused, throwable) -> {
-               if (!this.loadingCancelled) {
-                  if (throwable != null) {
-                     this.onLoadingFailed(Message.raw(throwable.getMessage() != null ? throwable.getMessage() : "Unknown error"));
-                  } else if (this.currentLoadingState != null && this.currentLoadingState.hasErrors()) {
-                     this.onLoadingFailed(this.currentLoadingState.getStatusMessage());
-                  } else {
-                     this.isLoading = false;
-                     this.loadingWorldName = null;
-                     this.currentLoadingState = null;
-                     playerComponent.getPageManager().setPage(ref, store, Page.ContentCreation);
-                  }
+         this.sendUpdate(packResult.commandBuilder(), packResult.eventBuilder(), false);
+      } else {
+         switch (data.uiAction) {
+            case Load:
+               if (this.isLoading || this.isShuttingDown) {
+                  return;
                }
-            });
-            break;
-         case OpenSavePropertiesDialog: {
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            commandBuilder.set("#MainPage.Visible", false);
-            commandBuilder.set("#SaveConfigPage.Visible", true);
-            this.sendUpdate(commandBuilder);
-            break;
-         }
-         case CancelSavePropertiesDialog: {
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            commandBuilder.set("#MainPage.Visible", true);
-            commandBuilder.set("#SaveConfigPage.Visible", false);
-            this.sendUpdate(commandBuilder);
-            break;
-         }
-         case SavePropertiesConfig:
-            PrefabEditorCreationSettings.save(data.configName, data.toCreationSettings()).thenRun(() -> {
-               UICommandBuilder builderx = new UICommandBuilder();
-               builderx.set("#MainPage.Visible", true);
-               builderx.set("#SaveConfigPage.Visible", false);
-               builderx.set("#SaveConfigPage #Buttons.Visible", true);
-               builderx.set("#SaveConfigPage #SaveName #Input.Value", "");
-               this.savedConfigsDropdown.add(new DropdownEntryInfo(LocalizableString.fromString(data.configName), data.configName));
-               builderx.set("#SavedConfigs #Input.Entries", this.savedConfigsDropdown);
-               builderx.set("#SavedConfigs #Input.Value", data.configName);
-               this.sendUpdate(builderx);
-            });
-            break;
-         case ApplySavedProperties:
-            if (data.configName == null || data.configName.isBlank()) {
-               UICommandBuilder builderx = new UICommandBuilder();
-               builderx.set("#MainPage #RootDir #Input.Value", PrefabEditLoadCommand.DEFAULT_PREFAB_ROOT_DIRECTORY.name());
-               builderx.set("#MainPage #PrefabPaths #Input.Value", "");
-               builderx.set("#MainPage #Recursive #CheckBox.Value", false);
-               builderx.set("#MainPage #Children #CheckBox.Value", false);
-               builderx.set("#MainPage #Entities #CheckBox.Value", false);
-               builderx.set("#MainPage #EnableWorldTicking #CheckBox.Value", false);
-               builderx.set("#MainPage #DesiredYLevel #Input.Value", 55);
-               builderx.set("#MainPage #BlocksBetweenPrefabs #Input.Value", 15);
-               builderx.set("#MainPage #WorldGenType #Input.Value", PrefabEditLoadCommand.DEFAULT_WORLD_GEN_TYPE.name());
-               builderx.set("#MainPage #Environment #Input.Value", "Env_Zone1_Plains");
-               builderx.set("#MainPage #GrassTint #Input.Color", "#5B9E28");
-               builderx.set("#MainPage #NumAirBeforeGround #Input.Value", 0);
-               builderx.set("#MainPage #PasteAxis #Input.Value", PrefabEditLoadCommand.DEFAULT_PREFAB_STACKING_AXIS.name());
-               builderx.set("#MainPage #AlignmentMethod #Input.Value", PrefabEditLoadCommand.DEFAULT_PREFAB_ALIGNMENT.name());
-               builderx.set("#MainPage #RowSplitMode #Input.Value", PrefabEditLoadCommand.DEFAULT_ROW_SPLIT_MODE.name());
-               this.sendUpdate(builderx);
-               return;
-            }
 
-            PrefabEditorCreationSettings.load(data.configName).thenAccept(settings -> {
-               if (settings != null) {
+               this.isLoading = true;
+               this.loadingCancelled = false;
+               this.currentLoadingState = new PrefabLoadingState();
+               this.loadingWorldName = "prefabEditor-" + playerRefComponent.getUsername();
+               UICommandBuilder showLoadingBuilder = new UICommandBuilder();
+               showLoadingBuilder.set("#MainPage.Visible", false);
+               showLoadingBuilder.set("#SaveConfigPage.Visible", false);
+               showLoadingBuilder.set("#LoadingPage.Visible", true);
+               showLoadingBuilder.set("#LoadingPage #ProgressBar.Value", 0.0F);
+               showLoadingBuilder.set("#LoadingPage #StatusText.TextSpans", Message.translation("server.commands.editprefab.loading.phase.initializing"));
+               showLoadingBuilder.set("#LoadingPage #ErrorText.Visible", false);
+               showLoadingBuilder.set("#LoadingPage #CancelButton.Visible", true);
+               this.sendUpdate(showLoadingBuilder);
+               this.playerRef.sendMessage(Message.translation("server.commands.editprefab.loading"));
+               CompletableFuture<Void> result = BuilderToolsPlugin.get()
+                  .getPrefabEditSessionManager()
+                  .loadPrefabAndCreateEditSession(ref, playerComponent, data.toCreationSettings(), store, this::onLoadingProgress);
+               if (result == null) {
+                  this.onLoadingFailed(Message.translation("server.commands.editprefab.error.failedToStart"));
+                  return;
+               }
+
+               result.whenComplete((unused, throwable) -> {
+                  if (!this.loadingCancelled) {
+                     if (throwable != null) {
+                        this.onLoadingFailed(Message.raw(throwable.getMessage() != null ? throwable.getMessage() : "Unknown error"));
+                     } else if (this.currentLoadingState != null && this.currentLoadingState.hasErrors()) {
+                        this.onLoadingFailed(this.currentLoadingState.getStatusMessage());
+                     } else {
+                        this.isLoading = false;
+                        this.loadingWorldName = null;
+                        this.currentLoadingState = null;
+                        playerComponent.getPageManager().setPage(ref, store, Page.ContentCreation);
+                     }
+                  }
+               });
+               break;
+            case OpenSavePropertiesDialog: {
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               commandBuilder.set("#MainPage.Visible", false);
+               commandBuilder.set("#SaveConfigPage.Visible", true);
+               this.sendUpdate(commandBuilder);
+               break;
+            }
+            case CancelSavePropertiesDialog: {
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               commandBuilder.set("#MainPage.Visible", true);
+               commandBuilder.set("#SaveConfigPage.Visible", false);
+               this.sendUpdate(commandBuilder);
+               break;
+            }
+            case SavePropertiesConfig:
+               AssetPack targetPack = this.packBrowser.getSelectedPack();
+               if (targetPack == null) {
+                  this.playerRef.sendMessage(Message.translation("server.customUI.assetPackBrowser.packRequired"));
+                  return;
+               }
+
+               BuilderToolsUserData.get(playerComponent).setLastSavePack(targetPack.getName());
+               CompletableFuture<Void> saveFuture = PrefabEditorCreationSettings.save(data.configName, data.toCreationSettings(), targetPack);
+               saveFuture.thenRun(() -> {
                   UICommandBuilder builderx = new UICommandBuilder();
-                  builderx.set("#MainPage #RootDir #Input.Value", settings.getPrefabRootDirectory().name());
-                  builderx.set("#MainPage #PrefabPaths #Input.Value", String.join(",", settings.getUnprocessedPrefabPaths()));
-                  builderx.set("#MainPage #Recursive #CheckBox.Value", settings.isRecursive());
-                  builderx.set("#MainPage #Children #CheckBox.Value", settings.isLoadChildren());
-                  builderx.set("#MainPage #Entities #CheckBox.Value", settings.shouldLoadEntities());
-                  builderx.set("#MainPage #EnableWorldTicking #CheckBox.Value", settings.isWorldTickingEnabled());
-                  builderx.set("#MainPage #DesiredYLevel #Input.Value", settings.getPasteYLevelGoal());
-                  builderx.set("#MainPage #BlocksBetweenPrefabs #Input.Value", settings.getBlocksBetweenEachPrefab());
-                  builderx.set("#MainPage #WorldGenType #Input.Value", settings.getWorldGenType().name());
-                  builderx.set("#MainPage #Environment #Input.Value", settings.getEnvironment());
-                  builderx.set("#MainPage #GrassTint #Input.Color", settings.getGrassTint());
-                  builderx.set("#MainPage #NumAirBeforeGround #Input.Value", settings.getBlocksAboveSurface());
-                  builderx.set("#MainPage #PasteAxis #Input.Value", settings.getStackingAxis().name());
-                  builderx.set("#MainPage #AlignmentMethod #Input.Value", settings.getAlignment().name());
-                  builderx.set("#MainPage #RowSplitMode #Input.Value", settings.getRowSplitMode().name());
+                  builderx.set("#MainPage.Visible", true);
+                  builderx.set("#SaveConfigPage.Visible", false);
+                  builderx.set("#SaveConfigPage #Buttons.Visible", true);
+                  builderx.set("#SaveConfigPage #SaveName #Input.Value", "");
+                  this.savedConfigsDropdown.add(new DropdownEntryInfo(LocalizableString.fromString(data.configName), data.configName));
+                  builderx.set("#SavedConfigs #Input.Entries", this.savedConfigsDropdown);
+                  builderx.set("#SavedConfigs #Input.Value", data.configName);
+                  this.sendUpdate(builderx);
+               });
+               break;
+            case ApplySavedProperties:
+               if (data.configName == null || data.configName.isBlank()) {
+                  UICommandBuilder builderx = new UICommandBuilder();
+                  builderx.set("#MainPage #RootDir #Input.Value", PrefabEditLoadCommand.DEFAULT_PREFAB_ROOT_DIRECTORY.name());
+                  builderx.set("#MainPage #PrefabPaths #Input.Value", "");
+                  builderx.set("#MainPage #Recursive #CheckBox.Value", false);
+                  builderx.set("#MainPage #Children #CheckBox.Value", false);
+                  builderx.set("#MainPage #Entities #CheckBox.Value", false);
+                  builderx.set("#MainPage #EnableWorldTicking #CheckBox.Value", false);
+                  builderx.set("#MainPage #DesiredYLevel #Input.Value", 55);
+                  builderx.set("#MainPage #BlocksBetweenPrefabs #Input.Value", 15);
+                  builderx.set("#MainPage #WorldGenType #Input.Value", PrefabEditLoadCommand.DEFAULT_WORLD_GEN_TYPE.name());
+                  builderx.set("#MainPage #Environment #Input.Value", "Env_Zone1_Plains");
+                  builderx.set("#MainPage #GrassTint #Input.Color", "#5B9E28");
+                  builderx.set("#MainPage #NumAirBeforeGround #Input.Value", 0);
+                  builderx.set("#MainPage #PasteAxis #Input.Value", PrefabEditLoadCommand.DEFAULT_PREFAB_STACKING_AXIS.name());
+                  builderx.set("#MainPage #AlignmentMethod #Input.Value", PrefabEditLoadCommand.DEFAULT_PREFAB_ALIGNMENT.name());
+                  builderx.set("#MainPage #RowSplitMode #Input.Value", PrefabEditLoadCommand.DEFAULT_ROW_SPLIT_MODE.name());
+                  this.sendUpdate(builderx);
+                  return;
+               }
+
+               PrefabEditorCreationSettings.load(data.configName).thenAccept(settings -> {
+                  if (settings != null) {
+                     UICommandBuilder builderx = new UICommandBuilder();
+                     builderx.set("#MainPage #RootDir #Input.Value", settings.getPrefabRootDirectory().name());
+                     builderx.set("#MainPage #PrefabPaths #Input.Value", String.join(",", settings.getUnprocessedPrefabPaths()));
+                     builderx.set("#MainPage #Recursive #CheckBox.Value", settings.isRecursive());
+                     builderx.set("#MainPage #Children #CheckBox.Value", settings.isLoadChildren());
+                     builderx.set("#MainPage #Entities #CheckBox.Value", settings.shouldLoadEntities());
+                     builderx.set("#MainPage #EnableWorldTicking #CheckBox.Value", settings.isWorldTickingEnabled());
+                     builderx.set("#MainPage #DesiredYLevel #Input.Value", settings.getPasteYLevelGoal());
+                     builderx.set("#MainPage #BlocksBetweenPrefabs #Input.Value", settings.getBlocksBetweenEachPrefab());
+                     builderx.set("#MainPage #WorldGenType #Input.Value", settings.getWorldGenType().name());
+                     builderx.set("#MainPage #Environment #Input.Value", settings.getEnvironment());
+                     builderx.set("#MainPage #GrassTint #Input.Color", settings.getGrassTint());
+                     builderx.set("#MainPage #NumAirBeforeGround #Input.Value", settings.getBlocksAboveSurface());
+                     builderx.set("#MainPage #PasteAxis #Input.Value", settings.getStackingAxis().name());
+                     builderx.set("#MainPage #AlignmentMethod #Input.Value", settings.getAlignment().name());
+                     builderx.set("#MainPage #RowSplitMode #Input.Value", settings.getRowSplitMode().name());
+                     this.sendUpdate(builderx);
+                  }
+               });
+               break;
+            case Cancel:
+               playerComponent.getPageManager().setPage(ref, store, Page.None);
+               break;
+            case CancelLoading:
+               if (this.isShuttingDown) {
+                  return;
+               }
+
+               this.loadingCancelled = true;
+               this.isLoading = false;
+               this.isShuttingDown = true;
+               UICommandBuilder cancellingBuilder = new UICommandBuilder();
+               cancellingBuilder.set("#LoadingPage #CancelButton.Disabled", true);
+               cancellingBuilder.set("#LoadingPage #StatusText.TextSpans", Message.translation("server.commands.editprefab.loading.phase.cancelling"));
+               cancellingBuilder.set("#LoadingPage #ProgressBar.Value", 0.1F);
+               cancellingBuilder.set("#LoadingPage #ErrorText.Visible", false);
+               this.sendUpdate(cancellingBuilder);
+               PrefabEditSessionManager sessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
+               if (this.loadingWorldName != null) {
+                  String worldNameToClean = this.loadingWorldName;
+                  this.loadingWorldName = null;
+                  sessionManager.cleanupCancelledSession(this.playerRef.getUuid(), worldNameToClean, this::onShutdownProgress)
+                     .whenComplete((unused, throwable) -> {
+                        this.isShuttingDown = false;
+                        this.currentLoadingState = null;
+                        UICommandBuilder builderx = new UICommandBuilder();
+                        builderx.set("#LoadingPage.Visible", false);
+                        builderx.set("#LoadingPage #CancelButton.Disabled", false);
+                        builderx.set("#MainPage.Visible", true);
+                        this.sendUpdate(builderx);
+                        if (throwable != null) {
+                           this.playerRef.sendMessage(Message.translation("server.commands.editprefab.error.shutdownFailed"));
+                        }
+                     });
+               } else {
+                  this.isShuttingDown = false;
+                  this.currentLoadingState = null;
+                  UICommandBuilder builderx = new UICommandBuilder();
+                  builderx.set("#LoadingPage.Visible", false);
+                  builderx.set("#MainPage.Visible", true);
                   this.sendUpdate(builderx);
                }
-            });
-            break;
-         case Cancel:
-            playerComponent.getPageManager().setPage(ref, store, Page.None);
-            break;
-         case CancelLoading:
-            if (this.isShuttingDown) {
-               return;
-            }
-
-            this.loadingCancelled = true;
-            this.isLoading = false;
-            this.isShuttingDown = true;
-            UICommandBuilder cancellingBuilder = new UICommandBuilder();
-            cancellingBuilder.set("#LoadingPage #CancelButton.Disabled", true);
-            cancellingBuilder.set("#LoadingPage #StatusText.TextSpans", Message.translation("server.commands.editprefab.loading.phase.cancelling"));
-            cancellingBuilder.set("#LoadingPage #ProgressBar.Value", 0.1F);
-            cancellingBuilder.set("#LoadingPage #ErrorText.Visible", false);
-            this.sendUpdate(cancellingBuilder);
-            PrefabEditSessionManager sessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
-            if (this.loadingWorldName != null) {
-               String worldNameToClean = this.loadingWorldName;
-               this.loadingWorldName = null;
-               sessionManager.cleanupCancelledSession(this.playerRef.getUuid(), worldNameToClean, this::onShutdownProgress)
-                  .whenComplete((unused, throwable) -> {
-                     this.isShuttingDown = false;
-                     this.currentLoadingState = null;
-                     UICommandBuilder builderx = new UICommandBuilder();
-                     builderx.set("#LoadingPage.Visible", false);
-                     builderx.set("#LoadingPage #CancelButton.Disabled", false);
-                     builderx.set("#MainPage.Visible", true);
-                     this.sendUpdate(builderx);
-                     if (throwable != null) {
-                        this.playerRef.sendMessage(Message.translation("server.commands.editprefab.error.shutdownFailed"));
-                     }
-                  });
-            } else {
-               this.isShuttingDown = false;
-               this.currentLoadingState = null;
-               UICommandBuilder builderx = new UICommandBuilder();
-               builderx.set("#LoadingPage.Visible", false);
-               builderx.set("#MainPage.Visible", true);
-               this.sendUpdate(builderx);
-            }
-            break;
-         case SavePropertiesNameChanged:
-            UICommandBuilder builder = new UICommandBuilder();
-            builder.set("#SaveConfigPage #Buttons #SavePropertiesButton.Disabled", data.configName.isBlank());
-            this.sendUpdate(builder);
-            break;
-         case OpenBrowser: {
-            this.inAssetsRoot = true;
-            this.assetsCurrentDir = Paths.get("");
-            this.browserRoot = Paths.get("Assets");
-            this.browserCurrent = Paths.get("");
-            this.selectedPath = null;
-            this.browserSearchQuery = "";
-            this.selectedItems.clear();
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            UIEventBuilder eventBuilder = new UIEventBuilder();
-            commandBuilder.set("#MainPage.Visible", false);
-            commandBuilder.set("#BrowserPage.Visible", true);
-            List<DropdownEntryInfo> roots = this.buildBrowserRootEntries();
-            commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Entries", roots);
-            commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Value", "Assets");
-            commandBuilder.set("#BrowserPage #BrowserContent #SearchInput.Value", "");
-            commandBuilder.set("#BrowserPage #SelectedSection #SelectedItems.Value", "");
-            this.buildBrowserList(commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
-            break;
-         }
-         case BrowserNavigate:
-            if (data.browserFile == null) {
-               return;
-            }
-
-            String fileName = data.browserFile;
-            if (this.inAssetsRoot) {
-               this.handleAssetsNavigation(fileName);
-            } else {
-               this.handleRegularNavigation(fileName);
-            }
-            break;
-         case BrowserRootChanged: {
-            if (data.browserRootStr == null) {
-               return;
-            }
-
-            if (!this.isAllowedBrowserRoot(data.browserRootStr)) {
-               return;
-            }
-
-            this.inAssetsRoot = "Assets".equals(data.browserRootStr);
-            this.assetsCurrentDir = Paths.get("");
-            if (this.inAssetsRoot) {
+               break;
+            case SavePropertiesNameChanged:
+               UICommandBuilder builder = new UICommandBuilder();
+               builder.set("#SaveConfigPage #Buttons #SavePropertiesButton.Disabled", data.configName.isBlank());
+               this.sendUpdate(builder);
+               break;
+            case OpenBrowser: {
+               this.inAssetsRoot = true;
+               this.assetsCurrentDir = Paths.get("");
                this.browserRoot = Paths.get("Assets");
                this.browserCurrent = Paths.get("");
-            } else {
-               this.browserRoot = this.findActualRootPath(data.browserRootStr);
-               if (this.browserRoot == null) {
-                  this.browserRoot = Path.of(data.browserRootStr);
+               this.selectedPath = null;
+               this.browserSearchQuery = "";
+               this.selectedItems.clear();
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               UIEventBuilder eventBuilder = new UIEventBuilder();
+               commandBuilder.set("#MainPage.Visible", false);
+               commandBuilder.set("#BrowserPage.Visible", true);
+               List<DropdownEntryInfo> roots = this.buildBrowserRootEntries();
+               commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Entries", roots);
+               commandBuilder.set("#BrowserPage #BrowserContent #RootSelector.Value", "Assets");
+               commandBuilder.set("#BrowserPage #BrowserContent #SearchInput.Value", "");
+               commandBuilder.set("#BrowserPage #SelectedSection #SelectedItems.Value", "");
+               this.buildBrowserList(commandBuilder, eventBuilder);
+               this.sendUpdate(commandBuilder, eventBuilder, false);
+               break;
+            }
+            case BrowserNavigate:
+               if (data.browserFile == null) {
+                  return;
                }
 
-               this.browserCurrent = this.browserRoot.getFileSystem().getPath("");
-            }
+               String fileName = data.browserFile;
+               if (this.inAssetsRoot) {
+                  this.handleAssetsNavigation(fileName);
+               } else {
+                  this.handleRegularNavigation(fileName);
+               }
+               break;
+            case BrowserRootChanged: {
+               if (data.browserRootStr == null) {
+                  return;
+               }
 
-            this.selectedPath = null;
-            this.browserSearchQuery = "";
-            this.selectedItems.clear();
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            UIEventBuilder eventBuilder = new UIEventBuilder();
-            commandBuilder.set("#BrowserPage #BrowserContent #SearchInput.Value", "");
-            commandBuilder.set("#BrowserPage #SelectedSection #SelectedItems.Value", "");
-            PrefabRootDirectory rootDirValue = this.getRootDirectoryForPath(data.browserRootStr);
-            if (rootDirValue != null) {
-               commandBuilder.set("#MainPage #RootDir #Input.Value", rootDirValue.name());
-            }
+               if (!this.isAllowedBrowserRoot(data.browserRootStr)) {
+                  return;
+               }
 
-            this.buildBrowserList(commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
-            break;
-         }
-         case BrowserSearch: {
-            this.browserSearchQuery = data.browserSearchStr != null ? data.browserSearchStr.trim().toLowerCase() : "";
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            UIEventBuilder eventBuilder = new UIEventBuilder();
-            this.buildBrowserList(commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
-            break;
-         }
-         case AddFolderToList: {
-            String pathToAdd = this.getCurrentBrowserPath();
-            if (!pathToAdd.isEmpty() && !this.selectedItems.contains(pathToAdd)) {
-               this.selectedItems.add(pathToAdd);
-            }
+               this.inAssetsRoot = "Assets".equals(data.browserRootStr);
+               this.assetsCurrentDir = Paths.get("");
+               if (this.inAssetsRoot) {
+                  this.browserRoot = Paths.get("Assets");
+                  this.browserCurrent = Paths.get("");
+               } else {
+                  this.browserRoot = this.findActualRootPath(data.browserRootStr);
+                  if (this.browserRoot == null) {
+                     this.browserRoot = Path.of(data.browserRootStr);
+                  }
 
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            commandBuilder.set("#BrowserPage #SelectedSection #SelectedItems.Value", String.join("\n", this.selectedItems));
-            this.sendUpdate(commandBuilder);
-            break;
-         }
-         case ConfirmBrowser: {
-            String pathsToSet;
-            if (!this.selectedItems.isEmpty()) {
-               pathsToSet = String.join(",", this.selectedItems);
-            } else {
-               pathsToSet = this.getCurrentBrowserPath();
-            }
+                  this.browserCurrent = this.browserRoot.getFileSystem().getPath("");
+               }
 
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            commandBuilder.set("#MainPage #PrefabPaths #Input.Value", pathsToSet);
-            PrefabRootDirectory rootDirValue = this.inAssetsRoot ? PrefabRootDirectory.ASSET : this.getRootDirectoryForPath(this.browserRoot.toString());
-            if (rootDirValue != null) {
-               commandBuilder.set("#MainPage #RootDir #Input.Value", rootDirValue.name());
-            }
+               this.selectedPath = null;
+               this.browserSearchQuery = "";
+               this.selectedItems.clear();
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               UIEventBuilder eventBuilder = new UIEventBuilder();
+               commandBuilder.set("#BrowserPage #BrowserContent #SearchInput.Value", "");
+               commandBuilder.set("#BrowserPage #SelectedSection #SelectedItems.Value", "");
+               PrefabRootDirectory rootDirValue = this.getRootDirectoryForPath(data.browserRootStr);
+               if (rootDirValue != null) {
+                  commandBuilder.set("#MainPage #RootDir #Input.Value", rootDirValue.name());
+               }
 
-            commandBuilder.set("#BrowserPage.Visible", false);
-            commandBuilder.set("#MainPage.Visible", true);
-            this.sendUpdate(commandBuilder);
-            break;
-         }
-         case CancelBrowser: {
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            commandBuilder.set("#BrowserPage.Visible", false);
-            commandBuilder.set("#MainPage.Visible", true);
-            this.sendUpdate(commandBuilder);
+               this.buildBrowserList(commandBuilder, eventBuilder);
+               this.sendUpdate(commandBuilder, eventBuilder, false);
+               break;
+            }
+            case BrowserSearch: {
+               this.browserSearchQuery = data.browserSearchStr != null ? data.browserSearchStr.trim().toLowerCase() : "";
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               UIEventBuilder eventBuilder = new UIEventBuilder();
+               this.buildBrowserList(commandBuilder, eventBuilder);
+               this.sendUpdate(commandBuilder, eventBuilder, false);
+               break;
+            }
+            case AddFolderToList: {
+               String pathToAdd = this.getCurrentBrowserPath();
+               if (!pathToAdd.isEmpty() && !this.selectedItems.contains(pathToAdd)) {
+                  this.selectedItems.add(pathToAdd);
+               }
+
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               commandBuilder.set("#BrowserPage #SelectedSection #SelectedItems.Value", String.join("\n", this.selectedItems));
+               this.sendUpdate(commandBuilder);
+               break;
+            }
+            case ConfirmBrowser: {
+               String pathsToSet;
+               if (!this.selectedItems.isEmpty()) {
+                  pathsToSet = String.join(",", this.selectedItems);
+               } else {
+                  pathsToSet = this.getCurrentBrowserPath();
+               }
+
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               commandBuilder.set("#MainPage #PrefabPaths #Input.Value", pathsToSet);
+               PrefabRootDirectory rootDirValue = this.inAssetsRoot ? PrefabRootDirectory.ASSET : this.getRootDirectoryForPath(this.browserRoot.toString());
+               if (rootDirValue != null) {
+                  commandBuilder.set("#MainPage #RootDir #Input.Value", rootDirValue.name());
+               }
+
+               commandBuilder.set("#BrowserPage.Visible", false);
+               commandBuilder.set("#MainPage.Visible", true);
+               this.sendUpdate(commandBuilder);
+               break;
+            }
+            case CancelBrowser: {
+               UICommandBuilder commandBuilder = new UICommandBuilder();
+               commandBuilder.set("#BrowserPage.Visible", false);
+               commandBuilder.set("#MainPage.Visible", true);
+               this.sendUpdate(commandBuilder);
+            }
+            case OpenPackBrowser:
+            case ConfirmPackBrowser:
+            case CancelPackBrowser:
+            case OpenCreatePack:
+            case CreatePack:
+            case CancelCreatePack:
+            case PackSearch:
+            case PackSelect:
          }
       }
    }
@@ -871,7 +919,15 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
       BrowserSearch,
       AddFolderToList,
       ConfirmBrowser,
-      CancelBrowser;
+      CancelBrowser,
+      OpenPackBrowser,
+      ConfirmPackBrowser,
+      CancelPackBrowser,
+      OpenCreatePack,
+      CreatePack,
+      CancelCreatePack,
+      PackSearch,
+      PackSelect;
    }
 
    protected static class PageData {
@@ -977,6 +1033,26 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
          .add()
          .append(new KeyedCodec<>("@BrowserSearch", Codec.STRING), (o, browserSearchStr) -> o.browserSearchStr = browserSearchStr, o -> o.browserSearchStr)
          .add()
+         .append(new KeyedCodec<>("Pack", Codec.STRING), (o, s) -> o.packBrowserData.pack = s, o -> o.packBrowserData.pack)
+         .add()
+         .append(new KeyedCodec<>("@PackSearch", Codec.STRING), (o, s) -> o.packBrowserData.search = s, o -> o.packBrowserData.search)
+         .add()
+         .append(new KeyedCodec<>("@CreateName", Codec.STRING), (o, s) -> o.packBrowserData.createName = s, o -> o.packBrowserData.createName)
+         .add()
+         .append(new KeyedCodec<>("@CreateGroup", Codec.STRING), (o, s) -> o.packBrowserData.createGroup = s, o -> o.packBrowserData.createGroup)
+         .add()
+         .append(
+            new KeyedCodec<>("@CreateDescription", Codec.STRING), (o, s) -> o.packBrowserData.createDescription = s, o -> o.packBrowserData.createDescription
+         )
+         .add()
+         .append(new KeyedCodec<>("@CreateVersion", Codec.STRING), (o, s) -> o.packBrowserData.createVersion = s, o -> o.packBrowserData.createVersion)
+         .add()
+         .append(new KeyedCodec<>("@CreateWebsite", Codec.STRING), (o, s) -> o.packBrowserData.createWebsite = s, o -> o.packBrowserData.createWebsite)
+         .add()
+         .append(new KeyedCodec<>("@CreateAuthorName", Codec.STRING), (o, s) -> o.packBrowserData.createAuthorName = s, o -> o.packBrowserData.createAuthorName)
+         .add()
+         .append(new KeyedCodec<>("ValidateCreate", Codec.STRING), (o, s) -> o.packBrowserData.validateCreate = s, o -> o.packBrowserData.validateCreate)
+         .add()
          .build();
       public String configName;
       public PrefabEditorLoadSettingsPage.Action uiAction;
@@ -998,6 +1074,7 @@ public class PrefabEditorLoadSettingsPage extends InteractiveCustomUIPage<Prefab
       public String browserFile;
       public String browserRootStr;
       public String browserSearchStr;
+      public final AssetPackSaveBrowserEventData packBrowserData = new AssetPackSaveBrowserEventData();
 
       public PageData() {
       }

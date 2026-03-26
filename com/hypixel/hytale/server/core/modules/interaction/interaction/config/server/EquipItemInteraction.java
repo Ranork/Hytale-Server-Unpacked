@@ -8,10 +8,8 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
@@ -41,17 +39,17 @@ public class EquipItemInteraction extends SimpleInstantInteraction {
       assert commandBuffer != null;
 
       Ref<EntityStore> ref = context.getEntity();
-      if (EntityUtils.getEntity(ref, commandBuffer) instanceof LivingEntity livingEntity) {
-         Inventory var15 = livingEntity.getInventory();
-         byte activeSlot = context.getHeldItemSlot();
-         ItemStack itemInHand = context.getHeldItem();
-         if (itemInHand != null) {
-            Item item = itemInHand.getItem();
-            if (item != null) {
-               ItemArmor armor = item.getArmor();
-               if (armor != null) {
+      byte activeSlot = context.getHeldItemSlot();
+      ItemStack itemInHand = context.getHeldItem();
+      if (itemInHand != null) {
+         Item item = itemInHand.getItem();
+         if (item != null) {
+            ItemArmor armor = item.getArmor();
+            if (armor != null) {
+               InventoryComponent.Armor armorComponent = commandBuffer.getComponent(ref, InventoryComponent.Armor.getComponentType());
+               if (armorComponent != null) {
                   short slotId = (short)armor.getArmorSlot().ordinal();
-                  ItemContainer armorContainer = var15.getArmor();
+                  ItemContainer armorContainer = armorComponent.getInventory();
                   if (slotId <= armorContainer.getCapacity()) {
                      MoveTransaction<ItemStackTransaction> stackTransaction = context.getHeldItemContainer()
                         .moveItemStackFromSlot(activeSlot, itemInHand.getQuantity(), armorContainer);

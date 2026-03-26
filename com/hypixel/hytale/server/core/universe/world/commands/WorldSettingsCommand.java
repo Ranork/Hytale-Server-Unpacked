@@ -18,7 +18,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.storage.provider.IChunkStorageProvider;
 import com.hypixel.hytale.server.core.universe.world.worldgen.provider.IWorldGenProvider;
 import com.hypixel.hytale.server.core.universe.world.worldmap.provider.IWorldMapProvider;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -35,7 +37,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.worldgentype.desc",
          "type",
          ArgTypes.STRING,
-         "WorldGen Type",
+         "server.commands.world.settings.worldgentype.name",
          worldConfig -> IWorldGenProvider.CODEC.getIdFor((Class<? extends IWorldGenProvider>)worldConfig.getWorldGenProvider().getClass()),
          (worldConfig, path) -> worldConfig.setWorldGenProvider(IWorldGenProvider.CODEC.getCodecFor(path).getDefaultValue())
       );
@@ -44,7 +46,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.worldmaptype.desc",
          "type",
          ArgTypes.STRING,
-         "WorldMap Type",
+         "server.commands.world.settings.worldmaptype.name",
          worldConfig -> IWorldMapProvider.CODEC.getIdFor((Class<? extends IWorldMapProvider>)worldConfig.getWorldMapProvider().getClass()),
          (worldConfig, path) -> worldConfig.setWorldMapProvider(IWorldMapProvider.CODEC.getCodecFor(path).getDefaultValue())
       );
@@ -53,31 +55,43 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.chunkstoragetype.desc",
          "type",
          ArgTypes.STRING,
-         "ChunkStorage Type",
+         "server.commands.world.settings.chunkstoragetype.name",
          worldConfig -> IChunkStorageProvider.CODEC.getIdFor((Class<? extends IChunkStorageProvider<?>>)worldConfig.getChunkStorageProvider().getClass()),
          (worldConfig, path) -> worldConfig.setChunkStorageProvider((IChunkStorageProvider<?>)IChunkStorageProvider.CODEC.getCodecFor(path).getDefaultValue())
       );
       this.generateSubCommand(
-         "ticking", "server.commands.world.settings.ticking.desc", "ticking", ArgTypes.BOOLEAN, "Ticking", WorldConfig::isTicking, WorldConfig::setTicking
+         "ticking",
+         "server.commands.world.settings.ticking.desc",
+         "ticking",
+         ArgTypes.BOOLEAN,
+         "server.commands.world.settings.ticking.name",
+         WorldConfig::isTicking,
+         WorldConfig::setTicking
       );
       this.generateSubCommand(
          "blockticking",
          "server.commands.world.settings.blockticking.desc",
          "blockticking",
          ArgTypes.BOOLEAN,
-         "Block Ticking",
+         "server.commands.world.settings.blockticking.name",
          WorldConfig::isBlockTicking,
          WorldConfig::setBlockTicking
       );
       this.generateSubCommand(
-         "pvp", "server.commands.world.settings.pvp.desc", "pvp", ArgTypes.BOOLEAN, "PvP", WorldConfig::isPvpEnabled, WorldConfig::setPvpEnabled
+         "pvp",
+         "server.commands.world.settings.pvp.desc",
+         "pvp",
+         ArgTypes.BOOLEAN,
+         "server.commands.world.settings.pvp.name",
+         WorldConfig::isPvpEnabled,
+         WorldConfig::setPvpEnabled
       );
       this.generateSubCommand(
          "timepaused",
          "server.commands.world.settings.timepaused.desc",
          "timepaused",
          ArgTypes.BOOLEAN,
-         "Time Paused",
+         "server.commands.world.settings.timepaused.name",
          WorldConfig::isGameTimePaused,
          WorldConfig::setGameTimePaused
       );
@@ -86,7 +100,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.spawningnpc.desc",
          "spawning",
          ArgTypes.BOOLEAN,
-         "Spawning NPC's",
+         "server.commands.world.settings.spawningnpc.name",
          WorldConfig::isSpawningNPC,
          WorldConfig::setSpawningNPC
       );
@@ -95,7 +109,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.spawnmarkers.desc",
          "enabled",
          ArgTypes.BOOLEAN,
-         "Spawn markers enabled",
+         "server.commands.world.settings.spawnmarkers.name",
          WorldConfig::isSpawnMarkersEnabled,
          WorldConfig::setIsSpawnMarkersEnabled
       );
@@ -104,7 +118,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.freezeallnpcs.desc",
          "enabled",
          ArgTypes.BOOLEAN,
-         "NPCs will be frozen",
+         "server.commands.world.settings.freezeallnpcs.name",
          WorldConfig::isAllNPCFrozen,
          WorldConfig::setIsAllNPCFrozen
       );
@@ -113,7 +127,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.compassupdating.desc",
          "updating",
          ArgTypes.BOOLEAN,
-         "Compass Updating",
+         "server.commands.world.settings.compassupdating.name",
          World::isCompassUpdating,
          WorldConfig::isCompassUpdating,
          World::setCompassUpdating
@@ -123,7 +137,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.playersaving.desc",
          "enabled",
          ArgTypes.BOOLEAN,
-         "Player Saving Enabled",
+         "server.commands.world.settings.playersaving.name",
          WorldConfig::isSavingPlayers,
          WorldConfig::setSavingPlayers
       );
@@ -132,7 +146,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.chunksaving.desc",
          "enabled",
          ArgTypes.BOOLEAN,
-         "Chunk Saving Enabled",
+         "server.commands.world.settings.chunksaving.name",
          WorldConfig::canSaveChunks,
          WorldConfig::setCanSaveChunks
       );
@@ -141,7 +155,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.chunkunload.desc",
          "enabled",
          ArgTypes.BOOLEAN,
-         "Chunk Unloading Enabled",
+         "server.commands.world.settings.chunkunloading.name",
          WorldConfig::canUnloadChunks,
          WorldConfig::setCanUnloadChunks
       );
@@ -150,7 +164,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.gamemode.desc",
          "gamemode",
          new EnumArgumentType<>("server.commands.parsing.argtype.gamemode.name", GameMode.class),
-         "Default GameMode",
+         "server.commands.world.settings.gamemode.name",
          WorldConfig::getGameMode,
          WorldConfig::setGameMode
       );
@@ -159,7 +173,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          "server.commands.world.settings.gameplayconfig.desc",
          "id",
          ArgTypes.STRING,
-         "GameplayConfigId",
+         "server.commands.world.settings.gameplayconfig.name",
          WorldConfig::getGameplayConfig,
          WorldConfig::setGameplayConfig
       );
@@ -167,7 +181,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          new WorldSettingsCommand.WorldSettingsBox2DCommand(
             "pregenerate",
             "server.commands.world.settings.pregenerate.desc",
-            "Pre-generate region",
+            "server.commands.world.settings.pregenerate.name",
             w -> w.getWorldConfig().getChunkConfig().getPregenerateRegion(),
             wc -> wc.getChunkConfig().getPregenerateRegion(),
             (w, v) -> {
@@ -181,13 +195,25 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          new WorldSettingsCommand.WorldSettingsBox2DCommand(
             "keeploaded",
             "server.commands.world.settings.keeploaded.desc",
-            "Keep loaded region",
+            "server.commands.world.settings.keeploaded.name",
             w -> w.getWorldConfig().getChunkConfig().getKeepLoadedRegion(),
             wc -> wc.getChunkConfig().getKeepLoadedRegion(),
             (w, v) -> {
                WorldConfig worldConfig = w.getWorldConfig();
                worldConfig.getChunkConfig().setKeepLoadedRegion(v);
                worldConfig.markChanged();
+            }
+         )
+      );
+      this.addSubCommand(
+         new WorldSettingsCommand.WorldSettingsSetCommand<>(
+            "disabledfluidtickers",
+            "server.commands.world.settings.disabledfluidtickers.desc",
+            "server.commands.world.settings.disabledfluidtickers.name",
+            w -> w.getWorldConfig().getDisabledFluidTickers(),
+            (w, v) -> {
+               w.getWorldConfig().setDisabledFluidTickers(v);
+               w.getWorldConfig().markChanged();
             }
          )
       );
@@ -266,7 +292,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          Box2D currentValue = this.getter.apply(world);
          context.sendMessage(
             Message.translation("server.commands.world.settings.currentValue")
-               .param("display", this.display)
+               .param("display", Message.translation(this.display))
                .param("worldName", world.getName())
                .param("currentValue", Objects.toString(currentValue))
          );
@@ -285,7 +311,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
             world.getWorldConfig().markChanged();
             context.sendMessage(
                Message.translation("server.commands.world.settings.displaySetDefault")
-                  .param("display", WorldSettingsBox2DCommand.this.display)
+                  .param("display", Message.translation(WorldSettingsBox2DCommand.this.display))
                   .param("worldName", world.getName())
                   .param("newValue", Objects.toString(newValue))
                   .param("oldValue", Objects.toString(currentValue))
@@ -317,11 +343,144 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
             world.getWorldConfig().markChanged();
             context.sendMessage(
                Message.translation("server.commands.world.settings.displaySet")
-                  .param("display", WorldSettingsBox2DCommand.this.display)
+                  .param("display", Message.translation(WorldSettingsBox2DCommand.this.display))
                   .param("worldName", world.getName())
                   .param("newValue", Objects.toString(newValue))
                   .param("oldValue", Objects.toString(currentValue))
             );
+         }
+      }
+   }
+
+   private static class WorldSettingsSetCommand<T> extends AbstractWorldCommand {
+      @Nonnull
+      private final String display;
+      @Nonnull
+      private final Function<World, Set<T>> getter;
+      @Nonnull
+      private final BiConsumer<World, Set<T>> setter;
+
+      public WorldSettingsSetCommand(
+         @Nonnull String name,
+         @Nonnull String description,
+         @Nonnull String display,
+         @Nonnull Function<World, Set<T>> getter,
+         @Nonnull BiConsumer<World, Set<T>> setter
+      ) {
+         super(name, description);
+         this.display = display;
+         this.getter = getter;
+         this.setter = setter;
+         this.addSubCommand(new WorldSettingsCommand.WorldSettingsSetCommand.AddSubCommand());
+         this.addSubCommand(new WorldSettingsCommand.WorldSettingsSetCommand.RemoveSubCommand());
+         this.addSubCommand(new WorldSettingsCommand.WorldSettingsSetCommand.ClearSubCommand());
+      }
+
+      @Override
+      protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+         Set<T> currentValue = this.getter.apply(world);
+         if (currentValue.isEmpty()) {
+            context.sendMessage(
+               Message.translation("server.commands.world.settings.set.empty")
+                  .param("display", Message.translation(this.display))
+                  .param("worldName", world.getName())
+            );
+         } else {
+            context.sendMessage(
+               Message.translation("server.commands.world.settings.set.list")
+                  .param("display", Message.translation(this.display))
+                  .param("worldName", world.getName())
+                  .param("values", String.join(", ", currentValue.stream().map(Objects::toString).toList()))
+            );
+         }
+      }
+
+      private class AddSubCommand extends AbstractWorldCommand {
+         @Nonnull
+         private final RequiredArg<String> valueArg = this.withRequiredArg("value", "server.commands.world.settings.set.add.value.desc", ArgTypes.STRING);
+
+         public AddSubCommand() {
+            super("add", "server.commands.world.settings.set.add.desc");
+         }
+
+         @Override
+         protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+            T value = context.get(this.valueArg);
+            Set<T> current = WorldSettingsSetCommand.this.getter.apply(world);
+            HashSet<T> updated = new HashSet<>(current);
+            if (!updated.add(value)) {
+               context.sendMessage(
+                  Message.translation("server.commands.world.settings.set.alreadyPresent")
+                     .param("display", Message.translation(WorldSettingsSetCommand.this.display))
+                     .param("worldName", world.getName())
+                     .param("value", value.toString())
+               );
+            } else {
+               WorldSettingsSetCommand.this.setter.accept(world, updated);
+               context.sendMessage(
+                  Message.translation("server.commands.world.settings.set.added")
+                     .param("display", Message.translation(WorldSettingsSetCommand.this.display))
+                     .param("worldName", world.getName())
+                     .param("value", value.toString())
+               );
+            }
+         }
+      }
+
+      private class ClearSubCommand extends AbstractWorldCommand {
+         public ClearSubCommand() {
+            super("clear", "server.commands.world.settings.set.clear.desc");
+         }
+
+         @Override
+         protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+            Set<T> current = WorldSettingsSetCommand.this.getter.apply(world);
+            if (current.isEmpty()) {
+               context.sendMessage(
+                  Message.translation("server.commands.world.settings.set.empty")
+                     .param("display", Message.translation(WorldSettingsSetCommand.this.display))
+                     .param("worldName", world.getName())
+               );
+            } else {
+               WorldSettingsSetCommand.this.setter.accept(world, Set.of());
+               context.sendMessage(
+                  Message.translation("server.commands.world.settings.set.cleared")
+                     .param("display", Message.translation(WorldSettingsSetCommand.this.display))
+                     .param("worldName", world.getName())
+               );
+            }
+         }
+      }
+
+      private class RemoveSubCommand extends AbstractWorldCommand {
+         @Nonnull
+         private final RequiredArg<String> valueArg = this.withRequiredArg("value", "server.commands.world.settings.set.remove.value.desc", ArgTypes.STRING);
+
+         public RemoveSubCommand() {
+            super("remove", "server.commands.world.settings.set.remove.desc");
+         }
+
+         @Override
+         protected void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
+            T value = context.get(this.valueArg);
+            Set<T> current = WorldSettingsSetCommand.this.getter.apply(world);
+            HashSet<T> updated = new HashSet<>(current);
+            if (!updated.remove(value)) {
+               context.sendMessage(
+                  Message.translation("server.commands.world.settings.set.notPresent")
+                     .param("display", Message.translation(WorldSettingsSetCommand.this.display))
+                     .param("worldName", world.getName())
+                     .param("value", value.toString())
+               );
+            } else {
+               WorldSettingsSetCommand.this.setter.accept(world, updated);
+               context.sendMessage(
+                  Message.translation("server.commands.world.settings.set.removed")
+                     .param("display", Message.translation(WorldSettingsSetCommand.this.display))
+                     .param("worldName", world.getName())
+                     .param("value", value.toString())
+               );
+            }
          }
       }
    }
@@ -366,7 +525,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
          T currentValue = this.getter.apply(world);
          context.sendMessage(
             Message.translation("server.commands.world.settings.currentValue")
-               .param("display", this.display)
+               .param("display", Message.translation(this.display))
                .param("worldName", world.getName())
                .param("currentValue", currentValue.toString())
          );
@@ -385,7 +544,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
             world.getWorldConfig().markChanged();
             context.sendMessage(
                Message.translation("server.commands.world.settings.displaySetDefault")
-                  .param("display", WorldSettingsSubCommand.this.display)
+                  .param("display", Message.translation(WorldSettingsSubCommand.this.display))
                   .param("worldName", world.getName())
                   .param("newValue", newValue.toString())
                   .param("oldValue", currentValue.toString())
@@ -411,7 +570,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
             world.getWorldConfig().markChanged();
             context.sendMessage(
                Message.translation("server.commands.world.settings.displaySet")
-                  .param("display", WorldSettingsSubCommand.this.display)
+                  .param("display", Message.translation(WorldSettingsSubCommand.this.display))
                   .param("worldName", world.getName())
                   .param("newValue", newValue.toString())
                   .param("oldValue", currentValue.toString())

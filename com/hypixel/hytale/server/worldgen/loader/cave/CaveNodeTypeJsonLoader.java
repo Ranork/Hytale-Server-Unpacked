@@ -3,6 +3,8 @@ package com.hypixel.hytale.server.worldgen.loader.cave;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
 import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
@@ -27,9 +29,11 @@ import com.hypixel.hytale.server.worldgen.loader.cave.shape.EllipsoidCaveNodeSha
 import com.hypixel.hytale.server.worldgen.loader.cave.shape.EmptyLineCaveNodeShapeGeneratorJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.cave.shape.PipeCaveNodeShapeGeneratorJsonLoader;
 import com.hypixel.hytale.server.worldgen.loader.cave.shape.PrefabCaveNodeShapeGeneratorJsonLoader;
+import com.hypixel.hytale.server.worldgen.loader.context.CaveFileContext;
 import com.hypixel.hytale.server.worldgen.loader.context.ZoneFileContext;
 import com.hypixel.hytale.server.worldgen.loader.util.ResolvedBlockArrayJsonLoader;
 import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
 import com.hypixel.hytale.server.worldgen.util.ResolvedBlockArray;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
@@ -39,6 +43,7 @@ public class CaveNodeTypeJsonLoader extends JsonLoader<SeedStringResource, CaveN
    protected final String name;
    protected final CaveNodeTypeStorage storage;
    protected final ZoneFileContext zoneContext;
+   protected final CaveFileContext caveContext;
 
    public CaveNodeTypeJsonLoader(
       @Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json, String name, CaveNodeTypeStorage storage, ZoneFileContext zoneContext
@@ -47,6 +52,7 @@ public class CaveNodeTypeJsonLoader extends JsonLoader<SeedStringResource, CaveN
       this.name = name;
       this.storage = storage;
       this.zoneContext = zoneContext;
+      this.caveContext = new CaveFileContext(name, zoneContext);
    }
 
    @Nonnull
@@ -69,31 +75,35 @@ public class CaveNodeTypeJsonLoader extends JsonLoader<SeedStringResource, CaveN
 
    @Nonnull
    protected CaveNodeType.CaveNodeChildEntry[] loadChildren() {
-      if (this.has("Children")) {
+      CaveNodeType.CaveNodeChildEntry[] var7;
+      try (ListPool.Resource<CaveNodeType.CaveNodeChildEntry> entries = CaveNodeType.CHILD_POOL.acquire()) {
          JsonElement childrenElement = this.get("Children");
-         if (childrenElement.isJsonArray()) {
-            JsonArray childrenArray = childrenElement.getAsJsonArray();
-            CaveNodeType.CaveNodeChildEntry[] children = new CaveNodeType.CaveNodeChildEntry[childrenArray.size()];
+         if (childrenElement != null) {
+            if (childrenElement.isJsonArray()) {
+               JsonArray childrenArray = childrenElement.getAsJsonArray();
 
-            for (int i = 0; i < childrenArray.size(); i++) {
-               children[i] = new CaveNodeChildEntryJsonLoader(
-                     this.seed.append(String.format(".Child-%s", i)), this.dataFolder, this.getOrLoad(childrenArray.get(i)), this.storage
-                  )
-                  .load();
+               for (int i = 0; i < childrenArray.size(); i++) {
+                  entries.add(
+                     new CaveNodeChildEntryJsonLoader(
+                           this.seed.append(String.format(".Child-%s", i)), this.dataFolder, this.getOrLoad(childrenArray.get(i)), this.storage
+                        )
+                        .load()
+                  );
+               }
+            } else {
+               entries.add(
+                  new CaveNodeChildEntryJsonLoader(
+                        this.seed.append(String.format(".Child-%s", 0)), this.dataFolder, this.getOrLoad(childrenElement), this.storage
+                     )
+                     .load()
+               );
             }
-
-            return children;
          }
 
-         if (childrenElement.isJsonObject()) {
-            return new CaveNodeType.CaveNodeChildEntry[]{
-               new CaveNodeChildEntryJsonLoader(this.seed.append(String.format(".Child-%s", 0)), this.dataFolder, this.getOrLoad(childrenElement), this.storage)
-                  .load()
-            };
-         }
+         var7 = entries.toArray();
       }
 
-      return CaveNodeType.CaveNodeChildEntry.EMPTY_ARRAY;
+      return var7;
    }
 
    @Nullable
@@ -101,7 +111,8 @@ public class CaveNodeTypeJsonLoader extends JsonLoader<SeedStringResource, CaveN
       CavePrefabContainer container = null;
       if (this.has("Prefabs")) {
          ZoneFileContext context = this.zoneContext.matchContext(this.json, "Prefabs");
-         container = new CavePrefabContainerJsonLoader(this.seed, this.dataFolder, this.get("Prefabs"), context).load();
+         CaveFileContext caveContext = new CaveFileContext(this.name, this.caveContext.getPath(), context);
+         container = new CavePrefabContainerJsonLoader(this.seed, this.dataFolder, this.get("Prefabs"), caveContext).load();
       }
 
       return container;
@@ -189,22 +200,32 @@ public class CaveNodeTypeJsonLoader extends JsonLoader<SeedStringResource, CaveN
 
    @Nonnull
    protected CaveNodeType.CaveNodeCoverEntry[] loadCovers() {
-      CaveNodeType.CaveNodeCoverEntry[] entries = CaveNodeType.CaveNodeCoverEntry.EMPTY_ARRAY;
-      if (this.has("Cover")) {
+      CaveNodeType.CaveNodeCoverEntry[] var8;
+      try (ListPool.Resource<CaveNodeType.CaveNodeCoverEntry> entries = CaveNodeType.COVER_POOL.acquire()) {
          JsonElement coverElement = this.get("Cover");
-         if (coverElement.isJsonArray()) {
-            JsonArray coverArray = coverElement.getAsJsonArray();
-            entries = new CaveNodeType.CaveNodeCoverEntry[coverArray.size()];
+         if (coverElement != null) {
+            if (coverElement.isJsonArray()) {
+               JsonArray coverArray = coverElement.getAsJsonArray();
 
-            for (int i = 0; i < entries.length; i++) {
-               entries[i] = new CaveNodeCoverEntryJsonLoader(this.seed.append(String.format("-cover#%s", i)), this.dataFolder, coverArray.get(i)).load();
+               for (int i = 0; i < coverArray.size(); i++) {
+                  entries.add(new CaveNodeCoverEntryJsonLoader(this.seed.append(String.format("-cover#%s", i)), this.dataFolder, coverArray.get(i)).load());
+               }
+            } else {
+               entries.add(new CaveNodeCoverEntryJsonLoader(this.seed, this.dataFolder, coverElement).load());
             }
-         } else {
-            entries = new CaveNodeType.CaveNodeCoverEntry[]{new CaveNodeCoverEntryJsonLoader(this.seed, this.dataFolder, coverElement).load()};
          }
+
+         ModifyEvent.SeedGenerator<SeedStringResource> seed = new ModifyEvent.SeedGenerator<>(this.seed);
+         ModifyEvent.dispatch(
+            ModifyEvents.CaveCovers.class,
+            new ModifyEvents.CaveCovers(
+               this.caveContext, entries, content -> new CaveNodeCoverEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+            )
+         );
+         var8 = entries.toArray();
       }
 
-      return entries;
+      return var8;
    }
 
    protected int loadPriority() {

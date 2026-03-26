@@ -136,6 +136,26 @@ public class SimpleItemContainer extends ItemContainer {
    }
 
    @Override
+   protected void lockForRead() {
+      this.lock.readLock().lock();
+   }
+
+   @Override
+   protected void unlockForRead() {
+      this.lock.readLock().unlock();
+   }
+
+   @Override
+   protected void lockForWrite() {
+      this.lock.writeLock().lock();
+   }
+
+   @Override
+   protected void unlockForWrite() {
+      this.lock.writeLock().unlock();
+   }
+
+   @Override
    protected ItemStack internal_getSlot(short slot) {
       return (ItemStack)this.items.get(slot);
    }

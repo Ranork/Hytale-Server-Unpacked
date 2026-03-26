@@ -44,11 +44,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -305,15 +304,13 @@ public class ObjectiveLocationMarkerSystems {
             this.setupMarker(store, objectiveLocationMarkerComponent, entityReference, position, uuid, commandBuffer);
          } else if (!activeObjective.isCompleted()) {
             SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.playerSpatialComponent);
-            ObjectList<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> playerRefs = SpatialResource.getThreadLocalReferenceList();
             objectiveLocationMarkerComponent.area.getPlayersInExitArea(spatialResource, playerRefs, position);
             HashSet<UUID> playersInExitArea = new HashSet<>(playerRefs.size());
             PlayerRef[] playersInEntryArea = new PlayerRef[playerRefs.size()];
             int playersInEntryAreaSize = 0;
-            ObjectListIterator playerUUIDs = playerRefs.iterator();
 
-            while (playerUUIDs.hasNext()) {
-               Ref<EntityStore> playerRef = (Ref<EntityStore>)playerUUIDs.next();
+            for (Ref<EntityStore> playerRef : playerRefs) {
                PlayerRef playerRefComponent = commandBuffer.getComponent(playerRef, this.playerRefComponentType);
                if (playerRefComponent != null) {
                   UUIDComponent playerUuidComponent = commandBuffer.getComponent(playerRef, this.uuidComponentType);
@@ -335,10 +332,10 @@ public class ObjectiveLocationMarkerSystems {
                }
             }
 
-            Set<UUID> playerUUIDsx = activeObjective.getPlayerUUIDs();
+            Set<UUID> playerUUIDs = activeObjective.getPlayerUUIDs();
             Set<UUID> activePlayerUUIDs = activeObjective.getActivePlayerUUIDs();
             String objectiveId = activeObjective.getObjectiveId();
-            updateIncomingPlayers(playersInEntryArea, playersInEntryAreaSize, objectiveLocationMarkerComponent, playerUUIDsx, activePlayerUUIDs, objectiveId);
+            updateIncomingPlayers(playersInEntryArea, playersInEntryAreaSize, objectiveLocationMarkerComponent, playerUUIDs, activePlayerUUIDs, objectiveId);
             updateOutgoingPlayers(playersInExitArea, objectiveLocationMarkerComponent, activePlayerUUIDs, objectiveId);
          } else {
             commandBuffer.removeEntity(entityReference, RemoveReason.REMOVE);

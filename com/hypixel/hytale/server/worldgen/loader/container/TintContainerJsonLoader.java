@@ -2,6 +2,8 @@ package com.hypixel.hytale.server.worldgen.loader.container;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
 import com.hypixel.hytale.common.util.ArrayUtil;
@@ -13,18 +15,23 @@ import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.procedurallib.property.NoiseProperty;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.container.TintContainer;
+import com.hypixel.hytale.server.worldgen.loader.context.BiomeFileContext;
 import com.hypixel.hytale.server.worldgen.loader.util.ColorUtil;
 import com.hypixel.hytale.server.worldgen.util.ConstantNoiseProperty;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class TintContainerJsonLoader extends JsonLoader<SeedStringResource, TintContainer> {
-   public TintContainerJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json) {
+   @Nonnull
+   private final BiomeFileContext biomeContext;
+
+   public TintContainerJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json, @Nonnull BiomeFileContext biomeContext) {
       super(seed.append(".TintContainer"), dataFolder, json);
+      this.biomeContext = biomeContext;
    }
 
    @Nonnull
@@ -50,24 +57,33 @@ public class TintContainerJsonLoader extends JsonLoader<SeedStringResource, Tint
 
    @Nonnull
    protected List<TintContainer.TintContainerEntry> loadEntries() {
-      if (!this.has("Entries")) {
-         return Collections.emptyList();
-      } else {
-         JsonArray arr = this.get("Entries").getAsJsonArray();
-         List<TintContainer.TintContainerEntry> entries = new ArrayList<>(arr.size());
+      JsonArray tintArray = this.mustGetArray("Entries", EMPTY_ARRAY);
 
-         for (int i = 0; i < arr.size(); i++) {
+      ObjectArrayList e;
+      try (ListPool.Resource<TintContainer.TintContainerEntry> entries = TintContainer.ENTRY_POOL.acquire(tintArray.size())) {
+         for (int i = 0; i < tintArray.size(); i++) {
             try {
                entries.add(
-                  new TintContainerJsonLoader.TintContainerEntryJsonLoader(this.seed.append(String.format("-%s", i)), this.dataFolder, arr.get(i)).load()
+                  new TintContainerJsonLoader.TintContainerEntryJsonLoader(this.seed.append(String.format("-%s", i)), this.dataFolder, tintArray.get(i)).load()
                );
-            } catch (Throwable var5) {
-               throw new Error(String.format("Failed to load TintContainerEntry #%s", i), var5);
+            } catch (Throwable var6) {
+               throw new Error(String.format("Failed to load TintContainerEntry #%s", i), var6);
             }
          }
 
-         return entries;
+         ModifyEvent.SeedGenerator<SeedStringResource> seed = new ModifyEvent.SeedGenerator<>(this.seed);
+         ModifyEvent.dispatch(
+            ModifyEvents.BiomeTints.class,
+            new ModifyEvents.BiomeTints(
+               this.biomeContext,
+               entries,
+               content -> new TintContainerJsonLoader.TintContainerEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+            )
+         );
+         e = new ObjectArrayList(entries);
       }
+
+      return e;
    }
 
    public interface Constants {

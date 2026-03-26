@@ -12,15 +12,17 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import java.util.HashMap;
+import it.unimi.dsi.fastutil.objects.Reference2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Reference2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class DamageData {
-   private final Map<Ref<EntityStore>, Vector3d> kills = new HashMap<>();
-   private final Object2DoubleMap<Ref<EntityStore>> damageInflicted = new Object2DoubleOpenHashMap();
-   private final Object2DoubleMap<Ref<EntityStore>> damageSuffered = new Object2DoubleOpenHashMap();
+   private final Map<Ref<EntityStore>, Vector3d> kills = new Reference2ObjectOpenHashMap();
+   private final Reference2DoubleMap<Ref<EntityStore>> damageInflicted = new Reference2DoubleOpenHashMap();
+   private final Reference2DoubleMap<Ref<EntityStore>> damageSuffered = new Reference2DoubleOpenHashMap();
    private final Object2DoubleMap<DamageCause> damageByCause = new Object2DoubleOpenHashMap();
    private double maxDamageSuffered;
    private double maxDamageInflicted;

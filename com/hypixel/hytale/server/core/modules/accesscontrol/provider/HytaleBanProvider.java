@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.stream.JsonWriter;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.modules.accesscontrol.AccessControlModule;
 import com.hypixel.hytale.server.core.modules.accesscontrol.ban.Ban;
 import com.hypixel.hytale.server.core.util.io.BlockingDiskFile;
@@ -29,7 +30,7 @@ public class HytaleBanProvider extends BlockingDiskFile implements AccessProvide
 
    @Nonnull
    @Override
-   public CompletableFuture<Optional<String>> getDisconnectReason(UUID uuid) {
+   public CompletableFuture<Optional<Message>> getDisconnectReason(@Nonnull UUID uuid) {
       Ban ban = this.bans.get(uuid);
       if (ban != null && !ban.isInEffect()) {
          this.bans.remove(uuid);

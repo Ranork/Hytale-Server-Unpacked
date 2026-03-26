@@ -86,8 +86,7 @@ public class PlaceFluidInteraction extends SimpleBlockInteraction {
          target.add(face.getDirection());
       }
 
-      Ref<ChunkStore> section = world.getChunkStore()
-         .getChunkSectionReference(ChunkUtil.chunkCoordinate(target.x), ChunkUtil.chunkCoordinate(target.y), ChunkUtil.chunkCoordinate(target.z));
+      Ref<ChunkStore> section = world.getChunkStore().getChunkSectionReferenceAtBlock(target.x, target.y, target.z);
       if (section != null) {
          FluidSection fluidSectionComponent = store.getComponent(section, FluidSection.getComponentType());
          if (fluidSectionComponent != null) {

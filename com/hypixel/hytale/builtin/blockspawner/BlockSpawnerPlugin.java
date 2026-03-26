@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.VariantRotation;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -62,7 +63,7 @@ public class BlockSpawnerPlugin extends JavaPlugin {
                         .setPath("Item/Block/Spawners"))
                      .setCodec(BlockSpawnerTable.CODEC))
                   .setKeyFunction(BlockSpawnerTable::getId))
-               .loadsAfter(Item.class, BlockType.class))
+               .loadsAfter(Item.class, BlockType.class, ItemDropList.class))
             .build()
       );
       this.blockSpawnerComponentType = this.getChunkStoreRegistry().registerComponent(BlockSpawner.class, "BlockSpawner", BlockSpawner.CODEC);
@@ -202,7 +203,7 @@ public class BlockSpawnerPlugin extends JavaPlugin {
                               BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
                               worldChunkComponent.setBlock(x, y, z, blockId, blockType, rotation.index(), 0, flags);
                               if (holder != null) {
-                                 worldChunkComponent.setState(x, y, z, holder.clone());
+                                 worldChunkComponent.setState(x, y, z, blockType, rotation.index(), holder.clone());
                               }
                            });
                         }

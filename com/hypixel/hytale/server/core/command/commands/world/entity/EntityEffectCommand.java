@@ -13,8 +13,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractTarget
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import java.util.List;
 import javax.annotation.Nonnull;
 
 public class EntityEffectCommand extends AbstractTargetEntityCommand {
@@ -31,15 +30,11 @@ public class EntityEffectCommand extends AbstractTargetEntityCommand {
    }
 
    @Override
-   protected void execute(
-      @Nonnull CommandContext context, @Nonnull ObjectList<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store
-   ) {
+   protected void execute(@Nonnull CommandContext context, @Nonnull List<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       EntityEffect entityEffect = this.effectArg.get(context);
       float duration = this.durationArg.get(context);
-      ObjectListIterator var7 = entities.iterator();
 
-      while (var7.hasNext()) {
-         Ref<EntityStore> entityRef = (Ref<EntityStore>)var7.next();
+      for (Ref<EntityStore> entityRef : entities) {
          EffectControllerComponent effectControllerComponent = store.getComponent(entityRef, EffectControllerComponent.getComponentType());
          if (effectControllerComponent != null) {
             effectControllerComponent.addEffect(entityRef, entityEffect, duration, OverlapBehavior.OVERWRITE, store);

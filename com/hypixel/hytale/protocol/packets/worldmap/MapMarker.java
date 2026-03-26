@@ -15,15 +15,13 @@ import javax.annotation.Nullable;
 public class MapMarker {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 38;
-   public static final int VARIABLE_FIELD_COUNT = 6;
-   public static final int VARIABLE_BLOCK_START = 62;
+   public static final int VARIABLE_FIELD_COUNT = 5;
+   public static final int VARIABLE_BLOCK_START = 58;
    public static final int MAX_SIZE = 1677721600;
    @Nonnull
    public String id = "";
    @Nullable
    public FormattedMessage name;
-   @Nullable
-   public String customName;
    @Nonnull
    public String markerImage = "";
    @Nonnull
@@ -39,7 +37,6 @@ public class MapMarker {
    public MapMarker(
       @Nonnull String id,
       @Nullable FormattedMessage name,
-      @Nullable String customName,
       @Nonnull String markerImage,
       @Nonnull Transform transform,
       @Nullable ContextMenuItem[] contextMenuItems,
@@ -47,7 +44,6 @@ public class MapMarker {
    ) {
       this.id = id;
       this.name = name;
-      this.customName = customName;
       this.markerImage = markerImage;
       this.transform = transform;
       this.contextMenuItems = contextMenuItems;
@@ -57,7 +53,6 @@ public class MapMarker {
    public MapMarker(@Nonnull MapMarker other) {
       this.id = other.id;
       this.name = other.name;
-      this.customName = other.customName;
       this.markerImage = other.markerImage;
       this.transform = other.transform;
       this.contextMenuItems = other.contextMenuItems;
@@ -69,7 +64,7 @@ public class MapMarker {
       MapMarker obj = new MapMarker();
       byte nullBits = buf.getByte(offset);
       obj.transform = Transform.deserialize(buf, offset + 1);
-      int varPos0 = offset + 62 + buf.getIntLE(offset + 38);
+      int varPos0 = offset + 58 + buf.getIntLE(offset + 38);
       int idLen = VarInt.peek(buf, varPos0);
       if (idLen < 0) {
          throw ProtocolException.negativeLength("Id", idLen);
@@ -78,25 +73,11 @@ public class MapMarker {
       } else {
          obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
          if ((nullBits & 1) != 0) {
-            varPos0 = offset + 62 + buf.getIntLE(offset + 42);
+            varPos0 = offset + 58 + buf.getIntLE(offset + 42);
             obj.name = FormattedMessage.deserialize(buf, varPos0);
          }
 
-         if ((nullBits & 2) != 0) {
-            varPos0 = offset + 62 + buf.getIntLE(offset + 46);
-            idLen = VarInt.peek(buf, varPos0);
-            if (idLen < 0) {
-               throw ProtocolException.negativeLength("CustomName", idLen);
-            }
-
-            if (idLen > 4096000) {
-               throw ProtocolException.stringTooLong("CustomName", idLen, 4096000);
-            }
-
-            obj.customName = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
-         }
-
-         varPos0 = offset + 62 + buf.getIntLE(offset + 50);
+         varPos0 = offset + 58 + buf.getIntLE(offset + 46);
          idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
             throw ProtocolException.negativeLength("MarkerImage", idLen);
@@ -104,8 +85,8 @@ public class MapMarker {
             throw ProtocolException.stringTooLong("MarkerImage", idLen, 4096000);
          } else {
             obj.markerImage = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
-            if ((nullBits & 4) != 0) {
-               varPos0 = offset + 62 + buf.getIntLE(offset + 54);
+            if ((nullBits & 2) != 0) {
+               varPos0 = offset + 58 + buf.getIntLE(offset + 50);
                idLen = VarInt.peek(buf, varPos0);
                if (idLen < 0) {
                   throw ProtocolException.negativeLength("ContextMenuItems", idLen);
@@ -129,8 +110,8 @@ public class MapMarker {
                }
             }
 
-            if ((nullBits & 8) != 0) {
-               varPos0 = offset + 62 + buf.getIntLE(offset + 58);
+            if ((nullBits & 4) != 0) {
+               varPos0 = offset + 58 + buf.getIntLE(offset + 54);
                idLen = VarInt.peek(buf, varPos0);
                if (idLen < 0) {
                   throw ProtocolException.negativeLength("Components", idLen);
@@ -161,9 +142,9 @@ public class MapMarker {
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 62;
+      int maxEnd = 58;
       int fieldOffset0 = buf.getIntLE(offset + 38);
-      int pos0 = offset + 62 + fieldOffset0;
+      int pos0 = offset + 58 + fieldOffset0;
       int sl = VarInt.peek(buf, pos0);
       pos0 += VarInt.length(buf, pos0) + sl;
       if (pos0 - offset > maxEnd) {
@@ -172,34 +153,24 @@ public class MapMarker {
 
       if ((nullBits & 1) != 0) {
          fieldOffset0 = buf.getIntLE(offset + 42);
-         pos0 = offset + 62 + fieldOffset0;
+         pos0 = offset + 58 + fieldOffset0;
          pos0 += FormattedMessage.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
       }
 
-      if ((nullBits & 2) != 0) {
-         fieldOffset0 = buf.getIntLE(offset + 46);
-         pos0 = offset + 62 + fieldOffset0;
-         sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
-         if (pos0 - offset > maxEnd) {
-            maxEnd = pos0 - offset;
-         }
-      }
-
-      fieldOffset0 = buf.getIntLE(offset + 50);
-      pos0 = offset + 62 + fieldOffset0;
+      fieldOffset0 = buf.getIntLE(offset + 46);
+      pos0 = offset + 58 + fieldOffset0;
       sl = VarInt.peek(buf, pos0);
       pos0 += VarInt.length(buf, pos0) + sl;
       if (pos0 - offset > maxEnd) {
          maxEnd = pos0 - offset;
       }
 
-      if ((nullBits & 4) != 0) {
-         fieldOffset0 = buf.getIntLE(offset + 54);
-         pos0 = offset + 62 + fieldOffset0;
+      if ((nullBits & 2) != 0) {
+         fieldOffset0 = buf.getIntLE(offset + 50);
+         pos0 = offset + 58 + fieldOffset0;
          sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.length(buf, pos0);
 
@@ -212,9 +183,9 @@ public class MapMarker {
          }
       }
 
-      if ((nullBits & 8) != 0) {
-         fieldOffset0 = buf.getIntLE(offset + 58);
-         pos0 = offset + 62 + fieldOffset0;
+      if ((nullBits & 4) != 0) {
+         fieldOffset0 = buf.getIntLE(offset + 54);
+         pos0 = offset + 58 + fieldOffset0;
          sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.length(buf, pos0);
 
@@ -237,16 +208,12 @@ public class MapMarker {
          nullBits = (byte)(nullBits | 1);
       }
 
-      if (this.customName != null) {
+      if (this.contextMenuItems != null) {
          nullBits = (byte)(nullBits | 2);
       }
 
-      if (this.contextMenuItems != null) {
-         nullBits = (byte)(nullBits | 4);
-      }
-
       if (this.components != null) {
-         nullBits = (byte)(nullBits | 8);
+         nullBits = (byte)(nullBits | 4);
       }
 
       buf.writeByte(nullBits);
@@ -254,8 +221,6 @@ public class MapMarker {
       int idOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int nameOffsetSlot = buf.writerIndex();
-      buf.writeIntLE(0);
-      int customNameOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int markerImageOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
@@ -271,13 +236,6 @@ public class MapMarker {
          this.name.serialize(buf);
       } else {
          buf.setIntLE(nameOffsetSlot, -1);
-      }
-
-      if (this.customName != null) {
-         buf.setIntLE(customNameOffsetSlot, buf.writerIndex() - varBlockStart);
-         PacketIO.writeVarString(buf, this.customName, 4096000);
-      } else {
-         buf.setIntLE(customNameOffsetSlot, -1);
       }
 
       buf.setIntLE(markerImageOffsetSlot, buf.writerIndex() - varBlockStart);
@@ -314,14 +272,10 @@ public class MapMarker {
    }
 
    public int computeSize() {
-      int size = 62;
+      int size = 58;
       size += PacketIO.stringSize(this.id);
       if (this.name != null) {
          size += this.name.computeSize();
-      }
-
-      if (this.customName != null) {
-         size += PacketIO.stringSize(this.customName);
       }
 
       size += PacketIO.stringSize(this.markerImage);
@@ -349,15 +303,15 @@ public class MapMarker {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 62) {
-         return ValidationResult.error("Buffer too small: expected at least 62 bytes");
+      if (buffer.readableBytes() - offset < 58) {
+         return ValidationResult.error("Buffer too small: expected at least 58 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
          int idOffset = buffer.getIntLE(offset + 38);
          if (idOffset < 0) {
             return ValidationResult.error("Invalid offset for Id");
          } else {
-            int pos = offset + 62 + idOffset;
+            int pos = offset + 58 + idOffset;
             if (pos >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Id");
             } else {
@@ -378,7 +332,7 @@ public class MapMarker {
                            return ValidationResult.error("Invalid offset for Name");
                         }
 
-                        pos = offset + 62 + idOffset;
+                        pos = offset + 58 + idOffset;
                         if (pos >= buffer.writerIndex()) {
                            return ValidationResult.error("Offset out of bounds for Name");
                         }
@@ -391,38 +345,11 @@ public class MapMarker {
                         pos += FormattedMessage.computeBytesConsumed(buffer, pos);
                      }
 
-                     if ((nullBits & 2) != 0) {
-                        idOffset = buffer.getIntLE(offset + 46);
-                        if (idOffset < 0) {
-                           return ValidationResult.error("Invalid offset for CustomName");
-                        }
-
-                        pos = offset + 62 + idOffset;
-                        if (pos >= buffer.writerIndex()) {
-                           return ValidationResult.error("Offset out of bounds for CustomName");
-                        }
-
-                        idLen = VarInt.peek(buffer, pos);
-                        if (idLen < 0) {
-                           return ValidationResult.error("Invalid string length for CustomName");
-                        }
-
-                        if (idLen > 4096000) {
-                           return ValidationResult.error("CustomName exceeds max length 4096000");
-                        }
-
-                        pos += VarInt.length(buffer, pos);
-                        pos += idLen;
-                        if (pos > buffer.writerIndex()) {
-                           return ValidationResult.error("Buffer overflow reading CustomName");
-                        }
-                     }
-
-                     idOffset = buffer.getIntLE(offset + 50);
+                     idOffset = buffer.getIntLE(offset + 46);
                      if (idOffset < 0) {
                         return ValidationResult.error("Invalid offset for MarkerImage");
                      } else {
-                        pos = offset + 62 + idOffset;
+                        pos = offset + 58 + idOffset;
                         if (pos >= buffer.writerIndex()) {
                            return ValidationResult.error("Offset out of bounds for MarkerImage");
                         } else {
@@ -437,13 +364,13 @@ public class MapMarker {
                               if (pos > buffer.writerIndex()) {
                                  return ValidationResult.error("Buffer overflow reading MarkerImage");
                               } else {
-                                 if ((nullBits & 4) != 0) {
-                                    idOffset = buffer.getIntLE(offset + 54);
+                                 if ((nullBits & 2) != 0) {
+                                    idOffset = buffer.getIntLE(offset + 50);
                                     if (idOffset < 0) {
                                        return ValidationResult.error("Invalid offset for ContextMenuItems");
                                     }
 
-                                    pos = offset + 62 + idOffset;
+                                    pos = offset + 58 + idOffset;
                                     if (pos >= buffer.writerIndex()) {
                                        return ValidationResult.error("Offset out of bounds for ContextMenuItems");
                                     }
@@ -469,13 +396,13 @@ public class MapMarker {
                                     }
                                  }
 
-                                 if ((nullBits & 8) != 0) {
-                                    idOffset = buffer.getIntLE(offset + 58);
+                                 if ((nullBits & 4) != 0) {
+                                    idOffset = buffer.getIntLE(offset + 54);
                                     if (idOffset < 0) {
                                        return ValidationResult.error("Invalid offset for Components");
                                     }
 
-                                    pos = offset + 62 + idOffset;
+                                    pos = offset + 58 + idOffset;
                                     if (pos >= buffer.writerIndex()) {
                                        return ValidationResult.error("Offset out of bounds for Components");
                                     }
@@ -517,7 +444,6 @@ public class MapMarker {
       MapMarker copy = new MapMarker();
       copy.id = this.id;
       copy.name = this.name != null ? this.name.clone() : null;
-      copy.customName = this.customName;
       copy.markerImage = this.markerImage;
       copy.transform = this.transform.clone();
       copy.contextMenuItems = this.contextMenuItems != null ? Arrays.stream(this.contextMenuItems).map(e -> e.clone()).toArray(ContextMenuItem[]::new) : null;
@@ -534,7 +460,6 @@ public class MapMarker {
             ? false
             : Objects.equals(this.id, other.id)
                && Objects.equals(this.name, other.name)
-               && Objects.equals(this.customName, other.customName)
                && Objects.equals(this.markerImage, other.markerImage)
                && Objects.equals(this.transform, other.transform)
                && Arrays.equals((Object[])this.contextMenuItems, (Object[])other.contextMenuItems)
@@ -547,7 +472,6 @@ public class MapMarker {
       int result = 1;
       result = 31 * result + Objects.hashCode(this.id);
       result = 31 * result + Objects.hashCode(this.name);
-      result = 31 * result + Objects.hashCode(this.customName);
       result = 31 * result + Objects.hashCode(this.markerImage);
       result = 31 * result + Objects.hashCode(this.transform);
       result = 31 * result + Arrays.hashCode((Object[])this.contextMenuItems);

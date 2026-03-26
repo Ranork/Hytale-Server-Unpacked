@@ -241,8 +241,9 @@ public class AbilityCombatAction extends CombatActionOption {
          ctx.log("%s: Executing option %s", archetypeChunk.getReferenceTo(index), this.getId());
       }
 
-      InventoryHelper.setHotbarSlot(npcComponent.getInventory(), (byte)this.weaponSlot);
-      InventoryHelper.setOffHandSlot(npcComponent.getInventory(), (byte)this.offhandSlot);
+      Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+      InventoryHelper.setHotbarSlot(ref, npcComponent.getInventory(), (byte)this.weaponSlot, commandBuffer);
+      InventoryHelper.setOffHandSlot(ref, npcComponent.getInventory(), (byte)this.offhandSlot, commandBuffer);
       if (this.subState != null) {
          role.getStateSupport().setSubState(this.subState);
          ctx = CombatActionEvaluator.LOGGER.at(Level.FINEST);
@@ -252,7 +253,6 @@ public class AbilityCombatAction extends CombatActionOption {
       }
 
       if (this.actionTarget == CombatActionOption.Target.Self) {
-         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
          RootInteraction interaction = RootInteraction.getAssetMap().getAsset(this.ability);
          if (interaction == null) {
             throw new IllegalStateException("No such interaction: " + this.ability);

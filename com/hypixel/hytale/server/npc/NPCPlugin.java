@@ -41,9 +41,9 @@ import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.AssetPackRegisterEvent;
 import com.hypixel.hytale.server.core.asset.AssetPackUnregisterEvent;
-import com.hypixel.hytale.server.core.asset.GenerateSchemaEvent;
 import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
 import com.hypixel.hytale.server.core.asset.LoadAssetEvent;
+import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
@@ -64,6 +64,7 @@ import com.hypixel.hytale.server.core.modules.migrations.MigrationModule;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.schema.SchemaGenerator;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.npc.INonPlayerCharacter;
 import com.hypixel.hytale.server.core.universe.world.path.WorldPathChangedEvent;
@@ -136,6 +137,7 @@ import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.Buil
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterAnd;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterAttitude;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterCombat;
+import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterEntityEffect;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterHeightDifference;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterInsideBlock;
 import com.hypixel.hytale.server.npc.corecomponents.entity.filters.builders.BuilderEntityFilterInventory;
@@ -441,7 +443,15 @@ public class NPCPlugin extends JavaPlugin {
       );
       eventRegistry.register(AssetPackRegisterEvent.class, event -> this.builderManager.loadBuilders(event.getAssetPack(), false));
       eventRegistry.register(AssetPackUnregisterEvent.class, event -> this.builderManager.unloadBuilders(event.getAssetPack()));
-      eventRegistry.register(GenerateSchemaEvent.class, this::onSchemaGenerate);
+      SchemaGenerator.registerAssetSchema("NPCRole.json", ctx -> {
+         Schema schema = this.builderManager.generateSchema(ctx);
+         schema.setId("NPCRole.json");
+         schema.setTitle("NPCRole");
+         Schema.HytaleMetadata hytale = schema.getHytale();
+         hytale.setPath("NPC/Roles");
+         hytale.setExtension(".json");
+         return schema;
+      }, List.of("NPC/Roles/*.json", "NPC/Roles/**/*.json"), null);
       AssetRegistry.register(
          ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
                               AttitudeGroup.class, new IndexedLookupTableAssetMap<>(AttitudeGroup[]::new)
@@ -482,7 +492,7 @@ public class NPCPlugin extends JavaPlugin {
                         .setCodec(Condition.CODEC))
                      .setKeyFunction(Condition::getId))
                   .setReplaceOnRemove(Condition::getAlwaysTrueFor))
-               .loadsAfter(ResponseCurve.class, NPCGroup.class, EntityStatType.class))
+               .loadsAfter(ResponseCurve.class, NPCGroup.class, EntityStatType.class, EntityEffect.class))
             .build()
       );
       this.getEntityRegistry().registerEntity("NPC", NPCEntity.class, NPCEntity::new, NPCEntity.CODEC);
@@ -531,6 +541,7 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new CombatViewSystems.EntityRemoved(this.combatDataComponentType, this.combatDataPoolResourceType));
       entityStoreRegistry.registerSystem(new CombatViewSystems.Ticking(this.combatDataComponentType, this.combatDataPoolResourceType));
       entityStoreRegistry.registerSystem(new NPCSystems.ModelChangeSystem());
+      entityStoreRegistry.registerSystem(new NPCSystems.OnNPCAdded());
       entityStoreRegistry.registerSystem(new RoleBuilderSystem());
       entityStoreRegistry.registerSystem(new BalancingInitialisationSystem());
       entityStoreRegistry.registerSystem(new RoleSystems.RoleActivateSystem(npcComponentType));
@@ -592,18 +603,7 @@ public class NPCPlugin extends JavaPlugin {
       entityStoreRegistry.registerSystem(new NPCSystems.KillFeedDecedentEventSystem());
       entityStoreRegistry.registerSystem(new NPCSystems.PrefabPlaceEntityEventSystem());
       entityStoreRegistry.registerSystem(new NPCVelocityInstructionSystem());
-      this.getEntityStoreRegistry().registerSystem(new NPCPlugin.NPCEntityRegenerateStatsSystem());
-   }
-
-   public void onSchemaGenerate(@Nonnull GenerateSchemaEvent event) {
-      Schema schema = this.builderManager.generateSchema(event.getContext());
-      event.addSchema("NPCRole.json", schema);
-      event.addSchemaLink("NPCRole", List.of("NPC/Roles/*.json", "NPC/Roles/**/*.json"), null);
-      Schema.HytaleMetadata hytale = schema.getHytale();
-      hytale.setPath("NPC/Roles");
-      hytale.setExtension(".json");
-      schema.setId("NPCRole.json");
-      schema.setTitle("NPCRole");
+      entityStoreRegistry.registerSystem(new NPCPlugin.NPCEntityRegenerateStatsSystem());
    }
 
    @Override
@@ -844,7 +844,8 @@ public class NPCPlugin extends JavaPlugin {
          .registerCoreComponentType("And", BuilderEntityFilterAnd::new)
          .registerCoreComponentType("Or", BuilderEntityFilterOr::new)
          .registerCoreComponentType("Altitude", BuilderEntityFilterAltitude::new)
-         .registerCoreComponentType("InsideBlock", BuilderEntityFilterInsideBlock::new);
+         .registerCoreComponentType("InsideBlock", BuilderEntityFilterInsideBlock::new)
+         .registerCoreComponentType("EntityEffect", BuilderEntityFilterEntityEffect::new);
       this.registerCoreComponentType("Attitude", BuilderSensorEntityPrioritiserAttitude::new);
       NPCPlugin.NPCConfig config = this.config.get();
       this.autoReload = config.isAutoReload();
@@ -1224,12 +1225,12 @@ public class NPCPlugin extends JavaPlugin {
          );
    }
 
-   protected void generateDescriptors() {
+   public void generateDescriptors() {
       this.getLogger().at(Level.INFO).log("===== Generating descriptors for NPC!");
       this.builderDescriptors = this.builderManager.generateDescriptors();
    }
 
-   protected void saveDescriptors() {
+   public void saveDescriptors() {
       this.getLogger().at(Level.INFO).log("===== Saving descriptors for NPC!");
       Path path = Path.of("npc_descriptors.json");
       BuilderManager.saveDescriptors(this.builderDescriptors, path);

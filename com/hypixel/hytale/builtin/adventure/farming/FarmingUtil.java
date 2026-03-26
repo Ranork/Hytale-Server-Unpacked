@@ -13,6 +13,7 @@ import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Rangef;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockGathering;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.HarvestingDropType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.FarmingData;
@@ -211,115 +212,118 @@ public class FarmingUtil {
       int rotationIndex,
       @Nonnull Vector3i blockPosition
    ) {
-      FarmingData farmingConfig = blockType.getFarming();
-      boolean isFarmable = true;
-      if (farmingConfig == null || farmingConfig.getStages() == null) {
-         isFarmable = false;
-      }
-
-      if (blockType.getGathering().getHarvest() == null) {
+      BlockGathering gathering = blockType.getGathering();
+      if (gathering == null) {
          return false;
       } else {
-         World world = store.getExternalData().getWorld();
-         Vector3d centerPosition = new Vector3d();
-         blockType.getBlockCenter(rotationIndex, centerPosition);
-         centerPosition.add(blockPosition);
-         if (isFarmable && farmingConfig.getStageSetAfterHarvest() != null) {
-            giveDrops(store, ref, centerPosition, blockType);
-            Map<String, FarmingStageData[]> stageSets = farmingConfig.getStages();
-            FarmingStageData[] stages = stageSets.get(farmingConfig.getStartingStageSet());
-            if (stages == null) {
-               return false;
-            } else {
-               int currentStageIndex = stages.length - 1;
-               FarmingStageData previousStage = stages[currentStageIndex];
-               String newStageSet = farmingConfig.getStageSetAfterHarvest();
-               FarmingStageData[] newStages = stageSets.get(newStageSet);
-               if (newStages != null && newStages.length != 0) {
-                  Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-                  Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-                  if (chunkRef == null) {
-                     return false;
-                  } else {
-                     BlockComponentChunk blockComponentChunk = chunkStore.getComponent(chunkRef, BlockComponentChunk.getComponentType());
-                     if (blockComponentChunk == null) {
+         HarvestingDropType harvestingDropType = gathering.getHarvest();
+         if (harvestingDropType == null) {
+            return false;
+         } else {
+            World world = store.getExternalData().getWorld();
+            Vector3d centerPosition = new Vector3d();
+            blockType.getBlockCenter(rotationIndex, centerPosition);
+            centerPosition.add(blockPosition);
+            FarmingData farmingConfig = blockType.getFarming();
+            boolean isFarmable = farmingConfig != null && farmingConfig.getStages() != null;
+            if (isFarmable && farmingConfig.getStageSetAfterHarvest() != null) {
+               giveDrops(store, ref, centerPosition, blockType, harvestingDropType);
+               Map<String, FarmingStageData[]> stageSets = farmingConfig.getStages();
+               FarmingStageData[] stages = stageSets.get(farmingConfig.getStartingStageSet());
+               if (stages == null) {
+                  return false;
+               } else {
+                  int currentStageIndex = stages.length - 1;
+                  FarmingStageData previousStage = stages[currentStageIndex];
+                  String newStageSet = farmingConfig.getStageSetAfterHarvest();
+                  FarmingStageData[] newStages = stageSets.get(newStageSet);
+                  if (newStages != null && newStages.length != 0) {
+                     Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+                     Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
+                     if (chunkRef == null) {
                         return false;
                      } else {
-                        Instant now = store.getExternalData()
-                           .getWorld()
-                           .getEntityStore()
-                           .getStore()
-                           .getResource(WorldTimeResource.getResourceType())
-                           .getGameTime();
-                        int blockIndexColumn = ChunkUtil.indexBlockInColumn(blockPosition.x, blockPosition.y, blockPosition.z);
-                        Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(blockIndexColumn);
-                        FarmingBlock farmingBlock;
-                        if (blockRef == null) {
-                           Holder<ChunkStore> blockEntity = ChunkStore.REGISTRY.newHolder();
-                           blockEntity.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(blockIndexColumn, chunkRef));
-                           farmingBlock = new FarmingBlock();
-                           farmingBlock.setLastTickGameTime(now);
-                           farmingBlock.setCurrentStageSet(newStageSet);
-                           blockEntity.addComponent(FarmingBlock.getComponentType(), farmingBlock);
-                           blockRef = chunkStore.addEntity(blockEntity, AddReason.SPAWN);
-                        } else {
-                           farmingBlock = chunkStore.ensureAndGetComponent(blockRef, FarmingBlock.getComponentType());
-                        }
-
-                        farmingBlock.setCurrentStageSet(newStageSet);
-                        farmingBlock.setGrowthProgress(0.0F);
-                        farmingBlock.setExecutions(0);
-                        farmingBlock.setGeneration(farmingBlock.getGeneration() + 1);
-                        farmingBlock.setLastTickGameTime(now);
-                        Ref<ChunkStore> sectionRef = world.getChunkStore()
-                           .getChunkSectionReference(
-                              ChunkUtil.chunkCoordinate(blockPosition.x),
-                              ChunkUtil.chunkCoordinate(blockPosition.y),
-                              ChunkUtil.chunkCoordinate(blockPosition.z)
-                           );
-                        if (sectionRef == null) {
-                           return false;
-                        } else if (blockRef == null) {
+                        BlockComponentChunk blockComponentChunk = chunkStore.getComponent(chunkRef, BlockComponentChunk.getComponentType());
+                        if (blockComponentChunk == null) {
                            return false;
                         } else {
-                           BlockSection section = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
-                           if (section != null) {
-                              int blockIndex = ChunkUtil.indexBlock(blockPosition.x, blockPosition.y, blockPosition.z);
-                              section.scheduleTick(blockIndex, now);
+                           Instant now = store.getExternalData()
+                              .getWorld()
+                              .getEntityStore()
+                              .getStore()
+                              .getResource(WorldTimeResource.getResourceType())
+                              .getGameTime();
+                           int blockIndexColumn = ChunkUtil.indexBlockInColumn(blockPosition.x, blockPosition.y, blockPosition.z);
+                           Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(blockIndexColumn);
+                           FarmingBlock farmingBlock;
+                           if (blockRef == null) {
+                              Holder<ChunkStore> blockEntity = ChunkStore.REGISTRY.newHolder();
+                              blockEntity.putComponent(
+                                 BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(blockIndexColumn, chunkRef)
+                              );
+                              farmingBlock = new FarmingBlock();
+                              farmingBlock.setLastTickGameTime(now);
+                              farmingBlock.setCurrentStageSet(newStageSet);
+                              blockEntity.addComponent(FarmingBlock.getComponentType(), farmingBlock);
+                              blockRef = chunkStore.addEntity(blockEntity, AddReason.SPAWN);
+                           } else {
+                              farmingBlock = chunkStore.ensureAndGetComponent(blockRef, FarmingBlock.getComponentType());
                            }
 
-                           newStages[0].apply(chunkStore, sectionRef, blockRef, blockPosition.x, blockPosition.y, blockPosition.z, previousStage);
-                           return true;
+                           farmingBlock.setCurrentStageSet(newStageSet);
+                           farmingBlock.setGrowthProgress(0.0F);
+                           farmingBlock.setExecutions(0);
+                           farmingBlock.setGeneration(farmingBlock.getGeneration() + 1);
+                           farmingBlock.setLastTickGameTime(now);
+                           Ref<ChunkStore> sectionRef = world.getChunkStore()
+                              .getChunkSectionReferenceAtBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+                           if (sectionRef == null) {
+                              return false;
+                           } else if (blockRef == null) {
+                              return false;
+                           } else {
+                              BlockSection section = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
+                              if (section != null) {
+                                 int blockIndex = ChunkUtil.indexBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+                                 section.scheduleTick(blockIndex, now);
+                              }
+
+                              newStages[0].apply(chunkStore, sectionRef, blockRef, blockPosition.x, blockPosition.y, blockPosition.z, previousStage);
+                              return true;
+                           }
                         }
                      }
-                  }
-               } else {
-                  WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-                  if (chunk != null) {
-                     chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
-                  }
+                  } else {
+                     WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
+                     if (chunk != null) {
+                        chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+                     }
 
-                  return false;
+                     return false;
+                  }
                }
-            }
-         } else {
-            giveDrops(store, ref, centerPosition, blockType);
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-            if (chunk != null) {
-               chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
-            }
+            } else {
+               giveDrops(store, ref, centerPosition, blockType, harvestingDropType);
+               WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
+               if (chunk != null) {
+                  chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+               }
 
-            return true;
+               return true;
+            }
          }
       }
    }
 
    protected static void giveDrops(
-      @Nonnull ComponentAccessor<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull Vector3d origin, @Nonnull BlockType blockType
+      @Nonnull ComponentAccessor<EntityStore> store,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Vector3d origin,
+      @Nonnull BlockType blockType,
+      @Nonnull HarvestingDropType harvestingDropType
    ) {
-      HarvestingDropType harvest = blockType.getGathering().getHarvest();
-      String itemId = harvest.getItemId();
-      String dropListId = harvest.getDropListId();
+      String itemId = harvestingDropType.getItemId();
+      String dropListId = harvestingDropType.getDropListId();
 
       for (ItemStack itemStack : BlockHarvestUtils.getDrops(blockType, 1, itemId, dropListId)) {
          ItemUtils.interactivelyPickupItem(ref, itemStack, origin, store);

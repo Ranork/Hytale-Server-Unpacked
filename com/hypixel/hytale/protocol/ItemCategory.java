@@ -13,8 +13,8 @@ import javax.annotation.Nullable;
 public class ItemCategory {
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 6;
-   public static final int VARIABLE_FIELD_COUNT = 4;
-   public static final int VARIABLE_BLOCK_START = 22;
+   public static final int VARIABLE_FIELD_COUNT = 5;
+   public static final int VARIABLE_BLOCK_START = 26;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public String id;
@@ -27,6 +27,8 @@ public class ItemCategory {
    public ItemGridInfoDisplayMode infoDisplayMode = ItemGridInfoDisplayMode.Tooltip;
    @Nullable
    public ItemCategory[] children;
+   @Nullable
+   public SubCategoryDefinition[] subCategories;
 
    public ItemCategory() {
    }
@@ -37,7 +39,8 @@ public class ItemCategory {
       @Nullable String icon,
       int order,
       @Nonnull ItemGridInfoDisplayMode infoDisplayMode,
-      @Nullable ItemCategory[] children
+      @Nullable ItemCategory[] children,
+      @Nullable SubCategoryDefinition[] subCategories
    ) {
       this.id = id;
       this.name = name;
@@ -45,6 +48,7 @@ public class ItemCategory {
       this.order = order;
       this.infoDisplayMode = infoDisplayMode;
       this.children = children;
+      this.subCategories = subCategories;
    }
 
    public ItemCategory(@Nonnull ItemCategory other) {
@@ -54,6 +58,7 @@ public class ItemCategory {
       this.order = other.order;
       this.infoDisplayMode = other.infoDisplayMode;
       this.children = other.children;
+      this.subCategories = other.subCategories;
    }
 
    @Nonnull
@@ -63,7 +68,7 @@ public class ItemCategory {
       obj.order = buf.getIntLE(offset + 1);
       obj.infoDisplayMode = ItemGridInfoDisplayMode.fromValue(buf.getByte(offset + 5));
       if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 22 + buf.getIntLE(offset + 6);
+         int varPos0 = offset + 26 + buf.getIntLE(offset + 6);
          int idLen = VarInt.peek(buf, varPos0);
          if (idLen < 0) {
             throw ProtocolException.negativeLength("Id", idLen);
@@ -77,7 +82,7 @@ public class ItemCategory {
       }
 
       if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 22 + buf.getIntLE(offset + 10);
+         int varPos1 = offset + 26 + buf.getIntLE(offset + 10);
          int nameLen = VarInt.peek(buf, varPos1);
          if (nameLen < 0) {
             throw ProtocolException.negativeLength("Name", nameLen);
@@ -91,7 +96,7 @@ public class ItemCategory {
       }
 
       if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 22 + buf.getIntLE(offset + 14);
+         int varPos2 = offset + 26 + buf.getIntLE(offset + 14);
          int iconLen = VarInt.peek(buf, varPos2);
          if (iconLen < 0) {
             throw ProtocolException.negativeLength("Icon", iconLen);
@@ -105,7 +110,7 @@ public class ItemCategory {
       }
 
       if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 22 + buf.getIntLE(offset + 18);
+         int varPos3 = offset + 26 + buf.getIntLE(offset + 18);
          int childrenCount = VarInt.peek(buf, varPos3);
          if (childrenCount < 0) {
             throw ProtocolException.negativeLength("Children", childrenCount);
@@ -129,15 +134,40 @@ public class ItemCategory {
          }
       }
 
+      if ((nullBits & 16) != 0) {
+         int varPos4 = offset + 26 + buf.getIntLE(offset + 22);
+         int subCategoriesCount = VarInt.peek(buf, varPos4);
+         if (subCategoriesCount < 0) {
+            throw ProtocolException.negativeLength("SubCategories", subCategoriesCount);
+         }
+
+         if (subCategoriesCount > 4096000) {
+            throw ProtocolException.arrayTooLong("SubCategories", subCategoriesCount, 4096000);
+         }
+
+         int varIntLen = VarInt.length(buf, varPos4);
+         if (varPos4 + varIntLen + subCategoriesCount * 5L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("SubCategories", varPos4 + varIntLen + subCategoriesCount * 5, buf.readableBytes());
+         }
+
+         obj.subCategories = new SubCategoryDefinition[subCategoriesCount];
+         int elemPos = varPos4 + varIntLen;
+
+         for (int i = 0; i < subCategoriesCount; i++) {
+            obj.subCategories[i] = SubCategoryDefinition.deserialize(buf, elemPos);
+            elemPos += SubCategoryDefinition.computeBytesConsumed(buf, elemPos);
+         }
+      }
+
       return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 22;
+      int maxEnd = 26;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 6);
-         int pos0 = offset + 22 + fieldOffset0;
+         int pos0 = offset + 26 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
          pos0 += VarInt.length(buf, pos0) + sl;
          if (pos0 - offset > maxEnd) {
@@ -147,7 +177,7 @@ public class ItemCategory {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 10);
-         int pos1 = offset + 22 + fieldOffset1;
+         int pos1 = offset + 26 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
          pos1 += VarInt.length(buf, pos1) + sl;
          if (pos1 - offset > maxEnd) {
@@ -157,7 +187,7 @@ public class ItemCategory {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 14);
-         int pos2 = offset + 22 + fieldOffset2;
+         int pos2 = offset + 26 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
          pos2 += VarInt.length(buf, pos2) + sl;
          if (pos2 - offset > maxEnd) {
@@ -167,7 +197,7 @@ public class ItemCategory {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 18);
-         int pos3 = offset + 22 + fieldOffset3;
+         int pos3 = offset + 26 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
          pos3 += VarInt.length(buf, pos3);
 
@@ -177,6 +207,21 @@ public class ItemCategory {
 
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
+         }
+      }
+
+      if ((nullBits & 16) != 0) {
+         int fieldOffset4 = buf.getIntLE(offset + 22);
+         int pos4 = offset + 26 + fieldOffset4;
+         int arrLen = VarInt.peek(buf, pos4);
+         pos4 += VarInt.length(buf, pos4);
+
+         for (int i = 0; i < arrLen; i++) {
+            pos4 += SubCategoryDefinition.computeBytesConsumed(buf, pos4);
+         }
+
+         if (pos4 - offset > maxEnd) {
+            maxEnd = pos4 - offset;
          }
       }
 
@@ -202,6 +247,10 @@ public class ItemCategory {
          nullBits = (byte)(nullBits | 8);
       }
 
+      if (this.subCategories != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
       buf.writeByte(nullBits);
       buf.writeIntLE(this.order);
       buf.writeByte(this.infoDisplayMode.getValue());
@@ -212,6 +261,8 @@ public class ItemCategory {
       int iconOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int childrenOffsetSlot = buf.writerIndex();
+      buf.writeIntLE(0);
+      int subCategoriesOffsetSlot = buf.writerIndex();
       buf.writeIntLE(0);
       int varBlockStart = buf.writerIndex();
       if (this.id != null) {
@@ -249,10 +300,25 @@ public class ItemCategory {
       } else {
          buf.setIntLE(childrenOffsetSlot, -1);
       }
+
+      if (this.subCategories != null) {
+         buf.setIntLE(subCategoriesOffsetSlot, buf.writerIndex() - varBlockStart);
+         if (this.subCategories.length > 4096000) {
+            throw ProtocolException.arrayTooLong("SubCategories", this.subCategories.length, 4096000);
+         }
+
+         VarInt.write(buf, this.subCategories.length);
+
+         for (SubCategoryDefinition item : this.subCategories) {
+            item.serialize(buf);
+         }
+      } else {
+         buf.setIntLE(subCategoriesOffsetSlot, -1);
+      }
    }
 
    public int computeSize() {
-      int size = 22;
+      int size = 26;
       if (this.id != null) {
          size += PacketIO.stringSize(this.id);
       }
@@ -275,12 +341,22 @@ public class ItemCategory {
          size += VarInt.size(this.children.length) + childrenSize;
       }
 
+      if (this.subCategories != null) {
+         int subCategoriesSize = 0;
+
+         for (SubCategoryDefinition elem : this.subCategories) {
+            subCategoriesSize += elem.computeSize();
+         }
+
+         size += VarInt.size(this.subCategories.length) + subCategoriesSize;
+      }
+
       return size;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 22) {
-         return ValidationResult.error("Buffer too small: expected at least 22 bytes");
+      if (buffer.readableBytes() - offset < 26) {
+         return ValidationResult.error("Buffer too small: expected at least 26 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 1) != 0) {
@@ -289,7 +365,7 @@ public class ItemCategory {
                return ValidationResult.error("Invalid offset for Id");
             }
 
-            int pos = offset + 22 + idOffset;
+            int pos = offset + 26 + idOffset;
             if (pos >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Id");
             }
@@ -316,7 +392,7 @@ public class ItemCategory {
                return ValidationResult.error("Invalid offset for Name");
             }
 
-            int posx = offset + 22 + nameOffset;
+            int posx = offset + 26 + nameOffset;
             if (posx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Name");
             }
@@ -343,7 +419,7 @@ public class ItemCategory {
                return ValidationResult.error("Invalid offset for Icon");
             }
 
-            int posxx = offset + 22 + iconOffset;
+            int posxx = offset + 26 + iconOffset;
             if (posxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Icon");
             }
@@ -370,7 +446,7 @@ public class ItemCategory {
                return ValidationResult.error("Invalid offset for Children");
             }
 
-            int posxxx = offset + 22 + childrenOffset;
+            int posxxx = offset + 26 + childrenOffset;
             if (posxxx >= buffer.writerIndex()) {
                return ValidationResult.error("Offset out of bounds for Children");
             }
@@ -396,6 +472,38 @@ public class ItemCategory {
             }
          }
 
+         if ((nullBits & 16) != 0) {
+            int subCategoriesOffset = buffer.getIntLE(offset + 22);
+            if (subCategoriesOffset < 0) {
+               return ValidationResult.error("Invalid offset for SubCategories");
+            }
+
+            int posxxxx = offset + 26 + subCategoriesOffset;
+            if (posxxxx >= buffer.writerIndex()) {
+               return ValidationResult.error("Offset out of bounds for SubCategories");
+            }
+
+            int subCategoriesCount = VarInt.peek(buffer, posxxxx);
+            if (subCategoriesCount < 0) {
+               return ValidationResult.error("Invalid array count for SubCategories");
+            }
+
+            if (subCategoriesCount > 4096000) {
+               return ValidationResult.error("SubCategories exceeds max length 4096000");
+            }
+
+            posxxxx += VarInt.length(buffer, posxxxx);
+
+            for (int i = 0; i < subCategoriesCount; i++) {
+               ValidationResult structResult = SubCategoryDefinition.validateStructure(buffer, posxxxx);
+               if (!structResult.isValid()) {
+                  return ValidationResult.error("Invalid SubCategoryDefinition in SubCategories[" + i + "]: " + structResult.error());
+               }
+
+               posxxxx += SubCategoryDefinition.computeBytesConsumed(buffer, posxxxx);
+            }
+         }
+
          return ValidationResult.OK;
       }
    }
@@ -408,6 +516,7 @@ public class ItemCategory {
       copy.order = this.order;
       copy.infoDisplayMode = this.infoDisplayMode;
       copy.children = this.children != null ? Arrays.stream(this.children).map(e -> e.clone()).toArray(ItemCategory[]::new) : null;
+      copy.subCategories = this.subCategories != null ? Arrays.stream(this.subCategories).map(e -> e.clone()).toArray(SubCategoryDefinition[]::new) : null;
       return copy;
    }
 
@@ -423,7 +532,8 @@ public class ItemCategory {
                && Objects.equals(this.icon, other.icon)
                && this.order == other.order
                && Objects.equals(this.infoDisplayMode, other.infoDisplayMode)
-               && Arrays.equals((Object[])this.children, (Object[])other.children);
+               && Arrays.equals((Object[])this.children, (Object[])other.children)
+               && Arrays.equals((Object[])this.subCategories, (Object[])other.subCategories);
       }
    }
 
@@ -435,6 +545,7 @@ public class ItemCategory {
       result = 31 * result + Objects.hashCode(this.icon);
       result = 31 * result + Integer.hashCode(this.order);
       result = 31 * result + Objects.hashCode(this.infoDisplayMode);
-      return 31 * result + Arrays.hashCode((Object[])this.children);
+      result = 31 * result + Arrays.hashCode((Object[])this.children);
+      return 31 * result + Arrays.hashCode((Object[])this.subCategories);
    }
 }

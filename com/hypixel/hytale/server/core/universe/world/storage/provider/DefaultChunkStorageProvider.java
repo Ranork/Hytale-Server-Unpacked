@@ -6,7 +6,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import java.io.IOException;
+import java.nio.file.Path;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class DefaultChunkStorageProvider implements IChunkStorageProvider<Object> {
@@ -44,6 +46,22 @@ public class DefaultChunkStorageProvider implements IChunkStorageProvider<Object
    @Override
    public IChunkSaver getSaver(@Nonnull Object o, @Nonnull Store<ChunkStore> store) throws IOException {
       return ((IChunkStorageProvider<Object>)this.provider).getSaver(o, store);
+   }
+
+   @Nullable
+   @Override
+   public IChunkLoader getRecoveryLoader(@Nonnull Store<ChunkStore> store, Path backupPath) {
+      return this.provider.getRecoveryLoader(store, backupPath);
+   }
+
+   @Override
+   public void beginRecovery(Path file, Path recoveryPath) throws IOException {
+      this.provider.beginRecovery(file, recoveryPath);
+   }
+
+   @Override
+   public void revertRecovery(Path file, Path recoveryPath) throws IOException {
+      this.provider.revertRecovery(file, recoveryPath);
    }
 
    @Override

@@ -122,7 +122,7 @@ public class RaycastSelector extends SelectorType {
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 11L),
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 12L)
             );
-            DebugUtils.addArrow(commandBuffer.getExternalData().getWorld(), position, dir, color, 5.0F, true);
+            DebugUtils.addArrow(commandBuffer.getExternalData().getWorld(), position, dir, color, 5.0F, DebugUtils.FLAG_FADE);
          }
 
          this.blockPosition = TargetUtil.getTargetBlock(commandBuffer.getExternalData().getWorld(), (id, fluidId) -> {

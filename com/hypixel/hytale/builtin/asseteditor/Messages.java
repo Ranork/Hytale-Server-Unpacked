@@ -90,4 +90,6 @@ public class Messages {
    public static final Message PACK_GROUP_REQUIRED = Message.translation("server.assetEditor.messages.packGroupRequired");
    @Nonnull
    public static final Message PACK_ALREADY_EXISTS = Message.translation("server.assetEditor.messages.packAlreadyExists");
+   @Nonnull
+   public static final Message INVALID_TARGET_DIRECTORY = Message.translation("server.assetEditor.messages.invalidTargetDirectory");
 }

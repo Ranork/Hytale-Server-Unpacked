@@ -19,10 +19,13 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
 import com.hypixel.hytale.metrics.MetricsRegistry;
+import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.PlayerSkin;
 import com.hypixel.hytale.protocol.ToClientPacket;
@@ -34,6 +37,7 @@ import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.NameMatching;
 import com.hypixel.hytale.server.core.Options;
+import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.config.BackupConfig;
@@ -81,7 +85,10 @@ import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.spawn.IndividualSpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
+import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkSavingSystems;
+import com.hypixel.hytale.server.core.universe.world.storage.provider.BackupChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.provider.DefaultChunkStorageProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.provider.EmptyChunkStorageProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.provider.IChunkStorageProvider;
@@ -111,12 +118,19 @@ import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntIntPair;
+import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
@@ -130,8 +144,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiPredicate;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -305,8 +322,8 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
 
                LEGACY_BLOCK_ID_MAP = Collections.unmodifiableMap(map);
             }
-         } catch (IOException var15) {
-            ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var15)).log("Failed to delete blockIdMap.json");
+         } catch (IOException var21) {
+            ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var21)).log("Failed to delete blockIdMap.json");
          }
 
          if (Options.getOptionSet().has(Options.BARE)) {
@@ -319,48 +336,296 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                if (Files.exists(this.worldsDeletedPath)) {
                   FileUtil.deleteDirectory(this.worldsDeletedPath);
                }
-            } catch (Throwable var14) {
-               throw new RuntimeException("Failed to complete deletion of " + this.worldsDeletedPath.toAbsolutePath(), var14);
+            } catch (Throwable var16) {
+               throw new RuntimeException("Failed to complete deletion of " + this.worldsDeletedPath.toAbsolutePath(), var16);
             }
 
             try {
                Files.createDirectories(this.worldsPath);
+               if (Options.getOptionSet().has(Options.VERIFY_WORLDS)) {
+                  boolean isRecovery = Options.getOptionSet().has(Options.RECOVERY_MODE);
 
-               try (DirectoryStream<Path> stream = Files.newDirectoryStream(this.worldsPath)) {
-                  for (Path file : stream) {
-                     if (HytaleServer.get().isShuttingDown()) {
-                        return;
-                     }
+                  try (DirectoryStream<Path> stream = Files.newDirectoryStream(this.worldsPath)) {
+                     for (Path file : stream) {
+                        if (HytaleServer.get().isShuttingDown()) {
+                           return;
+                        }
 
-                     if (!file.equals(this.worldsPath) && Files.isDirectory(file)) {
-                        String name = file.getFileName().toString();
-                        if (this.getWorld(name) == null) {
-                           loadingWorlds.add(this.loadWorldFromStart(file, name).exceptionally(throwable -> {
-                              ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(throwable)).log("Failed to load world: %s", name);
-                              return null;
-                           }));
-                        } else {
-                           this.getLogger().at(Level.SEVERE).log("Skipping loading world '%s' because it already exists!", name);
+                        if (!file.equals(this.worldsPath) && Files.isDirectory(file)) {
+                           Path recoveryPath = isRecovery ? file.resolve("recovery-tmp") : null;
+                           if (recoveryPath != null) {
+                              if (Files.exists(recoveryPath)) {
+                                 FileUtil.deleteDirectory(recoveryPath);
+                              }
+
+                              Files.createDirectories(recoveryPath);
+                           }
+
+                           String name = file.getFileName().toString();
+
+                           try {
+                              AtomicReference<WorldConfig> worldCfg = new AtomicReference<>();
+                              IntIntPair result = worldConfigProvider.load(file, name)
+                                 .thenApplyAsync(SneakyThrow.sneakyFunction(cfg -> {
+                                    if (recoveryPath != null) {
+                                       cfg.getChunkStorageProvider().beginRecovery(file, recoveryPath);
+                                    }
+
+                                    worldCfg.set(cfg);
+                                    return cfg;
+                                 }))
+                                 .thenCompose(v -> this.makeWorld(name, file, v))
+                                 .thenCompose(SneakyThrow.sneakyFunction(world -> this.verifyWorld(world, recoveryPath)))
+                                 .whenComplete((v, ex) -> {
+                                    WorldConfig cfg = worldCfg.get();
+                                    if (recoveryPath != null && cfg != null) {
+                                       try {
+                                          if (ex == null) {
+                                             if (Files.exists(recoveryPath)) {
+                                                FileUtil.deleteDirectory(recoveryPath);
+                                             }
+                                          } else {
+                                             cfg.getChunkStorageProvider().revertRecovery(file, recoveryPath);
+                                          }
+                                       } catch (IOException var7x) {
+                                          throw SneakyThrow.sneakyThrow(var7x);
+                                       }
+                                    }
+                                 })
+                                 .join();
+                              if (result.leftInt() > 0) {
+                                 this.getLogger()
+                                    .at(Level.SEVERE)
+                                    .log("Failed to verify world " + name + ", %d/%d chunks corrupted", result.leftInt(), result.rightInt());
+                                 HytaleServer.get()
+                                    .shutdownServer(
+                                       ShutdownReason.VERIFY_ERROR
+                                          .withMessage(
+                                             "Failed to verify world " + name + ", " + result.leftInt() + "/" + result.rightInt() + " chunks corrupted"
+                                          )
+                                    );
+                                 return;
+                              }
+                           } catch (Exception var17) {
+                              ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var17))
+                                 .log("Failed to %s world %s", isRecovery ? "recover" : "verify", name);
+                              HytaleServer.get()
+                                 .shutdownServer(
+                                    ShutdownReason.VERIFY_ERROR
+                                       .withMessage("Failed to " + (isRecovery ? "recover" : "verify") + " world " + name + "\n" + var17.getMessage())
+                                 );
+                              return;
+                           }
                         }
                      }
                   }
+
+                  HytaleServer.get().shutdownServer(ShutdownReason.SHUTDOWN);
+               } else {
+                  try (DirectoryStream<Path> stream = Files.newDirectoryStream(this.worldsPath)) {
+                     for (Path file : stream) {
+                        if (HytaleServer.get().isShuttingDown()) {
+                           return;
+                        }
+
+                        if (!file.equals(this.worldsPath) && Files.isDirectory(file)) {
+                           String name = file.getFileName().toString();
+                           if (this.getWorld(name) == null) {
+                              loadingWorlds.add(this.loadWorldFromStart(file, name).exceptionally(throwable -> {
+                                 ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(throwable)).log("Failed to load world: %s", name);
+                                 return null;
+                              }));
+                           } else {
+                              this.getLogger().at(Level.SEVERE).log("Skipping loading world '%s' because it already exists!", name);
+                           }
+                        }
+                     }
+                  }
+
+                  this.universeReady = CompletableFutureUtil._catch(
+                     CompletableFuture.allOf((CompletableFuture<?>[])loadingWorlds.toArray(CompletableFuture[]::new))
+                        .thenCompose(
+                           v -> {
+                              String worldName = config.getDefaults().getWorld();
+                              return worldName != null && !this.worlds.containsKey(worldName.toLowerCase())
+                                 ? CompletableFutureUtil._catch(this.addWorld(worldName))
+                                 : CompletableFuture.completedFuture(null);
+                           }
+                        )
+                        .thenRun(() -> HytaleServer.get().getEventBus().dispatch(AllWorldsLoadedEvent.class))
+                  );
+               }
+            } catch (IOException var20) {
+               throw new RuntimeException("Failed to load Worlds", var20);
+            }
+         }
+      }
+   }
+
+   private CompletableFuture<IntIntPair> verifyWorld(World world, @Nullable Path recoveryPath) throws IOException {
+      ChunkStore store = world.getChunkStore();
+      IChunkLoader loader = recoveryPath == null
+         ? store.getLoader()
+         : world.getWorldConfig().getChunkStorageProvider().getRecoveryLoader(store.getStore(), recoveryPath);
+      IChunkSaver saver = store.getSaver();
+      if (loader != null && saver != null) {
+         LongSet chunks = loader.getIndexes();
+         IChunkLoader fallbackLoader;
+         if (Options.getOptionSet().valueOf(Options.RECOVERY_MODE) == Options.RecoveryMode.FROM_BACKUP_OR_REGENERATE) {
+            Path backupDir = HytaleServer.get().getConfig().getBackupConfig().getDirectory();
+            if (backupDir == null || !Files.exists(backupDir)) {
+               Path legacyPath = this.path.resolve("../backup");
+               if (Files.exists(legacyPath)) {
+                  backupDir = legacyPath;
+               }
+            }
+
+            List<Path> backups = new ArrayList<>();
+            if (backupDir == null) {
+               return CompletableFuture.failedFuture(new RuntimeException("No usable backups"));
+            }
+
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
+            collectBackupZips(backupDir, formatter, backups);
+            collectBackupZips(backupDir.resolve("archive"), formatter, backups);
+            backups.sort(Comparator.<Path, String>comparing(p -> p.getFileName().toString()).reversed());
+            fallbackLoader = new BackupChunkLoader(store, backups);
+         } else {
+            fallbackLoader = null;
+         }
+
+         AtomicInteger completed = new AtomicInteger();
+         AtomicInteger corrupted = new AtomicInteger();
+         int total = chunks.size();
+         return this.verifyAllChunks(world, loader, saver, fallbackLoader, chunks.iterator(), completed, corrupted, total)
+            .thenApply(v -> IntIntPair.of(corrupted.get(), total))
+            .whenCompleteAsync((intIntPair, throwable) -> {
+               try {
+                  saver.flush();
+                  if (recoveryPath != null) {
+                     loader.close();
+                  }
+               } catch (IOException var10x) {
+                  throw SneakyThrow.sneakyThrow(var10x);
                }
 
-               this.universeReady = CompletableFutureUtil._catch(
-                  CompletableFuture.allOf((CompletableFuture<?>[])loadingWorlds.toArray(CompletableFuture[]::new))
-                     .thenCompose(
-                        v -> {
-                           String worldName = config.getDefaults().getWorld();
-                           return worldName != null && !this.worlds.containsKey(worldName.toLowerCase())
-                              ? CompletableFutureUtil._catch(this.addWorld(worldName))
-                              : CompletableFuture.completedFuture(null);
-                        }
-                     )
-                     .thenRun(() -> HytaleServer.get().getEventBus().dispatch(AllWorldsLoadedEvent.class))
-               );
-            } catch (IOException var13) {
-               throw new RuntimeException("Failed to load Worlds", var13);
-            }
+               this.removeWorld(world.getName());
+               if (fallbackLoader != null) {
+                  try {
+                     fallbackLoader.close();
+                  } catch (IOException var9x) {
+                     throw SneakyThrow.sneakyThrow(var9x);
+                  }
+               }
+            });
+      } else {
+         return CompletableFuture.failedFuture(new RuntimeException("Failed to load World"));
+      }
+   }
+
+   private CompletableFuture<Void> verifyAllChunks(
+      @Nonnull World world,
+      @Nonnull IChunkLoader loader,
+      @Nonnull IChunkSaver saver,
+      @Nullable IChunkLoader fallbackLoader,
+      @Nonnull LongIterator iterator,
+      @Nonnull AtomicInteger completed,
+      @Nonnull AtomicInteger corrupted,
+      int total
+   ) {
+      CompletableFuture<Void> result = new CompletableFuture<>();
+      this.verifyNextChunk(result, world, loader, saver, fallbackLoader, iterator, completed, corrupted, total);
+      return result;
+   }
+
+   private void verifyNextChunk(
+      @Nonnull CompletableFuture<Void> result,
+      @Nonnull World world,
+      @Nonnull IChunkLoader loader,
+      @Nonnull IChunkSaver saver,
+      @Nullable IChunkLoader fallbackLoader,
+      @Nonnull LongIterator iterator,
+      @Nonnull AtomicInteger completed,
+      @Nonnull AtomicInteger corrupted,
+      int total
+   ) {
+      if (!iterator.hasNext()) {
+         result.complete(null);
+      } else {
+         long index = iterator.nextLong();
+         int x = ChunkUtil.xOfChunkIndex(index);
+         int z = ChunkUtil.zOfChunkIndex(index);
+         Options.RecoveryMode mode = (Options.RecoveryMode)Options.getOptionSet().valueOf(Options.RECOVERY_MODE);
+         loader.loadHolder(x, z)
+            .thenCompose(v -> saver.saveHolder(x, z, (Holder<ChunkStore>)v))
+            .exceptionallyCompose(
+               t -> {
+                  if (mode == null) {
+                     corrupted.incrementAndGet();
+                     return CompletableFuture.completedFuture(null);
+                  } else {
+                     return switch (mode) {
+                        case REGENERATE -> saver.removeHolder(x, z);
+                        case FROM_BACKUP_OR_REGENERATE -> fallbackLoader == null
+                           ? CompletableFuture.failedFuture(
+                              new RuntimeException("Recovery of individual chunks from backups not supported by storage type. Please restore instead.")
+                           )
+                           : saver.removeHolder(x, z).thenCompose(v -> fallbackLoader.loadHolder(x, z)).thenCompose(v -> {
+                              if (v == null) {
+                                 ((HytaleLogger.Api)this.getLogger().atWarning()).log("Failed to recover a chunk at %d, %d", x, z);
+                                 return CompletableFuture.completedFuture(null);
+                              } else {
+                                 ((HytaleLogger.Api)this.getLogger().atInfo()).log("Managed to recover a chunk at %d, %d", x, z);
+                                 return saver.saveHolder(x, z, (Holder<ChunkStore>)v);
+                              }
+                           }).exceptionally(t1 -> {
+                              ((HytaleLogger.Api)this.getLogger().atWarning()).log("Failed to recover a chunk at %d, %d", x, z);
+                              return null;
+                           });
+                     };
+                  }
+               }
+            )
+            .thenAccept(
+               ignored -> {
+                  int done = completed.incrementAndGet();
+                  if (done % 100 == 0 || done == total) {
+                     String msg = String.format("%s %d/%d chunks for world %s", mode == null ? "Verified" : "Recovering", done, total, world.getName());
+                     ((HytaleLogger.Api)this.getLogger().atInfo()).log(msg);
+                     String statusKey = mode == null ? "client.gameLoadingView.status.verifiedChunks" : "client.gameLoadingView.status.recoveringChunks";
+                     double progress = MathUtil.round((double)done / total, 2) * 100.0;
+                     HytaleServer.get()
+                        .reportSingleplayerStatus(
+                           Message.translation(statusKey).param("done", done).param("total", total).param("name", world.getName()), progress
+                        );
+                  }
+               }
+            )
+            .whenComplete((v, throwable) -> {
+               if (throwable != null) {
+                  result.completeExceptionally(throwable);
+               } else {
+                  this.verifyNextChunk(result, world, loader, saver, fallbackLoader, iterator, completed, corrupted, total);
+               }
+            });
+      }
+   }
+
+   private static void collectBackupZips(@Nonnull Path dir, @Nonnull DateTimeFormatter formatter, @Nonnull List<Path> out) {
+      if (Files.isDirectory(dir)) {
+         try (Stream<Path> stream = Files.list(dir)) {
+            stream.filter(p -> Files.isRegularFile(p) && p.getFileName().toString().endsWith(".zip")).filter(p -> {
+               String name = p.getFileName().toString();
+               name = name.substring(0, name.length() - 4);
+
+               try {
+                  LocalDateTime.parse(name, formatter);
+                  return true;
+               } catch (DateTimeParseException var4) {
+                  return false;
+               }
+            }).forEach(out::add);
+         } catch (IOException var8) {
          }
       }
    }
@@ -372,7 +637,11 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    }
 
    public void disconnectAllPLayers() {
-      this.players.values().forEach(player -> player.getPacketHandler().disconnect("Stopping server!"));
+      ShutdownReason reason = HytaleServer.get().getShutdownReason();
+      FormattedMessage message = reason != null && reason.getFormattedMessage() != null
+         ? reason.getFormattedMessage()
+         : Message.translation("server.general.disconnect.stoppingServer").getFormattedMessage();
+      this.players.values().forEach(player -> player.getPacketHandler().disconnect(message));
    }
 
    public void shutdownAllWorlds() {
@@ -597,8 +866,6 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          if (event.isCancelled()) {
             return false;
          } else {
-            this.worlds.remove(nameLower);
-            this.worldsByUuid.remove(world.getWorldConfig().getUuid());
             if (world.isAlive()) {
                if (world.isInThread()) {
                   world.stopIndividualWorld();
@@ -607,6 +874,8 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                }
             }
 
+            this.worlds.remove(nameLower);
+            this.worldsByUuid.remove(world.getWorldConfig().getUuid());
             world.validateDeleteOnRemove();
             return true;
          }
@@ -625,8 +894,6 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
             .getEventBus()
             .dispatchFor(RemoveWorldEvent.class, name)
             .dispatch(new RemoveWorldEvent(world, RemoveWorldEvent.RemovalReason.EXCEPTIONAL));
-         this.worlds.remove(nameLower);
-         this.worldsByUuid.remove(world.getWorldConfig().getUuid());
          if (world.isAlive()) {
             if (world.isInThread()) {
                world.stopIndividualWorld(players);
@@ -635,6 +902,8 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
             }
          }
 
+         this.worlds.remove(nameLower);
+         this.worldsByUuid.remove(world.getWorldConfig().getUuid());
          world.validateDeleteOnRemove();
       }
    }
@@ -765,7 +1034,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                PlayerRef existingPlayer = this.players.putIfAbsent(uuid, playerRefComponent);
                if (existingPlayer != null) {
                   this.getLogger().at(Level.WARNING).log("Player '%s' (%s) already joining from another connection, rejecting duplicate", username, uuid);
-                  playerConnection.disconnect("A connection with this account is already in progress");
+                  playerConnection.disconnect(Message.translation("client.general.disconnect.accountAlreadyConnecting"));
                   return CompletableFuture.completedFuture(null);
                } else {
                   String lastWorldName = playerConfig.getWorld();
@@ -782,7 +1051,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                      World world = event.getWorld() != null ? event.getWorld() : this.getDefaultWorld();
                      if (world == null) {
                         this.players.remove(uuid, playerRefComponent);
-                        playerConnection.disconnect("No world available to join");
+                        playerConnection.disconnect(Message.translation("client.general.disconnect.noWorldAvailable"));
                         this.getLogger().at(Level.SEVERE).log("Player '%s' (%s) could not join - no default world configured", username, uuid);
                         return CompletableFuture.completedFuture(null);
                      } else {
@@ -892,7 +1161,11 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
             HytaleServer.get().shutdownServer();
          } else if (SingleplayerModule.isOwner(playerRef)) {
             this.getLogger().at(Level.INFO).log("Owner left the singleplayer server shutting down!");
-            this.getPlayers().forEach(p -> p.getPacketHandler().disconnect(playerRef.getUsername() + " left! Shutting down singleplayer world!"));
+            this.getPlayers()
+               .forEach(
+                  p -> p.getPacketHandler()
+                     .disconnect(Message.translation("server.general.disconnect.singleplayerOwnerLeft").param("username", playerRef.getUsername()))
+               );
             HytaleServer.get().shutdownServer();
          }
       }

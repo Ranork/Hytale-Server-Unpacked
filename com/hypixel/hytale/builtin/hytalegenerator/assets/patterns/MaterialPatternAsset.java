@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.patterns;
 
 import com.hypixel.hytale.builtin.hytalegenerator.assets.material.MaterialAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.MaterialPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -22,7 +23,7 @@ public class MaterialPatternAsset extends PatternAsset {
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
       if (super.isSkipped()) {
-         return Pattern.noPattern();
+         return ConstantPattern.INSTANCE_FALSE;
       } else {
          Material material = this.materialAsset.build(argument.materialCache);
          return new MaterialPattern(material);

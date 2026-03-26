@@ -96,22 +96,28 @@ public abstract class Option {
       CommandBuffer<EntityStore> commandBuffer,
       @Nonnull EvaluationContext context
    ) {
-      NPCEntity npcComponent = archetypeChunk.getComponent(selfIndex, NPCEntity.getComponentType());
-
-      assert npcComponent != null;
-
-      UUIDComponent uuidComponent = archetypeChunk.getComponent(selfIndex, UUIDComponent.getComponentType());
-
-      assert uuidComponent != null;
-
+      NPCEntity npcComponent = null;
+      UUIDComponent uuidComponent = null;
       double compensationFactor = 1.0 - 1.0 / this.sortedConditions.length;
       double result = 1.0;
+      HytaleLogger.Api logContext = Evaluator.LOGGER.at(Level.FINE);
 
       for (Option.ConditionReference reference : this.sortedConditions) {
          Condition condition = reference.get();
          double score = condition.calculateUtility(selfIndex, archetypeChunk, target, commandBuffer, context);
-         HytaleLogger.Api logContext = Evaluator.LOGGER.at(Level.FINE);
          if (logContext.isEnabled()) {
+            if (npcComponent == null) {
+               npcComponent = archetypeChunk.getComponent(selfIndex, NPCEntity.getComponentType());
+
+               assert npcComponent != null;
+            }
+
+            if (uuidComponent == null) {
+               uuidComponent = archetypeChunk.getComponent(selfIndex, UUIDComponent.getComponentType());
+
+               assert uuidComponent != null;
+            }
+
             logContext.log("%s with uuid %s: Scored condition %s at %s", npcComponent.getRoleName(), uuidComponent.getUuid(), condition, score);
          }
 

@@ -29,7 +29,7 @@ import com.hypixel.hytale.server.spawning.world.component.ChunkSpawnData;
 import com.hypixel.hytale.server.spawning.world.component.ChunkSpawnedNPCData;
 import com.hypixel.hytale.server.spawning.world.component.WorldSpawnData;
 import java.util.Iterator;
-import java.util.Set;
+import java.util.List;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -131,7 +131,7 @@ public class WorldSpawnTrackingSystem extends RefSystem<EntityStore> {
                      );
                   }
 
-                  Set<Ref<ChunkStore>> chunkOptions = worldSpawnData.getWorldEnvironmentSpawnData(environmentIndex).getChunkRefSet();
+                  List<Ref<ChunkStore>> chunkOptions = worldSpawnData.getWorldEnvironmentSpawnData(environmentIndex).getChunkRefList();
                   Iterator<Ref<ChunkStore>> iterator = chunkOptions.iterator();
 
                   while (iterator.hasNext() && count > 0.0) {
@@ -226,7 +226,7 @@ public class WorldSpawnTrackingSystem extends RefSystem<EntityStore> {
                      );
                   }
 
-                  Set<Ref<ChunkStore>> chunkOptions = worldSpawnData.getWorldEnvironmentSpawnData(environmentIndex).getChunkRefSet();
+                  List<Ref<ChunkStore>> chunkOptions = worldSpawnData.getWorldEnvironmentSpawnData(environmentIndex).getChunkRefList();
                   Iterator<Ref<ChunkStore>> iterator = chunkOptions.iterator();
 
                   while (iterator.hasNext() && count > 0.0) {

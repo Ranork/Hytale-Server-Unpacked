@@ -12,10 +12,8 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.ValueType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
@@ -75,12 +73,9 @@ public class StatsConditionWithModifierInteraction extends StatsConditionBaseInt
             }
 
             float statValue = this.valueType == ValueType.Absolute ? stat.get() : stat.asPercentage() * 100.0F;
-            Inventory inventory = null;
-            if (EntityUtils.getEntity(ref, componentAccessor) instanceof LivingEntity livingEntity) {
-               inventory = livingEntity.getInventory();
-            }
-
-            float modifiedCost = this.calculateDiscount(inventory, cost.getIntKey(), cost.getFloatValue());
+            InventoryComponent.Armor armorComponent = componentAccessor.getComponent(ref, InventoryComponent.Armor.getComponentType());
+            ItemContainer armorContainer = armorComponent != null ? armorComponent.getInventory() : null;
+            float modifiedCost = this.calculateDiscount(armorContainer, cost.getIntKey(), cost.getFloatValue());
             if (this.lessThan) {
                if (statValue >= modifiedCost) {
                   return false;
@@ -94,14 +89,9 @@ public class StatsConditionWithModifierInteraction extends StatsConditionBaseInt
       }
    }
 
-   private float calculateDiscount(@Nullable Inventory inventory, int statIndex, float baseCost) {
+   private float calculateDiscount(@Nullable ItemContainer armorContainer, int statIndex, float baseCost) {
       float flatModifier = 0.0F;
       float multiplierModifier = 0.0F;
-      ItemContainer armorContainer = null;
-      if (inventory != null) {
-         armorContainer = inventory.getArmor();
-      }
-
       if (armorContainer != null) {
          for (short i = 0; i < armorContainer.getCapacity(); i++) {
             ItemStack itemStack = armorContainer.getItemStack(i);

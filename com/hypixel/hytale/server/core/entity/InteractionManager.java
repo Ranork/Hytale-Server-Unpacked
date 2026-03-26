@@ -27,6 +27,7 @@ import com.hypixel.hytale.protocol.packets.inventory.SetActiveSlot;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
 import com.hypixel.hytale.server.core.modules.interaction.IInteractionSimulationHandler;
@@ -790,7 +791,7 @@ public class InteractionManager implements Component<EntityStore> {
                   return false;
                }
 
-               context = InteractionContext.forProxyEntity(this, this.entity, proxyTarget);
+               context = InteractionContext.forProxyEntity(this, ref, proxyTarget, this.commandBuffer);
             } else {
                context = InteractionContext.forInteraction(this, ref, type, packet.equipSlot, this.commandBuffer);
             }
@@ -799,7 +800,7 @@ public class InteractionManager implements Component<EntityStore> {
             if (rootInteractionId == null) {
                HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
                if (ctx.isEnabled()) {
-                  ctx.log("Missing root interaction: %d, %s, %s", index, this.entity.getInventory().getItemInHand(), type);
+                  ctx.log("Missing root interaction: %d, %s, %s", index, InventoryComponent.getItemInHand(this.commandBuffer, ref), type);
                }
 
                this.sendCancelPacket(index, packet.forkedId);

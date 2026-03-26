@@ -19,10 +19,8 @@ import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
@@ -85,13 +83,13 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
          super.tick0(firstRun, time, type, context, cooldownHandler);
       } else {
          Ref<EntityStore> ref = context.getEntity();
-         if (!(EntityUtils.getEntity(ref, commandBuffer) instanceof LivingEntity livingEntity)) {
+         InventoryComponent.Hotbar hotbarComponent = commandBuffer.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent == null) {
             context.getState().state = InteractionState.Failed;
             super.tick0(firstRun, time, type, context, cooldownHandler);
          } else {
-            Inventory inventory = livingEntity.getInventory();
-            byte activeHotbarSlot = inventory.getActiveHotbarSlot();
-            ItemStack inHandItemStack = inventory.getActiveHotbarItem();
+            byte activeHotbarSlot = hotbarComponent.getActiveSlot();
+            ItemStack inHandItemStack = hotbarComponent.getActiveItem();
             if (inHandItemStack == null) {
                context.getState().state = InteractionState.Failed;
                super.tick0(firstRun, time, type, context, cooldownHandler);
@@ -150,7 +148,7 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                                  }
 
                                  ItemStack itemWithNPC = inHandItemStack.withMetadata(CapturedNPCMetadata.KEYED_CODEC, itemMetaData);
-                                 inventory.getHotbar().replaceItemStackInSlot(activeHotbarSlot, item, itemWithNPC);
+                                 hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, itemWithNPC);
                                  commandBuffer.removeEntity(targetEntity, RemoveReason.REMOVE);
                               }
                            }
@@ -178,9 +176,11 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
          context.getState().state = InteractionState.Failed;
       } else {
          Ref<EntityStore> ref = context.getEntity();
-         if (EntityUtils.getEntity(ref, commandBuffer) instanceof LivingEntity livingEntity) {
-            Inventory inventory = livingEntity.getInventory();
-            byte activeHotbarSlot = inventory.getActiveHotbarSlot();
+         InventoryComponent.Hotbar hotbarComponent = commandBuffer.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent == null) {
+            context.getState().state = InteractionState.Failed;
+         } else {
+            byte activeHotbarSlot = hotbarComponent.getActiveSlot();
             CapturedNPCMetadata existingMeta = item.getFromMetadataOrNull("CapturedEntity", CapturedNPCMetadata.CODEC);
             if (existingMeta == null) {
                context.getState().state = InteractionState.Failed;
@@ -211,7 +211,7 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                                     world, world.getEntityStore().getStore(), new Vector3d(pos.x, pos.y, pos.z), new Vector3d().assign(Vector3d.FORWARD)
                                  )
                               );
-                              inventory.getHotbar().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
+                              hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
                               context.getState().state = InteractionState.Finished;
                            } else {
                               context.getState().state = InteractionState.Failed;
@@ -232,12 +232,10 @@ public class UseCaptureCrateInteraction extends SimpleBlockInteraction {
                      String roleId = existingMeta.getNpcNameKey();
                      int roleIndex = NPCPlugin.get().getIndex(roleId);
                      commandBuffer.run(_store -> NPCPlugin.get().spawnEntity(_store, roleIndex, spawnPos, Vector3f.ZERO, null, null));
-                     inventory.getHotbar().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
+                     hotbarComponent.getInventory().replaceItemStackInSlot(activeHotbarSlot, item, noMetaItemStack);
                   }
                }
             }
-         } else {
-            context.getState().state = InteractionState.Failed;
          }
       }
    }

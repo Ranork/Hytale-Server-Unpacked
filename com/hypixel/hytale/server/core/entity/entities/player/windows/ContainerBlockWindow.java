@@ -53,13 +53,11 @@ public class ContainerBlockWindow extends BlockWindow implements ItemContainerWi
    @Override
    public void handleAction(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull WindowAction action) {
       if (action instanceof SortItemsAction sortAction) {
-         SortType sortType = SortType.fromPacket(sortAction.sortType);
          Player playerComponent = store.getComponent(ref, Player.getComponentType());
 
          assert playerComponent != null;
 
-         playerComponent.getInventory().setSortType(sortType);
-         this.itemContainer.sortItems(sortType);
+         this.itemContainer.sortItems(SortType.TYPE);
          this.invalidate();
       }
    }

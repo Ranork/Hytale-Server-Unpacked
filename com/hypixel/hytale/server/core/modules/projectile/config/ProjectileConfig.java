@@ -255,6 +255,7 @@ public class ProjectileConfig
       config.spawnOffset = this.spawnOffset;
       config.rotationOffset = this.spawnRotationOffset;
       config.launchLocalSoundEventIndex = this.launchLocalSoundEventIndex;
+      config.launchWorldSoundEventIndex = this.launchWorldSoundEventIndex;
       config.projectileSoundEventIndex = this.projectileSoundEventIndex;
       config.interactions = new EnumMap<>(InteractionType.class);
 

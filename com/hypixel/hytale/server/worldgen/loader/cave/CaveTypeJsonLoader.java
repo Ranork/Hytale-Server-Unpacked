@@ -6,6 +6,7 @@ import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
 import com.hypixel.hytale.procedurallib.condition.HeightThresholdCoordinateCondition;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
 import com.hypixel.hytale.procedurallib.condition.IHeightThresholdInterpreter;
+import com.hypixel.hytale.procedurallib.file.FileIO;
 import com.hypixel.hytale.procedurallib.json.DoubleRangeJsonLoader;
 import com.hypixel.hytale.procedurallib.json.FloatRangeJsonLoader;
 import com.hypixel.hytale.procedurallib.json.HeightThresholdInterpreterJsonLoader;
@@ -28,6 +29,7 @@ import com.hypixel.hytale.server.worldgen.loader.prefab.BlockPlacementMaskJsonLo
 import com.hypixel.hytale.server.worldgen.util.ConstantNoiseProperty;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
 import com.hypixel.hytale.server.worldgen.util.condition.flag.Int2FlagsCondition;
+import java.io.File;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -96,17 +98,28 @@ public class CaveTypeJsonLoader extends JsonLoader<SeedStringResource, CaveType>
       JsonElement entry = this.get("Entry");
       if (entry == null) {
          throw new IllegalArgumentException("\"Entry\" is not defined. Define an entry node type");
-      } else {
-         CaveNodeTypeStorage caveNodeTypeStorage = new CaveNodeTypeStorage(this.seed, this.dataFolder, this.caveFolder, this.zoneContext);
-         if (entry.isJsonObject()) {
-            String entryNodeTypeString = this.seed.get().getUniqueName("CaveType#");
-            return caveNodeTypeStorage.loadCaveNodeType(entryNodeTypeString, entry.getAsJsonObject());
-         } else if (entry.isJsonPrimitive() && entry.getAsJsonPrimitive().isString()) {
-            String entryNodeTypeString = entry.getAsString();
-            return caveNodeTypeStorage.loadCaveNodeType(entryNodeTypeString);
-         } else {
-            throw error("Invalid entry node type definition! Expected String or JsonObject: " + entry);
+      } else if (entry.isJsonObject()) {
+         String entryNodeTypeString = this.seed.get().getUniqueName("CaveType#");
+         return new CaveNodeTypeStorage(this.seed, this.dataFolder, this.caveFolder, this.zoneContext)
+            .loadCaveNodeType(entryNodeTypeString, entry.getAsJsonObject());
+      } else if (entry.isJsonPrimitive() && entry.getAsJsonPrimitive().isString()) {
+         Path caveFolder = this.caveFolder;
+         ZoneFileContext zoneContext = this.zoneContext;
+         String entryNodeTypeString = entry.getAsString();
+         if (entryNodeTypeString.startsWith("Zones.")) {
+            Path filepath = this.dataFolder.resolve(entryNodeTypeString.replace(".", File.separator));
+            Path relPath = FileIO.relativize(filepath, this.dataFolder);
+            if (relPath.getNameCount() > 1) {
+               String zoneName = relPath.getName(1).toString();
+               zoneContext = zoneContext.getParentContext().getZones().get(zoneName);
+               caveFolder = zoneContext.getPath().resolve("Cave");
+               entryNodeTypeString = FileIO.relativize(filepath, caveFolder).toString().replace(File.separator, ".");
+            }
          }
+
+         return new CaveNodeTypeStorage(this.seed, this.dataFolder, caveFolder, zoneContext).loadCaveNodeType(entryNodeTypeString);
+      } else {
+         throw error("Invalid entry node type definition! Expected String or JsonObject: " + entry);
       }
    }
 

@@ -85,11 +85,14 @@ public class PortalDevicePageSupplier implements OpenCustomUIInteraction.CustomP
                      world.setBlockInteractionState(new Vector3i(targetBlock.x, targetBlock.y, targetBlock.z), blockType, this.config.getOffState());
                      playerRef.sendMessage(Message.translation("server.portals.device.adjusted").color("#ff0000"));
                      return null;
-                  } else if (existingDevice != null && destinationWorld != null) {
-                     return new PortalDeviceActivePage(playerRef, this.config, blockRef);
                   } else {
-                     chunkStore.getStore().putComponent(blockRef, PortalDevice.getComponentType(), new PortalDevice(this.config, blockType.getId()));
-                     return new PortalDeviceSummonPage(playerRef, this.config, blockRef, inHand);
+                     boolean isLoading = existingDevice != null && existingDevice.isLoadingWorld();
+                     if ((existingDevice == null || destinationWorld == null) && !isLoading) {
+                        chunkStore.getStore().putComponent(blockRef, PortalDevice.getComponentType(), new PortalDevice(this.config, blockType.getId()));
+                        return new PortalDeviceSummonPage(playerRef, this.config, blockRef, inHand);
+                     } else {
+                        return new PortalDeviceActivePage(playerRef, this.config, blockRef);
+                     }
                   }
                }
             }

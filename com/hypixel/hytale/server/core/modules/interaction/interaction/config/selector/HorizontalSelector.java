@@ -284,7 +284,7 @@ public class HorizontalSelector extends SelectorType {
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 11L),
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 12L)
             );
-            DebugUtils.addFrustum(commandBuffer.getExternalData().getWorld(), matrix, this.projectionProvider.getMatrix(), color, 5.0F, true);
+            DebugUtils.addFrustum(commandBuffer.getExternalData().getWorld(), matrix, this.projectionProvider.getMatrix(), color, 5.0F, DebugUtils.FLAG_FADE);
          }
 
          this.runTimeDeltaPercentageSum += runTimeDeltaPercentage;

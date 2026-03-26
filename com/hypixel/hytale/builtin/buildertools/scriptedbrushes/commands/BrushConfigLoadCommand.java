@@ -14,6 +14,9 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.AssetArgumentType;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -72,6 +75,7 @@ public class BrushConfigLoadCommand extends AbstractPlayerCommand {
          @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
       ) {
          UUID playerUUID = playerRef.getUuid();
+         Player playerComponent = store.getComponent(ref, Player.getComponentType());
          PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(playerUUID);
          BrushConfig brushConfig = prototypeSettings.getBrushConfig();
          BrushConfigCommandExecutor brushConfigCommandExecutor = prototypeSettings.getBrushConfigCommandExecutor();
@@ -79,10 +83,20 @@ public class BrushConfigLoadCommand extends AbstractPlayerCommand {
             playerRef.sendMessage(MESSAGE_COMMANDS_BRUSH_CONFIG_CANNOT_USE_COMMAND_DURING_EXEC);
          } else {
             ScriptedBrushAsset brushAssetArg = this.brushNameArg.get(context);
+            String brushId = brushAssetArg.getId();
             brushAssetArg.loadIntoExecutor(brushConfigCommandExecutor);
-            prototypeSettings.setCurrentlyLoadedBrushConfigName(brushAssetArg.getId());
+            prototypeSettings.setCurrentlyLoadedBrushConfigName(brushId);
             prototypeSettings.setUsePrototypeBrushConfigurations(true);
-            playerRef.sendMessage(Message.translation("server.commands.brushConfig.loaded").param("name", brushAssetArg.getId()));
+            Inventory inventory = playerComponent.getInventory();
+            ItemContainer hotbar = inventory.getHotbar();
+            String editorToolItemId = ScriptedBrushAsset.getEditorToolItemId(brushId);
+            if (editorToolItemId == null) {
+               editorToolItemId = "EditorTool_ScriptedBrushTemplate";
+            }
+
+            hotbar.setItemStackForSlot(inventory.getActiveHotbarSlot(), new ItemStack(editorToolItemId));
+            prototypeSettings.setPrototypeItemId(editorToolItemId);
+            playerRef.sendMessage(Message.translation("server.commands.brushConfig.loaded").param("name", brushId));
          }
       }
    }

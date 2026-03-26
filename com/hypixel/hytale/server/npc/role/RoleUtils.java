@@ -1,6 +1,9 @@
 package com.hypixel.hytale.server.npc.role;
 
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
@@ -25,8 +28,10 @@ public class RoleUtils {
       }
    }
 
-   public static void setItemInHand(@Nonnull NPCEntity npcComponent, @Nullable String itemInHand) {
-      if (!InventoryHelper.useItem(npcComponent.getInventory(), itemInHand)) {
+   public static void setItemInHand(
+      @Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nullable String itemInHand, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      if (!InventoryHelper.useItem(ref, npcComponent.getInventory(), itemInHand, componentAccessor)) {
          NPCPlugin.get().getLogger().at(Level.WARNING).log("NPC of type '%s': Failed to use item '%s'", npcComponent.getRoleName(), itemInHand);
       }
    }

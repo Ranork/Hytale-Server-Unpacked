@@ -7,10 +7,10 @@ import javax.annotation.Nonnull;
 
 public class MovementStatesUpdate extends ComponentUpdate {
    public static final int NULLABLE_BIT_FIELD_SIZE = 0;
-   public static final int FIXED_BLOCK_SIZE = 22;
+   public static final int FIXED_BLOCK_SIZE = 23;
    public static final int VARIABLE_FIELD_COUNT = 0;
-   public static final int VARIABLE_BLOCK_START = 22;
-   public static final int MAX_SIZE = 22;
+   public static final int VARIABLE_BLOCK_START = 23;
+   public static final int MAX_SIZE = 23;
    @Nonnull
    public MovementStates movementStates = new MovementStates();
 
@@ -33,7 +33,7 @@ public class MovementStatesUpdate extends ComponentUpdate {
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
-      return 22;
+      return 23;
    }
 
    @Override
@@ -45,11 +45,11 @@ public class MovementStatesUpdate extends ComponentUpdate {
 
    @Override
    public int computeSize() {
-      return 22;
+      return 23;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 22 ? ValidationResult.error("Buffer too small: expected at least 22 bytes") : ValidationResult.OK;
+      return buffer.readableBytes() - offset < 23 ? ValidationResult.error("Buffer too small: expected at least 23 bytes") : ValidationResult.OK;
    }
 
    public MovementStatesUpdate clone() {

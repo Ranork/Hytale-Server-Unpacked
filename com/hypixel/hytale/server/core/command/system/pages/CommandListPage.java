@@ -238,9 +238,7 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
          throw new IllegalArgumentException("Unknown command: " + commandName);
       } else {
          commandBuilder.set("#CommandName.TextSpans", Message.raw(commandName));
-         String description = command.getDescription();
          Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-         commandBuilder.set("#CommandDescription.TextSpans", description != null ? Message.translation(description) : Message.empty());
          this.selectedSubcommand = null;
          this.selectedVariantIndex = null;
          this.subcommandBreadcrumb.clear();
@@ -281,8 +279,6 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
                this.selectedSubcommand = subcommandName;
                this.selectedVariantIndex = null;
                this.updateTitleWithBreadcrumb(commandBuilder);
-               String description = subcommand.getDescription();
-               commandBuilder.set("#CommandDescription.TextSpans", description != null ? Message.translation(description) : Message.empty());
                this.buildSubcommandTabs(subcommand, playerComponent, commandBuilder, eventBuilder);
                commandBuilder.set("#BackButton.Visible", true);
                this.displayCommandInfo(subcommand, playerComponent, commandBuilder, eventBuilder);
@@ -323,10 +319,12 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
             this.updateTitleWithVariantSuffix(commandBuilder);
             commandBuilder.set("#VariantsSection.Visible", false);
             commandBuilder.set("#BackButton.Visible", true);
+            String variantDescription = variant.getDescription();
+            commandBuilder.set("#CommandDescription.TextSpans", variantDescription != null ? Message.translation(variantDescription) : Message.empty());
             commandBuilder.set("#CommandUsageLabel.TextSpans", this.getSimplifiedUsage(variant, playerComponent));
             this.buildParametersSection(variant, playerComponent, commandBuilder);
             this.buildArgumentTypesSection(variant, playerComponent, commandBuilder);
-         } catch (Exception var11) {
+         } catch (Exception var12) {
          }
       }
    }
@@ -441,8 +439,9 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
          titleText.append(" > ").append(part);
       }
 
-      titleText.append(" [Variant]");
-      commandBuilder.set("#CommandName.TextSpans", Message.raw(titleText.toString()));
+      commandBuilder.set(
+         "#CommandName.TextSpans", Message.raw(titleText.toString()).insert(" ").insert(Message.translation("server.customUI.commandListPage.variantSuffix"))
+      );
    }
 
    private void buildAliasesSection(@Nonnull AbstractCommand command, @Nonnull UICommandBuilder commandBuilder) {
@@ -508,6 +507,8 @@ public class CommandListPage extends InteractiveCustomUIPage<CommandListPage.Com
    private void displayCommandInfo(
       @Nonnull AbstractCommand command, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder
    ) {
+      String description = command.getDescription();
+      commandBuilder.set("#CommandDescription.TextSpans", description != null ? Message.translation(description) : Message.empty());
       this.buildVariantsSection(command, playerComponent, commandBuilder, eventBuilder);
       this.buildAliasesSection(command, commandBuilder);
       this.buildPermissionSection(command, commandBuilder);

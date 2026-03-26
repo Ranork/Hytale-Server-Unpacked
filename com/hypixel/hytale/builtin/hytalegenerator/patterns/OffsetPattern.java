@@ -1,8 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
-import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class OffsetPattern extends Pattern {
    @Nonnull
@@ -10,7 +11,7 @@ public class OffsetPattern extends Pattern {
    @Nonnull
    private final Vector3i offset;
    @Nonnull
-   private final SpaceSize readSpaceSize;
+   private final Bounds3i bounds_voxelGrid;
    @Nonnull
    private final Vector3i rChildPosition;
    @Nonnull
@@ -19,7 +20,7 @@ public class OffsetPattern extends Pattern {
    public OffsetPattern(@Nonnull Pattern pattern, @Nonnull Vector3i offset) {
       this.pattern = pattern;
       this.offset = offset;
-      this.readSpaceSize = pattern.readSpace().moveBy(offset);
+      this.bounds_voxelGrid = pattern.getBounds_voxelGrid().clone().offset(offset);
       this.rChildPosition = new Vector3i();
       this.rChildContext = new Pattern.Context();
    }
@@ -32,9 +33,9 @@ public class OffsetPattern extends Pattern {
       return this.pattern.matches(this.rChildContext);
    }
 
-   @Nonnull
+   @NonNullDecl
    @Override
-   public SpaceSize readSpace() {
-      return this.readSpaceSize.clone();
+   public Bounds3i getBounds_voxelGrid() {
+      return this.bounds_voxelGrid;
    }
 }

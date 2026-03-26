@@ -10,16 +10,19 @@ import com.hypixel.hytale.metrics.MetricsRegistry;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import com.hypixel.hytale.metrics.metric.Metric;
 import com.hypixel.hytale.protocol.CachedPacket;
+import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.ToServerPacket;
 import com.hypixel.hytale.protocol.io.PacketStatsRecorder;
 import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
-import com.hypixel.hytale.protocol.packets.connection.Disconnect;
 import com.hypixel.hytale.protocol.packets.connection.DisconnectType;
 import com.hypixel.hytale.protocol.packets.connection.Ping;
 import com.hypixel.hytale.protocol.packets.connection.Pong;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
+import com.hypixel.hytale.protocol.packets.connection.ServerDisconnect;
+import com.hypixel.hytale.protocol.packets.stream.StreamType;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.io.adapter.PacketAdapters;
 import com.hypixel.hytale.server.core.io.handlers.login.AuthenticationPacketHandler;
@@ -28,6 +31,7 @@ import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.io.transport.QUICTransport;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.receiver.IPacketReceiver;
+import com.hypixel.hytale.server.core.util.MessageUtil;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.local.LocalAddress;
@@ -46,11 +50,14 @@ import java.net.SocketAddress;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BooleanSupplier;
@@ -91,6 +98,10 @@ public abstract class PacketHandler implements IPacketReceiver {
    protected CompletableFuture<Void> clientReadyForChunksFuture;
    @Nonnull
    protected final PacketHandler.DisconnectReason disconnectReason = new PacketHandler.DisconnectReason();
+   @Nonnull
+   private final Map<StreamType, Channel> auxiliaryChannels = Collections.synchronizedMap(new EnumMap<>(StreamType.class));
+   private final AtomicLong lastStreamOpenTimeNanos = new AtomicLong();
+   private static final long STREAM_OPEN_MIN_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(1L);
 
    public PacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion) {
       this.channels[0] = channel;
@@ -107,14 +118,9 @@ public abstract class PacketHandler implements IPacketReceiver {
       return this.channels[0];
    }
 
-   @Deprecated(forRemoval = true)
-   public void setCompressionEnabled(boolean compressionEnabled) {
-      HytaleLogger.getLogger().at(Level.INFO).log(this.getIdentifier() + " compression now handled by encoder");
-   }
-
-   @Deprecated(forRemoval = true)
-   public boolean isCompressionEnabled() {
-      return true;
+   @Nullable
+   public Channel getChannel(@Nonnull StreamType type) {
+      return type == StreamType.Game ? this.channels[0] : this.auxiliaryChannels.get(type);
    }
 
    @Nonnull
@@ -256,17 +262,26 @@ public abstract class PacketHandler implements IPacketReceiver {
       return (ToClientPacket)(packet instanceof CachedPacket ? packet : CachedPacket.cache(packet));
    }
 
-   public void disconnect(@Nonnull String message) {
+   public void disconnect(@Nonnull Message message) {
+      this.disconnect(message.getFormattedMessage());
+   }
+
+   public void disconnect(@Nonnull FormattedMessage message) {
       this.disconnectReason.setServerDisconnectReason(message);
       String sni = this.getSniHostname();
       HytaleLogger.getLogger()
          .at(Level.INFO)
-         .log("Disconnecting %s (SNI: %s) with the message: %s", NettyUtil.formatRemoteAddress(this.getChannel()), sni, message);
+         .log(
+            "Disconnecting %s (SNI: %s) with the message: %s",
+            NettyUtil.formatRemoteAddress(this.getChannel()),
+            sni,
+            MessageUtil.formatMessageToPlainString(message)
+         );
       this.disconnect0(message);
    }
 
-   protected void disconnect0(@Nonnull String message) {
-      this.getChannel().writeAndFlush(new Disconnect(message, DisconnectType.Disconnect)).addListener(ProtocolUtil.CLOSE_ON_COMPLETE);
+   protected void disconnect0(@Nonnull FormattedMessage message) {
+      this.getChannel().writeAndFlush(new ServerDisconnect(message, DisconnectType.Disconnect)).addListener(ProtocolUtil.CLOSE_ON_COMPLETE);
    }
 
    @Nullable
@@ -357,7 +372,7 @@ public abstract class PacketHandler implements IPacketReceiver {
                         HytaleLogger.getLogger()
                            .at(Level.WARNING)
                            .log("Stage timeout for %s at stage '%s' after %s connected", this.getIdentifier(), stageId, duration);
-                        this.disconnect("Either you took too long to login or we took too long to process your request! Retry again in a moment.");
+                        this.disconnect(Message.translation("client.general.disconnect.stageTimeout"));
                      }
                   }
                },
@@ -435,6 +450,12 @@ public abstract class PacketHandler implements IPacketReceiver {
          : null;
    }
 
+   public boolean checkStreamOpenRateLimit() {
+      long now = System.nanoTime();
+      long prev = this.lastStreamOpenTimeNanos.getAndUpdate(last -> now - last >= STREAM_OPEN_MIN_INTERVAL_NANOS ? now : last);
+      return now - prev < STREAM_OPEN_MIN_INTERVAL_NANOS;
+   }
+
    @Nonnull
    public PacketHandler.DisconnectReason getDisconnectReason() {
       return this.disconnectReason;
@@ -464,6 +485,43 @@ public abstract class PacketHandler implements IPacketReceiver {
       this.channels[networkChannel.getValue()] = channel;
    }
 
+   public void setChannel(@Nonnull StreamType type, @Nullable Channel channel) {
+      if (type == StreamType.Game) {
+         throw new IllegalArgumentException("Cannot set Game stream via auxiliary channel API");
+      } else {
+         if (channel != null) {
+            this.auxiliaryChannels.put(type, channel);
+         } else {
+            this.auxiliaryChannels.remove(type);
+         }
+      }
+   }
+
+   public boolean compareAndSetChannel(@Nonnull StreamType type, @Nullable Channel expected, @Nullable Channel newValue) {
+      if (type == StreamType.Game) {
+         throw new IllegalArgumentException("Cannot CAS Game stream via auxiliary channel API");
+      } else {
+         synchronized (this.auxiliaryChannels) {
+            Channel current = this.auxiliaryChannels.get(type);
+            if (current == expected) {
+               if (newValue != null) {
+                  this.auxiliaryChannels.put(type, newValue);
+               } else {
+                  this.auxiliaryChannels.remove(type);
+               }
+
+               return true;
+            } else {
+               return false;
+            }
+         }
+      }
+   }
+
+   public int getAuxiliaryChannelCount() {
+      return this.auxiliaryChannels.size();
+   }
+
    public static void logConnectionTimings(@Nonnull Channel channel, @Nonnull String message, @Nonnull Level level) {
       Attribute<Long> loginStartAttribute = channel.attr(LOGIN_START_ATTRIBUTE_KEY);
       long now = System.nanoTime();
@@ -483,7 +541,7 @@ public abstract class PacketHandler implements IPacketReceiver {
 
    public static class DisconnectReason {
       @Nullable
-      private String serverDisconnectReason;
+      private FormattedMessage serverDisconnectReason;
       @Nullable
       private DisconnectType clientDisconnectType;
 
@@ -492,12 +550,22 @@ public abstract class PacketHandler implements IPacketReceiver {
 
       @Nullable
       public String getServerDisconnectReason() {
+         return this.serverDisconnectReason != null ? MessageUtil.formatMessageToPlainString(this.serverDisconnectReason) : null;
+      }
+
+      @Nullable
+      public FormattedMessage getServerDisconnectReasonFormatted() {
          return this.serverDisconnectReason;
       }
 
-      public void setServerDisconnectReason(String serverDisconnectReason) {
+      public void setServerDisconnectReason(@Nullable FormattedMessage serverDisconnectReason) {
          this.serverDisconnectReason = serverDisconnectReason;
          this.clientDisconnectType = null;
+      }
+
+      @Deprecated
+      public void setServerDisconnectReason(@Nullable String serverDisconnectReason) {
+         this.setServerDisconnectReason(serverDisconnectReason != null ? Message.raw(serverDisconnectReason).getFormattedMessage() : null);
       }
 
       @Nullable

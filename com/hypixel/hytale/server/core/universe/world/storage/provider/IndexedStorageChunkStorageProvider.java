@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.BufferChunkSaver;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
+import com.hypixel.hytale.server.core.util.io.FileUtil;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import com.hypixel.hytale.storage.IndexedStorageFile;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -70,12 +71,35 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
 
    @Nonnull
    public IChunkLoader getLoader(@Nonnull IndexedStorageChunkStorageProvider.IndexedStorageCache cache, @Nonnull Store<ChunkStore> store) {
-      return new IndexedStorageChunkStorageProvider.IndexedStorageChunkLoader(store, cache, this.flushOnWrite);
+      return new IndexedStorageChunkStorageProvider.IndexedStorageChunkLoader(store, cache, this.flushOnWrite, false);
    }
 
    @Nonnull
    public IChunkSaver getSaver(@Nonnull IndexedStorageChunkStorageProvider.IndexedStorageCache cache, @Nonnull Store<ChunkStore> store) {
       return new IndexedStorageChunkStorageProvider.IndexedStorageChunkSaver(store, cache, this.flushOnWrite);
+   }
+
+   @Override
+   public void beginRecovery(Path file, Path recoveryPath) throws IOException {
+      FileUtil.atomicMove(file.resolve("chunks"), recoveryPath.resolve("chunks"));
+   }
+
+   @Override
+   public void revertRecovery(Path file, Path recoveryPath) throws IOException {
+      Path chunks = file.resolve("chunks");
+      if (Files.exists(chunks)) {
+         FileUtil.deleteDirectory(chunks);
+      }
+
+      FileUtil.atomicMove(recoveryPath.resolve("chunks"), chunks);
+   }
+
+   @Nullable
+   @Override
+   public IChunkLoader getRecoveryLoader(@Nonnull Store<ChunkStore> store, Path backupPath) {
+      IndexedStorageChunkStorageProvider.IndexedStorageCache cache = new IndexedStorageChunkStorageProvider.IndexedStorageCache();
+      cache.path = backupPath.resolve("chunks");
+      return new IndexedStorageChunkStorageProvider.IndexedStorageChunkLoader(store, cache, false, true);
    }
 
    @Nonnull
@@ -199,7 +223,7 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
             LongOpenHashSet chunkIndexes = new LongOpenHashSet();
 
             try (Stream<Path> stream = Files.list(this.path)) {
-               stream.forEach(path -> {
+               stream.forEach(SneakyThrow.sneakyConsumer(path -> {
                   if (!Files.isDirectory(path)) {
                      long regionIndex;
                      try {
@@ -210,7 +234,7 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
 
                      int regionX = ChunkUtil.xOfChunkIndex(regionIndex);
                      int regionZ = ChunkUtil.zOfChunkIndex(regionIndex);
-                     IndexedStorageFile regionFile = this.getOrTryOpen(regionX, regionZ, true);
+                     IndexedStorageFile regionFile = this.getOrTryOpen(regionX, regionZ, false);
                      if (regionFile != null) {
                         IntList blobIndexes = regionFile.keys();
                         IntListIterator iterator = blobIndexes.iterator();
@@ -225,7 +249,7 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
                         }
                      }
                   }
-               });
+               }));
             }
 
             return chunkIndexes;
@@ -292,17 +316,22 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
       @Nonnull
       private final IndexedStorageChunkStorageProvider.IndexedStorageCache cache;
       private final boolean flushOnWrite;
+      private final boolean ownsCache;
 
       public IndexedStorageChunkLoader(
-         @Nonnull Store<ChunkStore> store, @Nonnull IndexedStorageChunkStorageProvider.IndexedStorageCache cache, boolean flushOnWrite
+         @Nonnull Store<ChunkStore> store, @Nonnull IndexedStorageChunkStorageProvider.IndexedStorageCache cache, boolean flushOnWrite, boolean ownsCache
       ) {
          super(store);
          this.cache = cache;
          this.flushOnWrite = flushOnWrite;
+         this.ownsCache = ownsCache;
       }
 
       @Override
       public void close() throws IOException {
+         if (this.ownsCache) {
+            this.cache.close();
+         }
       }
 
       @Nonnull

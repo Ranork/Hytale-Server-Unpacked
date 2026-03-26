@@ -1,8 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.scanners;
 
 import com.hypixel.hytale.builtin.hytalegenerator.assets.framework.DecimalConstantsFrameworkAsset;
-import com.hypixel.hytale.builtin.hytalegenerator.scanners.ColumnLinearScanner;
+import com.hypixel.hytale.builtin.hytalegenerator.scanners.EmptyScanner;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
+import com.hypixel.hytale.builtin.hytalegenerator.scanners.deprecated.ColumnLinearScanner;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -39,7 +40,7 @@ public class ColumnLinearScannerAsset extends ScannerAsset {
    @Override
    public Scanner build(@Nonnull ScannerAsset.Argument argument) {
       if (super.skip()) {
-         return Scanner.noScanner();
+         return EmptyScanner.INSTANCE;
       } else if (this.isRelativeToPosition) {
          return new ColumnLinearScanner(this.minY, this.maxY, this.resultCap, this.topDownOrder, true, 0.0);
       } else {

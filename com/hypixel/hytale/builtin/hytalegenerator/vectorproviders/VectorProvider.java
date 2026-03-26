@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.vectorproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.TerrainDensityProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.TerrainDensityProvider;
 import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

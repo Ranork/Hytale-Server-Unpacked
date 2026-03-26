@@ -65,6 +65,7 @@ public abstract class ResponseCurve implements JsonAssetWithMap<String, IndexedL
       CODEC.register("Exponential", ExponentialResponseCurve.class, ExponentialResponseCurve.CODEC);
       CODEC.register("Logistic", LogisticResponseCurve.class, LogisticResponseCurve.CODEC);
       CODEC.register("SineWave", SineWaveResponseCurve.class, SineWaveResponseCurve.CODEC);
+      CODEC.register("Switch", SwitchResponseCurve.class, SwitchResponseCurve.CODEC);
    }
 
    public static class Reference {

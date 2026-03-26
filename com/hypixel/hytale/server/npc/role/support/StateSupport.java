@@ -23,8 +23,9 @@ import com.hypixel.hytale.server.npc.statetransition.StateTransitionController;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.BitSet;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -80,9 +81,9 @@ public class StateSupport {
       }
 
       if (builderSupport.isTrackInteractions()) {
-         this.interactedPlayers = new HashSet<>();
-         this.interactablePlayers = new HashSet<>();
-         this.contextualInteractions = new HashMap<>();
+         this.interactedPlayers = new ReferenceOpenHashSet();
+         this.interactablePlayers = new ReferenceOpenHashSet();
+         this.contextualInteractions = new Reference2ObjectOpenHashMap();
       }
 
       if (this.busyStates != null) {

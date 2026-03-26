@@ -4,8 +4,9 @@ import com.hypixel.hytale.assetstore.AssetExtraInfo;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
+import com.hypixel.hytale.builtin.hytalegenerator.WeightedMap;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.Cleanable;
-import com.hypixel.hytale.builtin.hytalegenerator.datastructures.WeightedMap;
+import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.props.WeightedProp;
 import com.hypixel.hytale.codec.Codec;
@@ -44,7 +45,7 @@ public class WeightedPropAsset extends PropAsset {
 
          return new WeightedProp(weightedProps, childArgument.parentSeed.createSupplier().get());
       } else {
-         return Prop.noProp();
+         return EmptyProp.INSTANCE;
       }
    }
 
@@ -75,7 +76,7 @@ public class WeightedPropAsset extends PropAsset {
       private String id;
       private AssetExtraInfo.Data data;
       private double weight = 1.0;
-      private PropAsset propAsset = new NoPropAsset();
+      private PropAsset propAsset = new EmptyPropAsset();
 
       public String getId() {
          return this.id;

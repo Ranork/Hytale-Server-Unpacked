@@ -519,6 +519,7 @@ public class FarmingSystems {
                   int blockId = blockSection.get(x, y, z);
                   BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
                   FarmingSystems.updateSoilDecayTime(commandBuffer, soilComponent, blockType);
+                  decayTime = soilComponent.getDecayTime();
                }
 
                if (decayTime == null) {

@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders;
 
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.cached.CachedPositionProvider;
 import com.hypixel.hytale.codec.Codec;
@@ -30,10 +31,10 @@ public class CachedPositionProviderAsset extends PositionProviderAsset {
    @Override
    public PositionProvider build(@Nonnull PositionProviderAsset.Argument argument) {
       if (super.skip()) {
-         return PositionProvider.noPositionProvider();
+         return EmptyPositionProvider.INSTANCE;
       } else {
          PositionProvider childPositions = this.childAsset.build(argument);
-         return new CachedPositionProvider(childPositions, this.sectionSize, this.cacheSize, false);
+         return new CachedPositionProvider(childPositions, this.sectionSize, this.cacheSize);
       }
    }
 

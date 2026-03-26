@@ -4,10 +4,14 @@ import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
 import com.hypixel.hytale.procedurallib.property.NoiseProperty;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
 public class EnvironmentContainer {
+   public static final ListPool<EnvironmentContainer.EnvironmentContainerEntry> ENTRY_POOL = new ListPool<>(
+      10, new EnvironmentContainer.EnvironmentContainerEntry[0]
+   );
    protected final EnvironmentContainer.DefaultEnvironmentContainerEntry defaultEntry;
    protected final EnvironmentContainer.EnvironmentContainerEntry[] entries;
 

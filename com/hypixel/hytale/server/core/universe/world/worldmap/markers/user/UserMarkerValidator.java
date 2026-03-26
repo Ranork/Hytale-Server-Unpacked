@@ -76,7 +76,7 @@ public final class UserMarkerValidator {
    }
 
    private static double getMaxRemovalDistanceSquared(Player player) {
-      double maxDistance = player.getViewRadius() * 1.5 * 32.0;
+      int maxDistance = player.getViewRadius() * 2 * 32;
       return maxDistance * maxDistance;
    }
 

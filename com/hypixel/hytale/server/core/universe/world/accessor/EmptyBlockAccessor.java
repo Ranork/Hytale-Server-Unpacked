@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.universe.world.accessor;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.function.predicate.TriIntPredicate;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import javax.annotation.Nullable;
 
@@ -72,18 +71,8 @@ public class EmptyBlockAccessor implements BlockAccessor {
 
    @Nullable
    @Override
-   public BlockState getState(int x, int y, int z) {
-      return null;
-   }
-
-   @Nullable
-   @Override
    public Holder<ChunkStore> getBlockComponentHolder(int x, int y, int z) {
       return null;
-   }
-
-   @Override
-   public void setState(int x, int y, int z, BlockState state, boolean notify) {
    }
 
    @Override

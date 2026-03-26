@@ -11,6 +11,7 @@ import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent2D;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEvent3D;
 import com.hypixel.hytale.protocol.packets.world.PlaySoundEventEntity;
+import com.hypixel.hytale.protocol.packets.world.PlaySoundEventLocalPlayer;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.itemsound.config.ItemSoundSet;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -20,8 +21,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import java.util.List;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -63,6 +63,26 @@ public class SoundUtil {
    ) {
       if (soundEventIndex != 0) {
          playerRefComponent.getPacketHandler().write(new PlaySoundEvent2D(soundEventIndex, soundCategory, volumeModifier, pitchModifier));
+      }
+   }
+
+   public static void playLocalPlayerSoundEvent(
+      @Nonnull PlayerRef playerRefComponent, int localSoundEventIndex, int worldSoundEventIndex, @Nonnull SoundCategory soundCategory
+   ) {
+      playLocalPlayerSoundEvent(playerRefComponent, localSoundEventIndex, worldSoundEventIndex, soundCategory, 1.0F, 1.0F);
+   }
+
+   public static void playLocalPlayerSoundEvent(
+      @Nonnull PlayerRef playerRefComponent,
+      int localSoundEventIndex,
+      int worldSoundEventIndex,
+      @Nonnull SoundCategory soundCategory,
+      float volumeModifier,
+      float pitchModifier
+   ) {
+      if (localSoundEventIndex != 0 || worldSoundEventIndex != 0) {
+         playerRefComponent.getPacketHandler()
+            .write(new PlaySoundEventLocalPlayer(localSoundEventIndex, worldSoundEventIndex, soundCategory, volumeModifier, pitchModifier));
       }
    }
 
@@ -128,12 +148,10 @@ public class SoundUtil {
             SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(
                EntityModule.get().getPlayerSpatialResourceType()
             );
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             playerSpatialResource.getSpatialStructure().collect(position, soundEvent.getMaxDistance(), results);
-            ObjectListIterator var16 = results.iterator();
 
-            while (var16.hasNext()) {
-               Ref<EntityStore> playerRef = (Ref<EntityStore>)var16.next();
+            for (Ref<EntityStore> playerRef : results) {
                if (playerRef != null && playerRef.isValid()) {
                   PlayerRef playerRefComponent = componentAccessor.getComponent(playerRef, PlayerRef.getComponentType());
 
@@ -182,12 +200,10 @@ public class SoundUtil {
             SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = componentAccessor.getResource(
                EntityModule.get().getPlayerSpatialResourceType()
             );
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             playerSpatialResource.getSpatialStructure().collect(new Vector3d(x, y, z), soundEvent.getMaxDistance(), results);
-            ObjectListIterator var16 = results.iterator();
 
-            while (var16.hasNext()) {
-               Ref<EntityStore> playerRef = (Ref<EntityStore>)var16.next();
+            for (Ref<EntityStore> playerRef : results) {
                if (playerRef != null && playerRef.isValid() && shouldHear.test(playerRef)) {
                   PlayerRef playerRefComponent = componentAccessor.getComponent(playerRef, PlayerRef.getComponentType());
 

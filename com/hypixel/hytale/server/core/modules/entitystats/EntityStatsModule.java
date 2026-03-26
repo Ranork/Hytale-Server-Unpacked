@@ -16,28 +16,12 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.AllLegacyLivingEntityTypesQuery;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatTypePacketGenerator;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.AliveCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.ChargingCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.Condition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.EnvironmentCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.GlidingCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.LogicCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.NoDamageTakenCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.OutOfCombatCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.PlayerCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.RegenHealthCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.SprintingCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.StatCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.SuffocatingCondition;
-import com.hypixel.hytale.server.core.modules.entitystats.asset.condition.WieldingCondition;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.Modifier;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
@@ -80,19 +64,6 @@ public class EntityStatsModule extends JavaPlugin {
    protected void setup() {
       Modifier.CODEC.register("Boost", StaticModifier.class, StaticModifier.ENTITY_CODEC);
       Modifier.CODEC.register("Static", StaticModifier.class, StaticModifier.ENTITY_CODEC);
-      Condition.CODEC.register("LogicCondition", LogicCondition.class, LogicCondition.CODEC);
-      Condition.CODEC.register("RegenHealth", RegenHealthCondition.class, RegenHealthCondition.CODEC);
-      Condition.CODEC.register("NoDamageTaken", NoDamageTakenCondition.class, NoDamageTakenCondition.CODEC);
-      Condition.CODEC.register("Suffocating", SuffocatingCondition.class, SuffocatingCondition.CODEC);
-      Condition.CODEC.register("Charging", ChargingCondition.class, ChargingCondition.CODEC);
-      Condition.CODEC.register("Alive", AliveCondition.class, AliveCondition.CODEC);
-      Condition.CODEC.register("Environment", EnvironmentCondition.class, EnvironmentCondition.CODEC);
-      Condition.CODEC.register("Player", PlayerCondition.class, PlayerCondition.CODEC);
-      Condition.CODEC.register("OutOfCombat", OutOfCombatCondition.class, OutOfCombatCondition.CODEC);
-      Condition.CODEC.register("Wielding", WieldingCondition.class, WieldingCondition.CODEC);
-      Condition.CODEC.register("Sprinting", SprintingCondition.class, SprintingCondition.CODEC);
-      Condition.CODEC.register("Gliding", GlidingCondition.class, GlidingCondition.CODEC);
-      Condition.CODEC.register("Stat", StatCondition.class, StatCondition.CODEC);
       AssetRegistry.register(
          ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
                                  EntityStatType.class, new IndexedLookupTableAssetMap<>(EntityStatType[]::new)
@@ -166,11 +137,10 @@ public class EntityStatsModule extends JavaPlugin {
       Universe.get().getWorlds().forEach((s, world) -> world.execute(() -> {
          Store<EntityStore> store = world.getEntityStore().getStore();
          store.forEachEntityParallel(AllLegacyLivingEntityTypesQuery.INSTANCE, (index, archetypeChunk, commandBuffer) -> {
-            LivingEntity livingEntity = (LivingEntity)EntityUtils.getEntity(index, archetypeChunk);
-
-            assert livingEntity != null;
-
-            livingEntity.getStatModifiersManager().setRecalculate(true);
+            EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
+            if (entityStatMapComponent != null) {
+               entityStatMapComponent.getStatModifiersManager().scheduleRecalculate();
+            }
          });
       }));
    }

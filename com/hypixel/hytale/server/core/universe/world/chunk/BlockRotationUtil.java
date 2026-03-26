@@ -9,19 +9,34 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class BlockRotationUtil {
-   @Nullable
-   public static RotationTuple getFlipped(
-      @Nonnull RotationTuple blockRotation, @Nullable BlockFlipType flipType, @Nonnull Axis axis, @Nonnull VariantRotation variantRotation
-   ) {
-      Rotation rotationYaw = blockRotation.yaw();
-      Rotation rotationPitch = blockRotation.pitch();
-      Rotation rotationRoll = blockRotation.roll();
-      if (flipType != null) {
-         rotationYaw = flipType.flipYaw(rotationYaw, axis);
-      }
+   private static final int[][][] LOCAL_FLIP_CORRECTIONS = new int[][][]{
+      {{0, 0, 1}, {0, 1, 0}, {1, 0, 0}}, {{0, 0, -1}, {0, 1, 0}, {-1, 0, 0}}, {{-1, 0, 0}, {0, 1, 0}, {0, 0, 1}}
+   };
 
-      boolean preventPitchRotation = axis != Axis.Y;
-      return get(rotationYaw, rotationPitch, rotationRoll, axis, Rotation.OneEighty, variantRotation, preventPitchRotation);
+   @Nullable
+   public static RotationTuple getFlipped(@Nonnull RotationTuple blockRotation, @Nullable BlockFlipType flipType, @Nonnull Axis axis) {
+      if (flipType == null) {
+         Rotation yaw = blockRotation.yaw();
+         Rotation pitch = blockRotation.pitch();
+         Rotation roll = blockRotation.roll();
+         switch (axis) {
+            case X:
+               yaw = yaw.toInverse();
+               roll = roll.toInverse();
+               break;
+            case Y:
+               pitch = pitch.add(Rotation.OneEighty);
+               roll = roll.toInverse();
+               break;
+            case Z:
+               yaw = yaw.toInverse();
+               pitch = pitch.toInverse();
+         }
+
+         return RotationTuple.of(yaw, pitch, roll);
+      } else {
+         return RotationTuple.flip(blockRotation, flipType, axis, LOCAL_FLIP_CORRECTIONS);
+      }
    }
 
    @Nullable
@@ -42,15 +57,13 @@ public class BlockRotationUtil {
       RotationTuple rotationPair = null;
       switch (axis) {
          case X:
-            RotationTuple rotateX = variantRotation.rotateX(RotationTuple.of(rotationYaw, rotationPitch), rotation);
-            rotationPair = variantRotation.verify(rotateX);
+            rotationPair = variantRotation.rotateX(RotationTuple.of(rotationYaw, rotationPitch), rotation);
             break;
          case Y:
             rotationPair = variantRotation.verify(RotationTuple.of(rotationYaw.add(rotation), rotationPitch));
             break;
          case Z:
-            RotationTuple rotateZ = variantRotation.rotateZ(RotationTuple.of(rotationYaw, rotationPitch), rotation);
-            rotationPair = variantRotation.verify(rotateZ);
+            rotationPair = variantRotation.rotateZ(RotationTuple.of(rotationYaw, rotationPitch), rotation);
       }
 
       if (rotationPair == null) {

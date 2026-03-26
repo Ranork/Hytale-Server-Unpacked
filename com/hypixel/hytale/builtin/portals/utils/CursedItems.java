@@ -1,7 +1,6 @@
 package com.hypixel.hytale.builtin.portals.utils;
 
 import com.hypixel.hytale.server.core.asset.type.item.config.metadata.AdventureMetadata;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -26,10 +25,6 @@ public final class CursedItems {
          }
       });
       return uncursedAny.get();
-   }
-
-   public static void deleteAll(@Nonnull Player player) {
-      deleteAll(player.getInventory().getCombinedEverything());
    }
 
    public static void deleteAll(@Nonnull ItemContainer itemContainer) {

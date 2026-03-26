@@ -1,18 +1,21 @@
 package com.hypixel.hytale.server.core.universe.world.chunk.section.palette;
 
+import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.math.util.NumberUtil;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
+import it.unimi.dsi.fastutil.ints.Int2ShortMaps;
 import it.unimi.dsi.fastutil.ints.Int2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.Int2ShortMap.Entry;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import it.unimi.dsi.fastutil.shorts.Short2IntMap;
 import it.unimi.dsi.fastutil.shorts.Short2IntOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.Short2ShortMap;
 import it.unimi.dsi.fastutil.shorts.Short2ShortOpenHashMap;
-import it.unimi.dsi.fastutil.shorts.Short2ShortMap.Entry;
+import it.unimi.dsi.fastutil.shorts.ShortSet;
 import java.util.BitSet;
 import java.util.function.IntConsumer;
 import java.util.function.ToIntFunction;
@@ -33,22 +36,39 @@ public abstract class AbstractShortSectionPalette implements ISectionPalette {
       this.internalIdCount.put((short)0, (short)-32768);
    }
 
-   public AbstractShortSectionPalette(short[] blocks, @Nonnull int[] data, int[] unique, int count) {
-      this(new Int2ShortOpenHashMap(count), new Short2IntOpenHashMap(count), new BitSet(count), new Short2ShortOpenHashMap(count), blocks);
+   public AbstractShortSectionPalette(@Nonnull short[] blocks, @Nonnull int[] data, @Nonnull Int2ShortMap externalIdCounts) {
+      this(
+         new Int2ShortOpenHashMap(externalIdCounts.size()),
+         new Short2IntOpenHashMap(externalIdCounts.size()),
+         new BitSet(externalIdCounts.size()),
+         new Short2ShortOpenHashMap(externalIdCounts.size()),
+         blocks
+      );
+      ObjectIterator<Entry> externalIdCountIter = Int2ShortMaps.fastIterator(externalIdCounts);
 
-      for (int internalId = 0; internalId < count; internalId++) {
-         int blockId = unique[internalId];
-         this.internalToExternal.put((short)internalId, blockId);
-         this.externalToInternal.put(blockId, (short)internalId);
-         this.internalIdSet.set(internalId);
-         this.internalIdCount.put((short)internalId, (short)0);
+      for (short internalIdCounter = 0; externalIdCountIter.hasNext(); internalIdCounter++) {
+         Entry entry = (Entry)externalIdCountIter.next();
+         this.internalToExternal.put(internalIdCounter, entry.getIntKey());
+         this.externalToInternal.put(entry.getIntKey(), internalIdCounter);
+         this.internalIdSet.set(internalIdCounter);
+         this.internalIdCount.put(internalIdCounter, entry.getShortValue());
       }
 
-      for (int index = 0; index < data.length; index++) {
-         int id = data[index];
-         short internalId = this.externalToInternal.get(id);
-         this.incrementBlockCount(internalId);
-         this.set0(index, internalId);
+      int index = 0;
+
+      while (index < data.length) {
+         int externalId = data[index];
+         int start = index;
+
+         do {
+            index++;
+         } while (index < data.length && data[index] == externalId);
+
+         short internalId = this.externalToInternal.get(externalId);
+
+         for (int i = start; i < index; i++) {
+            this.set0(i, internalId);
+         }
       }
    }
 
@@ -149,7 +169,7 @@ public abstract class AbstractShortSectionPalette implements ISectionPalette {
       ObjectIterator var2 = this.internalIdCount.short2ShortEntrySet().iterator();
 
       while (var2.hasNext()) {
-         Entry entry = (Entry)var2.next();
+         it.unimi.dsi.fastutil.shorts.Short2ShortMap.Entry entry = (it.unimi.dsi.fastutil.shorts.Short2ShortMap.Entry)var2.next();
          short internalId = entry.getShortKey();
          short count = entry.getShortValue();
          int externalId = this.internalToExternal.get(internalId);
@@ -272,19 +292,65 @@ public abstract class AbstractShortSectionPalette implements ISectionPalette {
    }
 
    @Override
-   public void find(@Nonnull IntList ids, @Nonnull IntSet internalIdHolder, @Nonnull IntConsumer indexConsumer) {
+   public void find(@Nonnull IntList ids, @Nonnull IntConsumer indexConsumer) {
+      ShortSet internalIds = this.getThreadLocalInternalIdSet(ids);
+      if (!internalIds.isEmpty()) {
+         int index = 0;
+         short type = this.get0(index);
+
+         while (index < 32768) {
+            int start = index;
+            short runType = type;
+
+            do {
+               index++;
+            } while (index < 32768 && (type = this.get0(index)) == runType);
+
+            if (internalIds.contains(runType)) {
+               for (int i = start; i < index; i++) {
+                  indexConsumer.accept(i);
+               }
+            }
+         }
+      }
+   }
+
+   @Override
+   public void find(@Nonnull IntList ids, @Nonnull BiIntConsumer indexBlockConsumer) {
+      ShortSet internalIds = this.getThreadLocalInternalIdSet(ids);
+      if (!internalIds.isEmpty()) {
+         int index = 0;
+         short type = this.get0(index);
+
+         while (index < 32768) {
+            int start = index;
+            short runType = type;
+
+            do {
+               index++;
+            } while (index < 32768 && (type = this.get0(index)) == runType);
+
+            if (internalIds.contains(runType)) {
+               int external = this.internalToExternal.get(runType);
+
+               for (int i = start; i < index; i++) {
+                  indexBlockConsumer.accept(i, external);
+               }
+            }
+         }
+      }
+   }
+
+   protected ShortSet getThreadLocalInternalIdSet(IntList ids) {
+      ShortSet internalIds = PaletteSetProvider.get().getShortSet(ids.size());
+
       for (int i = 0; i < ids.size(); i++) {
          short internal = this.externalToInternal.getOrDefault(ids.getInt(i), (short)-32768);
          if (internal != -32768) {
-            internalIdHolder.add(internal);
+            internalIds.add(internal);
          }
       }
 
-      for (int ix = 0; ix < 32768; ix++) {
-         short type = this.get0(ix);
-         if (internalIdHolder.contains(type)) {
-            indexConsumer.accept(ix);
-         }
-      }
+      return internalIds;
    }
 }

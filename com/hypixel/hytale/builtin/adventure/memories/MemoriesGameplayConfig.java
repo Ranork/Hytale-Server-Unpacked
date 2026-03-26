@@ -7,6 +7,7 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -56,12 +57,32 @@ public class MemoriesGameplayConfig {
       )
       .addValidator(Validators.greaterThan(16))
       .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("MemoriesRestoreSoundEventId", Codec.STRING),
+         (activationEffects, s) -> activationEffects.memoriesRestoreSoundEventId = s,
+         activationEffects -> activationEffects.memoriesRestoreSoundEventId,
+         (activationEffects, parent) -> activationEffects.memoriesRestoreSoundEventId = parent.memoriesRestoreSoundEventId
+      )
+      .addValidator(Validators.nonNull())
+      .addValidator(SoundEvent.VALIDATOR_CACHE.getValidator())
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("MemoriesCatchSoundEventId", Codec.STRING),
+         (memoriesGameplayConfig, s) -> memoriesGameplayConfig.memoriesCatchSoundEventId = s,
+         memoriesGameplayConfig -> memoriesGameplayConfig.memoriesCatchSoundEventId,
+         (memoriesGameplayConfig, parent) -> memoriesGameplayConfig.memoriesCatchSoundEventId = parent.memoriesCatchSoundEventId
+      )
+      .addValidator(Validators.nonNull())
+      .addValidator(SoundEvent.VALIDATOR_CACHE.getValidator())
+      .add()
       .build();
    private int[] memoriesAmountPerLevel;
    private String memoriesRecordParticles;
    private String memoriesCatchItemId;
    private ModelParticle memoriesCatchEntityParticle;
    private int memoriesCatchParticleViewDistance = 64;
+   private String memoriesRestoreSoundEventId;
+   private String memoriesCatchSoundEventId;
 
    @Nullable
    public static MemoriesGameplayConfig get(@Nonnull GameplayConfig config) {
@@ -78,6 +99,14 @@ public class MemoriesGameplayConfig {
 
    public String getMemoriesCatchItemId() {
       return this.memoriesCatchItemId;
+   }
+
+   public String getMemoriesRestoreSoundEventId() {
+      return this.memoriesRestoreSoundEventId;
+   }
+
+   public String getMemoriesCatchSoundEventId() {
+      return this.memoriesCatchSoundEventId;
    }
 
    public ModelParticle getMemoriesCatchEntityParticle() {

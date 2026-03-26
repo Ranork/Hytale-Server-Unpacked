@@ -6,33 +6,31 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.component.dependency.Dependency;
-import com.hypixel.hytale.component.dependency.Order;
-import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ListTransaction;
+import com.hypixel.hytale.server.core.modules.block.BlockModule;
+import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock;
 import com.hypixel.hytale.server.core.modules.item.ItemModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
-import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerState;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortLists;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,12 +45,14 @@ public class StashPlugin extends JavaPlugin {
 
    @Override
    protected void setup() {
-      this.getChunkStoreRegistry().registerSystem(new StashPlugin.StashSystem(BlockStateModule.get().getComponentType(ItemContainerState.class)));
+      this.getChunkStoreRegistry().registerSystem(new StashPlugin.StashSystem(ItemContainerBlock.getComponentType()));
       this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(StashGameplayConfig.class, "Stash", StashGameplayConfig.CODEC);
    }
 
    @Nullable
-   public static ListTransaction<ItemStackTransaction> stash(@Nonnull ItemContainerState containerState, boolean clearDropList) {
+   public static ListTransaction<ItemStackTransaction> stash(
+      BlockModule.BlockStateInfo blockStateInfo, @Nonnull ItemContainerBlock containerState, boolean clearDropList
+   ) {
       String droplist = containerState.getDroplist();
       if (droplist == null) {
          return null;
@@ -61,7 +61,7 @@ public class StashPlugin extends JavaPlugin {
          if (stacks.isEmpty()) {
             return ListTransaction.getEmptyTransaction(true);
          } else {
-            ItemContainer itemContainer = containerState.getItemContainer();
+            SimpleItemContainer itemContainer = containerState.getItemContainer();
             short capacity = itemContainer.getCapacity();
             ShortArrayList slots = new ShortArrayList(capacity);
 
@@ -69,8 +69,13 @@ public class StashPlugin extends JavaPlugin {
                slots.add(s);
             }
 
-            Vector3i blockPosition = containerState.getBlockPosition();
-            long positionHash = blockPosition.hashCode();
+            WorldChunk wc = blockStateInfo.getChunkRef().getStore().getComponent(blockStateInfo.getChunkRef(), WorldChunk.getComponentType());
+            int x = ChunkUtil.xFromBlockInColumn(blockStateInfo.getIndex());
+            int y = ChunkUtil.yFromBlockInColumn(blockStateInfo.getIndex());
+            int z = ChunkUtil.zFromBlockInColumn(blockStateInfo.getIndex());
+            int worldX = ChunkUtil.worldCoordFromLocalCoord(wc.getX(), x);
+            int worldZ = ChunkUtil.worldCoordFromLocalCoord(wc.getZ(), z);
+            long positionHash = HashUtil.hash(worldX, y, worldZ);
             Random rnd = new Random(positionHash);
             ShortLists.shuffle(slots, rnd);
             boolean anySucceeded = false;
@@ -79,8 +84,7 @@ public class StashPlugin extends JavaPlugin {
                short slot = slots.getShort(idx);
                ItemStackSlotTransaction transaction = itemContainer.addItemStackToSlot(slot, stacks.get(idx));
                if (transaction.getRemainder() != null && !transaction.getRemainder().isEmpty()) {
-                  LOGGER.at(Level.WARNING)
-                     .log("Could not add Item to Stash at %d, %d, %d: %s", blockPosition.x, blockPosition.y, blockPosition.z, transaction.getRemainder());
+                  LOGGER.at(Level.WARNING).log("Could not add Item to Stash at %d, %d, %d: %s", worldX, y, worldZ, transaction.getRemainder());
                } else {
                   anySucceeded = true;
                }
@@ -97,18 +101,20 @@ public class StashPlugin extends JavaPlugin {
 
    private static class StashSystem extends RefSystem<ChunkStore> {
       @Nonnull
-      private final ComponentType<ChunkStore, ItemContainerState> itemContainerStateComponentType;
+      private final ComponentType<ChunkStore, ItemContainerBlock> itemContainerStateComponentType;
       @Nonnull
-      private final Set<Dependency<ChunkStore>> dependencies;
+      private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType = BlockModule.BlockStateInfo.getComponentType();
+      @Nonnull
+      private final Query<ChunkStore> query;
 
-      public StashSystem(@Nonnull ComponentType<ChunkStore, ItemContainerState> itemContainerStateComponentType) {
+      public StashSystem(@Nonnull ComponentType<ChunkStore, ItemContainerBlock> itemContainerStateComponentType) {
          this.itemContainerStateComponentType = itemContainerStateComponentType;
-         this.dependencies = Set.of(new SystemDependency<>(Order.AFTER, BlockStateModule.LegacyBlockStateRefSystem.class));
+         this.query = Query.and(itemContainerStateComponentType, this.blockStateInfoComponentType);
       }
 
       @Override
       public Query<ChunkStore> getQuery() {
-         return this.itemContainerStateComponentType;
+         return this.query;
       }
 
       @Override
@@ -117,13 +123,17 @@ public class StashPlugin extends JavaPlugin {
       ) {
          World world = store.getExternalData().getWorld();
          if (world.getWorldConfig().getGameMode() != GameMode.Creative) {
-            ItemContainerState itemContainerStateComponent = store.getComponent(ref, this.itemContainerStateComponentType);
+            ItemContainerBlock itemContainerStateComponent = store.getComponent(ref, this.itemContainerStateComponentType);
 
             assert itemContainerStateComponent != null;
 
+            BlockModule.BlockStateInfo blockStateInfo = store.getComponent(ref, this.blockStateInfoComponentType);
+
+            assert blockStateInfo != null;
+
             StashGameplayConfig stashGameplayConfig = StashGameplayConfig.getOrDefault(world.getGameplayConfig());
             boolean clearContainerDropList = stashGameplayConfig.isClearContainerDropList();
-            StashPlugin.stash(itemContainerStateComponent, clearContainerDropList);
+            StashPlugin.stash(blockStateInfo, itemContainerStateComponent, clearContainerDropList);
          }
       }
 
@@ -131,12 +141,6 @@ public class StashPlugin extends JavaPlugin {
       public void onEntityRemove(
          @Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<ChunkStore>> getDependencies() {
-         return this.dependencies;
       }
    }
 }

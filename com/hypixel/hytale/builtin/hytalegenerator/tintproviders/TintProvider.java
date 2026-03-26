@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.tintproviders;
 
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;

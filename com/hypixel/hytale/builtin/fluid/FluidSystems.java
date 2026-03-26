@@ -41,6 +41,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -252,10 +253,12 @@ public class FluidSystems {
 
             World world = commandBuffer.getExternalData().getWorld();
             WorldChunk worldChunkComponent = commandBuffer.getComponent(chunkSectionComponent.getChunkColumnReference(), this.worldChunkComponentType);
+            int sectionX = chunkSectionComponent.getX();
             int sectionY = chunkSectionComponent.getY();
+            int sectionZ = chunkSectionComponent.getZ();
             world.execute(() -> {
                if (worldChunkComponent != null && worldChunkComponent.getWorld() != null) {
-                  worldChunkComponent.getWorld().getChunkLighting().invalidateLightInChunkSection(worldChunkComponent, sectionY);
+                  worldChunkComponent.getWorld().getChunkLighting().invalidateLightInChunkSection(store.getExternalData(), sectionX, sectionY, sectionZ);
                }
             });
             Collection<PlayerRef> playerRefs = store.getExternalData().getWorld().getPlayerRefs();
@@ -449,12 +452,17 @@ public class FluidSystems {
             BlockSection blockSection = blockChunkComponent.getSectionAtIndex(fluidSectionComponent.getY());
             if (blockSection != null) {
                if (blockSection.getTickingBlocksCountCopy() != 0) {
+                  World world = store.getExternalData().getWorld();
+                  DisabledFluidResource disabledFluidResource = store.getResource(DisabledFluidResource.getResourceType());
+                  IntSet disabledFluidIds = disabledFluidResource.getDisabledFluidIds(world.getWorldConfig());
                   FluidTicker.CachedAccessor accessor = FluidTicker.CachedAccessor.of(commandBuffer, fluidSectionComponent, blockSection, 5);
                   blockSection.forEachTicking(accessor, commandBuffer, fluidSectionComponent.getY(), (accessor1, commandBuffer1, x, y, z, block) -> {
                      FluidSection fluidSection1 = accessor1.selfFluidSection;
                      BlockSection blockSection1 = accessor1.selfBlockSection;
                      int fluidId = fluidSection1.getFluidId(x, y, z);
                      if (fluidId == 0) {
+                        return BlockTickStrategy.IGNORED;
+                     } else if (disabledFluidIds.contains(fluidId)) {
                         return BlockTickStrategy.IGNORED;
                      } else {
                         int blockX = fluidSection1.getX() << 5 | x;

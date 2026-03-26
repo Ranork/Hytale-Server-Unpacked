@@ -111,8 +111,8 @@ public class AmbienceFX {
          }
 
          int varIntLen = VarInt.length(buf, varPos2);
-         if (varPos2 + varIntLen + soundsCount * 27L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Sounds", varPos2 + varIntLen + soundsCount * 27, buf.readableBytes());
+         if (varPos2 + varIntLen + soundsCount * 31L > buf.readableBytes()) {
+            throw ProtocolException.bufferTooSmall("Sounds", varPos2 + varIntLen + soundsCount * 31, buf.readableBytes());
          }
 
          obj.sounds = new AmbienceFXSound[soundsCount];
@@ -351,7 +351,7 @@ public class AmbienceFX {
       }
 
       if (this.sounds != null) {
-         size += VarInt.size(this.sounds.length) + this.sounds.length * 27;
+         size += VarInt.size(this.sounds.length) + this.sounds.length * 31;
       }
 
       if (this.music != null) {
@@ -441,7 +441,7 @@ public class AmbienceFX {
             }
 
             posxx += VarInt.length(buffer, posxx);
-            posxx += soundsCount * 27;
+            posxx += soundsCount * 31;
             if (posxx > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Sounds");
             }

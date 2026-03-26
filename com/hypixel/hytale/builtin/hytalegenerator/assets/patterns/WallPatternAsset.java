@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.patterns;
 
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.WallPattern;
 import com.hypixel.hytale.codec.Codec;
@@ -34,7 +35,7 @@ public class WallPatternAsset extends PatternAsset {
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
       if (super.isSkipped()) {
-         return Pattern.noPattern();
+         return ConstantPattern.INSTANCE_FALSE;
       } else {
          Pattern wallPattern = this.wall.build(argument);
          Pattern originPattern = this.origin.build(argument);

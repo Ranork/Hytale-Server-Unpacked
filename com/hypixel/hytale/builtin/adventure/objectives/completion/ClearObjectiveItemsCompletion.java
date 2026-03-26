@@ -5,8 +5,7 @@ import com.hypixel.hytale.builtin.adventure.objectives.config.completion.ClearOb
 import com.hypixel.hytale.builtin.adventure.objectives.config.completion.ObjectiveCompletionAsset;
 import com.hypixel.hytale.builtin.adventure.objectives.interactions.StartObjectiveInteraction;
 import com.hypixel.hytale.component.ComponentAccessor;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -26,16 +25,14 @@ public class ClearObjectiveItemsCompletion extends ObjectiveCompletion {
    @Override
    public void handle(@Nonnull Objective objective, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       objective.forEachParticipant((participantReference, objectiveUuid) -> {
-         if (EntityUtils.getEntity(participantReference, componentAccessor) instanceof LivingEntity livingEntity) {
-            CombinedItemContainer inventory = livingEntity.getInventory().getCombinedHotbarFirst();
+         CombinedItemContainer inventory = InventoryComponent.getCombined(componentAccessor, participantReference, InventoryComponent.HOTBAR_FIRST);
 
-            for (short i = 0; i < inventory.getCapacity(); i++) {
-               ItemStack itemStack = inventory.getItemStack(i);
-               if (itemStack != null) {
-                  UUID savedObjectiveUuid = itemStack.getFromMetadataOrNull(StartObjectiveInteraction.OBJECTIVE_UUID);
-                  if (objectiveUuid.equals(savedObjectiveUuid)) {
-                     inventory.removeItemStackFromSlot(i);
-                  }
+         for (short i = 0; i < inventory.getCapacity(); i++) {
+            ItemStack itemStack = inventory.getItemStack(i);
+            if (itemStack != null) {
+               UUID savedObjectiveUuid = itemStack.getFromMetadataOrNull(StartObjectiveInteraction.OBJECTIVE_UUID);
+               if (objectiveUuid.equals(savedObjectiveUuid)) {
+                  inventory.removeItemStackFromSlot(i);
                }
             }
          }

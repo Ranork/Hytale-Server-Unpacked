@@ -400,6 +400,21 @@ public class MotionControllerWalk extends MotionControllerBase {
       return super.canAct(ref, componentAccessor) && this.onGround && this.belowBlockType != null && this.belowBlockType.getMaterial() == BlockMaterial.Solid;
    }
 
+   @Nullable
+   @Override
+   public String canActFailReason(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      String reason = super.canActFailReason(ref, componentAccessor);
+      if (reason != null) {
+         return reason;
+      } else if (!this.onGround) {
+         return "OFF_GROUND";
+      } else if (this.belowBlockType == null) {
+         return "NO_BLOCK_BELOW";
+      } else {
+         return this.belowBlockType.getMaterial() != BlockMaterial.Solid ? "NO_SOLID_BLOCK_BELOW" : null;
+      }
+   }
+
    @Override
    public void updateModelParameters(Ref<EntityStore> ref, Model model, @Nonnull Box boundingBox, ComponentAccessor<EntityStore> componentAccessor) {
       super.updateModelParameters(ref, model, boundingBox, componentAccessor);
@@ -1147,8 +1162,9 @@ public class MotionControllerWalk extends MotionControllerBase {
 
                      steering.setYaw(heading);
                      this.isFullyRotated = true;
-                  } else if (steering.hasYaw()) {
-                     heading = this.computeHeading(steering.getYaw(), steering.getRelativeTurnSpeed(), heading, dt, false, false);
+                  } else if (steering.hasYawOrDirection()) {
+                     float yaw = steering.getYawOrDirection();
+                     heading = this.computeHeading(yaw, steering.getRelativeTurnSpeed(), heading, dt, false, false);
                      steering.setYaw(heading);
                   } else if (this.moveSpeed != 0.0) {
                      heading = this.computeHeading(moveHeading, steering.getRelativeTurnSpeed(), heading, dt, true, true);
@@ -1170,7 +1186,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                   Velocity velocityComponent = componentAccessor.getComponent(ref, Velocity.getComponentType());
                   Vector3d velocity = velocityComponent.getVelocity();
                   moveHeading = NPCPhysicsMath.headingFromDirection(velocity.x, velocity.z, heading);
-                  if (!steering.hasYaw()) {
+                  if (!steering.hasYawOrDirection()) {
                      steering.setYaw(heading);
                   }
 
@@ -1361,8 +1377,8 @@ public class MotionControllerWalk extends MotionControllerBase {
       boolean tryClimb = false;
       boolean needsRotation = this.isRequiresPreciseMovement() && !this.isFullyRotated;
       this.lastValidPosition.assign(this.position);
+      boolean wasOnGround = this.onGround;
       if (collision == null) {
-         boolean wasOnGround = this.onGround;
          double triggerScale;
          if (wasOnGround && !(endSlide >= 1.0)) {
             boolean canAct = this.canAct(ref, componentAccessor);
@@ -1372,7 +1388,7 @@ public class MotionControllerWalk extends MotionControllerBase {
                   this.onGround = true;
                   this.isObstructed = false;
                   endSlide = this.shortenSlide(translation, endSlide);
-               } else if (this.isRequiresDepthProbing()) {
+               } else if (this.isRequiresDepthProbing() || role.avoidanceFallCheckRequired()) {
                   this.tmpMovePosition.assign(this.position).addScaled(translation, endSlide);
                   if (this.isDropBlocked(this.tmpMovePosition, this.maxDropHeight, false, avoidingBlockDamage, this.isRelaxedMoveConstraints, componentAccessor)
                      )
@@ -1496,9 +1512,9 @@ public class MotionControllerWalk extends MotionControllerBase {
                if (this.debugModeMove) {
                   LOGGER.at(Level.INFO)
                      .log(
-                        "Move: Collision Up onGround=%s/%s blocked=%s newpos=%s state=%s",
+                        "Move: Collision Up onGround is/was=%s/%s blocked=%s newpos=%s state=%s",
                         this.onGround,
-                        true,
+                        wasOnGround,
                         this.isObstructed,
                         Vector3d.formatShortString(this.position),
                         this.getMotionKind()

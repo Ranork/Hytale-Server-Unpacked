@@ -8,6 +8,7 @@ import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
@@ -23,6 +24,12 @@ import javax.annotation.Nonnull;
 public class DebugShapeArrowCommand extends AbstractPlayerCommand {
    @Nonnull
    private static final Message MESSAGE_COMMANDS_DEBUG_SHAPE_ARROW_SUCCESS = Message.translation("server.commands.debug.shape.arrow.success");
+   @Nonnull
+   private final FlagArg fadeFlag = this.withFlagArg("fade", "server.commands.debug.shape.flag.fade.desc");
+   @Nonnull
+   private final FlagArg noWireframeFlag = this.withFlagArg("no-wireframe", "server.commands.debug.shape.flag.noWireframe.desc");
+   @Nonnull
+   private final FlagArg noSolidFlag = this.withFlagArg("no-solid", "server.commands.debug.shape.flag.noSolid.desc");
 
    public DebugShapeArrowCommand() {
       super("arrow", "server.commands.debug.shape.arrow.desc");
@@ -62,7 +69,8 @@ public class DebugShapeArrowCommand extends AbstractPlayerCommand {
       matrix.translate(pos.x, pos.y + eyeHeight, pos.z);
       matrix.rotateAxis(-lookYaw, 0.0, 1.0, 0.0, tmp);
       matrix.rotateAxis((Math.PI / 2) - lookPitch, 1.0, 0.0, 0.0, tmp);
-      DebugUtils.addArrow(world, matrix, color, 1.0, 30.0F, true);
+      int flags = DebugShapeSubCommand.buildFlags(context, this.fadeFlag, this.noWireframeFlag, this.noSolidFlag);
+      DebugUtils.addArrow(world, matrix, color, 1.0, 30.0F, flags);
       context.sendMessage(MESSAGE_COMMANDS_DEBUG_SHAPE_ARROW_SUCCESS);
    }
 }

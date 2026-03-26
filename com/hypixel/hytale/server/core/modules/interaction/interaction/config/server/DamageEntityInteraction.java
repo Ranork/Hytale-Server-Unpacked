@@ -21,13 +21,11 @@ import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.EntitySnapshot;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackComponent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
@@ -432,10 +430,7 @@ public class DamageEntityInteraction extends Interaction {
                knockbackComponent.setDuration(knockback.getDuration());
             }
 
-            Player attackerPlayerComponent = commandBuffer.getComponent(attackerRef, Player.getComponentType());
-            ItemStack itemInHand = attackerPlayerComponent != null && !attackerPlayerComponent.canApplyItemStackPenalties(attackerRef, commandBuffer)
-               ? null
-               : context.getHeldItem();
+            ItemStack itemInHand = ItemUtils.canApplyItemStackPenalties(attackerRef, commandBuffer) ? context.getHeldItem() : null;
             Damage[] hits = DamageCalculatorSystems.queueDamageCalculator(
                commandBuffer.getExternalData().getWorld(), damage, targetRef, context.getCommandBuffer(), source, itemInHand
             );
@@ -493,59 +488,55 @@ public class DamageEntityInteraction extends Interaction {
             .reduce(1.0, (a, b) -> a * b);
       }
 
-      if (EntityUtils.getEntity(attackerRef, componentAccessor) instanceof LivingEntity livingEntity) {
-         Inventory inventory = livingEntity.getInventory();
-         if (inventory != null) {
-            ItemContainer armorContainer = inventory.getArmor();
-            if (armorContainer != null) {
-               float knockbackEnhancementModifier = 1.0F;
+      InventoryComponent.Armor armorComponent = componentAccessor.getComponent(attackerRef, InventoryComponent.Armor.getComponentType());
+      if (armorComponent != null) {
+         ItemContainer armorContainer = armorComponent.getInventory();
+         float knockbackEnhancementModifier = 1.0F;
 
-               for (short i = 0; i < armorContainer.getCapacity(); i++) {
-                  ItemStack itemStack = armorContainer.getItemStack(i);
-                  if (itemStack != null && !itemStack.isEmpty()) {
-                     Item item = itemStack.getItem();
-                     if (item.getArmor() != null) {
-                        Map<DamageCause, StaticModifier[]> armorDamageEnhancementMap = item.getArmor().getDamageEnhancementValues();
-                        ObjectIterator damageClassModifier = damage.keySet().iterator();
+         for (short i = 0; i < armorContainer.getCapacity(); i++) {
+            ItemStack itemStack = armorContainer.getItemStack(i);
+            if (itemStack != null && !itemStack.isEmpty()) {
+               Item item = itemStack.getItem();
+               if (item.getArmor() != null) {
+                  Map<DamageCause, StaticModifier[]> armorDamageEnhancementMap = item.getArmor().getDamageEnhancementValues();
+                  ObjectIterator damageClassModifier = damage.keySet().iterator();
 
-                        while (damageClassModifier.hasNext()) {
-                           DamageCause damageCause = (DamageCause)damageClassModifier.next();
-                           if (armorDamageEnhancementMap != null) {
-                              StaticModifier[] armorDamageEnhancementValue = armorDamageEnhancementMap.get(damageCause);
-                              if (armorDamageEnhancementValue != null) {
-                                 for (StaticModifier staticModifier : armorDamageEnhancementValue) {
-                                    if (staticModifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
-                                       armorDamageModifiers[0] += staticModifier.getAmount();
-                                    } else {
-                                       armorDamageModifiers[1] += staticModifier.getAmount();
-                                    }
-                                 }
-                              }
-                           }
-
-                           Map<DamageCause, Float> knockbackEnhancements = item.getArmor().getKnockbackEnhancements();
-                           if (knockbackEnhancements != null) {
-                              knockbackEnhancementModifier += knockbackEnhancements.get(damageCause);
-                           }
-                        }
-
-                        StaticModifier[] damageClassModifierx = item.getArmor().getDamageClassEnhancement().get(damageClass);
-                        if (damageClassModifierx != null) {
-                           for (StaticModifier modifier : damageClassModifierx) {
-                              if (modifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
-                                 armorDamageModifiers[0] += modifier.getAmount();
+                  while (damageClassModifier.hasNext()) {
+                     DamageCause damageCause = (DamageCause)damageClassModifier.next();
+                     if (armorDamageEnhancementMap != null) {
+                        StaticModifier[] armorDamageEnhancementValue = armorDamageEnhancementMap.get(damageCause);
+                        if (armorDamageEnhancementValue != null) {
+                           for (StaticModifier staticModifier : armorDamageEnhancementValue) {
+                              if (staticModifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
+                                 armorDamageModifiers[0] += staticModifier.getAmount();
                               } else {
-                                 armorDamageModifiers[1] += modifier.getAmount();
+                                 armorDamageModifiers[1] += staticModifier.getAmount();
                               }
                            }
                         }
                      }
+
+                     Map<DamageCause, Float> knockbackEnhancements = item.getArmor().getKnockbackEnhancements();
+                     if (knockbackEnhancements != null) {
+                        knockbackEnhancementModifier += knockbackEnhancements.get(damageCause);
+                     }
+                  }
+
+                  StaticModifier[] damageClassModifierx = item.getArmor().getDamageClassEnhancement().get(damageClass);
+                  if (damageClassModifierx != null) {
+                     for (StaticModifier modifier : damageClassModifierx) {
+                        if (modifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
+                           armorDamageModifiers[0] += modifier.getAmount();
+                        } else {
+                           armorDamageModifiers[1] += modifier.getAmount();
+                        }
+                     }
                   }
                }
-
-               knockbackMultiplier[0] *= knockbackEnhancementModifier;
             }
          }
+
+         knockbackMultiplier[0] *= knockbackEnhancementModifier;
       }
    }
 

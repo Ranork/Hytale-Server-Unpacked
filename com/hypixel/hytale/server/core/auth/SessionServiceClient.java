@@ -8,6 +8,7 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.util.ServiceHttpClientFactory;
+import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -217,6 +218,7 @@ public class SessionServiceClient {
       }
    }
 
+   @Nullable
    public SessionServiceClient.GameSessionResponse createGameSession(@Nonnull String oauthAccessToken, @Nonnull UUID profileUuid) {
       try {
          String body = String.format("{\"uuid\":\"%s\"}", profileUuid.toString());
@@ -271,9 +273,14 @@ public class SessionServiceClient {
                   .build();
                LOGGER.at(Level.INFO).log("Refreshing game session...");
                HttpResponse<String> response = this.httpClient.send(request, BodyHandlers.ofString());
-               if (response.statusCode() != 200) {
-                  LOGGER.at(Level.WARNING).log("Failed to refresh session: HTTP %d - %s", response.statusCode(), response.body());
-                  return null;
+               int statusCode = response.statusCode();
+               if (statusCode != 200) {
+                  LOGGER.at(Level.WARNING).log("Failed to refresh session: HTTP %d - %s", statusCode, response.body());
+                  if (!AuthConfig.isRejectedStatusCode(statusCode)) {
+                     throw new HttpResponseException(statusCode, response.body());
+                  } else {
+                     return null;
+                  }
                } else {
                   SessionServiceClient.GameSessionResponse sessionResponse = SessionServiceClient.GameSessionResponse.CODEC
                      .decodeJson(new RawJsonReader(response.body().toCharArray()), EmptyExtraInfo.EMPTY);
@@ -285,15 +292,15 @@ public class SessionServiceClient {
                      return null;
                   }
                }
-            } catch (IOException var5) {
-               LOGGER.at(Level.WARNING).log("IO error while refreshing session: %s", var5.getMessage());
-               return null;
-            } catch (InterruptedException var6) {
+            } catch (IOException var6) {
+               LOGGER.at(Level.WARNING).log("IO error while refreshing session: %s", var6.getMessage());
+               throw SneakyThrow.sneakyThrow(var6);
+            } catch (InterruptedException var7) {
                LOGGER.at(Level.WARNING).log("Request interrupted while refreshing session");
                Thread.currentThread().interrupt();
                return null;
-            } catch (Exception var7) {
-               LOGGER.at(Level.WARNING).log("Unexpected error refreshing session: %s", var7.getMessage());
+            } catch (Exception var8) {
+               LOGGER.at(Level.WARNING).log("Unexpected error refreshing session: %s", var8.getMessage());
                return null;
             }
          },
@@ -385,6 +392,7 @@ public class SessionServiceClient {
          .add()
          .build();
 
+      @Nullable
       public Instant getExpiresAtInstant() {
          if (this.expiresAt == null) {
             return null;

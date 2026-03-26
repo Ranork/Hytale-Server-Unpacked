@@ -8,14 +8,14 @@ import com.hypixel.hytale.server.npc.blackboard.view.BlockRegionView;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import java.util.HashMap;
+import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 
 public class ResourceView extends BlockRegionView<ResourceView> {
    private final long index;
    private final IntSet[] reservationsBySection = new IntSet[10];
-   private final Map<Ref<EntityStore>, ResourceView.BlockReservation> reservationsByEntity = new HashMap<>();
+   private final Map<Ref<EntityStore>, ResourceView.BlockReservation> reservationsByEntity = new Reference2ObjectOpenHashMap();
 
    public ResourceView(long index) {
       this.index = index;

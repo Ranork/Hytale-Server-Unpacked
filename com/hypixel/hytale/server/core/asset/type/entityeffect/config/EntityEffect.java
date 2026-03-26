@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
+import com.hypixel.hytale.server.core.modules.entity.condition.Condition;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsModule;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
@@ -234,6 +235,14 @@ public class EntityEffect
       )
       .documentation("Localization key used on the death screen when this EntityEffect kills a player.")
       .add()
+      .<Condition[]>appendInherited(
+         new KeyedCodec<>("ApplyConditions", new ArrayCodec<>(Condition.CODEC, Condition[]::new)),
+         (entityEffect, conditions) -> entityEffect.applyConditions = conditions,
+         entityEffect -> entityEffect.applyConditions,
+         (entityEffect, parent) -> entityEffect.applyConditions = parent.applyConditions
+      )
+      .documentation("Conditions that must ALL be true for this effect to remain active. If any condition fails, the effect is removed.")
+      .add()
       .afterDecode(entityEffect -> {
          entityEffect.entityStats = EntityStatsModule.resolveEntityStats(entityEffect.unknownEntityStats);
          entityEffect.statModifiers = EntityStatsModule.resolveEntityStats(entityEffect.rawStatModifiers);
@@ -296,6 +305,8 @@ public class EntityEffect
    protected String locale;
    protected boolean invulnerable = false;
    protected String deathMessageKey;
+   @Nullable
+   protected Condition[] applyConditions;
    @Nullable
    protected Map<String, StaticModifier[]> rawStatModifiers;
    @Nullable
@@ -429,6 +440,11 @@ public class EntityEffect
 
    public String getDeathMessageKey() {
       return this.deathMessageKey;
+   }
+
+   @Nullable
+   public Condition[] getApplyConditions() {
+      return this.applyConditions;
    }
 
    @Nonnull

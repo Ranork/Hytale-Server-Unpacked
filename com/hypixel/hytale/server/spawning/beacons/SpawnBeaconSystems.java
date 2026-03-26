@@ -51,9 +51,8 @@ import com.hypixel.hytale.server.spawning.util.FloodFillEntryPoolProviderSimple;
 import com.hypixel.hytale.server.spawning.util.FloodFillPositionSelector;
 import com.hypixel.hytale.server.spawning.wrappers.BeaconSpawnWrapper;
 import it.unimi.dsi.fastutil.Pair;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import it.unimi.dsi.fastutil.objects.Reference2DoubleMap;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -222,7 +221,7 @@ public class SpawnBeaconSystems {
             BeaconSpawnController spawnController = legacySpawnBeaconComponent.getSpawnController();
             List<Ref<EntityStore>> spawnedEntities = spawnController.getSpawnedEntities();
             if (!spawnedEntities.isEmpty()) {
-               Object2DoubleMap<Ref<EntityStore>> entityTimeoutCounter = spawnController.getEntityTimeoutCounter();
+               Reference2DoubleMap<Ref<EntityStore>> entityTimeoutCounter = spawnController.getEntityTimeoutCounter();
                boolean despawnNPCsIfIdle = spawnController.isDespawnNPCsIfIdle();
                double beaconRadiusSquared = spawnController.getBeaconRadiusSquared();
                double despawnNPCAfterTimeout = spawnController.getDespawnNPCAfterTimeout();
@@ -269,12 +268,12 @@ public class SpawnBeaconSystems {
                double minY = y + yRange[0];
                double maxY = y + yRange[1];
                SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.playerSpatialResource);
-               ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+               List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
                spatialResource.getSpatialStructure().collect(position, spawnWrapper.getBeaconRadius(), results);
                List<PlayerRef> playersInRegion = spawnController.getPlayersInRegion();
 
                for (int ix = 0; ix < results.size(); ix++) {
-                  Ref<EntityStore> result = (Ref<EntityStore>)results.get(ix);
+                  Ref<EntityStore> result = results.get(ix);
                   if (result.isValid()) {
                      PlayerRef resultPlayerComponent = commandBuffer.getComponent(result, this.playerRefComponentType);
 

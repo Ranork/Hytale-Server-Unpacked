@@ -27,7 +27,7 @@ public class BlendNoisePropertyJsonLoader<K extends SeedResource> extends JsonLo
    }
 
    protected NoiseProperty[] loadNoise() {
-      JsonArray noise = this.mustGetArray("Noise", BlendNoisePropertyJsonLoader.Constants.EMPTY_ARRAY);
+      JsonArray noise = this.mustGetArray("Noise", EMPTY_ARRAY);
       NoiseProperty[] noises = new NoiseProperty[noise.size()];
 
       for (int i = 0; i < noise.size(); i++) {
@@ -38,7 +38,7 @@ public class BlendNoisePropertyJsonLoader<K extends SeedResource> extends JsonLo
    }
 
    protected double[] loadThresholds() {
-      JsonArray thresholds = this.mustGetArray("Thresholds", BlendNoisePropertyJsonLoader.Constants.EMPTY_ARRAY);
+      JsonArray thresholds = this.mustGetArray("Thresholds", EMPTY_ARRAY);
       double[] values = new double[thresholds.size()];
 
       for (int i = 0; i < thresholds.size(); i++) {

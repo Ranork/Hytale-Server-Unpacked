@@ -2,6 +2,8 @@ package com.hypixel.hytale.server.worldgen.loader.container;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
+import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
 import com.hypixel.hytale.procedurallib.json.DoubleRangeJsonLoader;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
@@ -17,16 +19,22 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.container.LayerContainer;
+import com.hypixel.hytale.server.worldgen.loader.context.BiomeFileContext;
 import com.hypixel.hytale.server.worldgen.loader.util.NoiseBlockArrayJsonLoader;
 import com.hypixel.hytale.server.worldgen.util.ConstantNoiseProperty;
+import com.hypixel.hytale.server.worldgen.util.ListPool;
 import com.hypixel.hytale.server.worldgen.util.NoiseBlockArray;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class LayerContainerJsonLoader extends JsonLoader<SeedStringResource, LayerContainer> {
-   public LayerContainerJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json) {
+   @Nonnull
+   protected final BiomeFileContext biomeContext;
+
+   public LayerContainerJsonLoader(@Nonnull SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json, @Nonnull BiomeFileContext biomeContext) {
       super(seed.append(".LayerContainer"), dataFolder, json);
+      this.biomeContext = biomeContext;
    }
 
    @Nonnull
@@ -63,42 +71,60 @@ public class LayerContainerJsonLoader extends JsonLoader<SeedStringResource, Lay
 
    @Nonnull
    protected LayerContainer.StaticLayer[] loadStaticLayers() {
-      if (!this.has("Static")) {
-         return new LayerContainer.StaticLayer[0];
-      } else {
-         JsonArray array = this.get("Static").getAsJsonArray();
-         LayerContainer.StaticLayer[] layers = new LayerContainer.StaticLayer[array.size()];
+      JsonArray layerArray = this.mustGetArray("Static", EMPTY_ARRAY);
 
-         for (int i = 0; i < layers.length; i++) {
+      LayerContainer.StaticLayer[] e;
+      try (ListPool.Resource<LayerContainer.StaticLayer> entries = LayerContainer.STATIC_POOL.acquire(layerArray.size())) {
+         for (int i = 0; i < layerArray.size(); i++) {
             try {
-               layers[i] = new LayerContainerJsonLoader.StaticLayerJsonLoader(this.seed.append("-" + i), this.dataFolder, array.get(i)).load();
-            } catch (Throwable var5) {
-               throw new Error(String.format("Error while loading StaticLayer #%s", i), var5);
+               entries.add(new LayerContainerJsonLoader.StaticLayerJsonLoader(this.seed.append("-" + i), this.dataFolder, layerArray.get(i)).load());
+            } catch (Throwable var6) {
+               throw new Error(String.format("Error while loading StaticLayer #%s", i), var6);
             }
          }
 
-         return layers;
+         ModifyEvent.SeedGenerator<SeedStringResource> seed = new ModifyEvent.SeedGenerator<>(this.seed);
+         ModifyEvent.dispatch(
+            ModifyEvents.BiomeStaticLayers.class,
+            new ModifyEvents.BiomeStaticLayers(
+               this.biomeContext,
+               entries,
+               content -> new LayerContainerJsonLoader.StaticLayerJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+            )
+         );
+         e = entries.toArray();
       }
+
+      return e;
    }
 
    @Nonnull
    protected LayerContainer.DynamicLayer[] loadDynamicLayers() {
-      if (!this.has("Dynamic")) {
-         return new LayerContainer.DynamicLayer[0];
-      } else {
-         JsonArray array = this.get("Dynamic").getAsJsonArray();
-         LayerContainer.DynamicLayer[] layers = new LayerContainer.DynamicLayer[array.size()];
+      JsonArray layerArray = this.mustGetArray("Dynamic", EMPTY_ARRAY);
 
-         for (int i = 0; i < layers.length; i++) {
+      LayerContainer.DynamicLayer[] e;
+      try (ListPool.Resource<LayerContainer.DynamicLayer> entries = LayerContainer.DYNAMIC_POOL.acquire(layerArray.size())) {
+         for (int i = 0; i < layerArray.size(); i++) {
             try {
-               layers[i] = new LayerContainerJsonLoader.DynamicLayerJsonLoader(this.seed.append("-" + i), this.dataFolder, array.get(i)).load();
-            } catch (Throwable var5) {
-               throw new Error(String.format("Error while loading DynamicLayer #%s", i), var5);
+               entries.add(new LayerContainerJsonLoader.DynamicLayerJsonLoader(this.seed.append("-" + i), this.dataFolder, layerArray.get(i)).load());
+            } catch (Throwable var6) {
+               throw new Error(String.format("Error while loading DynamicLayer #%s", i), var6);
             }
          }
 
-         return layers;
+         ModifyEvent.SeedGenerator<SeedStringResource> seed = new ModifyEvent.SeedGenerator<>(this.seed);
+         ModifyEvent.dispatch(
+            ModifyEvents.BiomeDynamicLayers.class,
+            new ModifyEvents.BiomeDynamicLayers(
+               this.biomeContext,
+               entries,
+               content -> new LayerContainerJsonLoader.DynamicLayerJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+            )
+         );
+         e = entries.toArray();
       }
+
+      return e;
    }
 
    public interface Constants {

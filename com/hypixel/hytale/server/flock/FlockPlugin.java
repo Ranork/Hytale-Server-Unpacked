@@ -227,25 +227,27 @@ public class FlockPlugin extends JavaPlugin {
 
             Pair<Ref<EntityStore>, NPCEntity> memberPair = NPCPlugin.get()
                .spawnEntity(store, memberRoleIndex, position, rotation, null, preAddToWorld, postSpawn);
-            Ref<EntityStore> memberRef = (Ref<EntityStore>)memberPair.first();
-            if (memberRef != null && memberRef.isValid()) {
-               BoundingBox memberBoundingBoxComponent = store.getComponent(memberRef, BoundingBox.getComponentType());
+            if (memberPair != null) {
+               Ref<EntityStore> memberRef = (Ref<EntityStore>)memberPair.first();
+               if (memberRef != null && memberRef.isValid()) {
+                  BoundingBox memberBoundingBoxComponent = store.getComponent(memberRef, BoundingBox.getComponentType());
 
-               assert memberBoundingBoxComponent != null;
+                  assert memberBoundingBoxComponent != null;
 
-               TransformComponent memberTransformComponent = store.getComponent(memberRef, TransformComponent.getComponentType());
+                  TransformComponent memberTransformComponent = store.getComponent(memberRef, TransformComponent.getComponentType());
 
-               assert memberTransformComponent != null;
+                  assert memberTransformComponent != null;
 
-               HeadRotation memberHeadRotationComponent = store.getComponent(memberRef, HeadRotation.getComponentType());
+                  HeadRotation memberHeadRotationComponent = store.getComponent(memberRef, HeadRotation.getComponentType());
 
-               assert memberHeadRotationComponent != null;
+                  assert memberHeadRotationComponent != null;
 
-               double offsetY = y - memberBoundingBoxComponent.getBoundingBox().min.y;
-               memberTransformComponent.getRotation().setYaw((float)(yaw + RandomExtra.randomRange((float) (Math.PI / 4), (float) (Math.PI / 4))));
-               memberHeadRotationComponent.getRotation().setPitch(0.0F);
-               memberTransformComponent.getPosition().assign(x + RandomExtra.randomRange(-0.5, 0.5), offsetY, z + RandomExtra.randomRange(-0.5, 0.5));
-               FlockMembershipSystems.join(memberRef, flockReference, store);
+                  double offsetY = y - memberBoundingBoxComponent.getBoundingBox().min.y;
+                  memberTransformComponent.getRotation().setYaw((float)(yaw + RandomExtra.randomRange((float) (Math.PI / 4), (float) (Math.PI / 4))));
+                  memberHeadRotationComponent.getRotation().setPitch(0.0F);
+                  memberTransformComponent.getPosition().assign(x + RandomExtra.randomRange(-0.5, 0.5), offsetY, z + RandomExtra.randomRange(-0.5, 0.5));
+                  FlockMembershipSystems.join(memberRef, flockReference, store);
+               }
             }
          }
 

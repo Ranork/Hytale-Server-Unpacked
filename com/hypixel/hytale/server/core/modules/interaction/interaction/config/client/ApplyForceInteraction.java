@@ -39,8 +39,8 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.operation.
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.core.modules.splitvelocity.VelocityConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.Arrays;
+import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -256,7 +256,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
             EntityModule.get().getNetworkSendableSpatialResourceType()
          );
          SpatialStructure<Ref<EntityStore>> spatialStructure = networkSendableSpatialComponent.getSpatialStructure();
-         ObjectList<Ref<EntityStore>> entities = SpatialResource.getThreadLocalReferenceList();
+         List<Ref<EntityStore>> entities = SpatialResource.getThreadLocalReferenceList();
          spatialStructure.collect(transformComponent.getPosition(), 1.5, entities);
          boolean checkGround = time >= this.groundCheckDelay;
          boolean onGround = checkGround

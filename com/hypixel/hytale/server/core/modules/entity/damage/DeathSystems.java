@@ -18,6 +18,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -44,6 +45,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.RespawnPage;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
@@ -61,12 +63,18 @@ import com.hypixel.hytale.server.core.modules.interaction.Interactions;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.UnarmedInteractions;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
+import com.hypixel.hytale.server.core.modules.voice.VoiceModule;
+import com.hypixel.hytale.server.core.modules.voice.VoicePlayerState;
+import com.hypixel.hytale.server.core.modules.voice.VoiceRouter;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -167,14 +175,24 @@ public class DeathSystems {
 
    public static class CorpseRemoval extends EntityTickingSystem<EntityStore> {
       @Nonnull
-      private static final ComponentType<EntityStore, DeferredCorpseRemoval> DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE = DeferredCorpseRemoval.getComponentType();
+      private static final Query<EntityStore> QUERY = Query.and(
+         DeathComponent.getComponentType(), Query.not(Player.getComponentType()), TransformComponent.getComponentType()
+      );
       @Nonnull
-      private static final Query<EntityStore> QUERY = Query.and(DeathComponent.getComponentType(), Query.not(Player.getComponentType()));
+      private static final Set<Dependency<EntityStore>> DEPENDENCIES = Collections.singleton(
+         new SystemDependency<>(Order.AFTER, DeathSystems.TickCorpseRemoval.class)
+      );
 
       @Nonnull
       @Override
       public Query<EntityStore> getQuery() {
          return QUERY;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return DEPENDENCIES;
       }
 
       @Override
@@ -191,9 +209,19 @@ public class DeathSystems {
 
          InteractionChain deathInteractionChain = deathComponent.getInteractionChain();
          if (deathInteractionChain == null || deathInteractionChain.getServerState() != InteractionState.NotFinished) {
-            DeferredCorpseRemoval corpseRemoval = archetypeChunk.getComponent(index, DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE);
-            if (corpseRemoval == null || corpseRemoval.tick(dt)) {
+            DeferredCorpseRemoval corpseRemoval = archetypeChunk.getComponent(index, DeferredCorpseRemoval.getComponentType());
+            if (corpseRemoval == null) {
                commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
+            } else if (corpseRemoval.shouldRemove()) {
+               commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
+               String deathParticles = corpseRemoval.getDeathParticles();
+               if (deathParticles != null) {
+                  TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+
+                  assert transformComponent != null;
+
+                  ParticleUtil.spawnParticleEffect(deathParticles, transformComponent.getPosition(), commandBuffer);
+               }
             }
          }
       }
@@ -253,17 +281,17 @@ public class DeathSystems {
 
          if (playerComponent.getGameMode() != GameMode.Creative) {
             component.setDisplayDataOnDeathScreen(true);
-            CombinedItemContainer combinedItemContainer = playerComponent.getInventory().getCombinedEverything();
+            CombinedItemContainer combinedInventoryComponent = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.EVERYTHING);
             if (component.getItemsDurabilityLossPercentage() > 0.0) {
                double durabilityLossRatio = component.getItemsDurabilityLossPercentage() / 100.0;
                boolean hasArmorBroken = false;
 
-               for (short i = 0; i < combinedItemContainer.getCapacity(); i++) {
-                  ItemStack itemStack = combinedItemContainer.getItemStack(i);
+               for (short i = 0; i < combinedInventoryComponent.getCapacity(); i++) {
+                  ItemStack itemStack = combinedInventoryComponent.getItemStack(i);
                   if (!ItemStack.isEmpty(itemStack) && !itemStack.isBroken() && itemStack.getItem().getDurabilityLossOnDeath()) {
                      double durabilityLoss = itemStack.getMaxDurability() * durabilityLossRatio;
                      ItemStack updatedItemStack = itemStack.withIncreasedDurability(-durabilityLoss);
-                     ItemStackSlotTransaction transaction = combinedItemContainer.replaceItemStackInSlot(i, itemStack, updatedItemStack);
+                     ItemStackSlotTransaction transaction = combinedInventoryComponent.replaceItemStackInSlot(i, itemStack, updatedItemStack);
                      if (transaction.getSlotAfter().isBroken() && itemStack.getItem().getArmor() != null) {
                         hasArmorBroken = true;
                      }
@@ -271,7 +299,10 @@ public class DeathSystems {
                }
 
                if (hasArmorBroken) {
-                  playerComponent.getStatModifiersManager().setRecalculate(true);
+                  EntityStatMap entityStatMapComponent = commandBuffer.getComponent(ref, EntityStatMap.getComponentType());
+                  if (entityStatMapComponent != null) {
+                     entityStatMapComponent.getStatModifiersManager().scheduleRecalculate();
+                  }
                }
             }
 
@@ -286,17 +317,17 @@ public class DeathSystems {
                      double itemAmountLossRatio = itemsAmountLossPercentage / 100.0;
                      itemsToDrop = new ObjectArrayList();
 
-                     for (short ix = 0; ix < combinedItemContainer.getCapacity(); ix++) {
-                        ItemStack itemStack = combinedItemContainer.getItemStack(ix);
+                     for (short ix = 0; ix < combinedInventoryComponent.getCapacity(); ix++) {
+                        ItemStack itemStack = combinedInventoryComponent.getItemStack(ix);
                         if (!ItemStack.isEmpty(itemStack) && itemStack.getItem().dropsOnDeath()) {
                            int quantityToLose = Math.max(1, MathUtil.floor(itemStack.getQuantity() * itemAmountLossRatio));
                            itemsToDrop.add(itemStack.withQuantity(quantityToLose));
                            int newQuantity = itemStack.getQuantity() - quantityToLose;
                            if (newQuantity > 0) {
                               ItemStack updatedItemStack = itemStack.withQuantity(newQuantity);
-                              combinedItemContainer.replaceItemStackInSlot(ix, itemStack, updatedItemStack);
+                              combinedInventoryComponent.replaceItemStackInSlot(ix, itemStack, updatedItemStack);
                            } else {
-                              combinedItemContainer.removeItemStackFromSlot(ix);
+                              combinedInventoryComponent.removeItemStackFromSlot(ix);
                            }
                         }
                      }
@@ -602,6 +633,77 @@ public class DeathSystems {
       public void onEntityRemove(
          @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
+      }
+   }
+
+   public static class StopVoiceOnDeath extends DeathSystems.OnDeathSystem {
+      private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return Query.and(Player.getComponentType(), PlayerRef.getComponentType());
+      }
+
+      public void onComponentAdded(
+         @Nonnull Ref<EntityStore> ref, @Nonnull DeathComponent component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+         if (playerRefComponent != null) {
+            UUID playerId = playerRefComponent.getUuid();
+            VoiceModule voiceModule = VoiceModule.get();
+            if (voiceModule != null) {
+               VoicePlayerState voiceState = voiceModule.getPlayerState(playerId);
+               if (voiceState != null) {
+                  voiceState.setSilenced(true);
+                  voiceState.setSpeaking(false);
+                  VoiceRouter voiceRouter = voiceModule.getVoiceRouter();
+                  if (voiceRouter != null) {
+                     PlayerRef playerRef = Universe.get().getPlayer(playerId);
+                     if (playerRef != null) {
+                        voiceRouter.sendVoiceConfig(playerRef);
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   public static class TickCorpseRemoval extends EntityTickingSystem<EntityStore> {
+      @Nonnull
+      private static final ComponentType<EntityStore, DeferredCorpseRemoval> DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE = DeferredCorpseRemoval.getComponentType();
+      @Nonnull
+      private static final Query<EntityStore> QUERY = Query.and(
+         DeathComponent.getComponentType(), Query.not(Player.getComponentType()), TransformComponent.getComponentType(), DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE
+      );
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return QUERY;
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         DeathComponent deathComponent = archetypeChunk.getComponent(index, DeathComponent.getComponentType());
+
+         assert deathComponent != null;
+
+         InteractionChain deathInteractionChain = deathComponent.getInteractionChain();
+         if (deathInteractionChain == null || deathInteractionChain.getServerState() != InteractionState.NotFinished) {
+            DeferredCorpseRemoval corpseRemoval = archetypeChunk.getComponent(index, DEFERRED_CORPSE_REMOVAL_COMPONENT_TYPE);
+
+            assert corpseRemoval != null;
+
+            corpseRemoval.tick(dt);
+         }
       }
    }
 }

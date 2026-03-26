@@ -17,6 +17,7 @@ import com.hypixel.hytale.component.data.unknown.TempUnknownComponent;
 import com.hypixel.hytale.component.data.unknown.UnknownComponents;
 import com.hypixel.hytale.component.dependency.Dependency;
 import com.hypixel.hytale.component.event.EntityEventType;
+import com.hypixel.hytale.component.event.EntityHolderEventType;
 import com.hypixel.hytale.component.event.WorldEventType;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.query.ReadWriteArchetypeQuery;
@@ -24,6 +25,7 @@ import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.spatial.SpatialStructure;
 import com.hypixel.hytale.component.system.EcsEvent;
 import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.component.system.EntityHolderEventSystem;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.ISystem;
 import com.hypixel.hytale.component.system.QuerySystem;
@@ -106,6 +108,8 @@ public class ComponentRegistry<ECS_TYPE> implements IComponentRegistry<ECS_TYPE>
    @Nonnull
    private final Object2IntMap<Class<? extends EcsEvent>> entityEventTypeClassToIndex = new Object2IntOpenHashMap(16);
    @Nonnull
+   private final Object2IntMap<Class<? extends EcsEvent>> entityHolderEventTypeClassToIndex = new Object2IntOpenHashMap(16);
+   @Nonnull
    private final Object2IntMap<Class<? extends EcsEvent>> worldEventTypeClassToIndex = new Object2IntOpenHashMap(16);
    private final BitSet systemTypeIndexReuse = new BitSet();
    private int systemTypeSize;
@@ -164,6 +168,7 @@ public class ComponentRegistry<ECS_TYPE> implements IComponentRegistry<ECS_TYPE>
       this.resourceIdToIndex.defaultReturnValue(Integer.MIN_VALUE);
       this.systemTypeClassToIndex.defaultReturnValue(Integer.MIN_VALUE);
       this.entityEventTypeClassToIndex.defaultReturnValue(Integer.MIN_VALUE);
+      this.entityHolderEventTypeClassToIndex.defaultReturnValue(Integer.MIN_VALUE);
       this.worldEventTypeClassToIndex.defaultReturnValue(Integer.MIN_VALUE);
 
       for (int i = 0; i < 16; i++) {
@@ -540,6 +545,24 @@ public class ComponentRegistry<ECS_TYPE> implements IComponentRegistry<ECS_TYPE>
       }
    }
 
+   public <T extends EcsEvent> void unregisterEntityHolderEventType(@Nonnull EntityHolderEventType<ECS_TYPE, T> eventType) {
+      if (this.shutdown) {
+         throw new IllegalStateException("Registry has been shutdown");
+      } else {
+         eventType.validate();
+         long lock = this.dataLock.writeLock();
+
+         try {
+            this.unregisterEntityHolderEventType0(eventType);
+            lock = this.dataLock.tryConvertToReadLock(lock);
+            this.updateData0(new SystemTypeChange<>(ChangeType.UNREGISTERED, eventType));
+            eventType.invalidate();
+         } finally {
+            this.dataLock.unlock(lock);
+         }
+      }
+   }
+
    public <T extends EcsEvent> void unregisterWorldEventType(@Nonnull WorldEventType<ECS_TYPE, T> eventType) {
       if (this.shutdown) {
          throw new IllegalStateException("Registry has been shutdown");
@@ -669,6 +692,12 @@ public class ComponentRegistry<ECS_TYPE> implements IComponentRegistry<ECS_TYPE>
             if (system instanceof EntityEventSystem<ECS_TYPE, ?> eventSystem && !this.entityEventTypeClassToIndex.containsKey(eventSystem.getEventType())) {
                EntityEventType<ECS_TYPE, ?> eventType = this.registerEntityEventType0(eventSystem.getEventType());
                changes.add(new SystemTypeChange<>(ChangeType.REGISTERED, (SystemType<ECS_TYPE, EntityEventSystem<ECS_TYPE, EcsEvent>>)eventType));
+            }
+
+            if (system instanceof EntityHolderEventSystem<ECS_TYPE, ?> eventSystem
+               && !this.entityHolderEventTypeClassToIndex.containsKey(eventSystem.getEventType())) {
+               EntityHolderEventType<ECS_TYPE, ?> eventType = this.registerEntityHolderEventType0(eventSystem.getEventType());
+               changes.add(new SystemTypeChange<>(ChangeType.REGISTERED, (SystemType<ECS_TYPE, EntityHolderEventSystem<ECS_TYPE, EcsEvent>>)eventType));
             }
 
             if (system instanceof WorldEventSystem<ECS_TYPE, ?> eventSystem && !this.worldEventTypeClassToIndex.containsKey(eventSystem.getEventType())) {
@@ -1060,6 +1089,54 @@ public class ComponentRegistry<ECS_TYPE> implements IComponentRegistry<ECS_TYPE>
    public <T extends EcsEvent> EntityEventType<ECS_TYPE, T> getEntityEventTypeForClass(Class<T> eClass) {
       int index = this.entityEventTypeClassToIndex.getInt(eClass);
       return index == Integer.MIN_VALUE ? null : (EntityEventType)this.systemTypes[index];
+   }
+
+   @Nonnull
+   private <T extends EcsEvent> EntityHolderEventType<ECS_TYPE, T> registerEntityHolderEventType0(@Nonnull Class<? super T> eventTypeClass) {
+      if (this.entityHolderEventTypeClassToIndex.containsKey(eventTypeClass)) {
+         throw new IllegalArgumentException("event type '" + eventTypeClass + "' already exists!");
+      } else {
+         int systemTypeIndex;
+         if (this.systemTypeIndexReuse.isEmpty()) {
+            systemTypeIndex = this.systemTypeSize++;
+         } else {
+            systemTypeIndex = this.systemTypeIndexReuse.nextSetBit(0);
+            this.systemTypeIndexReuse.clear(systemTypeIndex);
+         }
+
+         if (this.systemTypes.length <= systemTypeIndex) {
+            this.systemTypes = Arrays.copyOf(this.systemTypes, ArrayUtil.grow(systemTypeIndex));
+            this.systemTypeToSystemIndex = Arrays.copyOf(this.systemTypeToSystemIndex, ArrayUtil.grow(systemTypeIndex));
+         }
+
+         EntityHolderEventType<ECS_TYPE, T> systemType = new EntityHolderEventType<>(
+            this, EntityHolderEventSystem.class, (Class<T>)eventTypeClass, systemTypeIndex
+         );
+         this.entityHolderEventTypeClassToIndex.put(eventTypeClass, systemTypeIndex);
+         this.systemTypes[systemTypeIndex] = systemType;
+         return systemType;
+      }
+   }
+
+   private <T extends EcsEvent> void unregisterEntityHolderEventType0(@Nonnull EntityHolderEventType<ECS_TYPE, T> eventType) {
+      int systemTypeIndex = eventType.getIndex();
+      if (systemTypeIndex == this.systemTypeSize - 1) {
+         int highestUsedIndex = this.systemTypeIndexReuse.previousClearBit(systemTypeIndex - 1);
+         this.systemTypeSize = highestUsedIndex + 1;
+         this.systemTypeIndexReuse.clear(this.systemTypeSize, systemTypeIndex);
+      } else {
+         this.systemTypeIndexReuse.set(systemTypeIndex);
+      }
+
+      this.entityHolderEventTypeClassToIndex.removeInt(eventType.getEventClass());
+      this.systemTypes[systemTypeIndex] = null;
+      this.systemTypeToSystemIndex[systemTypeIndex].clear();
+   }
+
+   @Nullable
+   public <T extends EcsEvent> EntityHolderEventType<ECS_TYPE, T> getEntityHolderEventTypeForClass(Class<T> eClass) {
+      int index = this.entityHolderEventTypeClassToIndex.getInt(eClass);
+      return index == Integer.MIN_VALUE ? null : (EntityHolderEventType)this.systemTypes[index];
    }
 
    @Nonnull

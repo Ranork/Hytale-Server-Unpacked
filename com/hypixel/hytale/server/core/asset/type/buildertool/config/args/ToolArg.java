@@ -4,6 +4,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.lookup.CodecMapCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArg;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
@@ -11,10 +12,19 @@ import javax.annotation.Nonnull;
 public abstract class ToolArg<T> implements NetworkSerializable<BuilderToolArg> {
    public static final CodecMapCodec<ToolArg> CODEC = new CodecMapCodec<>("Type");
    public static final BuilderCodec<ToolArg> DEFAULT_CODEC = BuilderCodec.abstractBuilder(ToolArg.class)
-      .addField(new KeyedCodec<>("Required", Codec.BOOLEAN), (shapeArg, o) -> shapeArg.required = o, shapeArg -> shapeArg.required)
+      .append(new KeyedCodec<>("Required", Codec.BOOLEAN), (shapeArg, o) -> shapeArg.required = o, shapeArg -> shapeArg.required)
+      .add()
+      .<String>append(new KeyedCodec<>("Id", CodecMapCodec.STRING), (arg, o) -> arg.id = o, arg -> arg.id)
+      .addValidator(Validators.nonNull())
+      .add()
       .build();
+   protected String id;
    protected boolean required = true;
    protected T value;
+
+   public String getId() {
+      return this.id;
+   }
 
    public T getValue() {
       return this.value;
@@ -35,6 +45,7 @@ public abstract class ToolArg<T> implements NetworkSerializable<BuilderToolArg> 
    public BuilderToolArg toPacket() {
       BuilderToolArg packet = new BuilderToolArg();
       packet.required = this.required;
+      packet.id = this.id;
       this.setupPacket(packet);
       return packet;
    }
@@ -42,6 +53,6 @@ public abstract class ToolArg<T> implements NetworkSerializable<BuilderToolArg> 
    @Nonnull
    @Override
    public String toString() {
-      return "ToolArg{required=" + this.required + ", value=" + this.value + "}";
+      return "ToolArg{required=" + this.required + "id=" + this.id + ", value=" + this.value + "}";
    }
 }

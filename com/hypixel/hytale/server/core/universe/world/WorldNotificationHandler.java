@@ -8,13 +8,7 @@ import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.SpawnBlockParticleSystem;
 import com.hypixel.hytale.protocol.packets.world.UpdateBlockDamage;
-import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.state.SendableBlockState;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -25,60 +19,6 @@ public class WorldNotificationHandler {
 
    public WorldNotificationHandler(@Nonnull World world) {
       this.world = world;
-   }
-
-   public void updateState(int x, int y, int z, BlockState state, BlockState oldState) {
-      this.updateState(x, y, z, state, oldState, null);
-   }
-
-   public void updateState(int x, int y, int z, BlockState state, BlockState oldState, @Nullable Predicate<PlayerRef> skip) {
-      if (y >= 0 && y < 320) {
-         Consumer<List<ToClientPacket>> removeOldState;
-         Predicate<PlayerRef> canPlayerSeeOld;
-         if (oldState instanceof SendableBlockState sendableBlockState && state != oldState) {
-            removeOldState = sendableBlockState::unloadFrom;
-            canPlayerSeeOld = sendableBlockState::canPlayerSee;
-         } else {
-            removeOldState = null;
-            canPlayerSeeOld = null;
-         }
-
-         Predicate<PlayerRef> canPlayerSee;
-         Consumer<List<ToClientPacket>> updateBlockState;
-         if (state instanceof SendableBlockState sendableBlockState) {
-            updateBlockState = sendableBlockState::sendTo;
-            canPlayerSee = sendableBlockState::canPlayerSee;
-         } else {
-            updateBlockState = null;
-            canPlayerSee = null;
-         }
-
-         if (removeOldState != null || updateBlockState != null) {
-            long indexChunk = ChunkUtil.indexChunkFromBlock(x, z);
-            List<ToClientPacket> packets = new ObjectArrayList();
-
-            for (PlayerRef playerRef : this.world.getPlayerRefs()) {
-               ChunkTracker chunkTracker = playerRef.getChunkTracker();
-               if (chunkTracker.isLoaded(indexChunk) && (skip == null || !skip.test(playerRef))) {
-                  if (removeOldState != null && canPlayerSeeOld.test(playerRef)) {
-                     removeOldState.accept(packets);
-                  }
-
-                  if (updateBlockState != null && canPlayerSee.test(playerRef)) {
-                     updateBlockState.accept(packets);
-                  }
-
-                  for (ToClientPacket packet : packets) {
-                     playerRef.getPacketHandler().write(packet);
-                  }
-
-                  packets.clear();
-               }
-            }
-         }
-      } else {
-         throw new IllegalArgumentException("Y value is outside the world! " + x + ", " + y + ", " + z);
-      }
    }
 
    public void updateChunk(long indexChunk) {

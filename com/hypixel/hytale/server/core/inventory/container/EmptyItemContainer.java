@@ -62,6 +62,22 @@ public class EmptyItemContainer extends ItemContainer {
       return action.apply(x);
    }
 
+   @Override
+   protected void lockForRead() {
+   }
+
+   @Override
+   protected void unlockForRead() {
+   }
+
+   @Override
+   protected void lockForWrite() {
+   }
+
+   @Override
+   protected void unlockForWrite() {
+   }
+
    @Nonnull
    @Override
    protected ClearTransaction internal_clear() {

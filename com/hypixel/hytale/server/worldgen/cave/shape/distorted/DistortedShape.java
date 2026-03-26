@@ -12,10 +12,6 @@ public interface DistortedShape extends IWorldBounds {
 
    Vector3d getAnchor(Vector3d var1, double var2, double var4, double var6);
 
-   default boolean hasGeometry() {
-      return this.getHighBoundX() > this.getLowBoundX() && this.getHighBoundY() > this.getLowBoundY() && this.getHighBoundZ() > this.getLowBoundZ();
-   }
-
    double getProjection(double var1, double var3);
 
    boolean isValidProjection(double var1);

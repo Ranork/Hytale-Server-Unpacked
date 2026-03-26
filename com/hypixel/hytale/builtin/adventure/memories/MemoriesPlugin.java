@@ -128,15 +128,14 @@ public class MemoriesPlugin extends JavaPlugin {
 
    @Override
    protected void start() {
-      try {
-         Path path = Constants.UNIVERSE_PATH.resolve("memories.json");
-         if (Files.exists(path)) {
-            this.recordedMemories = RawJsonReader.readSync(path, MemoriesPlugin.RecordedMemories.CODEC, this.getLogger());
-         } else {
+      Path path = Constants.UNIVERSE_PATH.resolve("memories.json");
+      if (Files.exists(path)) {
+         this.recordedMemories = RawJsonReader.readSyncWithBak(path, MemoriesPlugin.RecordedMemories.CODEC, this.getLogger());
+         if (this.recordedMemories == null) {
             this.recordedMemories = new MemoriesPlugin.RecordedMemories();
          }
-      } catch (IOException var2) {
-         throw new RuntimeException(var2);
+      } else {
+         this.recordedMemories = new MemoriesPlugin.RecordedMemories();
       }
 
       this.hasInitializedMemories = true;

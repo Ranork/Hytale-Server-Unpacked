@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.assets.bounds.DecimalBounds3dAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.BoundPositionProvider;
+import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -28,7 +29,7 @@ public class BoundPositionProviderAsset extends PositionProviderAsset {
    @Override
    public PositionProvider build(@Nonnull PositionProviderAsset.Argument argument) {
       return (PositionProvider)(super.skip()
-         ? PositionProvider.noPositionProvider()
+         ? EmptyPositionProvider.INSTANCE
          : new BoundPositionProvider(this.positionProviderAsset.build(argument), this.bounds.build()));
    }
 

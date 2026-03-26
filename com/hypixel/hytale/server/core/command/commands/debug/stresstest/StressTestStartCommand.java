@@ -282,7 +282,8 @@ public class StressTestStartCommand extends AbstractAsyncWorldCommand {
                         }
 
                         if (shutdown) {
-                           HytaleServer.get().shutdownServer(ShutdownReason.SHUTDOWN.withMessage("Stress test finished!"));
+                           Message reasonMessage = Message.translation("client.disconnection.shutdownReason.shutdown.stressTestFinished");
+                           HytaleServer.get().shutdownServer(ShutdownReason.SHUTDOWN.withMessage(reasonMessage));
                         }
                      } else {
                         BOTS.add(new Bot("bot-" + counter.getAndIncrement(), config, tickStepNanos));

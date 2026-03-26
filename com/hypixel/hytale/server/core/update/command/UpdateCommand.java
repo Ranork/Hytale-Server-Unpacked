@@ -21,6 +21,7 @@ public class UpdateCommand extends AbstractCommandCollection {
       this.addSubCommand(new UpdateCancelCommand());
       this.addSubCommand(new UpdateStatusCommand());
       this.addSubCommand(new UpdatePatchlineCommand());
+      this.addSubCommand(new UpdateSetupCommand());
    }
 
    @Nullable

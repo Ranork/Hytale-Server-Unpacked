@@ -40,42 +40,48 @@ public class PortalDeviceActivePage extends InteractiveCustomUIPage<PortalDevice
       PortalDeviceActivePage.State state = this.computeState(ref, store);
       if (state != PortalDeviceActivePage.Error.INVALID_BLOCK) {
          commandBuilder.append("Pages/PortalDeviceActive.ui");
-         if (state instanceof PortalDeviceActivePage.PortalIsOpen(World playerCountMsg, PortalWorld var19, boolean var26)) {
-            boolean var20 = var26;
-            if (true) {
-               PortalType var18 = var19.getPortalType();
-               commandBuilder.set("#PortalPanel.Visible", true);
-               if (var20) {
-                  commandBuilder.set("#Died.Visible", true);
-               }
+         if (state == PortalDeviceActivePage.Error.PORTAL_LOADING) {
+            commandBuilder.set("#Error.Visible", true);
+            commandBuilder.set("#ErrorTitle.Visible", false);
+            commandBuilder.set("#ErrorLabel.Text", Message.translation("server.customUI.portalDevice.loading"));
+         } else {
+            if (state instanceof PortalDeviceActivePage.PortalIsOpen(World playerCountMsg, PortalWorld var19, boolean var26)) {
+               boolean var20 = var26;
+               if (true) {
+                  PortalType var18 = var19.getPortalType();
+                  commandBuilder.set("#PortalPanel.Visible", true);
+                  if (var20) {
+                     commandBuilder.set("#Died.Visible", true);
+                  }
 
-               commandBuilder.set(
-                  "#PortalTitle.TextSpans", Message.translation("server.customUI.portalDevice.portalTitle").param("name", var18.getDisplayName())
-               );
-               commandBuilder.set("#PortalDescription.TextSpans", PortalDeviceSummonPage.createDescription(var18, var19.getTimeLimitSeconds()));
-               Message playerCountMsgx = createPlayerCountMsg(playerCountMsg);
-               commandBuilder.set("#PlayersInside.TextSpans", playerCountMsgx);
-               double remainingSeconds = var19.getRemainingSeconds(playerCountMsg);
-               if (remainingSeconds < var19.getTimeLimitSeconds()) {
-                  int remainingMinutes = (int)Math.round(remainingSeconds / 60.0);
-                  Message remainingTimeMsg = remainingMinutes <= 1
-                     ? Message.translation("server.customUI.portalDevice.lessThanAMinute")
-                     : Message.translation("server.customUI.portalDevice.remainingMinutes").param("time", remainingMinutes);
                   commandBuilder.set(
-                     "#RemainingDuration.TextSpans",
-                     Message.translation("server.customUI.portalDevice.remainingDuration").param("remaining", remainingTimeMsg.color("#ea4fa46b"))
+                     "#PortalTitle.TextSpans", Message.translation("server.customUI.portalDevice.portalTitle").param("name", var18.getDisplayName())
                   );
-               } else {
-                  commandBuilder.set("#PortalIsOpen.Visible", true);
-                  commandBuilder.set("#RemainingDuration.TextSpans", Message.translation("server.customUI.portalDevice.beTheFirst").color("#ea4fa46b"));
+                  commandBuilder.set("#PortalDescription.TextSpans", PortalDeviceSummonPage.createDescription(var18, var19.getTimeLimitSeconds()));
+                  Message playerCountMsgx = createPlayerCountMsg(playerCountMsg);
+                  commandBuilder.set("#PlayersInside.TextSpans", playerCountMsgx);
+                  double remainingSeconds = var19.getRemainingSeconds(playerCountMsg);
+                  if (remainingSeconds < var19.getTimeLimitSeconds()) {
+                     int remainingMinutes = (int)Math.round(remainingSeconds / 60.0);
+                     Message remainingTimeMsg = remainingMinutes <= 1
+                        ? Message.translation("server.customUI.portalDevice.lessThanAMinute")
+                        : Message.translation("server.customUI.portalDevice.remainingMinutes").param("time", remainingMinutes);
+                     commandBuilder.set(
+                        "#RemainingDuration.TextSpans",
+                        Message.translation("server.customUI.portalDevice.remainingDuration").param("remaining", remainingTimeMsg.color("#ea4fa46b"))
+                     );
+                  } else {
+                     commandBuilder.set("#PortalIsOpen.Visible", true);
+                     commandBuilder.set("#RemainingDuration.TextSpans", Message.translation("server.customUI.portalDevice.beTheFirst").color("#ea4fa46b"));
+                  }
+
+                  return;
                }
-
-               return;
             }
-         }
 
-         commandBuilder.set("#Error.Visible", true);
-         commandBuilder.set("#ErrorLabel.Text", Message.translation("server.customUI.portalDevice.unknownError").param("state", state.toString()));
+            commandBuilder.set("#Error.Visible", true);
+            commandBuilder.set("#ErrorLabel.Text", Message.translation("server.customUI.portalDevice.unknownError").param("state", state.toString()));
+         }
       }
    }
 
@@ -108,6 +114,8 @@ public class PortalDeviceActivePage extends InteractiveCustomUIPage<PortalDevice
          PortalDevice portalDevice = chunkStore.getComponent(this.blockRef, PortalDevice.getComponentType());
          if (portalDevice == null) {
             return PortalDeviceActivePage.Error.INVALID_BLOCK;
+         } else if (portalDevice.isLoadingWorld()) {
+            return PortalDeviceActivePage.Error.PORTAL_LOADING;
          } else {
             World destinationWorld = portalDevice.getDestinationWorld();
             if (destinationWorld == null) {
@@ -144,7 +152,8 @@ public class PortalDeviceActivePage extends InteractiveCustomUIPage<PortalDevice
       INVALID_BLOCK,
       INVALID_WORLD,
       DESTINATION_NOT_FRAGMENT,
-      INACTIVE_PORTAL;
+      INACTIVE_PORTAL,
+      PORTAL_LOADING;
    }
 
    private record PortalIsOpen(World world, PortalWorld portalWorld, boolean diedInside) implements PortalDeviceActivePage.State {

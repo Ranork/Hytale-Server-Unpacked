@@ -201,6 +201,19 @@ public class PrefabStore {
    }
 
    @Nonnull
+   public Path getRelativePrefabPath(@Nonnull Path absolutePrefabPath) {
+      Path normalized = absolutePrefabPath.toAbsolutePath().normalize();
+      AssetPack sourcePack = this.findAssetPackForPrefabPath(normalized);
+      if (sourcePack != null) {
+         Path sourcePrefabsPath = this.getAssetPrefabsPathForPack(sourcePack).toAbsolutePath().normalize();
+         return sourcePrefabsPath.relativize(normalized);
+      } else {
+         Path serverPrefabsPath = this.getServerPrefabsPath().toAbsolutePath().normalize();
+         return normalized.startsWith(serverPrefabsPath) ? serverPrefabsPath.relativize(normalized) : normalized.getFileName();
+      }
+   }
+
+   @Nonnull
    public BlockSelection getAssetPrefab(@Nonnull String key) {
       return this.getPrefab(resolvePrefabKey(this.getAssetPrefabsPath(), key));
    }
@@ -216,6 +229,21 @@ public class PrefabStore {
 
    public void saveAssetPrefab(@Nonnull String key, @Nonnull BlockSelection prefab, boolean overwrite) {
       this.savePrefab(resolvePrefabKey(this.getAssetPrefabsPath(), key), prefab, overwrite);
+   }
+
+   public void savePrefabToPack(@Nonnull AssetPack pack, @Nonnull String key, @Nonnull BlockSelection prefab, boolean overwrite) {
+      if (!AssetModule.get().validatePackExistsOnDisk(pack)) {
+         throw new PrefabSaveException(
+            PrefabSaveException.Type.ERROR, new IllegalStateException("Asset pack '" + pack.getName() + "' no longer exists on disk")
+         );
+      } else {
+         this.savePrefab(resolvePrefabKey(this.getAssetPrefabsPathForPack(pack), key), prefab, overwrite);
+      }
+   }
+
+   @Nonnull
+   public Path getPrefabsPathForPack(@Nullable AssetPack pack) {
+      return pack != null ? this.getAssetPrefabsPathForPack(pack) : this.getServerPrefabsPath();
    }
 
    @Nonnull

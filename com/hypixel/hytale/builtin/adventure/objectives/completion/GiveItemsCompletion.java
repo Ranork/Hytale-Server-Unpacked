@@ -6,12 +6,11 @@ import com.hypixel.hytale.builtin.adventure.objectives.historydata.ItemObjective
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
 import com.hypixel.hytale.server.core.modules.item.ItemModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -41,33 +40,33 @@ public class GiveItemsCompletion extends ObjectiveCompletion {
          boolean showItemNotification = world.getGameplayConfig().getShowItemPickupNotifications();
          objective.forEachParticipant(
             (participantReference, asset, objectiveHistoryData) -> {
-               if (EntityUtils.getEntity(participantReference, componentAccessor) instanceof LivingEntity livingEntity) {
-                  Inventory inventory = livingEntity.getInventory();
-                  List itemStacks = ItemModule.get().getRandomItemDrops(asset.getDropListId());
-                  SimpleItemContainer.addOrDropItemStacks(store, participantReference, inventory.getCombinedHotbarFirst(), itemStacks);
-                  Player playerComponent = componentAccessor.getComponent(participantReference, Player.getComponentType());
-                  if (playerComponent != null) {
-                     PlayerRef playerRefComponent = componentAccessor.getComponent(participantReference, PlayerRef.getComponentType());
+               CombinedItemContainer hotbarFirstCombinedItemContainer = InventoryComponent.getCombined(
+                  componentAccessor, participantReference, InventoryComponent.HOTBAR_FIRST
+               );
+               List<ItemStack> itemStacks = ItemModule.get().getRandomItemDrops(asset.getDropListId());
+               SimpleItemContainer.addOrDropItemStacks(store, participantReference, hotbarFirstCombinedItemContainer, itemStacks);
+               Player playerComponent = componentAccessor.getComponent(participantReference, Player.getComponentType());
+               if (playerComponent != null) {
+                  PlayerRef playerRefComponent = componentAccessor.getComponent(participantReference, PlayerRef.getComponentType());
 
-                     assert playerRefComponent != null;
+                  assert playerRefComponent != null;
 
-                     UUIDComponent uuidComponent = store.getComponent(participantReference, UUIDComponent.getComponentType());
+                  UUIDComponent uuidComponent = store.getComponent(participantReference, UUIDComponent.getComponentType());
 
-                     assert uuidComponent != null;
+                  assert uuidComponent != null;
 
-                     UUID uuid = uuidComponent.getUuid();
+                  UUID uuid = uuidComponent.getUuid();
 
-                     for (ItemStack itemStack : itemStacks) {
-                        objectiveHistoryData.addRewardForPlayerUUID(uuid, new ItemObjectiveRewardHistoryData(itemStack.getItemId(), itemStack.getQuantity()));
-                        if (showItemNotification) {
-                           Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
-                           NotificationUtil.sendNotification(
-                              playerRefComponent.getPacketHandler(),
-                              Message.translation("server.objectives.itemObjectiveCompletion").param("item", itemNameMessage),
-                              null,
-                              itemStack.toPacket()
-                           );
-                        }
+                  for (ItemStack itemStack : itemStacks) {
+                     objectiveHistoryData.addRewardForPlayerUUID(uuid, new ItemObjectiveRewardHistoryData(itemStack.getItemId(), itemStack.getQuantity()));
+                     if (showItemNotification) {
+                        Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
+                        NotificationUtil.sendNotification(
+                           playerRefComponent.getPacketHandler(),
+                           Message.translation("server.objectives.itemObjectiveCompletion").param("item", itemNameMessage),
+                           null,
+                           itemStack.toPacket()
+                        );
                      }
                   }
                }

@@ -16,9 +16,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import it.unimi.dsi.fastutil.objects.ObjectLists;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceLists;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
@@ -70,7 +71,7 @@ public abstract class AbstractTargetEntityCommand extends AbstractAsyncCommand {
 
       Store<EntityStore> store = world.getEntityStore().getStore();
       return this.runAsync(context, () -> {
-         ObjectList<Ref<EntityStore>> entitiesToOperateOn;
+         List<Ref<EntityStore>> entitiesToOperateOn;
          if (this.radiusArg.provided(context)) {
             if (!context.isPlayer()) {
                context.sendMessage(Message.translation("server.commands.errors.playerOrArg").param("option", "radius"));
@@ -91,8 +92,8 @@ public abstract class AbstractTargetEntityCommand extends AbstractAsyncCommand {
 
             double radius = this.radiusArg.get(context);
             Vector3d position = transformComponent.getPosition();
-            entitiesToOperateOn = new ObjectArrayList();
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            entitiesToOperateOn = new ReferenceArrayList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             SpatialResource<Ref<EntityStore>, EntityStore> entitySpatialResource = store.getResource(EntityModule.get().getEntitySpatialResourceType());
             entitySpatialResource.getSpatialStructure().collect(position, radius, results);
             entitiesToOperateOn.addAll(results);
@@ -107,7 +108,7 @@ public abstract class AbstractTargetEntityCommand extends AbstractAsyncCommand {
                return;
             }
 
-            entitiesToOperateOn = ObjectLists.singleton(targetRef);
+            entitiesToOperateOn = ReferenceLists.singleton(targetRef);
          } else if (this.entityArg.provided(context)) {
             Ref<EntityStore> entityRef = this.entityArg.get(store, context);
             if (entityRef == null || !entityRef.isValid()) {
@@ -141,7 +142,5 @@ public abstract class AbstractTargetEntityCommand extends AbstractAsyncCommand {
       }, world);
    }
 
-   protected abstract void execute(
-      @Nonnull CommandContext var1, @Nonnull ObjectList<Ref<EntityStore>> var2, @Nonnull World var3, @Nonnull Store<EntityStore> var4
-   );
+   protected abstract void execute(@Nonnull CommandContext var1, @Nonnull List<Ref<EntityStore>> var2, @Nonnull World var3, @Nonnull Store<EntityStore> var4);
 }

@@ -14,23 +14,18 @@ import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
+import com.hypixel.hytale.server.npc.util.VisHelper;
 import java.util.Set;
 import javax.annotation.Nonnull;
 
 public class AvoidanceSystem extends SteppableTickingSystem {
-   public static final Vector3f DEBUG_COLOR_STEERING_POST = new Vector3f(0.0F, 1.0F, 0.0F);
-   public static final Vector3f DEBUG_COLOR_STEERING_PRE = new Vector3f(1.0F, 0.0F, 0.0F);
-   public static final Vector3f DEBUG_COLOR_AVOIDANCE = new Vector3f(1.0F, 1.0F, 1.0F);
-   public static final Vector3f DEBUG_COLOR_SEPARATION = new Vector3f(0.0F, 0.0F, 1.0F);
-   public static final double DEBUG_MIN_VECTOR_DRAW_LENGTH_SQUARED = 0.01;
-   public static final double DEBUG_VECTORS_SCALE = 4.0;
-   public static final float DEBUG_VECTORS_TIME = 0.05F;
    @Nonnull
    private final ComponentType<EntityStore, NPCEntity> componentType;
    @Nonnull
@@ -77,60 +72,58 @@ public class AvoidanceSystem extends SteppableTickingSystem {
       assert npcComponent != null;
 
       Role role = npcComponent.getRole();
-      if (role.isAvoidingEntities() || role.isApplySeparation()) {
-         Ref<EntityStore> target = role.getMarkedEntitySupport().getTargetReferenceToIgnoreForAvoidance();
-         if (target != null && target.isValid()) {
-            role.getIgnoredEntitiesForAvoidance().add(target);
+      if (role != null) {
+         if (role.isAvoidingEntities() || role.isApplySeparation()) {
+            Ref<EntityStore> target = role.getMarkedEntitySupport().getTargetReferenceToIgnoreForAvoidance();
+            if (target != null && target.isValid()) {
+               role.getIgnoredEntitiesForAvoidance().add(target);
+            }
          }
-      }
 
-      if (!role.getActiveMotionController().isObstructed()) {
          DebugSupport debugSupport = role.getDebugSupport();
-         boolean debugVisAvoidance = debugSupport.isDebugFlagSet(RoleDebugFlags.VisAvoidance);
-         boolean debugVisSeparation = debugSupport.isDebugFlagSet(RoleDebugFlags.VisSeparation);
-         Vector3d preBlendSteering = !debugVisSeparation && !debugVisAvoidance ? null : role.getBodySteering().getTranslation().clone();
-         boolean renderSteering = false;
-         TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
+         boolean debugVisSteeringPre = debugSupport.isDebugFlagSet(RoleDebugFlags.VisSteeringPre);
+         Vector3d preBlendSteering = debugVisSteeringPre ? role.getBodySteering().getTranslation().clone() : null;
+         role.clearSteeringChanged();
+         if (!role.getActiveMotionController().isObstructed()) {
+            TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
 
-         assert transformComponent != null;
+            assert transformComponent != null;
 
-         Vector3d position = transformComponent.getPosition();
-         World world = commandBuffer.getExternalData().getWorld();
-         if (role.isAvoidingEntities()) {
-            role.blendAvoidance(npcRef, position, role.getBodySteering(), commandBuffer);
-            if (debugVisAvoidance) {
-               renderSteering = true;
-               renderDebugSteeringVector(position, role.getLastAvoidanceSteering(), DEBUG_COLOR_AVOIDANCE, world);
+            Vector3d position = transformComponent.getPosition();
+            World world = commandBuffer.getExternalData().getWorld();
+            Vector3f rotation = transformComponent.getRotation();
+            boolean debugVisAvoidance = debugSupport.isDebugFlagSet(RoleDebugFlags.VisAvoidance);
+            boolean debugVisSeparation = debugSupport.isDebugFlagSet(RoleDebugFlags.VisSeparation);
+            boolean debugVisOrientation = debugSupport.isDebugFlagSet(RoleDebugFlags.VisOrientation) && (debugVisAvoidance || debugVisSeparation);
+            if (role.isAvoidingEntities()) {
+               role.blendAvoidance(npcRef, position, rotation, role.getBodySteering(), commandBuffer);
+               if (debugVisAvoidance) {
+                  VisHelper.renderDebugVector(position, role.getLastAvoidanceSteering(), VisHelper.DEBUG_COLOR_AVOIDANCE, world);
+               }
+            }
+
+            if (role.isApplySeparation()) {
+               role.blendSeparation(npcRef, position, rotation, role.getBodySteering(), this.transformComponentType, commandBuffer);
+               if (debugVisSeparation) {
+                  VisHelper.renderDebugVector(position, role.getLastAvoidanceSteering(), VisHelper.DEBUG_COLOR_SEPARATION, world);
+               }
+            }
+
+            if (debugVisOrientation && role.getBodySteering().hasDirectionHint()) {
+               Vector3d hint = new Vector3d();
+               PhysicsMath.vectorFromAngles(role.getBodySteering().getDirectionHint().getYaw(), role.getBodySteering().getDirectionHint().getPitch(), hint);
+               hint.scale(0.25);
+               VisHelper.renderDebugVector(position, hint, DebugUtils.COLOR_CYAN, world);
+            }
+
+            if (debugVisSteeringPre) {
+               VisHelper.renderDebugVectorTo(position, preBlendSteering, VisHelper.DEBUG_COLOR_STEERING_PRE, world);
+            }
+
+            if (debugSupport.isDebugFlagSet(RoleDebugFlags.VisSteeringPost)) {
+               VisHelper.renderDebugVector(position, role.getBodySteering().getTranslation(), VisHelper.DEBUG_COLOR_STEERING_POST, world);
             }
          }
-
-         if (role.isApplySeparation()) {
-            role.blendSeparation(archetypeChunk.getReferenceTo(index), position, role.getBodySteering(), this.transformComponentType, commandBuffer);
-            if (debugVisSeparation) {
-               renderSteering = true;
-               renderDebugSteeringVector(position, role.getLastSeparationSteering(), DEBUG_COLOR_SEPARATION, world);
-            }
-         }
-
-         if (renderSteering) {
-            renderDebugSteeringVectorInverse(position, preBlendSteering, DEBUG_COLOR_STEERING_PRE, world);
-            renderDebugSteeringVector(position, role.getBodySteering().getTranslation(), DEBUG_COLOR_STEERING_POST, world);
-         }
-      }
-   }
-
-   private static void renderDebugSteeringVector(@Nonnull Vector3d position, @Nonnull Vector3d direction, @Nonnull Vector3f color, @Nonnull World world) {
-      if (!(direction.squaredLength() < 0.01)) {
-         Vector3d scaledDir = direction.clone().scale(4.0);
-         DebugUtils.addArrow(world, position, scaledDir, color, 0.05F, false);
-      }
-   }
-
-   private static void renderDebugSteeringVectorInverse(@Nonnull Vector3d position, @Nonnull Vector3d direction, @Nonnull Vector3f color, @Nonnull World world) {
-      if (!(direction.squaredLength() < 0.01)) {
-         Vector3d scaledDir = direction.clone().scale(4.0);
-         Vector3d start = position.clone().subtract(scaledDir);
-         DebugUtils.addArrow(world, start, scaledDir, color, 0.05F, false);
       }
    }
 }

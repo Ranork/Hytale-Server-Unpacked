@@ -3504,6 +3504,28 @@ public abstract class BuilderBase<T> implements Builder<T> {
       setter.accept(assetList);
    }
 
+   public boolean getOverride(
+      @Nonnull JsonElement data,
+      String name,
+      @Nonnull Consumer<FeatureOverride> setter,
+      BuilderDescriptorState state,
+      String shortDescription,
+      @Nullable String longDescription
+   ) {
+      return this.getEnum(data, name, setter, FeatureOverride.class, FeatureOverride.Default, state, shortDescription, longDescription);
+   }
+
+   public boolean getOverride(
+      @Nonnull JsonElement data,
+      String name,
+      @Nonnull EnumHolder<FeatureOverride> enumHolder,
+      BuilderDescriptorState state,
+      String shortDescription,
+      @Nullable String longDescription
+   ) {
+      return this.getEnum(data, name, enumHolder, FeatureOverride.class, FeatureOverride.Default, state, shortDescription, longDescription);
+   }
+
    protected BuilderDescriptor createDescriptor(
       @Nonnull Builder<?> builder,
       String builderName,

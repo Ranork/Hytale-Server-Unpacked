@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.asset.type.buildertool.config.args;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArg;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArgType;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOptionArg;
@@ -11,8 +12,11 @@ import javax.annotation.Nonnull;
 
 public class OptionArg extends ToolArg<String> {
    public static final BuilderCodec<OptionArg> CODEC = BuilderCodec.builder(OptionArg.class, OptionArg::new, ToolArg.DEFAULT_CODEC)
-      .addField(new KeyedCodec<>("Default", Codec.STRING), (optionArg, o) -> optionArg.value = o, optionArg -> optionArg.value)
-      .addField(new KeyedCodec<>("Options", Codec.STRING_ARRAY), (optionArg, o) -> optionArg.options = o, optionArg -> optionArg.options)
+      .append(new KeyedCodec<>("Default", Codec.STRING), (optionArg, o) -> optionArg.value = o, optionArg -> optionArg.value)
+      .add()
+      .<String[]>append(new KeyedCodec<>("Options", Codec.STRING_ARRAY, true), (optionArg, o) -> optionArg.options = o, optionArg -> optionArg.options)
+      .addValidator(Validators.nonNull())
+      .add()
       .build();
    protected String[] options;
 

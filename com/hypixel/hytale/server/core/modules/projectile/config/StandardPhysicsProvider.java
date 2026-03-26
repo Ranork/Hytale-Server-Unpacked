@@ -14,11 +14,9 @@ import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.InteractionType;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.meta.DynamicMetaStore;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionProvider;
 import com.hypixel.hytale.server.core.modules.collision.BlockContactData;
@@ -143,14 +141,14 @@ public class StandardPhysicsProvider implements IBlockCollisionConsumer, Compone
          this.impactConsumer = (ref, position, targetRef, collisionDetailName, commandBuffer) -> {
             if (creatorUuid != null) {
                Ref<EntityStore> creatorRef = commandBuffer.getExternalData().getRefFromUUID(creatorUuid);
-               if (creatorRef != null && creatorRef.isValid() && EntityUtils.getEntity(creatorRef, commandBuffer) instanceof LivingEntity livingEntity) {
+               if (creatorRef != null && creatorRef.isValid()) {
                   InteractionManager interactionManagerComponent = commandBuffer.getComponent(
                      creatorRef, InteractionModule.get().getInteractionManagerComponent()
                   );
                   if (interactionManagerComponent == null) {
                      commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
                   } else {
-                     InteractionContext context = InteractionContext.forProxyEntity(interactionManagerComponent, livingEntity, ref);
+                     InteractionContext context = InteractionContext.forProxyEntity(interactionManagerComponent, creatorRef, ref, commandBuffer);
                      DynamicMetaStore<InteractionContext> metaStore = context.getMetaStore();
                      metaStore.putMetaObject(Interaction.TARGET_ENTITY, targetRef);
                      metaStore.putMetaObject(Interaction.HIT_LOCATION, new Vector4d(position.x, position.y, position.z, 1.0));
@@ -173,14 +171,14 @@ public class StandardPhysicsProvider implements IBlockCollisionConsumer, Compone
          this.bounceConsumer = (ref, position, commandBuffer) -> {
             if (creatorUuid != null) {
                Ref<EntityStore> creatorRef = commandBuffer.getExternalData().getRefFromUUID(creatorUuid);
-               if (creatorRef != null && creatorRef.isValid() && EntityUtils.getEntity(creatorRef, commandBuffer) instanceof LivingEntity livingEntity) {
+               if (creatorRef != null && creatorRef.isValid()) {
                   InteractionManager interactionManagerComponent = commandBuffer.getComponent(
                      creatorRef, InteractionModule.get().getInteractionManagerComponent()
                   );
                   if (interactionManagerComponent == null) {
                      commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
                   } else {
-                     InteractionContext context = InteractionContext.forProxyEntity(interactionManagerComponent, livingEntity, ref);
+                     InteractionContext context = InteractionContext.forProxyEntity(interactionManagerComponent, creatorRef, ref, commandBuffer);
                      context.getMetaStore().putMetaObject(Interaction.HIT_LOCATION, new Vector4d(position.x, position.y, position.z, 1.0));
                      InteractionType interactionType = InteractionType.ProjectileBounce;
                      String rootInteractionId = context.getRootInteractionId(interactionType);

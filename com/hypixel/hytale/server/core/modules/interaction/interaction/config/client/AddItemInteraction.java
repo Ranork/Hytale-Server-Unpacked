@@ -9,10 +9,10 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -49,9 +49,8 @@ public class AddItemInteraction extends SimpleBlockInteraction {
    ) {
       if (this.quantity > 0 && this.itemId != null) {
          Ref<EntityStore> ref = context.getEntity();
-         if (EntityUtils.getEntity(ref, commandBuffer) instanceof LivingEntity livingEntity) {
-            livingEntity.getInventory().getCombinedHotbarFirst().addItemStack(new ItemStack(this.itemId, this.quantity));
-         }
+         CombinedItemContainer hotbarFirstCombinedContainer = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.HOTBAR_FIRST);
+         hotbarFirstCombinedContainer.addItemStack(new ItemStack(this.itemId, this.quantity));
       }
    }
 

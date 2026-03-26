@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.assets.patterns;
 
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.SurfacePattern;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -23,7 +24,7 @@ public class CeilingPatternAsset extends PatternAsset {
    @Override
    public Pattern build(@Nonnull PatternAsset.Argument argument) {
       if (super.isSkipped()) {
-         return Pattern.noPattern();
+         return ConstantPattern.INSTANCE_FALSE;
       } else {
          Pattern ceilingPattern = this.ceiling.build(argument);
          Pattern originPattern = this.origin.build(argument);

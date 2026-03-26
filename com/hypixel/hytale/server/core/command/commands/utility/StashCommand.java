@@ -10,13 +10,12 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
+import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
@@ -43,7 +42,7 @@ public class StashCommand extends AbstractPlayerCommand {
    protected void execute(
       @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
    ) {
-      ItemContainerState itemContainerState = this.getItemContainerState(ref, world, context, store);
+      ItemContainerBlock itemContainerState = this.getItemContainerState(ref, world, context, store);
       if (itemContainerState != null) {
          if (this.setArg.provided(context)) {
             String dropList = this.setArg.get(context);
@@ -61,7 +60,7 @@ public class StashCommand extends AbstractPlayerCommand {
    }
 
    @Nullable
-   private ItemContainerState getItemContainerState(
+   private ItemContainerBlock getItemContainerState(
       @Nonnull Ref<EntityStore> ref, @Nonnull World world, @Nonnull CommandContext context, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       Vector3i block = TargetUtil.getTargetBlock(ref, 10.0, componentAccessor);
@@ -78,7 +77,7 @@ public class StashCommand extends AbstractPlayerCommand {
 
             assert blockChunkComponent != null;
 
-            WorldChunk worldChunkComponent = chunkStoreStore.getComponent(chunkRef, WorldChunk.getComponentType());
+            BlockComponentChunk worldChunkComponent = chunkStoreStore.getComponent(chunkRef, BlockComponentChunk.getComponentType());
 
             assert worldChunkComponent != null;
 
@@ -90,12 +89,18 @@ public class StashCommand extends AbstractPlayerCommand {
                block.z = block.z - FillerBlockUtil.unpackZ(filler);
             }
 
-            BlockState state = worldChunkComponent.getState(block.x, block.y, block.z);
-            if (!(state instanceof ItemContainerState)) {
+            Ref<ChunkStore> state = worldChunkComponent.getEntityReference(ChunkUtil.indexBlockInColumn(block.x, block.y, block.z));
+            if (state == null) {
                context.sendMessage(Message.translation("server.general.containerNotFound").param("block", block.toString()));
                return null;
             } else {
-               return (ItemContainerState)state;
+               ItemContainerBlock blockItemComponent = state.getStore().getComponent(state, ItemContainerBlock.getComponentType());
+               if (blockItemComponent == null) {
+                  context.sendMessage(Message.translation("server.general.containerNotFound").param("block", block.toString()));
+                  return null;
+               } else {
+                  return blockItemComponent;
+               }
             }
          } else {
             int chunkX = ChunkUtil.chunkCoordinate(block.x);

@@ -30,7 +30,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.protocol.BenchType;
 import com.hypixel.hytale.protocol.BlockFlags;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.BlockNeighbor;
@@ -511,6 +510,16 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       .addValidator(SoundEventValidators.LOOPING)
       .documentation("A looping ambient sound event that emits from this block when placed in the world or held in-hand.")
       .add()
+      .<ConditionalBlockSound[]>appendInherited(
+         new KeyedCodec<>("ConditionalSounds", new ArrayCodec<>(ConditionalBlockSound.CODEC, ConditionalBlockSound[]::new)),
+         (blockType, o) -> blockType.conditionalSounds = o,
+         blockType -> blockType.conditionalSounds,
+         (blockType, parent) -> blockType.conditionalSounds = parent.conditionalSounds
+      )
+      .documentation(
+         "An array of conditional ambient sounds. Each entry references a looping sound event and an AmbienceFX whose conditions determine when the sound plays from this block."
+      )
+      .add()
       .<String>appendInherited(
          new KeyedCodec<>("InteractionSoundEventId", Codec.STRING),
          (blockType, s) -> blockType.interactionSoundEventId = s,
@@ -919,11 +928,13 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    @Nullable
    protected ConnectedBlockRuleSet connectedBlockRuleSet;
    protected Bench bench;
+   @Nullable
    protected BlockGathering gathering;
    protected BlockPlacementSettings placementSettings;
    protected StateData state;
    protected String ambientSoundEventId;
    protected transient int ambientSoundEventIndex;
+   protected ConditionalBlockSound[] conditionalSounds;
    protected String interactionSoundEventId;
    protected transient int interactionSoundEventIndex;
    protected boolean isLooping;
@@ -1043,6 +1054,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       this.interactions = other.interactions;
       this.ambientSoundEventId = other.ambientSoundEventId;
       this.ambientSoundEventIndex = other.ambientSoundEventIndex;
+      this.conditionalSounds = other.conditionalSounds;
       this.interactionSoundEventId = other.interactionSoundEventId;
       this.interactionSoundEventIndex = other.interactionSoundEventIndex;
       this.isLooping = other.isLooping;
@@ -1248,6 +1260,14 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
 
          packet.looping = this.isLooping;
          packet.ambientSoundEventIndex = this.ambientSoundEventIndex;
+         if (this.conditionalSounds != null && this.conditionalSounds.length > 0) {
+            packet.conditionalSounds = new com.hypixel.hytale.protocol.ConditionalBlockSound[this.conditionalSounds.length];
+
+            for (int i = 0; i < this.conditionalSounds.length; i++) {
+               packet.conditionalSounds[i] = this.conditionalSounds[i].toPacket();
+            }
+         }
+
          if (this.particles != null && this.particles.length > 0) {
             packet.particles = new com.hypixel.hytale.protocol.ModelParticle[this.particles.length];
 
@@ -1333,12 +1353,17 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       return key;
    }
 
+   @Nullable
    public String getDefaultStateKey() {
-      if (this.defaultStateKey == null) {
-         this.defaultStateKey = this.data.getContainerKey(BlockType.class);
-      }
+      if (this.data == null) {
+         return null;
+      } else {
+         if (this.defaultStateKey == null) {
+            this.defaultStateKey = this.data.getContainerKey(BlockType.class);
+         }
 
-      return this.defaultStateKey;
+         return this.defaultStateKey;
+      }
    }
 
    @Nullable
@@ -1578,6 +1603,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       return this.bench;
    }
 
+   @Nullable
    public BlockGathering getGathering() {
       return this.gathering;
    }
@@ -1777,28 +1803,22 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
 
    protected void processConfig() {
       if (this.bench != null) {
-         if (this.state == null && this.bench.getType() == BenchType.Processing) {
-            this.state = new StateData("processingBench");
-         }
-
          this.flags.isUsable = true;
          if (this.interactionHint == null) {
             this.interactionHint = "server.interactionHints.open";
          }
-      } else if (this.state == null || !"container".equalsIgnoreCase(this.state.getId()) && !"Door".equalsIgnoreCase(this.state.getId())) {
-         if (this.gathering != null && this.gathering.isHarvestable()) {
-            this.flags.isUsable = true;
-            if (this.interactionHint == null) {
-               this.interactionHint = "server.interactionHints.gather";
-            }
-         } else if (this.seats != null && this.seats.size() > 0 && this.interactionHint == null) {
-            this.interactionHint = "server.interactionHints.sit";
-         }
-      } else {
+      } else if (this.isDoor) {
          this.flags.isUsable = true;
          if (this.interactionHint == null) {
             this.interactionHint = "server.interactionHints.open";
          }
+      } else if (this.gathering != null && this.gathering.isHarvestable()) {
+         this.flags.isUsable = true;
+         if (this.interactionHint == null) {
+            this.interactionHint = "server.interactionHints.gather";
+         }
+      } else if (this.seats != null && this.seats.size() > 0 && this.interactionHint == null) {
+         this.interactionHint = "server.interactionHints.sit";
       }
 
       if (this.interactions.containsKey(InteractionType.Use)) {
@@ -2007,7 +2027,9 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          + this.ambientSoundEventId
          + "', ambientSoundEventIndex='"
          + this.ambientSoundEventIndex
-         + "', interactionSoundEventId='"
+         + "', conditionalSounds="
+         + Arrays.toString((Object[])this.conditionalSounds)
+         + ", interactionSoundEventId='"
          + this.interactionSoundEventId
          + "', interactionSoundEventIndex='"
          + this.interactionSoundEventIndex

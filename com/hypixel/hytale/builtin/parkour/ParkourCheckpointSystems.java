@@ -28,7 +28,7 @@ import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import it.unimi.dsi.fastutil.objects.ObjectList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -140,7 +140,7 @@ public class ParkourCheckpointSystems {
          if (lastIndex != 0) {
             int parkourCheckpointIndex = archetypeChunk.getComponent(index, this.parkourCheckpointComponentType).getIndex();
             SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.playerSpatialComponent);
-            ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+            List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
             Vector3d position = archetypeChunk.getComponent(index, this.transformComponentType).getPosition();
             spatialResource.getSpatialStructure().ordered(position, 1.0, results);
             ParkourPlugin parkourPlugin = ParkourPlugin.get();
@@ -148,7 +148,7 @@ public class ParkourCheckpointSystems {
             Object2LongMap<UUID> startTimeByPlayerMap = parkourPlugin.getStartTimeByPlayerMap();
 
             for (int i = 0; i < results.size(); i++) {
-               Ref<EntityStore> otherReference = (Ref<EntityStore>)results.get(i);
+               Ref<EntityStore> otherReference = results.get(i);
                UUIDComponent uuidComponent = commandBuffer.getComponent(otherReference, this.uuidComponentType);
                UUID playerUuid = uuidComponent.getUuid();
                Player player = commandBuffer.getComponent(otherReference, this.playerComponentType);

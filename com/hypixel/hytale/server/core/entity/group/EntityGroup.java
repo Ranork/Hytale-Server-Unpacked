@@ -9,8 +9,8 @@ import com.hypixel.hytale.function.consumer.QuadConsumer;
 import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.HashSet;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -19,9 +19,9 @@ import javax.annotation.Nullable;
 
 public class EntityGroup implements Component<EntityStore> {
    @Nonnull
-   private final Set<Ref<EntityStore>> memberSet = new HashSet<>();
+   private final Set<Ref<EntityStore>> memberSet = new ReferenceOpenHashSet();
    @Nonnull
-   private final List<Ref<EntityStore>> memberList = new ObjectArrayList();
+   private final List<Ref<EntityStore>> memberList = new ReferenceArrayList();
    @Nullable
    private Ref<EntityStore> leaderRef;
    private boolean dissolved;

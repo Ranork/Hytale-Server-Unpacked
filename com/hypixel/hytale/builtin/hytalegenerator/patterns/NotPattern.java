@@ -1,16 +1,15 @@
 package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
-import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import javax.annotation.Nonnull;
+import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class NotPattern extends Pattern {
    @Nonnull
    private final Pattern pattern;
-   private final SpaceSize readSpaceSize;
 
    public NotPattern(@Nonnull Pattern pattern) {
       this.pattern = pattern;
-      this.readSpaceSize = pattern.readSpace();
    }
 
    @Override
@@ -18,9 +17,9 @@ public class NotPattern extends Pattern {
       return !this.pattern.matches(context);
    }
 
-   @Nonnull
+   @NonNullDecl
    @Override
-   public SpaceSize readSpace() {
-      return this.readSpaceSize.clone();
+   public Bounds3i getBounds_voxelGrid() {
+      return this.pattern.getBounds_voxelGrid();
    }
 }

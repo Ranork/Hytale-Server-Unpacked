@@ -27,6 +27,7 @@ public class CommonAssetValidator implements Validator<String> {
    public static final CommonAssetValidator ICON_CRAFTING = new CommonAssetValidator("png", "Icons/CraftingCategories");
    public static final CommonAssetValidator ICON_ENTITY_STAT = new CommonAssetValidator("png", "Icons/EntityStats");
    public static final CommonAssetValidator ICON_MODEL = new CommonAssetValidator("png", "Icons/ModelsGenerated", "Icons/Models");
+   public static final CommonAssetValidator ICON_EMOTE = new CommonAssetValidator("png", "Icons/Emotes");
    public static final CommonAssetValidator UI_RETICLE_PART = new CommonAssetValidator("png", "UI/Reticles");
    public static final ArrayValidator<String> UI_RETICLE_PARTS_ARRAY = new ArrayValidator<>(UI_RETICLE_PART);
    public static final CommonAssetValidator UI_SCREEN_EFFECT = new CommonAssetValidator("png", "ScreenEffects");
@@ -43,6 +44,7 @@ public class CommonAssetValidator implements Validator<String> {
       "blockyanim", "Blocks", "Items", "Resources", "NPC", "VFX", "Consumable"
    );
    public static final CommonAssetValidator ANIMATION_CHARACTER = new CommonAssetValidator("blockyanim", "Characters", "NPC", "Equipment", "VFX", "Items");
+   public static final CommonAssetValidator ANIMATION_EMOTE = new CommonAssetValidator("blockyanim", "Characters");
    public static final CommonAssetValidator MUSIC = new CommonAssetValidator("ogg", "Music");
    public static final CommonAssetValidator SOUNDS = new CommonAssetValidator("ogg", "Sounds");
    @Nullable

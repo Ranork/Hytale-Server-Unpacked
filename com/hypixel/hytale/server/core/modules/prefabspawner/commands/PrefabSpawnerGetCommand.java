@@ -2,7 +2,7 @@ package com.hypixel.hytale.server.core.modules.prefabspawner.commands;
 
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerState;
+import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerBlock;
 import com.hypixel.hytale.server.core.prefab.PrefabWeights;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import java.util.Objects;
@@ -14,7 +14,7 @@ public class PrefabSpawnerGetCommand extends TargetPrefabSpawnerCommand {
    }
 
    @Override
-   protected void execute(@Nonnull CommandContext context, @Nonnull WorldChunk chunk, @Nonnull PrefabSpawnerState prefabSpawner) {
+   protected void execute(@Nonnull CommandContext context, @Nonnull WorldChunk chunk, @Nonnull PrefabSpawnerBlock prefabSpawner) {
       String prefab = Objects.requireNonNullElse(prefabSpawner.getPrefabPath(), "<undefined>");
       context.sendMessage(Message.translation("server.commands.prefabspawner.get.path").param("prefab", prefab));
       context.sendMessage(Message.translation("server.commands.prefabspawner.get.fitsHeightmap").param("fitHeightmap", prefabSpawner.isFitHeightmap()));

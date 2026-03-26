@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsModule;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import java.util.List;
 import javax.annotation.Nonnull;
 
@@ -29,9 +28,7 @@ public class EntityStatsAddCommand extends AbstractTargetEntityCommand {
    }
 
    @Override
-   protected void execute(
-      @Nonnull CommandContext context, @Nonnull ObjectList<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store
-   ) {
+   protected void execute(@Nonnull CommandContext context, @Nonnull List<Ref<EntityStore>> entities, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       int statAmount = this.statAmountArg.get(context);
       String entityStatName = this.entityStatNameArg.get(context);
       addEntityStat(context, entities, statAmount, entityStatName, store);

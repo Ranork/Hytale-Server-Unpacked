@@ -42,11 +42,14 @@ public class Ref<ECS_TYPE> {
       this.invalidatedBy = invalidatedBy != null ? invalidatedBy : new Throwable();
    }
 
-   public void validate(@Nonnull Store<ECS_TYPE> store) {
-      if (this.store != store) {
-         throw new IllegalStateException("Incorrect store for entity reference");
-      } else if (this.index == Integer.MIN_VALUE) {
+   public int validate(@Nonnull Store<ECS_TYPE> store) {
+      int localIndex = this.index;
+      if (localIndex == Integer.MIN_VALUE) {
          throw new IllegalStateException("Invalid entity reference!", this.invalidatedBy);
+      } else if (this.store != store) {
+         throw new IllegalStateException("Incorrect store for entity reference");
+      } else {
+         return localIndex;
       }
    }
 

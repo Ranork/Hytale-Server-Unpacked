@@ -2,7 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.ArrayUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.math.Interpolation;
+import com.hypixel.hytale.builtin.hytalegenerator.math.Interpolation;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;

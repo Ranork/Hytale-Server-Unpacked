@@ -37,7 +37,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntConsumer;
 import it.unimi.dsi.fastutil.ints.IntList;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
@@ -236,7 +235,6 @@ public class RunOnBlockTypesInteraction extends SimpleInteraction {
          RunOnBlockTypesInteraction.BlockSearchConsumer consumer = new RunOnBlockTypesInteraction.BlockSearchConsumer(
             originX, originY, originZ, radiusSquared, this.maxCount
          );
-         IntOpenHashSet internalIdHolder = new IntOpenHashSet();
          int minY = Math.max(0, originY - this.range);
          int maxY = Math.min(319, originY + this.range);
 
@@ -252,8 +250,7 @@ public class RunOnBlockTypesInteraction extends SimpleInteraction {
                         BlockSection section = blockChunk.getSectionAtIndex(sectionIndex);
                         if (!section.isSolidAir() && section.containsAny(blockIds)) {
                            consumer.setSection(x, z, sectionIndex);
-                           section.find(blockIds, internalIdHolder, consumer);
-                           internalIdHolder.clear();
+                           section.find(blockIds, consumer);
                         }
                      }
                   }

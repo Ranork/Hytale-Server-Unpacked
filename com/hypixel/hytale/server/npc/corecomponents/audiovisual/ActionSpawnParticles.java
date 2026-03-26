@@ -17,8 +17,7 @@ import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
 import com.hypixel.hytale.server.npc.corecomponents.audiovisual.builders.BuilderActionSpawnParticles;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
-import it.unimi.dsi.fastutil.objects.ObjectList;
-import it.unimi.dsi.fastutil.objects.ObjectListIterator;
+import java.util.List;
 import javax.annotation.Nonnull;
 
 public class ActionSpawnParticles extends ActionBase {
@@ -49,17 +48,15 @@ public class ActionSpawnParticles extends ActionBase {
 
       Vector3d position = new Vector3d(this.offset).rotateY(transformComponent.getRotation().getYaw()).add(transformComponent.getPosition());
       SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = store.getResource(EntityModule.get().getPlayerSpatialResourceType());
-      ObjectList<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
+      List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       playerSpatialResource.getSpatialStructure().collect(position, this.range, results);
       NetworkId networkIdComponent = store.getComponent(ref, NetworkId.getComponentType());
       if (networkIdComponent == null) {
          return true;
       } else {
          SpawnModelParticles packet = new SpawnModelParticles(networkIdComponent.getId(), this.modelParticlesProtocol);
-         ObjectListIterator var13 = results.iterator();
 
-         while (var13.hasNext()) {
-            Ref<EntityStore> playerRef = (Ref<EntityStore>)var13.next();
+         for (Ref<EntityStore> playerRef : results) {
             PlayerRef playerRefComponent = store.getComponent(playerRef, PlayerRef.getComponentType());
             if (playerRefComponent != null) {
                playerRefComponent.getPacketHandler().write(packet);

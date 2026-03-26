@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import javax.annotation.Nonnull;
@@ -185,19 +184,7 @@ public interface BlockAccessor {
 
    @Nullable
    @Deprecated
-   BlockState getState(int var1, int var2, int var3);
-
-   @Nullable
-   @Deprecated
    Holder<ChunkStore> getBlockComponentHolder(int var1, int var2, int var3);
-
-   @Deprecated
-   void setState(int var1, int var2, int var3, BlockState var4, boolean var5);
-
-   @Deprecated
-   default void setState(int x, int y, int z, BlockState state) {
-      this.setState(x, y, z, state, true);
-   }
 
    default void setBlockInteractionState(@Nonnull Vector3i blockPosition, @Nonnull BlockType blockType, @Nonnull String state) {
       this.setBlockInteractionState(blockPosition.x, blockPosition.y, blockPosition.z, blockType, state, false);

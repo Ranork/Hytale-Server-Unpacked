@@ -11,7 +11,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class Pong implements Packet, ToServerPacket {
-   public static final int PACKET_ID = 3;
+   public static final int PACKET_ID = 4;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
    public static final int FIXED_BLOCK_SIZE = 20;
@@ -27,7 +27,7 @@ public class Pong implements Packet, ToServerPacket {
 
    @Override
    public int getId() {
-      return 3;
+      return 4;
    }
 
    @Override

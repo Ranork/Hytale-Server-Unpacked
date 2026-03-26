@@ -30,8 +30,8 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.BitSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.BiPredicate;
@@ -43,7 +43,7 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
    private final long index;
    private final Blackboard blackboard;
    private final BitSet allBlockSets = new BitSet();
-   private final Set<Ref<EntityStore>> entities = new HashSet<>();
+   private final Set<Ref<EntityStore>> entities = new ReferenceOpenHashSet();
    private final IntArrayList blockSetAggregate = new IntArrayList();
    private final IntArrayList crossViewBlockSetAggregate = new IntArrayList();
    private boolean aggregateNeedsRebuild;

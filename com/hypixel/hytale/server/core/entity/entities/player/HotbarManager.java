@@ -9,6 +9,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -52,9 +53,12 @@ public class HotbarManager {
             playerRefComponent.sendMessage(MESSAGE_GENERAL_HOTBAR_INVALID_GAME_MODE);
          } else {
             this.currentlyLoadingHotbar = true;
-            this.savedHotbars[hotbarIndex] = playerComponent.getInventory().getHotbar().clone();
-            this.currentHotbar = hotbarIndex;
-            this.currentlyLoadingHotbar = false;
+            InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(playerRef, InventoryComponent.Hotbar.getComponentType());
+            if (hotbarComponent != null) {
+               this.savedHotbars[hotbarIndex] = hotbarComponent.getInventory().clone();
+               this.currentHotbar = hotbarIndex;
+               this.currentlyLoadingHotbar = false;
+            }
          }
       } else {
          playerRefComponent.sendMessage(MESSAGE_GENERAL_HOTBAR_INVALID_SLOT);
@@ -75,16 +79,19 @@ public class HotbarManager {
             playerRefComponent.sendMessage(MESSAGE_GENERAL_HOTBAR_INVALID_GAME_MODE);
          } else {
             this.currentlyLoadingHotbar = true;
-            ItemContainer hotbar = playerComponent.getInventory().getHotbar();
-            hotbar.removeAllItemStacks();
-            if (this.savedHotbars[hotbarIndex] != null) {
-               ItemContainer savedHotbar = this.savedHotbars[hotbarIndex].clone();
-               savedHotbar.forEach(hotbar::setItemStackForSlot);
-            }
+            InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(playerRef, InventoryComponent.Hotbar.getComponentType());
+            if (hotbarComponent != null) {
+               ItemContainer hotbar = hotbarComponent.getInventory();
+               hotbar.removeAllItemStacks();
+               if (this.savedHotbars[hotbarIndex] != null) {
+                  ItemContainer savedHotbar = this.savedHotbars[hotbarIndex].clone();
+                  savedHotbar.forEach(hotbar::setItemStackForSlot);
+               }
 
-            this.currentHotbar = hotbarIndex;
-            this.currentlyLoadingHotbar = false;
-            playerRefComponent.sendMessage(Message.translation("server.general.hotbar.loaded").param("id", hotbarIndex + 1));
+               this.currentHotbar = hotbarIndex;
+               this.currentlyLoadingHotbar = false;
+               playerRefComponent.sendMessage(Message.translation("server.general.hotbar.loaded").param("id", hotbarIndex + 1));
+            }
          }
       } else {
          playerRefComponent.sendMessage(MESSAGE_GENERAL_HOTBAR_INVALID_SLOT);

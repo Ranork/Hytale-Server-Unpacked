@@ -28,8 +28,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -57,7 +58,7 @@ public class ExplosionUtils {
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
       if (config.damageBlocks || config.damageEntities) {
-         Set<Ref<EntityStore>> targetRefs = new ObjectOpenHashSet();
+         Set<Ref<EntityStore>> targetRefs = new ReferenceOpenHashSet();
          Vector3d blockPosition = new Vector3d(Math.floor(position.x) + 0.5, Math.floor(position.y) + 0.5, Math.floor(position.z) + 0.5);
          processTargetBlocks(blockPosition, config, ignoreRef, targetRefs, commandBuffer, chunkStore);
          if (config.damageEntities) {
@@ -81,7 +82,7 @@ public class ExplosionUtils {
          explosionBlockRadius = (int)config.entityDamageRadius;
       }
 
-      List<Ref<EntityStore>> potentialTargets = new ObjectArrayList();
+      List<Ref<EntityStore>> potentialTargets = new ReferenceArrayList();
       if (config.damageEntities) {
          Selector.selectNearbyEntities(
             commandBuffer, position, (double)config.entityDamageRadius, potentialTargets::add, e -> ignoreRef == null || !e.equals(ignoreRef)

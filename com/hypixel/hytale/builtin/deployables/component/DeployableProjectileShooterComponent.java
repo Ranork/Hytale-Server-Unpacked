@@ -8,16 +8,16 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.projectile.config.ProjectileConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 
 public class DeployableProjectileShooterComponent implements Component<EntityStore> {
    @Nonnull
-   protected final List<Ref<EntityStore>> projectiles = new ObjectArrayList();
+   protected final List<Ref<EntityStore>> projectiles = new ReferenceArrayList();
    @Nonnull
-   protected final List<Ref<EntityStore>> projectilesForRemoval = new ObjectArrayList();
+   protected final List<Ref<EntityStore>> projectilesForRemoval = new ReferenceArrayList();
    protected Ref<EntityStore> activeTarget;
 
    public static ComponentType<EntityStore, DeployableProjectileShooterComponent> getComponentType() {

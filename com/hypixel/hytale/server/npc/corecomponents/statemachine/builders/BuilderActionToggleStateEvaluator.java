@@ -8,7 +8,7 @@ import com.hypixel.hytale.server.npc.corecomponents.statemachine.ActionToggleSta
 import javax.annotation.Nonnull;
 
 public class BuilderActionToggleStateEvaluator extends BuilderActionBase {
-   protected boolean enable;
+   protected boolean on;
 
    @Nonnull
    public ActionToggleStateEvaluator build(BuilderSupport builderSupport) {
@@ -35,7 +35,7 @@ public class BuilderActionToggleStateEvaluator extends BuilderActionBase {
 
    @Nonnull
    public BuilderActionToggleStateEvaluator readConfig(@Nonnull JsonElement data) {
-      this.requireBoolean(data, "Enabled", b -> this.enable = b, BuilderDescriptorState.Stable, "Whether or not to enable the state evaluator", null);
+      this.requireBoolean(data, "On", b -> this.on = b, BuilderDescriptorState.Stable, "Whether or not to enable the state evaluator", null);
       if (!this.isCreatingDescriptor()) {
          this.stateHelper.setRequiresStateEvaluator();
       }
@@ -43,7 +43,7 @@ public class BuilderActionToggleStateEvaluator extends BuilderActionBase {
       return this;
    }
 
-   public boolean isEnable() {
-      return this.enable;
+   public boolean isOn() {
+      return this.on;
    }
 }

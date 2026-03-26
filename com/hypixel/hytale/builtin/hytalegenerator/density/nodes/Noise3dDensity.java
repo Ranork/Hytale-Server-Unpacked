@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.fields.noise.NoiseField;
+import com.hypixel.hytale.builtin.hytalegenerator.noise.NoiseField;
 import javax.annotation.Nonnull;
 
 public class Noise3dDensity extends Density {

@@ -39,6 +39,19 @@ public class WorldMapSettings {
       return this.imageScale;
    }
 
+   public int getViewRadiusMin() {
+      return this.viewRadiusMin;
+   }
+
+   public int getViewRadiusMax() {
+      return this.viewRadiusMax;
+   }
+
+   @Nonnull
+   public WorldMapSettings withViewRadiusLimits(int min, int max) {
+      return new WorldMapSettings(this.worldMapArea, this.imageScale, this.viewRadiusMultiplier, min, max, this.settingsPacket);
+   }
+
    @Nonnull
    public UpdateWorldMapSettings getSettingsPacket() {
       return this.settingsPacket;

@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.projectile.config.Projectile;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.ProjectileComponent;
@@ -98,7 +99,7 @@ public class LaunchProjectileInteraction extends SimpleInstantInteraction implem
             ItemStack itemInHand = context.getHeldItem();
             if (itemInHand != null && !itemInHand.isEmpty()) {
                Item item = itemInHand.getItem();
-               if (attackerLivingEntity.canDecreaseItemStackDurability(sourceRef, commandBuffer) && !itemInHand.isUnbreakable() && item.getWeapon() != null) {
+               if (ItemUtils.canDecreaseItemStackDurability(sourceRef, commandBuffer) && !itemInHand.isUnbreakable() && item.getWeapon() != null) {
                   Inventory inventory = attackerLivingEntity.getInventory();
                   ItemContainer section = inventory.getSectionById(context.getHeldItemSectionId());
                   if (section != null) {

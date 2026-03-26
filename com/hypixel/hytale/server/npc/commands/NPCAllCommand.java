@@ -73,12 +73,14 @@ public class NPCAllCommand extends AbstractPlayerCommand {
                      }
 
                      Pair<Ref<EntityStore>, NPCEntity> npcPair = npcModule.spawnEntity(store, roleIndex, pos, null, null, null);
-                     Ref<EntityStore> npcRef = (Ref<EntityStore>)npcPair.first();
+                     if (npcPair != null) {
+                        Ref<EntityStore> npcRef = (Ref<EntityStore>)npcPair.first();
 
-                     assert npcRef != null;
+                        assert npcRef != null;
 
-                     store.putComponent(npcRef, Nameplate.getComponentType(), new Nameplate(name));
-                     store.ensureComponent(npcRef, Frozen.getComponentType());
+                        store.putComponent(npcRef, Nameplate.getComponentType(), new Nameplate(name));
+                        store.ensureComponent(npcRef, Frozen.getComponentType());
+                     }
                   }
                } catch (Throwable var33) {
                   playerRef.sendMessage(Message.translation("server.commands.npc.all.failedToSpawn").param("role", name));

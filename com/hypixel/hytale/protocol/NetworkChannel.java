@@ -3,7 +3,8 @@ package com.hypixel.hytale.protocol;
 public enum NetworkChannel {
    Default(0),
    Chunks(1),
-   WorldMap(2);
+   WorldMap(2),
+   Voice(3);
 
    public static final NetworkChannel[] VALUES = values();
    public static final int COUNT = VALUES.length;

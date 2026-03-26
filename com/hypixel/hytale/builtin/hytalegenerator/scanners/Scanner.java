@@ -1,61 +1,60 @@
 package com.hypixel.hytale.builtin.hytalegenerator.scanners;
 
-import com.hypixel.hytale.builtin.hytalegenerator.bounds.SpaceSize;
-import com.hypixel.hytale.builtin.hytalegenerator.datastructures.voxelspace.VoxelSpace;
+import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
-import com.hypixel.hytale.builtin.hytalegenerator.threadindexer.WorkerIndexer;
+import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
+import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.NullSpace;
+import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
 import com.hypixel.hytale.math.vector.Vector3i;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 
 public abstract class Scanner {
-   public abstract List<Vector3i> scan(@Nonnull Scanner.Context var1);
+   @Deprecated
+   public abstract void scan(@Nonnull Scanner.Context var1);
 
-   public abstract SpaceSize scanSpace();
+   public abstract void scan(@Nonnull Vector3i var1, @Nonnull Pipe.One<Vector3i> var2);
 
-   @Nonnull
-   public SpaceSize readSpaceWith(@Nonnull Pattern pattern) {
-      return SpaceSize.stack(pattern.readSpace(), this.scanSpace());
-   }
+   public abstract Bounds3i getBounds_voxelGrid();
 
-   @Nonnull
-   public static Scanner noScanner() {
-      final SpaceSize space = new SpaceSize(new Vector3i(0, 0, 0), new Vector3i(0, 0, 0));
-      return new Scanner() {
-         @Nonnull
-         @Override
-         public List<Vector3i> scan(@Nonnull Scanner.Context context) {
-            return Collections.emptyList();
-         }
-
-         @Nonnull
-         @Override
-         public SpaceSize scanSpace() {
-            return space;
-         }
-      };
+   public Bounds3i getBoundsWithPattern_voxelGrid(@Nonnull Pattern pattern) {
+      return this.getBounds_voxelGrid().clone().stack(pattern.getBounds_voxelGrid());
    }
 
    public static class Context {
+      @Nonnull
       public Vector3i position;
+      @Nonnull
       public Pattern pattern;
+      @Nonnull
       public VoxelSpace<Material> materialSpace;
-      public WorkerIndexer.Id workerId;
+      @Nonnull
+      public List<Vector3i> validPositions_out;
 
-      public Context(@Nonnull Vector3i position, @Nonnull Pattern pattern, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull WorkerIndexer.Id workerId) {
+      public Context() {
+         this.position = new Vector3i();
+         this.pattern = ConstantPattern.INSTANCE_FALSE;
+         this.materialSpace = NullSpace.instance();
+         this.validPositions_out = new ArrayList<>();
+      }
+
+      public Context(
+         @Nonnull Vector3i position, @Nonnull Pattern pattern, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull List<Vector3i> validPositions_out
+      ) {
          this.position = position;
          this.pattern = pattern;
          this.materialSpace = materialSpace;
-         this.workerId = workerId;
+         this.validPositions_out = validPositions_out;
       }
 
       public Context(@Nonnull Scanner.Context other) {
          this.position = other.position;
          this.pattern = other.pattern;
          this.materialSpace = other.materialSpace;
-         this.workerId = other.workerId;
+         this.validPositions_out = other.validPositions_out;
       }
    }
 }

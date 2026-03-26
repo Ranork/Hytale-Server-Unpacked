@@ -13,9 +13,9 @@ public class UnionPositionProvider extends PositionProvider {
    }
 
    @Override
-   public void positionsIn(@Nonnull PositionProvider.Context context) {
+   public void generate(@Nonnull PositionProvider.Context context) {
       for (PositionProvider position : this.positionProviders) {
-         position.positionsIn(context);
+         position.generate(context);
       }
    }
 }

@@ -1,10 +1,14 @@
 package com.hypixel.hytale.builtin.hytalegenerator.bounds;
 
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.performanceinstruments.MemInstrument;
+import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.MemInstrument;
+import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import javax.annotation.Nonnull;
 
 public class Bounds3i implements MemInstrument {
+   @Nonnull
+   public static final Bounds3i ZERO = new Bounds3i();
    @Nonnull
    public final Vector3i min;
    @Nonnull
@@ -20,7 +24,24 @@ public class Bounds3i implements MemInstrument {
       this.correct();
    }
 
+   public boolean contains(int x, int y, int z) {
+      return x >= this.min.x && y >= this.min.y && z >= this.min.z && x < this.max.x && y < this.max.y && z < this.max.z;
+   }
+
+   public boolean contains(double x, double y, double z) {
+      return x >= this.min.x && y >= this.min.y && z >= this.min.z && x < this.max.x && y < this.max.y && z < this.max.z;
+   }
+
    public boolean contains(@Nonnull Vector3i position) {
+      return position.x >= this.min.x
+         && position.y >= this.min.y
+         && position.z >= this.min.z
+         && position.x < this.max.x
+         && position.y < this.max.y
+         && position.z < this.max.z;
+   }
+
+   public boolean contains(@Nonnull Vector3d position) {
       return position.x >= this.min.x
          && position.y >= this.min.y
          && position.z >= this.min.z
@@ -73,9 +94,23 @@ public class Bounds3i implements MemInstrument {
    }
 
    @Nonnull
+   public Bounds3i offset(int x, int y, int z) {
+      this.min.add(x, y, z);
+      this.max.add(x, y, z);
+      return this;
+   }
+
+   @Nonnull
    public Bounds3i offset(@Nonnull Vector3i vector) {
       this.min.add(vector);
       this.max.add(vector);
+      return this;
+   }
+
+   @Nonnull
+   public Bounds3i offsetOpposite(@Nonnull Vector3i vector) {
+      this.min.subtract(vector);
+      this.max.subtract(vector);
       return this;
    }
 
@@ -109,7 +144,7 @@ public class Bounds3i implements MemInstrument {
    @Nonnull
    public Bounds3i encompass(@Nonnull Vector3i position) {
       this.min.assign(Math.min(this.min.x, position.x), Math.min(this.min.y, position.y), Math.min(this.min.z, position.z));
-      this.max.assign(Math.max(this.max.x, position.x), Math.max(this.max.y, position.y), Math.max(this.max.z, position.z));
+      this.max.assign(Math.max(this.max.x, position.x + 1), Math.max(this.max.y, position.y + 1), Math.max(this.max.z, position.z + 1));
       return this;
    }
 
@@ -131,22 +166,64 @@ public class Bounds3i implements MemInstrument {
 
    @Nonnull
    public Bounds3i flipOnOriginPoint() {
-      Vector3i swap = this.min.clone();
-      this.min.assign(this.max);
-      this.min.scale(-1);
-      this.max.assign(swap);
-      this.max.scale(-1);
-      return this;
+      if (this.isZeroVolume()) {
+         return this;
+      } else {
+         Vector3i swap = this.min.clone();
+         this.min.assign(this.max);
+         this.min.scale(-1);
+         this.max.assign(swap);
+         this.max.scale(-1);
+         return this;
+      }
    }
 
    @Nonnull
    public Bounds3i flipOnOriginVoxel() {
-      Vector3i swap = this.min.clone();
-      this.min.assign(Vector3i.ALL_ONES);
-      this.min.subtract(this.max);
-      this.max.assign(Vector3i.ALL_ONES);
-      this.max.subtract(swap);
-      return this;
+      if (this.isZeroVolume()) {
+         return this;
+      } else {
+         Vector3i swap = this.min.clone();
+         this.min.assign(Vector3i.ALL_ONES);
+         this.min.subtract(this.max);
+         this.max.assign(Vector3i.ALL_ONES);
+         this.max.subtract(swap);
+         return this;
+      }
+   }
+
+   public Bounds3i applyRotationAroundVoxel(@Nonnull RotationTuple rotationTuple, @Nonnull Vector3i anchor) {
+      if (this.isZeroVolume()) {
+         return this;
+      } else {
+         this.max.subtract(Vector3i.ALL_ONES);
+         this.min.subtract(anchor);
+         rotationTuple.applyRotationTo(this.min);
+         this.min.add(anchor);
+         this.max.subtract(anchor);
+         rotationTuple.applyRotationTo(this.max);
+         this.max.add(anchor);
+         this.correct();
+         this.max.add(Vector3i.ALL_ONES);
+         return this;
+      }
+   }
+
+   public Bounds3i undoRotationAroundVoxel(@Nonnull RotationTuple rotationTuple, @Nonnull Vector3i anchor) {
+      if (this.isZeroVolume()) {
+         return this;
+      } else {
+         this.max.subtract(Vector3i.ALL_ONES);
+         this.min.subtract(anchor);
+         rotationTuple.undoRotationTo(this.min);
+         this.min.add(anchor);
+         this.max.subtract(anchor);
+         rotationTuple.undoRotationTo(this.max);
+         this.max.add(anchor);
+         this.correct();
+         this.max.add(Vector3i.ALL_ONES);
+         return this;
+      }
    }
 
    @Nonnull

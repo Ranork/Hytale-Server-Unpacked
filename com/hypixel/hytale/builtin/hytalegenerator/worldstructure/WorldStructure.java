@@ -2,7 +2,6 @@ package com.hypixel.hytale.builtin.hytalegenerator.worldstructure;
 
 import com.hypixel.hytale.builtin.hytalegenerator.Registry;
 import com.hypixel.hytale.builtin.hytalegenerator.biome.Biome;
-import com.hypixel.hytale.builtin.hytalegenerator.framework.interfaces.functions.BiCarta;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import javax.annotation.Nonnull;
 

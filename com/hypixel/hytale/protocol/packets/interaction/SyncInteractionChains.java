@@ -50,8 +50,8 @@ public class SyncInteractionChains implements Packet, ToServerPacket, ToClientPa
       int updatesCount = VarInt.peek(buf, pos);
       if (updatesCount < 0) {
          throw ProtocolException.negativeLength("Updates", updatesCount);
-      } else if (updatesCount > 4096000) {
-         throw ProtocolException.arrayTooLong("Updates", updatesCount, 4096000);
+      } else if (updatesCount > 128) {
+         throw ProtocolException.arrayTooLong("Updates", updatesCount, 128);
       } else {
          int updatesVarLen = VarInt.size(updatesCount);
          if (pos + updatesVarLen + updatesCount * 33L > buf.readableBytes()) {
@@ -84,8 +84,8 @@ public class SyncInteractionChains implements Packet, ToServerPacket, ToClientPa
 
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
-      if (this.updates.length > 4096000) {
-         throw ProtocolException.arrayTooLong("Updates", this.updates.length, 4096000);
+      if (this.updates.length > 128) {
+         throw ProtocolException.arrayTooLong("Updates", this.updates.length, 128);
       } else {
          VarInt.write(buf, this.updates.length);
 
@@ -115,8 +115,8 @@ public class SyncInteractionChains implements Packet, ToServerPacket, ToClientPa
          int updatesCount = VarInt.peek(buffer, pos);
          if (updatesCount < 0) {
             return ValidationResult.error("Invalid array count for Updates");
-         } else if (updatesCount > 4096000) {
-            return ValidationResult.error("Updates exceeds max length 4096000");
+         } else if (updatesCount > 128) {
+            return ValidationResult.error("Updates exceeds max length 128");
          } else {
             pos += VarInt.length(buffer, pos);
 

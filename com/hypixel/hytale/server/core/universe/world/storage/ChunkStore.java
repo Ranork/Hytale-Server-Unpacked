@@ -366,7 +366,12 @@ public class ChunkStore implements WorldProvider {
 
    @Nonnull
    public CompletableFuture<Ref<ChunkStore>> getChunkSectionReferenceAsync(int x, int y, int z) {
-      return y >= 0 && y < 10 ? this.getChunkReferenceAsync(ChunkUtil.indexChunk(x, z)).thenApplyAsync(ref -> {
+      return this.getChunkSectionReferenceAsync(x, y, z, 0);
+   }
+
+   @Nonnull
+   public CompletableFuture<Ref<ChunkStore>> getChunkSectionReferenceAsync(int x, int y, int z, int flags) {
+      return y >= 0 && y < 10 ? this.getChunkReferenceAsync(ChunkUtil.indexChunk(x, z), flags).thenApplyAsync(ref -> {
          if (ref != null && ref.isValid()) {
             Store<ChunkStore> store = ref.getStore();
             ChunkColumn chunkColumnComponent = store.getComponent((Ref<ChunkStore>)ref, ChunkColumn.getComponentType());
@@ -375,6 +380,28 @@ public class ChunkStore implements WorldProvider {
             return null;
          }
       }, this.store.getExternalData().getWorld()) : CompletableFuture.failedFuture(new IndexOutOfBoundsException("Invalid y: " + y));
+   }
+
+   @Nullable
+   public Ref<ChunkStore> getChunkSectionReferenceAtBlock(int blockX, int blockY, int blockZ) {
+      return this.getChunkSectionReference(ChunkUtil.chunkCoordinate(blockX), ChunkUtil.chunkCoordinate(blockY), ChunkUtil.chunkCoordinate(blockZ));
+   }
+
+   @Nullable
+   public Ref<ChunkStore> getChunkSectionReferenceAtBlock(@Nonnull ComponentAccessor<ChunkStore> commandBuffer, int blockX, int blockY, int blockZ) {
+      return this.getChunkSectionReference(
+         commandBuffer, ChunkUtil.chunkCoordinate(blockX), ChunkUtil.chunkCoordinate(blockY), ChunkUtil.chunkCoordinate(blockZ)
+      );
+   }
+
+   @Nonnull
+   public CompletableFuture<Ref<ChunkStore>> getChunkSectionReferenceAtBlockAsync(int blockX, int blockY, int blockZ) {
+      return this.getChunkSectionReferenceAsync(ChunkUtil.chunkCoordinate(blockX), ChunkUtil.chunkCoordinate(blockY), ChunkUtil.chunkCoordinate(blockZ));
+   }
+
+   @Nonnull
+   public CompletableFuture<Ref<ChunkStore>> getChunkSectionReferenceAtBlockAsync(int blockX, int blockY, int blockZ, int flags) {
+      return this.getChunkSectionReferenceAsync(ChunkUtil.chunkCoordinate(blockX), ChunkUtil.chunkCoordinate(blockY), ChunkUtil.chunkCoordinate(blockZ), flags);
    }
 
    @Nullable

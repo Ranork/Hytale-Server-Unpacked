@@ -1,6 +1,8 @@
 package com.hypixel.hytale.builtin.buildertools.commands;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
+import com.hypixel.hytale.builtin.buildertools.BuilderToolsUserData;
 import com.hypixel.hytale.builtin.buildertools.prefablist.PrefabPage;
 import com.hypixel.hytale.builtin.buildertools.prefablist.PrefabSavePage;
 import com.hypixel.hytale.builtin.buildertools.utils.RecursivePrefabLoader;
@@ -292,6 +294,8 @@ public class PrefabCommand extends AbstractCommandCollection {
    }
 
    private static class PrefabSaveCommand extends AbstractPlayerCommand {
+      private static final Message MESSAGE_NO_SELECTION = Message.translation("server.builderTools.noSelection");
+
       public PrefabSaveCommand() {
          super("save", "server.commands.prefab.save.desc");
          this.requirePermission("hytale.editor.prefab.manage");
@@ -306,7 +310,13 @@ public class PrefabCommand extends AbstractCommandCollection {
 
          assert playerComponent != null;
 
-         playerComponent.getPageManager().openCustomPage(ref, store, new PrefabSavePage(playerRef));
+         BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
+         BlockSelection selection = builderState.getSelection();
+         if (selection != null && selection.hasSelectionBounds()) {
+            playerComponent.getPageManager().openCustomPage(ref, store, new PrefabSavePage(playerRef));
+         } else {
+            context.sendMessage(MESSAGE_NO_SELECTION);
+         }
       }
    }
 
@@ -323,6 +333,10 @@ public class PrefabCommand extends AbstractCommandCollection {
       private final FlagArg playerAnchorFlag = this.withFlagArg("playerAnchor", "server.commands.prefab.save.playerAnchor.desc");
       @Nonnull
       private final FlagArg clearSupportFlag = this.withFlagArg("clearSupport", "server.commands.editprefab.save.clearSupport.desc");
+      @Nonnull
+      private final DefaultArg<String> packArg = this.withDefaultArg(
+         "pack", "server.commands.prefab.save.pack.desc", ArgTypes.STRING, "", "server.commands.prefab.save.pack.desc"
+      );
 
       public PrefabSaveDirectCommand() {
          super("server.commands.prefab.save.desc");
@@ -336,17 +350,24 @@ public class PrefabCommand extends AbstractCommandCollection {
 
          assert playerComponent != null;
 
-         String name = this.nameArg.get(context);
-         boolean overwrite = this.overwriteFlag.get(context);
-         boolean entities = this.entitiesFlag.get(context);
-         boolean empty = this.emptyFlag.get(context);
-         boolean clearSupport = this.clearSupportFlag.get(context);
-         Vector3i playerAnchor = this.getPlayerAnchor(ref, store, this.playerAnchorFlag.get(context));
-         BuilderToolsPlugin.addToQueue(
-            playerComponent,
-            playerRef,
-            (r, s, componentAccessor) -> s.saveFromSelection(r, name, true, overwrite, entities, empty, playerAnchor, clearSupport, componentAccessor)
-         );
+         String packName = this.packArg.get(context);
+         AssetPack targetPack = BuilderToolsPlugin.resolveTargetPack(packName != null ? packName : "", playerComponent, context);
+         if (targetPack != null) {
+            BuilderToolsUserData.get(playerComponent).setLastSavePack(targetPack.getName());
+            String name = this.nameArg.get(context);
+            boolean overwrite = this.overwriteFlag.get(context);
+            boolean entities = this.entitiesFlag.get(context);
+            boolean empty = this.emptyFlag.get(context);
+            boolean clearSupport = this.clearSupportFlag.get(context);
+            Vector3i playerAnchor = this.getPlayerAnchor(ref, store, this.playerAnchorFlag.get(context));
+            BuilderToolsPlugin.addToQueue(
+               playerComponent,
+               playerRef,
+               (r, s, componentAccessor) -> s.saveFromSelection(
+                  r, name, true, overwrite, entities, empty, playerAnchor, clearSupport, targetPack, componentAccessor
+               )
+            );
+         }
       }
 
       @Nullable

@@ -2,9 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.commands;
 
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.hytalegenerator.LoggerUtil;
+import com.hypixel.hytale.builtin.hytalegenerator.Viewport;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.AssetManager;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.builtin.hytalegenerator.newsystem.NViewport;
 import com.hypixel.hytale.common.util.ExceptionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -73,7 +73,7 @@ public class ViewportCommand extends AbstractPlayerCommand {
             viewportBounds_voxelGrid = new Bounds3i(selection.getSelectionMin(), selection.getSelectionMax());
          }
 
-         NViewport viewport = new NViewport(viewportBounds_voxelGrid, world, context.sender());
+         Viewport viewport = new Viewport(viewportBounds_voxelGrid, world, context.sender());
          this.activeTask = () -> world.execute(() -> {
             try {
                viewport.refresh();

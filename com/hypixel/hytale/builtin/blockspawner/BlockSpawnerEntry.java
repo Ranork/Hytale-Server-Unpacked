@@ -8,7 +8,6 @@ import com.hypixel.hytale.codec.store.StoredCodec;
 import com.hypixel.hytale.common.map.IWeightedElement;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.prefab.config.SelectionPrefabSerializer;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import javax.annotation.Nonnull;
 
@@ -21,12 +20,6 @@ public class BlockSpawnerEntry implements IWeightedElement {
       .append(new KeyedCodec<>("RotationMode", BlockSpawnerEntry.RotationMode.CODEC), (entry, b) -> entry.rotationMode = b, entry -> entry.rotationMode)
       .add()
       .append(new KeyedCodec<>("Weight", Codec.DOUBLE), (entry, d) -> entry.weight = d, entry -> entry.weight)
-      .add()
-      .append(
-         new KeyedCodec<>("State", Codec.BSON_DOCUMENT),
-         (entry, wrapper, extraInfo) -> entry.blockComponents = SelectionPrefabSerializer.legacyStateDecode(wrapper),
-         (entry, extraInfo) -> null
-      )
       .add()
       .append(
          new KeyedCodec<>("Components", new StoredCodec<>(ChunkStore.HOLDER_CODEC_KEY)),

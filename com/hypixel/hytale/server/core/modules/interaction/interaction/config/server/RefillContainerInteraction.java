@@ -9,7 +9,6 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.iterator.BlockIterator;
-import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.InteractionState;
@@ -148,8 +147,7 @@ public class RefillContainerInteraction extends SimpleInstantInteraction {
                               fromPos,
                               toPos,
                               (x, y, z, px, py, pz, qx, qy, qz) -> {
-                                 Ref<ChunkStore> section = world.getChunkStore()
-                                    .getChunkSectionReference(ChunkUtil.chunkCoordinate(x), ChunkUtil.chunkCoordinate(y), ChunkUtil.chunkCoordinate(z));
+                                 Ref<ChunkStore> section = world.getChunkStore().getChunkSectionReferenceAtBlock(x, y, z);
                                  if (section == null) {
                                     return true;
                                  } else {

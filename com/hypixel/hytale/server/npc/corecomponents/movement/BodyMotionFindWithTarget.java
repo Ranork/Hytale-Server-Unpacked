@@ -51,6 +51,8 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
    private boolean lastAccessibleTargetPositionIsCurrent;
    protected String self;
    protected String other;
+   @Nullable
+   protected Ref<EntityStore> lastDesiredTargetEntity;
 
    public BodyMotionFindWithTarget(@Nonnull BuilderBodyMotionFindWithTarget builderMotionFindWithTarget, @Nonnull BuilderSupport support) {
       super(builderMotionFindWithTarget, support, new AStarWithTarget());
@@ -74,6 +76,13 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
       this.targetBoundingBox = null;
       this.lastPathedPosition.assign(Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE);
       this.self = role.getRoleName();
+      this.lastDesiredTargetEntity = null;
+   }
+
+   @Override
+   public void deactivate(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      super.deactivate(ref, role, componentAccessor);
+      this.lastDesiredTargetEntity = null;
    }
 
    @Override
@@ -84,6 +93,7 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
 
       assert boundingBoxComponent != null;
 
+      this.lastDesiredTargetEntity = null;
       this.targetBoundingBox = null;
       this.selfBoundingBox = boundingBoxComponent.getBoundingBox();
       this.lastAccessibleTargetPositionIsCurrent = false;
@@ -108,6 +118,7 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
                   this.lastAccessibleTargetPosition.assign(this.lastTargetPosition);
                   this.haveAccessibleTargetPosition = true;
                   this.lastAccessibleTargetPositionIsCurrent = true;
+                  this.lastDesiredTargetEntity = targetEntityReference;
                }
             } else {
                this.targetBoundingBox = null;
@@ -252,6 +263,12 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
 
    protected Vector3d getLastTargetPosition() {
       return this.lastTargetPosition;
+   }
+
+   @Nullable
+   @Override
+   protected Vector3d getSteeringTargetPosition() {
+      return this.haveValidTargetPosition ? this.lastTargetPosition : null;
    }
 
    protected Vector3d getLastAccessibleTargetPosition(

@@ -49,7 +49,7 @@ public class BuilderEntityFilterViewSector extends BuilderEntityFilterBase {
          0.0,
          DoubleRangeValidator.between(0.0, 360.0),
          BuilderDescriptorState.Stable,
-         "View sector to test entities in",
+         "View sector to test entities in (0 is treated as 360)",
          null
       );
       this.requireContext(InstructionType.Any, ComponentContext.NotSelfEntitySensor);

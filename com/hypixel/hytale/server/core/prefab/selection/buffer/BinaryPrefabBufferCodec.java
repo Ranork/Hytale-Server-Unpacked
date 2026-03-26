@@ -125,9 +125,7 @@ public class BinaryPrefabBufferCodec implements PrefabBufferCodec<ByteBuf> {
                Holder<ChunkStore> holder = null;
                if (hasState) {
                   BsonDocument doc = BsonUtil.readFromBinaryStream(buffer);
-                  if (version < 15) {
-                     holder = SelectionPrefabSerializer.legacyStateDecode(doc);
-                  } else if (version < 17) {
+                  if (version < 17) {
                      holder = ChunkStore.REGISTRY.deserialize(doc, worldVersion);
                   } else {
                      holder = ChunkStore.REGISTRY.deserialize(doc);

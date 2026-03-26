@@ -6,7 +6,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -15,11 +15,11 @@ public class TargetMemory implements Component<EntityStore> {
    @Nonnull
    private final Int2FloatOpenHashMap knownFriendlies = new Int2FloatOpenHashMap();
    @Nonnull
-   private final List<Ref<EntityStore>> knownFriendliesList = new ObjectArrayList();
+   private final List<Ref<EntityStore>> knownFriendliesList = new ReferenceArrayList();
    @Nonnull
    private final Int2FloatOpenHashMap knownHostiles = new Int2FloatOpenHashMap();
    @Nonnull
-   private final List<Ref<EntityStore>> knownHostilesList = new ObjectArrayList();
+   private final List<Ref<EntityStore>> knownHostilesList = new ReferenceArrayList();
    private final float rememberFor;
    @Nullable
    private Ref<EntityStore> closestHostile;

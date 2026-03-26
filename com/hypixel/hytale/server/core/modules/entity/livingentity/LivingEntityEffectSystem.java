@@ -10,38 +10,27 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.asset.type.entityeffect.config.RemovalBehavior;
 import com.hypixel.hytale.server.core.entity.effect.ActiveEntityEffect;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
-import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.condition.Condition;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageModule;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
-import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.accessor.LocalCachedChunkAccessor;
-import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
-import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.ints.IntListIterator;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.time.Instant;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class LivingEntityEffectSystem extends EntityTickingSystem<EntityStore> implements DisableProcessingAssert {
    @Nonnull
-   private static final Query<EntityStore> QUERY = Query.and(
-      EffectControllerComponent.getComponentType(), TransformComponent.getComponentType(), BoundingBox.getComponentType()
-   );
-   @Nonnull
-   private static final String EFFECT_NAME_BURN = "Burn";
-   @Nonnull
-   private static final String BLOCK_TYPE_FLUID_WATER = "Fluid_Water";
+   private static final Query<EntityStore> QUERY = Query.and(EffectControllerComponent.getComponentType(), TransformComponent.getComponentType());
 
    @Nonnull
    @Override
@@ -70,22 +59,28 @@ public class LivingEntityEffectSystem extends EntityTickingSystem<EntityStore> i
       if (!activeEffects.isEmpty()) {
          IndexedLookupTableAssetMap<String, EntityEffect> entityEffectAssetMap = EntityEffect.getAssetMap();
          Ref<EntityStore> entityRef = archetypeChunk.getReferenceTo(index);
-         ObjectIterator<ActiveEntityEffect> iterator = activeEffects.values().iterator();
          EntityStatMap entityStatMapComponent = commandBuffer.getComponent(entityRef, EntityStatMap.getComponentType());
          if (entityStatMapComponent != null) {
-            boolean invalidated = false;
+            IntList effectsToRemove = null;
             boolean invulnerable = false;
+            ObjectIterator var13 = activeEffects.values().iterator();
 
-            while (iterator.hasNext()) {
-               ActiveEntityEffect activeEntityEffect = (ActiveEntityEffect)iterator.next();
+            while (var13.hasNext()) {
+               ActiveEntityEffect activeEntityEffect = (ActiveEntityEffect)var13.next();
                int entityEffectIndex = activeEntityEffect.getEntityEffectIndex();
                EntityEffect entityEffect = entityEffectAssetMap.getAsset(entityEffectIndex);
                if (entityEffect == null) {
-                  iterator.remove();
-                  invalidated = true;
+                  if (effectsToRemove == null) {
+                     effectsToRemove = new IntArrayList();
+                  }
+
+                  effectsToRemove.add(entityEffectIndex);
                } else if (!canApplyEffect(entityRef, entityEffect, commandBuffer)) {
-                  iterator.remove();
-                  invalidated = true;
+                  if (effectsToRemove == null) {
+                     effectsToRemove = new IntArrayList();
+                  }
+
+                  effectsToRemove.add(entityEffectIndex);
                } else {
                   float tickDelta = Math.min(activeEntityEffect.getRemainingDuration(), dt);
                   activeEntityEffect.tick(commandBuffer, entityRef, entityEffect, entityStatMapComponent, tickDelta);
@@ -94,9 +89,11 @@ public class LivingEntityEffectSystem extends EntityTickingSystem<EntityStore> i
                   }
 
                   if (!activeEntityEffect.isInfinite() && activeEntityEffect.getRemainingDuration() <= 0.0F) {
-                     iterator.remove();
-                     effectControllerComponent.tryResetModelChange(entityRef, activeEntityEffect.getEntityEffectIndex(), commandBuffer);
-                     invalidated = true;
+                     if (effectsToRemove == null) {
+                        effectsToRemove = new IntArrayList();
+                     }
+
+                     effectsToRemove.add(entityEffectIndex);
                   }
 
                   if (activeEntityEffect.isInvulnerable()) {
@@ -106,10 +103,12 @@ public class LivingEntityEffectSystem extends EntityTickingSystem<EntityStore> i
             }
 
             effectControllerComponent.setInvulnerable(invulnerable);
-            if (invalidated) {
-               effectControllerComponent.invalidateCache();
-               if (EntityUtils.getEntity(index, archetypeChunk) instanceof LivingEntity livingEntity) {
-                  livingEntity.getStatModifiersManager().setRecalculate(true);
+            if (effectsToRemove != null) {
+               IntListIterator var18 = effectsToRemove.iterator();
+
+               while (var18.hasNext()) {
+                  int effectIndex = (Integer)var18.next();
+                  effectControllerComponent.removeEffect(entityRef, effectIndex, RemovalBehavior.COMPLETE, commandBuffer);
                }
             }
          }
@@ -125,40 +124,9 @@ public class LivingEntityEffectSystem extends EntityTickingSystem<EntityStore> i
    public static boolean canApplyEffect(
       @Nonnull Ref<EntityStore> ownerRef, @Nonnull EntityEffect entityEffect, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if ("Burn".equals(entityEffect.getId())) {
-         TransformComponent transformComponent = componentAccessor.getComponent(ownerRef, TransformComponent.getComponentType());
-
-         assert transformComponent != null;
-
-         Ref<ChunkStore> chunkRef = transformComponent.getChunkRef();
-         if (chunkRef != null && chunkRef.isValid()) {
-            World world = componentAccessor.getExternalData().getWorld();
-            Store<ChunkStore> chunkComponentStore = world.getChunkStore().getStore();
-            WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkRef, WorldChunk.getComponentType());
-
-            assert worldChunkComponent != null;
-
-            BoundingBox boundingBoxComponent = componentAccessor.getComponent(ownerRef, BoundingBox.getComponentType());
-
-            assert boundingBoxComponent != null;
-
-            Vector3d position = transformComponent.getPosition();
-            Box boundingBox = boundingBoxComponent.getBoundingBox();
-            LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atChunkCoords(world, worldChunkComponent.getX(), worldChunkComponent.getZ(), 1);
-            return boundingBox.forEachBlock(position, chunkAccessor, (x, y, z, _chunkAccessor) -> {
-               WorldChunk localChunk = _chunkAccessor.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
-               if (localChunk == null) {
-                  return true;
-               } else {
-                  BlockType blockType = localChunk.getBlockType(x, y, z);
-                  return blockType == null ? true : !blockType.getId().contains("Fluid_Water");
-               }
-            });
-         } else {
-            return false;
-         }
-      } else {
-         return true;
-      }
+      Condition[] applyConditions = entityEffect.getApplyConditions();
+      return applyConditions != null && applyConditions.length != 0
+         ? Condition.allConditionsMet(componentAccessor, ownerRef, Instant.now(), applyConditions)
+         : true;
    }
 }

@@ -54,6 +54,7 @@ public class MarkedEntitySupport {
       }
 
       this.storedPositions = support.allocatePositionSlots();
+      this.targetSlotToIgnoreForAvoidance = this.defaultTargetSlot;
    }
 
    public void clearMarkedEntity(int targetSlot) {
@@ -122,13 +123,12 @@ public class MarkedEntitySupport {
    }
 
    public void setTargetSlotToIgnoreForAvoidance(int targetSlotToIgnoreForAvoidance) {
-      this.targetSlotToIgnoreForAvoidance = targetSlotToIgnoreForAvoidance;
+      this.targetSlotToIgnoreForAvoidance = targetSlotToIgnoreForAvoidance >= 0 ? targetSlotToIgnoreForAvoidance : this.defaultTargetSlot;
    }
 
    @Nullable
    public Ref<EntityStore> getTargetReferenceToIgnoreForAvoidance() {
-      int slot = this.targetSlotToIgnoreForAvoidance >= 0 ? this.targetSlotToIgnoreForAvoidance : this.defaultTargetSlot;
-      return slot < 0 ? null : this.getMarkedEntityRef(slot);
+      return this.targetSlotToIgnoreForAvoidance < 0 ? null : this.getMarkedEntityRef(this.targetSlotToIgnoreForAvoidance);
    }
 
    public String getSlotName(int slot) {

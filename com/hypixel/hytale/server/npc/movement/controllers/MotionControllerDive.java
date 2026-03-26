@@ -165,15 +165,15 @@ public class MotionControllerDive extends MotionControllerBase {
             newPitch = PhysicsMath.normalizeTurnAngle(PhysicsMath.pitchFromDirection(dir.x, dir.y, dir.z));
          } else {
             translation.assign(Vector3d.ZERO);
-            if (steering.hasYaw()) {
-               newHeading = steering.getYaw();
+            if (steering.hasYawOrDirection()) {
+               newHeading = steering.getYawOrDirection();
             } else {
                newHeading = heading;
             }
 
             steering.clearYaw();
-            if (steering.hasPitch()) {
-               newPitch = steering.getPitch();
+            if (steering.hasPitchOrDirection()) {
+               newPitch = steering.getPitchOrDirection();
             } else {
                newPitch = pitch;
             }

@@ -6,7 +6,7 @@ import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -25,11 +25,12 @@ public class InventoryClearCommand extends AbstractPlayerCommand {
    protected void execute(
       @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
+      InventoryComponent.getCombined(store, ref, InventoryComponent.EVERYTHING).clear();
+      InventoryComponent.Tool toolComponent = store.getComponent(ref, InventoryComponent.Tool.getComponentType());
+      if (toolComponent != null) {
+         toolComponent.getInventory().clear();
+      }
 
-      assert playerComponent != null;
-
-      playerComponent.getInventory().clear();
       context.sendMessage(MESSAGE_COMMANDS_CLEARINV_SUCCESS);
    }
 }

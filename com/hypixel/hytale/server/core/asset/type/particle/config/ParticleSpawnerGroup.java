@@ -5,15 +5,16 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.common.util.ArrayUtil;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.InitialVelocity;
 import com.hypixel.hytale.protocol.RangeVector3f;
 import com.hypixel.hytale.protocol.Rangef;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
 
 public class ParticleSpawnerGroup implements NetworkSerializable<com.hypixel.hytale.protocol.ParticleSpawnerGroup> {
    public static final BuilderCodec<ParticleSpawnerGroup> CODEC = BuilderCodec.builder(ParticleSpawnerGroup.class, ParticleSpawnerGroup::new)
@@ -25,7 +26,7 @@ public class ParticleSpawnerGroup implements NetworkSerializable<com.hypixel.hyt
       .addValidator(ParticleSpawner.VALIDATOR_CACHE.getValidator())
       .add()
       .addField(
-         new KeyedCodec<>("PositionOffset", ProtocolCodecs.VECTOR3F),
+         new KeyedCodec<>("PositionOffset", Vector3fUtil.CODEC),
          (particleSpawnerGroup, o) -> particleSpawnerGroup.positionOffset = o,
          particleSpawnerGroup -> particleSpawnerGroup.positionOffset
       )

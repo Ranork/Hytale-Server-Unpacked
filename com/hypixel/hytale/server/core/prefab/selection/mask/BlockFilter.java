@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.prefab.selection.mask;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.function.FunctionCodec;
 import com.hypixel.hytale.common.util.ArrayUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BlockTypeListAsset;
@@ -21,6 +20,7 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BlockFilter {
    public static final BlockFilter[] EMPTY_ARRAY = new BlockFilter[0];
@@ -50,9 +50,9 @@ public class BlockFilter {
    public void resolve() {
       if (this.resolvedBlocks == null) {
          BlockFilter.BlocksAndFluids result = parseBlocksAndFluids(this.blocks);
-         this.resolvedBlocks = result.blocks;
-         this.resolvedFluids = result.fluids;
-         this.hasInvalidBlocks = result.hasInvalidBlocks;
+         this.resolvedBlocks = result.blocks();
+         this.resolvedFluids = result.fluids();
+         this.hasInvalidBlocks = result.hasInvalidBlocks();
       }
    }
 
@@ -209,11 +209,11 @@ public class BlockFilter {
 
    @Nonnull
    public static IntSet parseBlocks(@Nonnull String[] blocksArgs) {
-      return parseBlocksAndFluids(blocksArgs).blocks;
+      return parseBlocksAndFluids(blocksArgs).blocks();
    }
 
    @Nonnull
-   private static BlockFilter.BlocksAndFluids parseBlocksAndFluids(@Nonnull String[] blocksArgs) {
+   public static BlockFilter.BlocksAndFluids parseBlocksAndFluids(@Nonnull String[] blocksArgs) {
       IntSet blocks = new IntOpenHashSet();
       IntSet fluids = new IntOpenHashSet();
       boolean invalid = false;
@@ -228,27 +228,40 @@ public class BlockFilter {
             }
          }
 
-         int blockId = BlockPattern.parseBlock(blockArg);
-         if (blockId == 0 && !blockArg.equalsIgnoreCase("Empty")) {
-            invalid = true;
-         }
-
-         BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
-         if (blockType != null && blockType.getBlockListAssetId() != null) {
-            BlockTypeListAsset blockTypeListAsset = BlockTypeListAsset.getAssetMap().getAsset(blockType.getBlockListAssetId());
-            if (blockTypeListAsset != null && blockTypeListAsset.getBlockPattern() != null) {
-               Integer[] var12 = blockTypeListAsset.getBlockPattern().getResolvedKeys();
-               int var13 = var12.length;
-
-               for (int var14 = 0; var14 < var13; var14++) {
-                  int resolvedKey = var12[var14];
-                  blocks.add(resolvedKey);
-               }
-               continue;
+         int directFluidId = Fluid.getAssetMap().getIndex(blockArg);
+         if (directFluidId >= 0) {
+            fluids.add(directFluidId);
+         } else {
+            int blockId = BlockPattern.parseBlock(blockArg);
+            if (blockId == 0 && !blockArg.equalsIgnoreCase("Empty")) {
+               invalid = true;
             }
-         }
 
-         blocks.add(blockId);
+            BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
+            if (blockType != null && blockType.getBlockListAssetId() != null) {
+               BlockTypeListAsset blockTypeListAsset = BlockTypeListAsset.getAssetMap().getAsset(blockType.getBlockListAssetId());
+               if (blockTypeListAsset != null) {
+                  for (String key : blockTypeListAsset.getBlockTypeKeys()) {
+                     Item listItem = Item.getAssetMap().getAsset(key);
+                     if (listItem != null) {
+                        int listFluidId = getFluidIdFromItem(listItem);
+                        if (listFluidId >= 0) {
+                           fluids.add(listFluidId);
+                           continue;
+                        }
+                     }
+
+                     int resolvedBlockId = BlockPattern.parseBlock(key);
+                     if (BlockPattern.canParseBlock(key)) {
+                        blocks.add(resolvedBlockId);
+                     }
+                  }
+                  continue;
+               }
+            }
+
+            blocks.add(blockId);
+         }
       }
 
       return new BlockFilter.BlocksAndFluids(IntSets.unmodifiable(blocks), fluids.isEmpty() ? null : IntSets.unmodifiable(fluids), invalid);
@@ -282,16 +295,7 @@ public class BlockFilter {
       }
    }
 
-   private static class BlocksAndFluids {
-      final IntSet blocks;
-      final IntSet fluids;
-      final boolean hasInvalidBlocks;
-
-      BlocksAndFluids(IntSet blocks, IntSet fluids, boolean hasInvalidBlocks) {
-         this.blocks = blocks;
-         this.fluids = fluids;
-         this.hasInvalidBlocks = hasInvalidBlocks;
-      }
+   public record BlocksAndFluids(@Nonnull IntSet blocks, @Nullable IntSet fluids, boolean hasInvalidBlocks) {
    }
 
    public static enum FilterType {

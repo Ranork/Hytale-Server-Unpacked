@@ -4,11 +4,11 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class SurfacePattern extends Pattern {
    @Nonnull
@@ -91,19 +91,19 @@ public class SurfacePattern extends Pattern {
 
    @Override
    public boolean matches(@Nonnull Pattern.Context context) {
-      this.rChildPosition.assign(context.position);
+      this.rChildPosition.set(context.position);
       this.rChildContext.assign(context);
       this.rChildContext.position = this.rChildPosition;
 
       for (Vector3i pos : this.originPositions) {
-         this.rChildPosition.assign(pos).add(context.position);
+         this.rChildPosition.set(pos).add(context.position);
          if (!this.originPattern.matches(this.rChildContext)) {
             return false;
          }
       }
 
       for (Vector3i posx : this.surfacePositions) {
-         this.rChildPosition.assign(posx).add(context.position);
+         this.rChildPosition.set(posx).add(context.position);
          if (!this.wallPattern.matches(this.rChildContext)) {
             return false;
          }
@@ -114,6 +114,9 @@ public class SurfacePattern extends Pattern {
 
    private void applyFacing(@Nonnull Vector3i pos, @Nonnull SurfacePattern.Facing facing) {
       switch (facing) {
+         case U:
+         default:
+            break;
          case D:
             this.toD(pos);
             break;

@@ -2,12 +2,12 @@ package com.hypixel.hytale.builtin.portals.utils.posqueries.generators;
 
 import com.hypixel.hytale.builtin.portals.utils.posqueries.SpatialQuery;
 import com.hypixel.hytale.builtin.portals.utils.posqueries.SpatialQueryDebug;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SearchCone implements SpatialQuery {
    private final Vector3d direction;
@@ -53,7 +53,7 @@ public class SearchCone implements SpatialQuery {
          ThreadLocalRandom random = ThreadLocalRandom.current();
          double distance = this.minRadius + random.nextDouble() * (this.maxRadius - this.minRadius);
          double yawOffset = (random.nextDouble() - 0.5) * maxRadians;
-         Vector3d dir = this.direction.clone().rotateY((float)yawOffset).setLength(distance);
+         Vector3d dir = new Vector3d(this.direction).rotateY((float)yawOffset).normalize(distance);
          return dir.add(origin);
       }).limit(this.attempts);
    }

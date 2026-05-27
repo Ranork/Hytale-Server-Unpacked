@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.cl
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.Interaction;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
@@ -13,10 +14,13 @@ import com.hypixel.hytale.server.core.modules.interaction.Interactions;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 
 public class UseEntityInteraction extends SimpleInstantInteraction {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    public static final BuilderCodec<UseEntityInteraction> CODEC = BuilderCodec.builder(
          UseEntityInteraction.class, UseEntityInteraction::new, SimpleInstantInteraction.CODEC
@@ -42,16 +46,22 @@ public class UseEntityInteraction extends SimpleInstantInteraction {
 
       Ref<EntityStore> targetRef = commandBuffer.getStore().getExternalData().getRefFromNetworkId(chainData.entityId);
       if (targetRef != null && targetRef.isValid()) {
-         Interactions interactionsComponent = commandBuffer.getComponent(targetRef, Interactions.getComponentType());
-         if (interactionsComponent != null) {
-            String interaction = interactionsComponent.getInteractionId(type);
-            if (interaction == null) {
-               context.getState().state = InteractionState.Failed;
-            } else {
-               context.execute(RootInteraction.getRootInteractionOrUnknown(interaction));
-            }
-         } else {
+         if (!InteractionValidation.canPlayerInteractWithEntity(context.getEntity(), commandBuffer, context.getHeldItem(), targetRef)) {
+            LOGGER.at(Level.WARNING)
+               .log("Entity %d failed use entity interaction distance check for target entity %d", context.getEntity().getIndex(), targetRef.getIndex());
             context.getState().state = InteractionState.Failed;
+         } else {
+            Interactions interactionsComponent = commandBuffer.getComponent(targetRef, Interactions.getComponentType());
+            if (interactionsComponent != null) {
+               String interaction = interactionsComponent.getInteractionId(type);
+               if (interaction == null) {
+                  context.getState().state = InteractionState.Failed;
+               } else {
+                  context.execute(RootInteraction.getRootInteractionOrUnknown(interaction));
+               }
+            } else {
+               context.getState().state = InteractionState.Failed;
+            }
          }
       } else {
          context.getState().state = InteractionState.Failed;

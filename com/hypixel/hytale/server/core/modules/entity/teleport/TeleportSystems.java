@@ -10,9 +10,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.math.vector.Location;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.packets.player.ClientTeleport;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -25,6 +24,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TeleportSystems {
    public static class MoveSystem extends RefChangeSystem<EntityStore, Teleport> {
@@ -153,7 +153,7 @@ public class TeleportSystems {
 
          CollisionResultComponent collisionResultComponent = commandBuffer.getComponent(ref, this.collisionResultComponentType);
          if (collisionResultComponent != null) {
-            collisionResultComponent.getCollisionStartPosition().assign(transformComponent.getPosition());
+            collisionResultComponent.getCollisionStartPosition().set(transformComponent.getPosition());
          }
 
          playerComponent.moveTo(ref, component.getPosition().x, component.getPosition().y, component.getPosition().z, commandBuffer);
@@ -225,8 +225,8 @@ public class TeleportSystems {
          commandBuffer.removeComponent(ref, this.teleportComponentType);
          TransformComponent transformComponent = commandBuffer.getComponent(ref, this.transformComponentType);
          String originWorldName = commandBuffer.getExternalData().getWorld().getName();
-         Location origin = new Location(originWorldName, transformComponent.getTransform().clone());
-         Location destination = new Location(targetWorld.getName(), teleport.getPosition().clone(), teleport.getRotation().clone());
+         Location origin = new Location(originWorldName, new Transform(transformComponent.getTransform()));
+         Location destination = new Location(targetWorld.getName(), new Vector3d(teleport.getPosition()), new Rotation3f(teleport.getRotation()));
          commandBuffer.run(s -> {
             TeleportRecord teleportRecord = s.ensureAndGetComponent(ref, TeleportRecord.getComponentType());
             teleportRecord.setLastTeleport(new TeleportRecord.Entry(origin, destination, System.nanoTime()));
@@ -264,19 +264,19 @@ public class TeleportSystems {
 
          PendingTeleport pendingTeleportComponent = commandBuffer.ensureAndGetComponent(ref, this.pendingTeleportComponentType);
          Vector3d teleportPosition = teleport.getPosition();
-         Vector3f teleportRotation = teleport.getRotation();
+         Rotation3f teleportRotation = teleport.getRotation();
          transformComponent.teleportPosition(teleportPosition);
          transformComponent.teleportRotation(teleportRotation);
          HeadRotation headRotationComponent = commandBuffer.getComponent(ref, this.headRotationComponentType);
          if (headRotationComponent != null) {
-            Vector3f teleportHeadRotation = teleport.getHeadRotation();
+            Rotation3f teleportHeadRotation = teleport.getHeadRotation();
             headRotationComponent.teleportRotation(teleportHeadRotation != null ? teleportHeadRotation : teleportRotation);
          }
 
          TeleportRecord teleportHistory = commandBuffer.ensureAndGetComponent(ref, TeleportRecord.getComponentType());
          World world = commandBuffer.getExternalData().getWorld();
-         Location origin = new Location(world.getName(), teleportPosition.clone(), teleportRotation.clone());
-         Location destination = new Location(world.getName(), teleportPosition.clone(), teleportRotation.clone());
+         Location origin = new Location(world.getName(), new Vector3d(teleportPosition), new Rotation3f(teleportRotation));
+         Location destination = new Location(world.getName(), new Vector3d(teleportPosition), new Rotation3f(teleportRotation));
          teleportHistory.setLastTeleport(new TeleportRecord.Entry(origin, destination, System.nanoTime()));
          playerComponent.getWindowManager().validateWindows(ref, commandBuffer);
          int id = pendingTeleportComponent.queueTeleport(teleport);

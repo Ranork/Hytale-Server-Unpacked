@@ -1,11 +1,11 @@
 package com.hypixel.hytale.server.core.event.events.ecs;
 
 import com.hypixel.hytale.component.system.CancellableEcsEvent;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BreakBlockEvent extends CancellableEcsEvent {
    @Nullable

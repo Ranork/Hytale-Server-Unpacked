@@ -3,8 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.movement;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BodyMotionFind extends BodyMotionFindWithTarget {
    protected final double distance;
@@ -161,7 +161,7 @@ public class BodyMotionFind extends BodyMotionFindWithTarget {
 
    @Override
    public float estimateToGoal(@Nonnull AStarBase aStarBase, @Nonnull Vector3d fromPosition, MotionController motionController) {
-      return (float)((AStarWithTarget)aStarBase).getTargetPosition().distanceTo(fromPosition);
+      return (float)((AStarWithTarget)aStarBase).getTargetPosition().distance(fromPosition);
    }
 
    @Override
@@ -191,11 +191,11 @@ public class BodyMotionFind extends BodyMotionFindWithTarget {
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      Vector3f bodyRotation = transformComponent.getRotation();
-      this.tempDirectionVector.assign(this.getLastTargetPosition()).subtract(position);
-      steering.setYaw(NPCPhysicsMath.headingFromDirection(this.tempDirectionVector.x, this.tempDirectionVector.z, bodyRotation.getYaw()));
+      Rotation3f bodyRotation = transformComponent.getRotation();
+      this.tempDirectionVector.set(this.getLastTargetPosition()).sub(position);
+      steering.setYaw(NPCPhysicsMath.headingFromDirection(this.tempDirectionVector.x, this.tempDirectionVector.z, bodyRotation.yaw()));
       steering.setPitch(
-         NPCPhysicsMath.pitchFromDirection(this.tempDirectionVector.x, this.tempDirectionVector.y, this.tempDirectionVector.z, bodyRotation.getPitch())
+         NPCPhysicsMath.pitchFromDirection(this.tempDirectionVector.x, this.tempDirectionVector.y, this.tempDirectionVector.z, bodyRotation.pitch())
       );
    }
 
@@ -209,7 +209,7 @@ public class BodyMotionFind extends BodyMotionFindWithTarget {
       if (this.isBoundingBoxesOverlapping(position, targetPosition)) {
          return true;
       } else {
-         Vector3d direction = this.tempDirectionVector.assign(targetPosition).subtract(position);
+         Vector3d direction = this.tempDirectionVector.set(targetPosition).sub(position);
          motionController.probeMove(ref, position, direction, this.probeMoveData, componentAccessor);
          return this.isBoundingBoxesOverlapping(this.probeMoveData.probePosition, targetPosition);
       }

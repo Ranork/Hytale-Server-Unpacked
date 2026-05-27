@@ -6,7 +6,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
@@ -15,6 +14,7 @@ import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionFindBase;
 import com.hypixel.hytale.server.npc.movement.NavState;
 import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForceWithTarget;
@@ -35,6 +35,7 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotionBase implements AStarEvaluator, DebugSupport.DebugFlagsChangeListener {
    protected final int nodesPerTick;
@@ -48,8 +49,6 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    protected final double minPathLength;
    protected final double minPathLengthSquared;
    protected final boolean canSkipSteering;
-   protected final boolean isAvoidingBlockDamage;
-   protected final boolean isRelaxedMoveConstraints;
    protected final double desiredAltitudeWeight;
    protected final boolean dbgStatus;
    protected final boolean dbgProfile;
@@ -62,7 +61,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    protected final boolean dbgMotionState;
    @Nonnull
    protected final T aStar;
-   @Nonnull
+   @Nullable
    protected final AStarDebugBase aStarDebug;
    protected final PathFollower pathFollower = new PathFollower();
    protected final ProbeMoveData probeMoveData = new ProbeMoveData();
@@ -74,17 +73,19 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
    protected double throttleDelay;
    protected boolean passedWaypoint;
    protected boolean wasAvoidingBlockDamage;
+   protected boolean wasUnableToBreathe;
    protected boolean dbgDisplayString;
    protected boolean visPath;
    @Nullable
    protected DebugSupport cachedDebugSupport;
+   @Nonnull
+   protected final EnumSet<RelaxedConstraint> cachedEffectiveConstraints;
    protected final Vector3d lastSeekVisTarget = new Vector3d(Double.NaN, Double.NaN, Double.NaN);
    protected StringBuilder debugString;
 
    public BodyMotionFindBase(@Nonnull BuilderBodyMotionFindBase builderBodyMotionFindBase, @Nonnull BuilderSupport support, @Nonnull T aStar) {
       super(builderBodyMotionFindBase);
       this.aStar = aStar;
-      this.aStarDebug = aStar.createDebugHelper(HytaleLogger.forEnclosingClass());
       this.useBestPath = builderBodyMotionFindBase.getUseBestPath(support);
       this.nodesPerTick = builderBodyMotionFindBase.getNodesPerTick(support);
       this.usePathfinder = builderBodyMotionFindBase.isUsePathfinder(support);
@@ -97,10 +98,15 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
       this.throttleDelayMin = throttleDelayRange[0];
       this.throttleDelayMax = throttleDelayRange[1];
       this.throttleIgnoreCount = builderBodyMotionFindBase.getThrottleIgnoreCount(support);
-      this.isRelaxedMoveConstraints = builderBodyMotionFindBase.isRelaxedMoveConstraints(support);
-      this.isAvoidingBlockDamage = builderBodyMotionFindBase.isAvoidingBlockDamage(support);
+      boolean isLegacyRelaxedMoveConstraints = builderBodyMotionFindBase.isLegacyRelaxedMoveConstraints(support);
+      boolean usesLegacyConstraintMode = !builderBodyMotionFindBase.isRelaxedConstraintsPresent();
+      EnumSet<RelaxedConstraint> relaxedConstraints = builderBodyMotionFindBase.getRelaxedConstraints(support);
+      boolean isLegacyAvoidingBlockDamage = builderBodyMotionFindBase.isAvoidingBlockDamage(support);
+      this.cachedEffectiveConstraints = computeEffectiveRelaxedConstraints(
+         usesLegacyConstraintMode, relaxedConstraints, isLegacyRelaxedMoveConstraints, isLegacyAvoidingBlockDamage
+      );
       this.desiredAltitudeWeight = builderBodyMotionFindBase.getDesiredAltitudeWeight(support);
-      this.probeMoveData.setRelaxedMoveConstraints(this.isRelaxedMoveConstraints);
+      this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
       this.pathFollower.setPathSmoothing(builderBodyMotionFindBase.getPathSmoothing(support));
       this.pathFollower.setRelativeSpeed(builderBodyMotionFindBase.getRelativeSpeed(support));
       this.pathFollower.setRelativeSpeedWaypoint(builderBodyMotionFindBase.getRelativeSpeedWaypoint(support));
@@ -123,7 +129,14 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
       this.dbgStay = debugFlags.contains(BodyMotionFindBase.DebugFlags.Stay);
       this.dbgMotionState = debugFlags.contains(BodyMotionFindBase.DebugFlags.Motion);
       this.dbgDisplayString = false;
+      this.aStarDebug = !this.dbgPath && !this.dbgOpens && !this.dbgMaps ? null : aStar.createDebugHelper(HytaleLogger.forEnclosingClass());
       this.pathFollower.setDebugNodes(this.dbgNodes);
+   }
+
+   @Nullable
+   @Override
+   public EnumSet<RelaxedConstraint> getRelaxedConstraints() {
+      return this.cachedEffectiveConstraints;
    }
 
    @Override
@@ -141,7 +154,8 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
       debugSupport.registerDebugFlagsListener(this);
       this.setNavStateInit(activeMotionController);
       this.wasSteering = false;
-      this.wasAvoidingBlockDamage = this.isAvoidingBlockDamage && activeMotionController.isAvoidingBlockDamage();
+      this.wasAvoidingBlockDamage = !this.cachedEffectiveConstraints.contains(RelaxedConstraint.DAMAGE) && activeMotionController.isAvoidingBlockDamage();
+      this.wasUnableToBreathe = !role.couldBreatheCached();
       this.aStar.setStartPosition(transformComponent.getPosition());
    }
 
@@ -176,12 +190,9 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
          this.wasSteering = false;
          return false;
       } else {
-         if (!this.isAvoidingBlockDamage) {
-            activeMotionController.setAvoidingBlockDamage(false);
-         }
-
-         activeMotionController.setRelaxedMoveConstraints(this.isRelaxedMoveConstraints);
-         this.probeMoveData.setAvoidingBlockDamage(activeMotionController.isAvoidingBlockDamage());
+         activeMotionController.setRelaxedMoveConstraints(this.cachedEffectiveConstraints);
+         this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
+         applyEscapeConstraints(role, this.probeMoveData);
          if (this.isGoalReached(ref, activeMotionController, position, componentAccessor)) {
             this.setNavStateAtGoal(role.getActiveMotionController());
             this.wasSteering = false;
@@ -237,7 +248,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
                      if (steeringTarget != null && !steeringTarget.equals(this.lastSeekVisTarget)) {
                         this.cachedDebugSupport.clearPathVisualization();
                         this.cachedDebugSupport.recordPathWaypoint(steeringTarget, true, true, true);
-                        this.lastSeekVisTarget.assign(steeringTarget);
+                        this.lastSeekVisTarget.set(steeringTarget);
                      }
                   }
 
@@ -284,7 +295,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
                }
             }
 
-            if (this.pathFollower.pathInFinalStage() && activeMotionController.canAct(ref, componentAccessor)) {
+            if (this.pathFollower.pathInFinalStage() && activeMotionController.canSteer(ref, componentAccessor)) {
                if (this.pathFollower.getCurrentWaypoint() == null) {
                   if (this.aStar.getPath() != null) {
                      this.setPath(ref, position, activeMotionController, componentAccessor);
@@ -331,7 +342,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
                } else if (this.pathFollower.isWaypointFrozen()) {
                   this.aStar.clearPath();
                   Vector3d targetPosition = this.pathFollower.getCurrentWaypointPosition();
-                  if (targetPosition.distanceSquaredTo(position) < 1.0) {
+                  if (targetPosition.distanceSquared(position) < 1.0) {
                      this.pathFollower.setWaypointFrozen(false);
                      if (this.canSkipSteering && this.shouldSkipSteering(ref, activeMotionController, targetPosition, componentAccessor)) {
                         this.startPathFinder(ref, position, role, activeMotionController, componentAccessor);
@@ -376,7 +387,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
                }
             }
 
-            if (activeMotionController.canAct(ref, componentAccessor) && !this.dbgStay) {
+            if (activeMotionController.canSteer(ref, componentAccessor) && !this.dbgStay) {
                this.pathFollower.executePath(position, activeMotionController, desiredSteering);
                if (this.dbgMotionState) {
                   ((HytaleLogger.Api)NPCPlugin.get().getLogger().at(Level.INFO).every(100)).log("MotionFindBase: Executing path");
@@ -464,7 +475,7 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
             this.onNoPathFound(activeMotionController);
             return false;
          } else {
-            double pathLengthSquared = this.aStar.getEndPosition().distanceSquaredTo(this.aStar.getPosition());
+            double pathLengthSquared = this.aStar.getEndPosition().distanceSquared(this.aStar.getPosition());
             if (pathLengthSquared < this.minPathLengthSquared) {
                if (this.dbgStatus) {
                   NPCPlugin.get().getLogger().at(Level.INFO).log("Path computation failed. Path to short length=%s", Math.sqrt(pathLengthSquared));
@@ -566,7 +577,6 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
             }
          }
 
-         motionController.requireDepthProbing();
          return true;
       }
    }
@@ -725,7 +735,18 @@ public abstract class BodyMotionFindBase<T extends AStarBase> extends BodyMotion
 
             return true;
          } else {
-            return false;
+            boolean cannotBreathe = !activeMotionController.getRole().couldBreatheCached();
+            if (this.wasUnableToBreathe && !cannotBreathe) {
+               this.wasUnableToBreathe = false;
+               if (this.dbgStatus) {
+                  NPCPlugin.get().getLogger().at(Level.INFO).log("Recomputing Path - Recovered breathing");
+               }
+
+               return true;
+            } else {
+               this.wasUnableToBreathe = cannotBreathe;
+               return false;
+            }
          }
       }
    }

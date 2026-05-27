@@ -4,8 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -19,6 +17,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector2i;
+import org.joml.Vector3i;
 
 public class ChunkLightingCommand extends AbstractWorldCommand {
    @Nonnull
@@ -39,7 +39,7 @@ public class ChunkLightingCommand extends AbstractWorldCommand {
       Vector3i position = this.positionArg.get(context).getBlockPosition(context, store);
       ChunkStore chunkStore = world.getChunkStore();
       Store<ChunkStore> chunkStoreStore = chunkStore.getStore();
-      Vector2i chunkPos = new Vector2i(ChunkUtil.chunkCoordinate(position.getX()), ChunkUtil.chunkCoordinate(position.getZ()));
+      Vector2i chunkPos = new Vector2i(ChunkUtil.chunkCoordinate(position.x()), ChunkUtil.chunkCoordinate(position.z()));
       long chunkIndex = ChunkUtil.indexChunk(chunkPos.x, chunkPos.y);
       Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
       if (chunkRef != null && chunkRef.isValid()) {

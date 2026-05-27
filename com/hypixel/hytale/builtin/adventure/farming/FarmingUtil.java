@@ -10,8 +10,6 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockGathering;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -39,10 +37,22 @@ import java.time.Instant;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class FarmingUtil {
    private static final int MAX_SECONDS_BETWEEN_TICKS = 15;
    private static final int BETWEEN_RANDOM = 10;
+
+   private static long cappedTickNanos(long desiredNanos, @Nonnull World world, @Nonnull FarmingBlock farmingBlock, int worldX, int worldY, int worldZ) {
+      long maxNanos = (long)(
+         (15.0 + 10.0 * HashUtil.random(farmingBlock.getGeneration() ^ 3405692655L, worldX, worldY, worldZ))
+            * world.getTps()
+            * WorldTimeResource.getSecondsPerTick(world)
+            * 1.0E9
+      );
+      return Math.min(desiredNanos, maxNanos);
+   }
 
    public static void tickFarming(
       @Nonnull CommandBuffer<ChunkStore> commandBuffer,
@@ -70,7 +80,7 @@ public class FarmingUtil {
                float currentProgress = farmingBlock.getGrowthProgress();
                int currentStage = (int)currentProgress;
                String currentStageSet = farmingBlock.getCurrentStageSet();
-               FarmingStageData[] stages = currentStageSet != null ? farmingConfig.getStages().get(currentStageSet) : null;
+               FarmingStageData[] stages = farmingConfig.getStages().get(currentStageSet);
                if (stages == null) {
                   currentStageSet = farmingConfig.getStartingStageSet();
                   if (currentStageSet == null) {
@@ -133,24 +143,30 @@ public class FarmingUtil {
                               currentProgress += (float)(remainingTimeSeconds / (baseDuration / growthMultiplier));
                               farmingBlock.setGrowthProgress(currentProgress);
                               long nextGrowthInNanos = (remainingDurationSeconds - remainingTimeSeconds) * 1000000000L;
-                              long randCap = (long)(
-                                 (15.0 + 10.0 * HashUtil.random(farmingBlock.getGeneration() ^ 3405692655L, worldX, worldY, worldZ))
-                                    * world.getTps()
-                                    * WorldTimeResource.getSecondsPerTick(world)
-                                    * 1.0E9
+                              blockSection.scheduleTick(
+                                 ChunkUtil.indexBlock(x, y, z),
+                                 currentTime.plusNanos(cappedTickNanos(nextGrowthInNanos, world, farmingBlock, worldX, worldY, worldZ))
                               );
-                              long cappedNextGrowthInNanos = Math.min(nextGrowthInNanos, randCap);
-                              blockSection.scheduleTick(ChunkUtil.indexBlock(x, y, z), currentTime.plusNanos(cappedNextGrowthInNanos));
                               break;
                            }
 
                            remainingTimeSeconds -= remainingDurationSeconds;
-                           currentProgress = ++currentStage;
+                           int nextStage = currentStage + 1;
+                           if (nextStage < stages.length && !stages[nextStage].canApply(commandBuffer, sectionRef, blockRef, x, y, z)) {
+                              farmingBlock.setGrowthProgress(currentStage);
+                              blockChunk.markNeedsSaving();
+                              long regrowNanos = Math.round(baseDuration / growthMultiplier) * 1000000000L;
+                              blockSection.scheduleTick(ChunkUtil.indexBlock(x, y, z), currentTime.plusNanos(regrowNanos));
+                              break;
+                           }
+
+                           currentStage = nextStage;
+                           currentProgress = nextStage;
                            farmingBlock.setGrowthProgress(currentProgress);
                            blockChunk.markNeedsSaving();
                            farmingBlock.setGeneration(farmingBlock.getGeneration() + 1);
-                           if (currentStage >= stages.length) {
-                              if (stages[currentStage - 1].implementsShouldStop()) {
+                           if (nextStage >= stages.length) {
+                              if (stages[nextStage - 1].implementsShouldStop()) {
                                  currentStage = stages.length - 1;
                                  farmingBlock.setGrowthProgress(currentStage);
                                  stages[currentStage].apply(commandBuffer, sectionRef, blockRef, x, y, z, stages[currentStage]);
@@ -160,7 +176,10 @@ public class FarmingUtil {
                               }
                            } else {
                               farmingBlock.setExecutions(0);
-                              stages[currentStage].apply(commandBuffer, sectionRef, blockRef, x, y, z, stages[currentStage - 1]);
+                              stages[nextStage].apply(commandBuffer, sectionRef, blockRef, x, y, z, stages[nextStage - 1]);
+                              if (stages[nextStage].consumesRemainingTime()) {
+                                 remainingTimeSeconds = 0L;
+                              }
                            }
                         }
 
@@ -223,10 +242,15 @@ public class FarmingUtil {
             World world = store.getExternalData().getWorld();
             Vector3d centerPosition = new Vector3d();
             blockType.getBlockCenter(rotationIndex, centerPosition);
-            centerPosition.add(blockPosition);
+            centerPosition.add(blockPosition.x, blockPosition.y, blockPosition.z);
             FarmingData farmingConfig = blockType.getFarming();
             boolean isFarmable = farmingConfig != null && farmingConfig.getStages() != null;
-            if (isFarmable && farmingConfig.getStageSetAfterHarvest() != null) {
+            Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z);
+            Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(chunkIndex);
+            if (chunkRef == null) {
+               return false;
+            } else if (isFarmable && farmingConfig.getStageSetAfterHarvest() != null) {
                giveDrops(store, ref, centerPosition, blockType, harvestingDropType);
                Map<String, FarmingStageData[]> stageSets = farmingConfig.getStages();
                FarmingStageData[] stages = stageSets.get(farmingConfig.getStartingStageSet());
@@ -238,65 +262,51 @@ public class FarmingUtil {
                   String newStageSet = farmingConfig.getStageSetAfterHarvest();
                   FarmingStageData[] newStages = stageSets.get(newStageSet);
                   if (newStages != null && newStages.length != 0) {
-                     Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-                     Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-                     if (chunkRef == null) {
+                     BlockComponentChunk blockComponentChunk = chunkStore.getComponent(chunkRef, BlockComponentChunk.getComponentType());
+                     if (blockComponentChunk == null) {
                         return false;
                      } else {
-                        BlockComponentChunk blockComponentChunk = chunkStore.getComponent(chunkRef, BlockComponentChunk.getComponentType());
-                        if (blockComponentChunk == null) {
+                        Instant now = store.getResource(WorldTimeResource.getResourceType()).getGameTime();
+                        int blockIndexColumn = ChunkUtil.indexBlockInColumn(blockPosition.x, blockPosition.y, blockPosition.z);
+                        Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(blockIndexColumn);
+                        FarmingBlock farmingBlock;
+                        if (blockRef == null) {
+                           Holder<ChunkStore> blockEntity = ChunkStore.REGISTRY.newHolder();
+                           blockEntity.putComponent(BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(blockIndexColumn, chunkRef));
+                           farmingBlock = new FarmingBlock();
+                           farmingBlock.setLastTickGameTime(now);
+                           farmingBlock.setCurrentStageSet(newStageSet);
+                           blockEntity.addComponent(FarmingBlock.getComponentType(), farmingBlock);
+                           blockRef = chunkStore.addEntity(blockEntity, AddReason.SPAWN);
+                        } else {
+                           farmingBlock = chunkStore.ensureAndGetComponent(blockRef, FarmingBlock.getComponentType());
+                        }
+
+                        farmingBlock.setCurrentStageSet(newStageSet);
+                        farmingBlock.setGrowthProgress(0.0F);
+                        farmingBlock.setExecutions(0);
+                        farmingBlock.setGeneration(farmingBlock.getGeneration() + 1);
+                        farmingBlock.setLastTickGameTime(now);
+                        Ref<ChunkStore> sectionRef = world.getChunkStore().getChunkSectionReferenceAtBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+                        if (sectionRef == null) {
+                           return false;
+                        } else if (blockRef == null) {
                            return false;
                         } else {
-                           Instant now = store.getExternalData()
-                              .getWorld()
-                              .getEntityStore()
-                              .getStore()
-                              .getResource(WorldTimeResource.getResourceType())
-                              .getGameTime();
-                           int blockIndexColumn = ChunkUtil.indexBlockInColumn(blockPosition.x, blockPosition.y, blockPosition.z);
-                           Ref<ChunkStore> blockRef = blockComponentChunk.getEntityReference(blockIndexColumn);
-                           FarmingBlock farmingBlock;
-                           if (blockRef == null) {
-                              Holder<ChunkStore> blockEntity = ChunkStore.REGISTRY.newHolder();
-                              blockEntity.putComponent(
-                                 BlockModule.BlockStateInfo.getComponentType(), new BlockModule.BlockStateInfo(blockIndexColumn, chunkRef)
-                              );
-                              farmingBlock = new FarmingBlock();
-                              farmingBlock.setLastTickGameTime(now);
-                              farmingBlock.setCurrentStageSet(newStageSet);
-                              blockEntity.addComponent(FarmingBlock.getComponentType(), farmingBlock);
-                              blockRef = chunkStore.addEntity(blockEntity, AddReason.SPAWN);
-                           } else {
-                              farmingBlock = chunkStore.ensureAndGetComponent(blockRef, FarmingBlock.getComponentType());
+                           BlockSection section = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
+                           if (section != null) {
+                              int blockIndex = ChunkUtil.indexBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+                              section.scheduleTick(blockIndex, now);
                            }
 
-                           farmingBlock.setCurrentStageSet(newStageSet);
-                           farmingBlock.setGrowthProgress(0.0F);
-                           farmingBlock.setExecutions(0);
-                           farmingBlock.setGeneration(farmingBlock.getGeneration() + 1);
-                           farmingBlock.setLastTickGameTime(now);
-                           Ref<ChunkStore> sectionRef = world.getChunkStore()
-                              .getChunkSectionReferenceAtBlock(blockPosition.x, blockPosition.y, blockPosition.z);
-                           if (sectionRef == null) {
-                              return false;
-                           } else if (blockRef == null) {
-                              return false;
-                           } else {
-                              BlockSection section = chunkStore.getComponent(sectionRef, BlockSection.getComponentType());
-                              if (section != null) {
-                                 int blockIndex = ChunkUtil.indexBlock(blockPosition.x, blockPosition.y, blockPosition.z);
-                                 section.scheduleTick(blockIndex, now);
-                              }
-
-                              newStages[0].apply(chunkStore, sectionRef, blockRef, blockPosition.x, blockPosition.y, blockPosition.z, previousStage);
-                              return true;
-                           }
+                           newStages[0].apply(chunkStore, sectionRef, blockRef, blockPosition.x, blockPosition.y, blockPosition.z, previousStage);
+                           return true;
                         }
                      }
                   } else {
-                     WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-                     if (chunk != null) {
-                        chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+                     WorldChunk worldChunkComponent = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
+                     if (worldChunkComponent != null) {
+                        worldChunkComponent.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
                      }
 
                      return false;
@@ -304,9 +314,9 @@ public class FarmingUtil {
                }
             } else {
                giveDrops(store, ref, centerPosition, blockType, harvestingDropType);
-               WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockPosition.x, blockPosition.z));
-               if (chunk != null) {
-                  chunk.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
+               WorldChunk worldChunkComponent = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
+               if (worldChunkComponent != null) {
+                  worldChunkComponent.breakBlock(blockPosition.x, blockPosition.y, blockPosition.z);
                }
 
                return true;

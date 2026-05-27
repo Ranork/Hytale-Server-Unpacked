@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ItemSoundEvent;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.SoundCategory;
@@ -25,6 +24,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SoundUtil {
    public static void playItemSoundEvent(
@@ -167,7 +167,7 @@ public class SoundUtil {
    public static void playSoundEvent3d(
       int soundEventIndex, @Nonnull SoundCategory soundCategory, @Nonnull Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      playSoundEvent3d(soundEventIndex, soundCategory, position.getX(), position.getY(), position.getZ(), componentAccessor);
+      playSoundEvent3d(soundEventIndex, soundCategory, position.x(), position.y(), position.z(), componentAccessor);
    }
 
    public static void playSoundEvent3d(
@@ -219,7 +219,7 @@ public class SoundUtil {
    public static void playSoundEvent3d(
       @Nullable Ref<EntityStore> sourceRef, int soundEventIndex, @Nonnull Vector3d pos, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      playSoundEvent3d(sourceRef, soundEventIndex, pos.getX(), pos.getY(), pos.getZ(), componentAccessor);
+      playSoundEvent3d(sourceRef, soundEventIndex, pos.x(), pos.y(), pos.z(), componentAccessor);
    }
 
    public static void playSoundEvent3d(
@@ -235,7 +235,7 @@ public class SoundUtil {
       boolean ignoreSource,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      playSoundEvent3d(sourceRef, soundEventIndex, position.getX(), position.getY(), position.getZ(), ignoreSource, componentAccessor);
+      playSoundEvent3d(sourceRef, soundEventIndex, position.x(), position.y(), position.z(), ignoreSource, componentAccessor);
    }
 
    public static void playSoundEvent3d(
@@ -299,7 +299,7 @@ public class SoundUtil {
 
             assert transformComponent != null;
 
-            if (transformComponent.getPosition().distanceSquaredTo(x, y, z) <= maxDistance * maxDistance) {
+            if (transformComponent.getPosition().distanceSquared(x, y, z) <= maxDistance * maxDistance) {
                PlayerRef playerRefComponent = componentAccessor.getComponent(playerRef, PlayerRef.getComponentType());
 
                assert playerRefComponent != null;

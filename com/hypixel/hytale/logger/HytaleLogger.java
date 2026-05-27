@@ -14,6 +14,7 @@ import com.hypixel.hytale.logger.backend.HytaleUncaughtExceptionHandler;
 import com.hypixel.hytale.logger.util.LoggerPrintStream;
 import io.sentry.IScopes;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.LogManager;
@@ -130,6 +131,7 @@ public class HytaleLogger extends AbstractLogger<HytaleLogger.Api> {
 
    final class Context extends LogContext<HytaleLogger, HytaleLogger.Api> implements HytaleLogger.Api {
       private Context(@Nonnull Level level) {
+         Objects.requireNonNull(HytaleLogger.this);
          super(level, false);
       }
 

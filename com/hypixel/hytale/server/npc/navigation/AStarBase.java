@@ -7,8 +7,8 @@ import com.hypixel.hytale.function.function.ToFloatFunction;
 import com.hypixel.hytale.function.predicate.BiFloatPredicate;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -17,9 +17,11 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap.Entry;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.util.EnumSet;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class AStarBase {
    public static final double FULL_STEP_THRESHOLD = 0.9999999;
@@ -35,8 +37,7 @@ public class AStarBase {
    protected int totalNodesLimit = 400;
    protected boolean canMoveDiagonal = true;
    protected boolean optimizedBuildPath = true;
-   protected boolean isAvoidingBlockDamage;
-   protected boolean isRelaxedMoveConstraints;
+   protected EnumSet<RelaxedConstraint> relaxedConstraints = EnumSet.noneOf(RelaxedConstraint.class);
    protected final Vector3d startPosition = new Vector3d();
    protected AStarEvaluator evaluator;
    protected double positionToIndexOffsetX;
@@ -86,7 +87,7 @@ public class AStarBase {
    }
 
    public void setStartPosition(@Nonnull Vector3d position) {
-      this.startPosition.assign(position);
+      this.startPosition.set(position);
    }
 
    @Nonnull
@@ -166,9 +167,9 @@ public class AStarBase {
       this.clearPath();
       this.iterations = 0;
       this.evaluator = evaluator;
-      this.startPosition.assign(start);
-      this.isAvoidingBlockDamage = probeMoveData.isAvoidingBlockDamage;
-      this.isRelaxedMoveConstraints = probeMoveData.isRelaxedMoveConstraints;
+      this.startPosition.set(start);
+      this.relaxedConstraints.clear();
+      this.relaxedConstraints.addAll(probeMoveData.getRelaxedConstraints());
       long startBlockX = MathUtil.fastFloor(this.startPosition.x);
       long startBlockY = MathUtil.fastFloor(this.startPosition.y);
       long startBlockZ = MathUtil.fastFloor(this.startPosition.z);
@@ -194,7 +195,7 @@ public class AStarBase {
          || !this.searchDirectionsWorldNormal.equals(motionController.getWorldNormal())) {
          this.searchDirectionIsDiagonalMoves = this.canMoveDiagonal;
          this.searchDirectionIs2D = this.is2D;
-         this.searchDirectionsWorldNormal.assign(motionController.getWorldNormal());
+         this.searchDirectionsWorldNormal.set(motionController.getWorldNormal());
          int searchDirectionCount = this.is2D ? (this.canMoveDiagonal ? 8 : 4) : (this.canMoveDiagonal ? 26 : 6);
          this.searchDirections = new Vector3d[searchDirectionCount];
          this.searchDirectionDistances = new double[searchDirectionCount];
@@ -225,10 +226,10 @@ public class AStarBase {
 
          for (int i = 0; i < this.searchDirections.length - 1; i++) {
             if (this.inverseSearchDirections[i] == -1) {
-               this.tempDirectionVector.assign(this.searchDirections[i]).negate();
+               this.tempDirectionVector.set(this.searchDirections[i]).negate();
 
                for (int j = i + 1; j < this.searchDirections.length; j++) {
-                  if (this.searchDirections[j].equals(this.tempDirectionVector)) {
+                  if (this.searchDirections[j].equals(this.tempDirectionVector, 0.0)) {
                      this.inverseSearchDirections[i] = j;
                      this.inverseSearchDirections[j] = i;
                      break;
@@ -274,7 +275,7 @@ public class AStarBase {
 
       probeMoveData.setSaveSegments(false);
       this.tempPositionVector
-         .assign(this.projectedX ? start.x : startBlockX + 0.5, this.projectedY ? start.y : startBlockY + 0.5, this.projectedZ ? start.z : startBlockZ + 0.5);
+         .set(this.projectedX ? start.x : startBlockX + 0.5, this.projectedY ? start.y : startBlockY + 0.5, this.projectedZ ? start.z : startBlockZ + 0.5);
       Vector3d position = this.canAdvance(ref, this.startPosition, this.tempPositionVector, motionController, probeMoveData, componentAccessor);
       if (position != null) {
          this.addStartNode(this.startPosition, position, motionController);
@@ -288,7 +289,7 @@ public class AStarBase {
          for (double xx = this.projectedX ? 0.0 : 0.5; xx >= 0.0; xx -= 0.5) {
             for (double yx = this.projectedY ? 0.0 : 0.5; yx >= 0.0; yx -= 0.5) {
                for (double zx = this.projectedZ ? 0.0 : 0.5; zx >= 0.0; zx -= 0.5) {
-                  this.tempDirectionVector.assign(xx, yx, zx).add(this.tempPositionVector);
+                  this.tempDirectionVector.set(xx, yx, zx).add(this.tempPositionVector);
                   position = this.canAdvance(ref, this.startPosition, this.tempDirectionVector, motionController, probeMoveData, componentAccessor);
                   if (position != null) {
                      this.addStartNode(this.startPosition, position, motionController);
@@ -308,7 +309,7 @@ public class AStarBase {
             for (double xx = startX; xx <= endX; xx += 0.5) {
                for (double yx = startY; yx <= endY; yx += 0.5) {
                   for (double zxx = startZ; zxx <= endZ; zxx += 0.5) {
-                     this.tempDirectionVector.assign(xx, yx, zxx);
+                     this.tempDirectionVector.set(xx, yx, zxx);
                      position = this.canAdvance(ref, this.startPosition, this.tempDirectionVector, motionController, probeMoveData, componentAccessor);
                      if (position != null) {
                         this.addStartNode(this.startPosition, position, motionController);
@@ -333,8 +334,7 @@ public class AStarBase {
       if (this.progress != AStarBase.Progress.COMPUTING) {
          return this.progress;
       } else {
-         probeMoveData.isAvoidingBlockDamage = this.isAvoidingBlockDamage;
-         probeMoveData.isRelaxedMoveConstraints = this.isRelaxedMoveConstraints;
+         probeMoveData.setRelaxedConstraints(this.relaxedConstraints);
 
          while (!this.openNodes.isEmpty() && nodesToProcess-- > 0) {
             int idx = this.openNodes.size() - 1;
@@ -420,7 +420,7 @@ public class AStarBase {
    }
 
    public float buildFurthestPath() {
-      AStarNode node = this.buildBestPath(n -> (float)n.getPosition().distanceSquaredTo(this.startPosition), (oldV, v) -> v > oldV, 0.0F);
+      AStarNode node = this.buildBestPath(n -> (float)n.getPosition().distanceSquared(this.startPosition), (oldV, v) -> v > oldV, 0.0F);
       return node == null ? 0.0F : node.getTravelCost();
    }
 
@@ -634,7 +634,7 @@ public class AStarBase {
       if (endNode == null) {
          this.path = null;
       } else {
-         this.pathEnd.assign(endNode.getPosition());
+         this.pathEnd.set(endNode.getPosition());
          if (this.optimizedBuildPath) {
             AStarNode node = endNode;
             int length = 1;

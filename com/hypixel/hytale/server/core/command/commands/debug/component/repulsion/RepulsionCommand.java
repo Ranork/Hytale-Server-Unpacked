@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class RepulsionCommand extends AbstractCommandCollection {
    public RepulsionCommand() {
       super("repulsion", "server.commands.repulsion.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new RepulsionAddCommand());
       this.addSubCommand(new RepulsionRemoveCommand());
    }

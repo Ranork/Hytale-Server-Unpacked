@@ -4,8 +4,7 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
@@ -20,6 +19,7 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -33,6 +33,7 @@ import com.hypixel.hytale.server.spawning.util.FloodFillPositionSelector;
 import com.hypixel.hytale.server.spawning.wrappers.BeaconSpawnWrapper;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SpawnBeaconsCommand extends AbstractCommandCollection {
    private static final AssetArgumentType<BeaconNPCSpawn, ?> BEACON_SPAWN_ASSET_TYPE = new AssetArgumentType(
@@ -65,7 +66,7 @@ public class SpawnBeaconsCommand extends AbstractCommandCollection {
 
          assert transformComponent != null;
 
-         Vector3f rotation = transformComponent.getRotation();
+         Rotation3f rotation = transformComponent.getRotation();
          Vector3d position = transformComponent.getPosition();
          BeaconNPCSpawn beacon = this.beaconArg.get(context);
          BeaconSpawnWrapper wrapper = SpawningPlugin.get().getBeaconSpawnWrapper(BeaconNPCSpawn.getAssetMap().getIndex(beacon.getId()));
@@ -93,6 +94,7 @@ public class SpawnBeaconsCommand extends AbstractCommandCollection {
             holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
             holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
             Message displayNameMessage = Message.raw(spawn.getId());
+            holder.addComponent(PersistentDisplayName.getComponentType(), new PersistentDisplayName(displayNameMessage));
             holder.addComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(displayNameMessage));
             holder.addComponent(Nameplate.getComponentType(), new Nameplate(spawn.getId()));
             store.addEntity(holder, AddReason.SPAWN);

@@ -19,6 +19,7 @@ public class ValidatorTypeRegistry {
       factory.registerSubType(DoubleOrValidator.class, "DoubleOr");
       factory.registerSubType(DoubleRangeValidator.class, "DoubleRange");
       factory.registerSubType(AttributeRelationValidator.class, "NumericRelation");
+      factory.registerSubType(ExactlyOneZeroValidator.class, "ExactlyOneZero");
       factory.registerSubType(ArrayNotEmptyValidator.class, "ArrayNotEmpty");
       factory.registerSubType(AnyPresentValidator.class, "AnyPresent");
       factory.registerSubType(OnePresentValidator.class, "OnePresent");
@@ -42,6 +43,7 @@ public class ValidatorTypeRegistry {
       factory.registerSubType(BooleanImplicationValidator.class, "BooleanImplication");
       factory.registerSubType(InstructionContextValidator.class, "InstructionContext");
       factory.registerSubType(AtMostOneBooleanValidator.class, "AtMostOneBoolean");
+      factory.registerSubType(RequiresPrecedingValidator.class, "RequiresPreceding");
       gsonBuilder.registerTypeAdapterFactory(factory);
       return gsonBuilder;
    }

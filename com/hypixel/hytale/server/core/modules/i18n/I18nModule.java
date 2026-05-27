@@ -35,14 +35,21 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystemNotFoundException;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,7 +59,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class I18nModule extends JavaPlugin {
-   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(I18nModule.class).depends(AssetModule.class).build();
+   public static final PluginManifest MANIFEST = PluginManifest.corePlugin(I18nModule.class).optDepends(AssetModule.class).build();
+   private static final String BUNDLED_DEFAULTS_RESOURCE_ROOT = "bundledDefaults/";
    public static final String DEFAULT_LANGUAGE = "en-US";
    public static final Path FALLBACK_LANG_PATH = Paths.get("fallback.lang");
    public static final String FILE_EXTENSION = ".lang";
@@ -61,6 +69,7 @@ public class I18nModule extends JavaPlugin {
    public static final Path DEFAULT_GENERATED_PATH = Path.of("Server", "Languages", "en-US");
    private static I18nModule instance;
    private final Map<String, String> fallbacks = new ConcurrentHashMap<>();
+   private final Map<String, String> bundledDefaults = new ConcurrentHashMap<>();
    private final Map<String, Map<String, String>> languages = new ConcurrentHashMap<>();
    private final Map<String, Map<String, String>> cachedLanguages = new ConcurrentHashMap<>();
 
@@ -75,64 +84,137 @@ public class I18nModule extends JavaPlugin {
 
    @Override
    protected void setup() {
-      this.getEventRegistry().register(LoadAssetEvent.class, event -> {
-         for (AssetPack pack : AssetModule.get().getAssetPacks()) {
-            this.loadMessagesFromPack(pack);
-         }
-      });
-      this.getEventRegistry().register(AssetPackRegisterEvent.class, event -> this.loadMessagesFromPack(event.getAssetPack()));
-      this.getEventRegistry().register(AssetPackUnregisterEvent.class, event -> {});
-      this.getEventRegistry()
-         .register(
-            LoadedAssetsEvent.class,
-            BlockType.class,
-            event -> {
-               Map<String, String> addedMessages = new Object2ObjectOpenHashMap();
-               event.getLoadedAssets()
-                  .values()
-                  .forEach(
-                     item -> {
-                        Bench bench = item.getBench();
-                        if (bench != null) {
-                           String id = item.getId();
-                           if (bench instanceof CraftingBench craftingBench) {
-                              for (CraftingBench.BenchCategory category : craftingBench.getCategories()) {
-                                 addedMessages.put("server.items." + id + ".bench.categories." + category.getId() + ".name", category.getName());
-                                 if (category.getItemCategories() != null) {
-                                    for (CraftingBench.BenchItemCategory itemCategory : category.getItemCategories()) {
-                                       addedMessages.put(
-                                          "server.items." + id + ".bench.categories." + category.getId() + ".itemCategories." + itemCategory.getId() + ".name",
-                                          itemCategory.getName()
-                                       );
+      this.loadBundledDefaultsFromClasspath();
+      if (AssetModule.get() != null) {
+         this.getEventRegistry().register((short)-32, LoadAssetEvent.class, event -> {
+            for (AssetPack pack : AssetModule.get().getAssetPacks()) {
+               this.loadMessagesFromPack(pack);
+            }
+         });
+         this.getEventRegistry().register((short)-32, AssetPackRegisterEvent.class, event -> this.loadMessagesFromPack(event.getAssetPack()));
+         this.getEventRegistry().register(AssetPackUnregisterEvent.class, event -> {});
+         this.getEventRegistry()
+            .register(
+               LoadedAssetsEvent.class,
+               BlockType.class,
+               event -> {
+                  Map<String, String> addedMessages = new Object2ObjectOpenHashMap();
+                  event.getLoadedAssets()
+                     .values()
+                     .forEach(
+                        item -> {
+                           Bench bench = item.getBench();
+                           if (bench != null) {
+                              String id = item.getId();
+                              if (bench instanceof CraftingBench craftingBench) {
+                                 for (CraftingBench.BenchCategory category : craftingBench.getCategories()) {
+                                    addedMessages.put("server.items." + id + ".bench.categories." + category.getId() + ".name", category.getName());
+                                    if (category.getItemCategories() != null) {
+                                       for (CraftingBench.BenchItemCategory itemCategory : category.getItemCategories()) {
+                                          addedMessages.put(
+                                             "server.items."
+                                                + id
+                                                + ".bench.categories."
+                                                + category.getId()
+                                                + ".itemCategories."
+                                                + itemCategory.getId()
+                                                + ".name",
+                                             itemCategory.getName()
+                                          );
+                                       }
                                     }
                                  }
                               }
-                           }
 
-                           if (bench.getDescriptiveLabel() != null) {
-                              addedMessages.put("server.items." + id + ".bench.descriptiveLabel", bench.getDescriptiveLabel());
+                              if (bench.getDescriptiveLabel() != null) {
+                                 addedMessages.put("server.items." + id + ".bench.descriptiveLabel", bench.getDescriptiveLabel());
+                              }
                            }
                         }
-                     }
-                  );
-               this.addDefaultMessages(addedMessages, event.isInitial());
-            }
-         );
-      this.getEventRegistry().register(LoadedAssetsEvent.class, FieldcraftCategory.class, event -> {
-         Map<String, String> addedMessages = new Object2ObjectOpenHashMap();
-         event.getLoadedAssets().values().forEach(category -> {
-            if (category.getName() != null) {
-               addedMessages.put("fieldcraftCategories." + category.getId() + ".name", category.getName());
-            }
+                     );
+                  this.addDefaultMessages(addedMessages, event.isInitial());
+               }
+            );
+         this.getEventRegistry().register(LoadedAssetsEvent.class, FieldcraftCategory.class, event -> {
+            Map<String, String> addedMessages = new Object2ObjectOpenHashMap();
+            event.getLoadedAssets().values().forEach(category -> {
+               if (category.getName() != null) {
+                  addedMessages.put("fieldcraftCategories." + category.getId() + ".name", category.getName());
+               }
+            });
+            this.addDefaultMessages(addedMessages, event.isInitial());
          });
-         this.addDefaultMessages(addedMessages, event.isInitial());
-      });
+      }
    }
 
    @Override
    protected void start() {
-      this.getCommandRegistry().registerCommand(new InternationalizationCommands());
-      this.getCommandRegistry().registerCommand(new EnableTmpTagsCommand());
+      if (AssetModule.get() != null) {
+         this.getCommandRegistry().registerCommand(new InternationalizationCommands());
+         this.getCommandRegistry().registerCommand(new EnableTmpTagsCommand());
+      }
+   }
+
+   private void loadBundledDefaultsFromClasspath() {
+      ClassLoader classLoader = I18nModule.class.getClassLoader();
+
+      try {
+         Enumeration<URL> resources = classLoader.getResources("bundledDefaults/");
+
+         while (resources.hasMoreElements()) {
+            URL url = resources.nextElement();
+            this.loadBundledDefaultsFromUrl(this.bundledDefaults, url);
+         }
+      } catch (IOException var4) {
+         ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var4)).log("Failed to enumerate %s resources", "bundledDefaults/");
+      }
+   }
+
+   private void loadBundledDefaultsFromUrl(@Nonnull Map<String, String> messages, @Nonnull URL url) {
+      try {
+         label118: {
+            URI uri = url.toURI();
+            FileSystem ownedFs = null;
+
+            try {
+               Path root;
+               if ("jar".equals(uri.getScheme())) {
+                  FileSystem fs;
+                  try {
+                     fs = FileSystems.getFileSystem(uri);
+                  } catch (FileSystemNotFoundException var19) {
+                     fs = FileSystems.newFileSystem(uri, Collections.emptyMap());
+                     ownedFs = fs;
+                  }
+
+                  root = fs.getPath("/bundledDefaults/");
+               } else {
+                  root = Paths.get(uri);
+               }
+
+               if (Files.isDirectory(root)) {
+                  try (DirectoryStream<Path> stream = Files.newDirectoryStream(root, pathx -> pathx.getFileName().toString().endsWith(".lang"))) {
+                     for (Path path : stream) {
+                        String fileName = path.getFileName().toString();
+                        String prefix = fileName.substring(0, fileName.length() - ".lang".length());
+                        int before = messages.size();
+                        this.loadMessagesFrom(messages, prefix, path);
+                        this.getLogger().at(Level.INFO).log("Loaded %d bundled default translations from %s", messages.size() - before, path);
+                     }
+                     break label118;
+                  }
+               }
+            } finally {
+               if (ownedFs != null) {
+                  ownedFs.close();
+               }
+            }
+
+            return;
+         }
+      } catch (Exception var22) {
+         ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(new SkipSentryException(var22))).log("Failed to load bundled defaults from %s", url);
+      }
    }
 
    private void loadMessagesFromPack(AssetPack pack) {
@@ -315,19 +397,24 @@ public class I18nModule extends JavaPlugin {
 
    @Nullable
    public String getMessage(String language, @Nonnull String key) {
-      HytaleServerConfig config = HytaleServer.get().getConfig();
-      if (config != null && config.isDisplayTmpTagsInStrings()) {
-         return this.getMessages(language).get(key);
-      } else {
-         String translatedString = this.getMessages(language).get(key);
-         return translatedString != null ? translatedString.replace("[TMP] ", "").replace("[TMP]", "") : null;
+      String translatedString = this.getMessages(language).get(key);
+      if (translatedString == null) {
+         translatedString = this.bundledDefaults.get(key);
+         if (translatedString == null) {
+            return null;
+         }
       }
+
+      HytaleServerConfig config = HytaleServer.get().getConfig();
+      return config != null && config.isDisplayTmpTagsInStrings() ? translatedString : translatedString.replace("[TMP] ", "").replace("[TMP]", "");
    }
 
    private class I18nAssetMonitorHandler implements AssetMonitorHandler {
       private final Path languagesPath;
 
       public I18nAssetMonitorHandler(Path languagesPath) {
+         Objects.requireNonNull(I18nModule.this);
+         super();
          this.languagesPath = languagesPath;
       }
 
@@ -418,7 +505,7 @@ public class I18nModule extends JavaPlugin {
                }
             }
 
-            List<PlayerRef> players = Universe.get().getPlayers();
+            Collection<PlayerRef> players = Universe.get().getPlayers();
             Map<String, UpdateTranslations[]> updatePackets = new Object2ObjectOpenHashMap();
 
             for (PlayerRef playerRef : players) {

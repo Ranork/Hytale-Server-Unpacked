@@ -14,8 +14,6 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
@@ -39,6 +37,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class BedInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -90,16 +90,16 @@ public class BedInteraction extends SimpleBlockInteraction {
                            boolean isOwner = playerUuid.equals(ownerUUID);
                            if (isOwner) {
                               BlockPosition targetBlockPosition = context.getMetaStore().getMetaObject(TARGET_BLOCK_RAW);
-                              Vector3f whereWasHit = new Vector3f(targetBlockPosition.x + 0.5F, targetBlockPosition.y + 0.5F, targetBlockPosition.z + 0.5F);
+                              Vector3d whereWasHit = new Vector3d(targetBlockPosition.x + 0.5, targetBlockPosition.y + 0.5, targetBlockPosition.z + 0.5);
                               BlockMountAPI.BlockMountResult result = BlockMountAPI.mountOnBlock(ref, commandBuffer, pos, whereWasHit);
                               if (result instanceof BlockMountAPI.DidNotMount) {
-                                 playerComponent.sendMessage(Message.translation("server.interactions.didNotMount").param("state", result.toString()));
+                                 playerRefComponent.sendMessage(Message.translation("server.interactions.didNotMount").param("state", result.toString()));
                               } else if (result instanceof BlockMountAPI.Mounted) {
                                  commandBuffer.putComponent(ref, PlayerSomnolence.getComponentType(), PlayerSleep.NoddingOff.createComponent());
                                  commandBuffer.run(s -> SleepNotificationSystem.maybeDoNotification(s, false));
                               }
                            } else if (ownerUUID != null) {
-                              playerComponent.sendMessage(MESSAGE_SERVER_CUSTOM_UI_RESPAWN_POINT_CLAIMED);
+                              playerRefComponent.sendMessage(MESSAGE_SERVER_CUSTOM_UI_RESPAWN_POINT_CLAIMED);
                            } else {
                               PlayerRespawnPointData[] respawnPoints = playerComponent.getPlayerConfigData()
                                  .getPerWorldData(world.getName())
@@ -148,9 +148,7 @@ public class BedInteraction extends SimpleBlockInteraction {
          for (int i = 0; i < respawnPoints.length; i++) {
             PlayerRespawnPointData respawnPoint = respawnPoints[i];
             Vector3i respawnPointPosition = respawnPoint.getBlockPosition();
-            if (respawnPointPosition.distanceTo(currentRespawnPointPosition.x, respawnPointPosition.y, currentRespawnPointPosition.z) < radiusLimitRespawnPoint
-               )
-             {
+            if (respawnPointPosition.distance(currentRespawnPointPosition.x, respawnPointPosition.y, currentRespawnPointPosition.z) < radiusLimitRespawnPoint) {
                nearbyRespawnPointList.add(respawnPoint);
             }
          }

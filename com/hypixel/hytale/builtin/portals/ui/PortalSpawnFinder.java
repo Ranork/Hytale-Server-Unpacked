@@ -6,9 +6,9 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -21,12 +21,14 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public final class PortalSpawnFinder {
    private static final int MAX_ATTEMPTS_PER_WORLD = 10;
    private static final int QUALITY_ATTEMPTS = 2;
    private static final int CHECKS_PER_CHUNK = 8;
-   private static final Vector3d FALLBACK_POSITION = Vector3d.ZERO;
+   private static final Vector3dc FALLBACK_POSITION = Vector3dUtil.ZERO;
 
    @Nullable
    public static Transform computeSpawnTransform(@Nonnull World world, @Nonnull List<Vector3d> hintedSpawns) {
@@ -40,10 +42,10 @@ public final class PortalSpawnFinder {
          ((HytaleLogger.Api)HytaleLogger.getLogger().atWarning()).log("Both dart and fallback spawn finder failed for portal spawn");
          return null;
       } else {
-         Vector3f direction = Vector3f.lookAt(spawn).scale(-1.0F);
+         Rotation3f direction = Rotation3f.lookAt(spawn).mul(-1.0F);
          direction.setPitch(0.0F);
          direction.setRoll(0.0F);
-         return new Transform(spawn.clone().add(0.0, 0.5, 0.0), direction);
+         return new Transform(new Vector3d(spawn).add(0.0, 0.5, 0.0), direction);
       }
    }
 
@@ -152,7 +154,7 @@ public final class PortalSpawnFinder {
 
    @Nullable
    private static Vector3d findFallbackPositionOnGround(@Nonnull World world) {
-      Vector3d center = FALLBACK_POSITION.clone();
+      Vector3d center = new Vector3d(FALLBACK_POSITION);
       long chunkIndex = ChunkUtil.indexChunkFromBlock(center.x, center.z);
       WorldChunk centerChunk = world.getChunk(chunkIndex);
       return centerChunk == null ? null : findWithGroundBelow(centerChunk, 0, 319, 0, 319, true);

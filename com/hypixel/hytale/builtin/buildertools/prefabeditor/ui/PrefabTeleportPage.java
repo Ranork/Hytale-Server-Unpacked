@@ -9,9 +9,7 @@ import com.hypixel.hytale.common.util.StringCompareUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -36,6 +34,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabTeleportPage extends InteractiveCustomUIPage<PrefabTeleportPage.PageData> {
    private static final Value<String> BUTTON_HIGHLIGHTED = Value.ref("Pages/BasicTextButton.ui", "SelectedLabelStyle");
@@ -126,7 +126,7 @@ public class PrefabTeleportPage extends InteractiveCustomUIPage<PrefabTeleportPa
                   WorldChunk worldChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(centerX, centerZ));
                   int teleportY = worldChunk != null ? worldChunk.getHeight(centerX, centerZ) + 8 : maxPoint.y + 8;
                   Vector3d teleportPosition = new Vector3d(centerX + 0.5, teleportY, centerZ + 0.5);
-                  store.addComponent(ref, Teleport.getComponentType(), Teleport.createForPlayer(teleportPosition, new Vector3f()));
+                  store.addComponent(ref, Teleport.getComponentType(), Teleport.createForPlayer(teleportPosition, new Rotation3f()));
                   playerComponent.getPageManager().setPage(ref, store, Page.None);
                }
             } catch (IllegalArgumentException var15) {

@@ -37,7 +37,9 @@ public class PositionsPinchDensityAsset extends DensityAsset {
       .append(new KeyedCodec<>("PositionsMaxY", Codec.DOUBLE, false), (asset, v) -> asset.positionsMaxY = v, asset -> asset.positionsMaxY)
       .add()
       .build();
+   @Nonnull
    private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   @Nonnull
    private CurveAsset pinchCurveAsset = new ConstantCurveAsset();
    private double maxDistance;
    private boolean normalizeDistance;

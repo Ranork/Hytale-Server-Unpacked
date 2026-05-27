@@ -6,8 +6,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.function.consumer.TriIntConsumer;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
@@ -19,6 +17,8 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector4d;
 
 public interface Selector {
    static void selectNearbyBlocks(
@@ -77,7 +77,7 @@ public interface Selector {
          } else {
             Vector3d attackerPosition = transformComponent.getPosition();
             Model model = modelComponent.getModel();
-            Vector3d position = attackerPosition.clone().add(0.0, model.getEyeHeight(attacker, commandBuffer), 0.0);
+            Vector3d position = new Vector3d(attackerPosition).add(0.0, model.getEyeHeight(attacker, commandBuffer), 0.0);
             selectNearbyEntities(commandBuffer, position, range, consumer, filter);
          }
       }

@@ -66,11 +66,12 @@ public abstract class Registry<T extends Registration> {
          throw new IllegalStateException("Registry is not enabled!");
       } else {
          BooleanConsumer reg = v -> registration.unregister();
-         this.registrations.add(reg);
-         return this.wrappingFunction.wrap(registration, () -> this.enabled || registration.isRegistered(), () -> {
+         T wrapped = this.wrappingFunction.wrap(registration, () -> this.enabled || registration.isRegistered(), () -> {
             this.registrations.remove(reg);
             registration.unregister();
          });
+         this.registrations.add(reg);
+         return wrapped;
       }
    }
 

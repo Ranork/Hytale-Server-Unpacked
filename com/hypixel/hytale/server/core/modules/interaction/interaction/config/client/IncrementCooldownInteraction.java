@@ -10,7 +10,6 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
-import io.netty.util.internal.StringUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -54,7 +53,7 @@ public class IncrementCooldownInteraction extends SimpleInstantInteraction {
    @Override
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       String cooldownId = this.cooldown;
-      if (StringUtil.isNullOrEmpty(cooldownId)) {
+      if (cooldownId == null || cooldownId.isEmpty()) {
          InteractionCooldown rootCooldown = context.getChain().getRootInteraction().getCooldown();
          if (rootCooldown != null) {
             cooldownId = rootCooldown.cooldownId;

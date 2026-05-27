@@ -2,9 +2,9 @@ package com.hypixel.hytale.builtin.teleport.commands.teleport;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
@@ -22,6 +22,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.text.DecimalFormat;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SpawnSetCommand extends AbstractWorldCommand {
    @Nonnull
@@ -33,12 +34,13 @@ public class SpawnSetCommand extends AbstractWorldCommand {
       "position", "server.commands.spawn.set.position.desc", ArgTypes.RELATIVE_POSITION
    );
    @Nonnull
-   private final DefaultArg<Vector3f> rotationArg = this.withDefaultArg(
-      "rotation", "server.commands.spawn.set.rotation.desc", ArgTypes.ROTATION, Vector3f.FORWARD, "server.commands.spawn.set.rotation.default.desc"
+   private final DefaultArg<Rotation3fc> rotationArg = this.withDefaultArg(
+      "rotation", "server.commands.spawn.set.rotation.desc", ArgTypes.ROTATION, Rotation3f.IDENTITY, "server.commands.spawn.set.rotation.default.desc"
    );
 
    public SpawnSetCommand() {
       super("set", "server.commands.spawn.set.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override
@@ -61,10 +63,10 @@ public class SpawnSetCommand extends AbstractWorldCommand {
 
          assert transformComponent != null;
 
-         position = transformComponent.getPosition().clone();
+         position = new Vector3d(transformComponent.getPosition());
       }
 
-      Vector3f rotation;
+      Rotation3fc rotation;
       if (this.rotationArg.provided(context)) {
          rotation = this.rotationArg.get(context);
       } else if (context.isPlayer()) {
@@ -82,19 +84,19 @@ public class SpawnSetCommand extends AbstractWorldCommand {
          rotation = this.rotationArg.get(context);
       }
 
-      Transform spawnTransform = new Transform(position.clone(), rotation.clone());
+      Transform spawnTransform = new Transform(new Vector3d(position), new Rotation3f(rotation));
       WorldConfig worldConfig = world.getWorldConfig();
       worldConfig.setSpawnProvider(new GlobalSpawnProvider(spawnTransform));
       worldConfig.markChanged();
       world.getLogger().at(Level.INFO).log("Set spawn provider to: %s", worldConfig.getSpawnProvider());
       context.sendMessage(
          Message.translation("server.universe.setspawn.info")
-            .param("posX", DECIMAL.format(position.getX()))
-            .param("posY", DECIMAL.format(position.getY()))
-            .param("posZ", DECIMAL.format(position.getZ()))
-            .param("rotX", DECIMAL.format(rotation.getX()))
-            .param("rotY", DECIMAL.format(rotation.getY()))
-            .param("rotZ", DECIMAL.format(rotation.getZ()))
+            .param("posX", DECIMAL.format(position.x()))
+            .param("posY", DECIMAL.format(position.y()))
+            .param("posZ", DECIMAL.format(position.z()))
+            .param("rotX", DECIMAL.format(rotation.x()))
+            .param("rotY", DECIMAL.format(rotation.y()))
+            .param("rotZ", DECIMAL.format(rotation.z()))
       );
    }
 }

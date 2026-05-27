@@ -4,8 +4,11 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Objective;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -44,15 +47,19 @@ public class TrackOrUpdateObjective implements Packet, ToClientPacket {
 
    @Nonnull
    public static TrackOrUpdateObjective deserialize(@Nonnull ByteBuf buf, int offset) {
-      TrackOrUpdateObjective obj = new TrackOrUpdateObjective();
-      byte nullBits = buf.getByte(offset);
-      int pos = offset + 1;
-      if ((nullBits & 1) != 0) {
-         obj.objective = Objective.deserialize(buf, pos);
-         pos += Objective.computeBytesConsumed(buf, pos);
-      }
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("TrackOrUpdateObjective", 1, buf.readableBytes() - offset);
+      } else {
+         TrackOrUpdateObjective obj = new TrackOrUpdateObjective();
+         byte nullBits = buf.getByte(offset);
+         int pos = offset + 1;
+         if ((nullBits & 1) != 0) {
+            obj.objective = Objective.deserialize(buf, pos);
+            pos += Objective.computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -63,6 +70,37 @@ public class TrackOrUpdateObjective implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static Objective getObjective(MemorySegment mem) {
+      return getObjective(mem, 0);
+   }
+
+   @Nullable
+   public static Objective getObjective(MemorySegment mem, int offset) {
+      return hasObjective(mem, offset) ? Objective.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean hasObjective(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static TrackOrUpdateObjective toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TrackOrUpdateObjective toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TrackOrUpdateObjective", offset + 1, (int)mem.byteSize());
+      } else {
+         return new TrackOrUpdateObjective(hasObjective(mem, offset) ? Objective.toObject(mem, offset + 1) : null);
+      }
    }
 
    @Override
@@ -76,6 +114,22 @@ public class TrackOrUpdateObjective implements Packet, ToClientPacket {
       if (this.objective != null) {
          this.objective.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.objective != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 1;
+      if (this.objective != null) {
+         varOffset += this.objective.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

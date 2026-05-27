@@ -76,9 +76,10 @@ public class EnvironmentContainerJsonLoader extends JsonLoader<SeedStringResourc
          ModifyEvent.dispatch(
             ModifyEvents.BiomeEnvironments.class,
             new ModifyEvents.BiomeEnvironments(
+               this.seed,
                this.biomeContext,
                entries,
-               content -> new EnvironmentContainerJsonLoader.EnvironmentContainerEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+               path -> new EnvironmentContainerJsonLoader.EnvironmentContainerEntryJsonLoader(seed.next(), this.dataFolder, this.loadFile(path)).load()
             )
          );
          e = entries.toArray();

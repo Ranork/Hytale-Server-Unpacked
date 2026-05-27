@@ -13,7 +13,7 @@ public class CreativeHubWorldConfig {
    @Nonnull
    public static final BuilderCodec<CreativeHubWorldConfig> CODEC = BuilderCodec.builder(CreativeHubWorldConfig.class, CreativeHubWorldConfig::new)
       .append(new KeyedCodec<>("StartupInstance", Codec.STRING), (o, i) -> o.startupInstance = i, o -> o.startupInstance)
-      .documentation("The name of the instance to spawn players into when they first join this world.")
+      .documentation("The instance asset path under Server/Instances (for example Defaults/CreativeHub for the Crossroads template).")
       .add()
       .build();
    @Nullable

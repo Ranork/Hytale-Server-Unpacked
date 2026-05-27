@@ -2,13 +2,13 @@ package com.hypixel.hytale.server.core.universe.world.accessor;
 
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 @Deprecated
 public interface IChunkAccessorSync<WorldChunk extends BlockAccessor> {
@@ -31,7 +31,7 @@ public interface IChunkAccessorSync<WorldChunk extends BlockAccessor> {
    WorldChunk getNonTickingChunk(long var1);
 
    default int getBlock(@Nonnull Vector3i pos) {
-      return this.getBlock(pos.getX(), pos.getY(), pos.getZ());
+      return this.getBlock(pos.x(), pos.y(), pos.z());
    }
 
    default int getBlock(int x, int y, int z) {
@@ -42,7 +42,7 @@ public interface IChunkAccessorSync<WorldChunk extends BlockAccessor> {
 
    @Nullable
    default BlockType getBlockType(@Nonnull Vector3i pos) {
-      return this.getBlockType(pos.getX(), pos.getY(), pos.getZ());
+      return this.getBlockType(pos.x(), pos.y(), pos.z());
    }
 
    @Nullable

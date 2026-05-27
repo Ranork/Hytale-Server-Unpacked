@@ -2,8 +2,6 @@ package com.hypixel.hytale.server.core.entity.entities.player;
 
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.ClientCameraView;
 import com.hypixel.hytale.protocol.MouseButtonState;
 import com.hypixel.hytale.protocol.MouseButtonType;
@@ -14,12 +12,15 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.EnumMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector2dc;
+import org.joml.Vector3i;
 
 public class CameraManager implements Component<EntityStore> {
    private final Map<MouseButtonType, MouseButtonState> mouseStates = new EnumMap<>(MouseButtonType.class);
    private final Map<MouseButtonType, Vector3i> mousePressedPosition = new EnumMap<>(MouseButtonType.class);
    private final Map<MouseButtonType, Vector3i> mouseReleasedPosition = new EnumMap<>(MouseButtonType.class);
-   private Vector2d lastScreenPoint = Vector2d.ZERO;
+   private Vector2d lastScreenPoint = new Vector2d();
    private Vector3i lastTargetBlock;
 
    public static ComponentType<EntityStore, CameraManager> getComponentType() {
@@ -64,10 +65,10 @@ public class CameraManager implements Component<EntityStore> {
    }
 
    public void setLastScreenPoint(Vector2d lastScreenPoint) {
-      this.lastScreenPoint = lastScreenPoint;
+      this.lastScreenPoint.set(lastScreenPoint);
    }
 
-   public Vector2d getLastScreenPoint() {
+   public Vector2dc getLastScreenPoint() {
       return this.lastScreenPoint;
    }
 

@@ -13,6 +13,7 @@ import com.hypixel.hytale.codec.codecs.simple.DoubleCodec;
 import com.hypixel.hytale.codec.codecs.simple.FloatCodec;
 import com.hypixel.hytale.codec.codecs.simple.IntegerCodec;
 import com.hypixel.hytale.codec.codecs.simple.LongCodec;
+import com.hypixel.hytale.codec.codecs.simple.NullableBooleanCodec;
 import com.hypixel.hytale.codec.codecs.simple.ShortCodec;
 import com.hypixel.hytale.codec.codecs.simple.StringCodec;
 import com.hypixel.hytale.codec.exception.CodecException;
@@ -42,6 +43,7 @@ public interface Codec<T> extends RawJsonCodec<T>, SchemaConvertable<T> {
    BsonDocumentCodec BSON_DOCUMENT = new BsonDocumentCodec();
    StringCodec STRING = new StringCodec();
    BooleanCodec BOOLEAN = new BooleanCodec();
+   NullableBooleanCodec NULLABLE_BOOLEAN = new NullableBooleanCodec();
    DoubleCodec DOUBLE = new DoubleCodec();
    FloatCodec FLOAT = new FloatCodec();
    ByteCodec BYTE = new ByteCodec();

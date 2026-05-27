@@ -20,8 +20,6 @@ import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.InstantData;
 import com.hypixel.hytale.protocol.Model;
-import com.hypixel.hytale.protocol.Vector2f;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPopupNotificationType;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPreviewCameraSettings;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateModelPreview;
@@ -38,7 +36,9 @@ import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent;
@@ -60,6 +60,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2f;
+import org.joml.Vector3f;
 
 @Deprecated
 public class AssetSpecificFunctionality {
@@ -214,21 +216,35 @@ public class AssetSpecificFunctionality {
 
    private static void equipItem(@Nonnull Path assetPath, @Nonnull EditorClient editorClient) {
       PlayerRef playerRef = tryGetPlayer(editorClient);
-      if (playerRef != null) {
-         Player player = playerRef.getComponent(Player.getComponentType());
-         String key = Item.getAssetStore().decodeFilePathKey(assetPath);
-         Item item = Item.getAssetMap().getAsset(key);
-         if (item == null) {
-            editorClient.sendPopupNotification(
-               AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.unknownItem").param("id", key.toString())
+      if (playerRef != null && playerRef.isValid()) {
+         Ref<EntityStore> ref = playerRef.getReference();
+         if (ref != null && ref.isValid()) {
+            Store<EntityStore> store = ref.getStore();
+            World world = store.getExternalData().getWorld();
+            world.execute(
+               () -> {
+                  String key = Item.getAssetStore().decodeFilePathKey(assetPath);
+                  if (key != null) {
+                     Item item = Item.getAssetMap().getAsset(key);
+                     if (item == null) {
+                        editorClient.sendPopupNotification(
+                           AssetEditorPopupNotificationType.Error, Message.translation("server.assetEditor.messages.unknownItem").param("id", key)
+                        );
+                     } else {
+                        ItemArmor itemArmor = item.getArmor();
+                        if (itemArmor != null) {
+                           InventoryComponent.Armor armorComponent = store.getComponent(ref, InventoryComponent.Armor.getComponentType());
+                           if (armorComponent != null) {
+                              armorComponent.getInventory().setItemStackForSlot((short)itemArmor.getArmorSlot().ordinal(), new ItemStack(key));
+                           }
+                        } else {
+                           CombinedItemContainer combinedInventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
+                           combinedInventory.addItemStack(new ItemStack(key));
+                        }
+                     }
+                  }
+               }
             );
-         } else {
-            ItemArmor itemArmor = item.getArmor();
-            if (itemArmor != null) {
-               player.getInventory().getArmor().setItemStackForSlot((short)itemArmor.getArmorSlot().ordinal(), new ItemStack(key));
-            } else {
-               player.getInventory().getCombinedHotbarFirst().addItemStack(new ItemStack(key));
-            }
          }
       }
    }

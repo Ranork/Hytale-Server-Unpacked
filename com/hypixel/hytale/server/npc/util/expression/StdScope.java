@@ -289,7 +289,6 @@ public class StdScope implements Scope {
             case NUMBER:
             case STRING:
             case BOOLEAN:
-            default:
                throw new IllegalStateException("Can't assign an empty array to symbol " + name + "  of type " + symbol.valueType);
             case EMPTY_ARRAY:
                return;

@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameCompon
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.system.ModelSystems;
@@ -133,9 +134,9 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
             Role role;
             try {
                role = NPCPlugin.buildRole(roleBuilder, builderInfo, builderSupport, roleIndex);
-            } catch (SkipSentryException var24) {
+            } catch (SkipSentryException var23) {
                this.fail(holder);
-               npcPlugin.getLogger().at(Level.SEVERE).log("Error: %s for NPC %s", var24.getMessage(), npcComponent.getRole());
+               npcPlugin.getLogger().at(Level.SEVERE).log("Error: %s for NPC %s", var23.getMessage(), npcComponent.getRole());
                return;
             }
 
@@ -144,8 +145,11 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
                holder.ensureComponent(Invulnerable.getComponentType());
             }
 
-            Message roleNameMessage = Message.translation(role.getNameTranslationKey());
-            holder.putComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(roleNameMessage));
+            if (holder.getComponent(PersistentDisplayName.getComponentType()) == null) {
+               Message roleNameMessage = Message.translation(role.getNameTranslationKey());
+               holder.putComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(roleNameMessage));
+            }
+
             Interactions interactionsComponent = holder.ensureAndGetComponent(Interactions.getComponentType());
             interactionsComponent.setInteractionId(InteractionType.Use, "*UseNPC");
             if (role.getDeathInteraction() != null) {
@@ -258,7 +262,7 @@ public class RoleBuilderSystem extends HolderSystem<EntityStore> {
                   holder.putComponent(this.modelComponentType, new ModelComponent(scaledModel));
                }
 
-               role.spawned(holder, npcComponent);
+               role.spawned(holder, npcComponent, store);
                if (roleBuilder instanceof SpawnEffect spawnEffect) {
                   TransformComponent transformComponent = holder.getComponent(this.transformComponentType);
 

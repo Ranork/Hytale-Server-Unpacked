@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -42,13 +45,41 @@ public class BuilderToolGeneralAction implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolGeneralAction deserialize(@Nonnull ByteBuf buf, int offset) {
-      BuilderToolGeneralAction obj = new BuilderToolGeneralAction();
-      obj.action = BuilderToolAction.fromValue(buf.getByte(offset + 0));
-      return obj;
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("BuilderToolGeneralAction", 1, buf.readableBytes() - offset);
+      } else {
+         BuilderToolGeneralAction obj = new BuilderToolGeneralAction();
+         obj.action = BuilderToolAction.fromValue(buf.getByte(offset + 0));
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 1;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static BuilderToolAction getAction(MemorySegment mem) {
+      return getAction(mem, 0);
+   }
+
+   public static BuilderToolAction getAction(MemorySegment mem, int offset) {
+      return BuilderToolAction.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0)));
+   }
+
+   public static BuilderToolGeneralAction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolGeneralAction toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolGeneralAction", offset + 1, (int)mem.byteSize());
+      } else {
+         return new BuilderToolGeneralAction(BuilderToolAction.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0))));
+      }
    }
 
    @Override
@@ -57,12 +88,23 @@ public class BuilderToolGeneralAction implements Packet, ToServerPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), (byte)this.action.getValue());
+      return 1;
+   }
+
+   @Override
    public int computeSize() {
       return 1;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 1 ? ValidationResult.error("Buffer too small: expected at least 1 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 1) {
+         return ValidationResult.error("Buffer too small: expected at least 1 bytes");
+      } else {
+         int v = buffer.getByte(offset + 0) & 255;
+         return v >= 7 ? ValidationResult.error("Invalid BuilderToolAction value for Action") : ValidationResult.OK;
+      }
    }
 
    public BuilderToolGeneralAction clone() {

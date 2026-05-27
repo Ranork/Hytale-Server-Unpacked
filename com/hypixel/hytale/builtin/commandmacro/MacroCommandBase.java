@@ -35,11 +35,28 @@ public class MacroCommandBase extends AbstractAsyncCommand {
    @Nonnull
    private final List<Pair<String, List<MacroCommandReplacement>>> commandReplacements = new ObjectArrayList();
    private final Map<String, String> defaultValueStrings = new Object2ObjectOpenHashMap();
+   @Nonnull
+   private final String fullPath;
 
    public MacroCommandBase(
-      @Nonnull String name, @Nullable String[] aliases, @Nonnull String description, @Nullable MacroCommandParameter[] parameters, @Nonnull String[] commands
+      @Nonnull String leafName,
+      @Nonnull String fullPath,
+      @Nullable String[] aliases,
+      @Nonnull String description,
+      @Nullable MacroCommandParameter[] parameters,
+      @Nonnull String[] commands,
+      @Nullable String permissionGroup
    ) {
-      super(name, description);
+      super(leafName, description);
+      this.fullPath = fullPath;
+      if (permissionGroup != null) {
+         if (permissionGroup.isEmpty()) {
+            throw new IllegalArgumentException("Macro command '" + fullPath + "' has an empty permissionGroup; remove the field or specify a valid group");
+         }
+
+         this.setPermissionGroups(permissionGroup);
+      }
+
       if (aliases != null) {
          this.addAliases(aliases);
       }
@@ -133,8 +150,7 @@ public class MacroCommandBase extends AbstractAsyncCommand {
    protected CompletableFuture<Void> executeAsync(@Nonnull CommandContext context) {
       List<String> commandsToExecute = new ObjectArrayList();
       CommandSender commandSender = context.sender();
-      String macro = context.getCalledCommand().getName();
-      LOGGER.at(Level.INFO).log("%s expanding command macro: %s", commandSender.getDisplayName(), macro);
+      LOGGER.at(Level.INFO).log("%s expanding command macro: %s", commandSender.getUsername(), this.fullPath);
 
       for (Pair<String, List<MacroCommandReplacement>> stringListPair : this.commandReplacements) {
          String command = (String)stringListPair.key();

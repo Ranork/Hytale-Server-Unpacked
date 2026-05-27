@@ -193,6 +193,8 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
       private final String packKey;
 
       public AssetStoreMonitorHandler(String packKey) {
+         Objects.requireNonNull(HytaleAssetStore.this);
+         super();
          this.packKey = packKey;
       }
 
@@ -256,9 +258,6 @@ public class HytaleAssetStore<K, T extends JsonAssetWithMap<K, M>, M extends Ass
                      HytaleAssetStore.this.logger.at(Level.FINEST).log("File Modified: %s", path);
                      createdOrModifiedFilesToLoad.add(path);
                   }
-                  break;
-               default:
-                  throw new IllegalArgumentException("Unknown eventKind " + entry.getValue());
             }
          }
 

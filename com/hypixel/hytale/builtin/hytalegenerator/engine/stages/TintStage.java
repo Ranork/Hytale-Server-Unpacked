@@ -13,10 +13,11 @@ import com.hypixel.hytale.builtin.hytalegenerator.engine.views.PixelBufferView;
 import com.hypixel.hytale.builtin.hytalegenerator.tintproviders.TintProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class TintStage implements Stage {
    @Nonnull
@@ -52,7 +53,7 @@ public class TintStage implements Stage {
       this.tintOutputBufferType = tintOutputBufferType;
       this.stageName = stageName;
       this.worldStructure_workerData = worldStructure_workerData;
-      this.inputBounds_bufferGrid = GridUtils.createUnitBounds3i(Vector3i.ZERO);
+      this.inputBounds_bufferGrid = GridUtils.createUnitBounds3i(Vector3iUtil.ZERO);
    }
 
    @Override
@@ -64,7 +65,7 @@ public class TintStage implements Stage {
       Bounds3i outputBounds_voxelGrid = tintSpace.getBounds();
       Registry<Biome> biomeRegistry = this.worldStructure_workerData.get(context.workerId).getBiomeRegistry();
       Vector3i position_voxelGrid = new Vector3i(outputBounds_voxelGrid.min);
-      position_voxelGrid.setY(0);
+      position_voxelGrid.y = 0;
       TintProvider.Context tintContext = new TintProvider.Context(position_voxelGrid, context.workerId);
 
       for (position_voxelGrid.x = outputBounds_voxelGrid.min.x; position_voxelGrid.x < outputBounds_voxelGrid.max.x; position_voxelGrid.x++) {

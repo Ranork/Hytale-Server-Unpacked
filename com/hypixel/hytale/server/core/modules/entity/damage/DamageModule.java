@@ -53,6 +53,7 @@ public class DamageModule extends JavaPlugin {
       this.inspectDamageGroup = entityStoreRegistry.registerSystemGroup();
       entityStoreRegistry.registerSystem(new DamageModule.OrderGatherFilter());
       entityStoreRegistry.registerSystem(new DamageSystems.ApplyDamage());
+      entityStoreRegistry.registerSystem(new DamageSystems.BreathingSystem());
       entityStoreRegistry.registerSystem(new DamageSystems.CanBreathe());
       entityStoreRegistry.registerSystem(new DamageSystems.OutOfWorldDamage());
       entityStoreRegistry.registerSystem(new DamageSystems.FallDamagePlayers());

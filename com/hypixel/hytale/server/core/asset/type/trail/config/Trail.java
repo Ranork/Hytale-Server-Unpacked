@@ -13,7 +13,6 @@ import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.schema.metadata.ui.UIDefaultCollapsedState;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.protocol.FXRenderMode;
 import com.hypixel.hytale.protocol.IntersectionHighlight;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
@@ -21,6 +20,7 @@ import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.lang.ref.SoftReference;
 import javax.annotation.Nonnull;
+import org.joml.Vector2i;
 
 public class Trail implements JsonAssetWithMap<String, DefaultAssetMap<String, Trail>>, NetworkSerializable<com.hypixel.hytale.protocol.Trail> {
    public static final AssetBuilderCodec<String, Trail> CODEC = AssetBuilderCodec.builder(
@@ -176,7 +176,7 @@ public class Trail implements JsonAssetWithMap<String, DefaultAssetMap<String, T
          if (this.animation != null) {
             Vector2i frameSize = this.animation.getFrameSize();
             if (frameSize != null) {
-               packet.frameSize = new com.hypixel.hytale.protocol.Vector2i(frameSize.getX(), frameSize.getY());
+               packet.frameSize = new com.hypixel.hytale.protocol.Vector2i(frameSize.x(), frameSize.y());
             }
 
             if (this.animation.getFrameRange() != null) {

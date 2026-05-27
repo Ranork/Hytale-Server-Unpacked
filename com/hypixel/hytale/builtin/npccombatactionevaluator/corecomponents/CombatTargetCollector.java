@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -16,6 +15,7 @@ import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class CombatTargetCollector implements ISensorEntityCollector {
    @Nonnull
@@ -66,7 +66,7 @@ public class CombatTargetCollector implements ISensorEntityCollector {
                assert targetTransformComponent != null;
 
                Vector3d targetPos = targetTransformComponent.getPosition();
-               double distanceSquared = selfPos.distanceSquaredTo(targetPos);
+               double distanceSquared = selfPos.distanceSquared(targetPos);
                if (distanceSquared < this.closestHostileDistanceSquared) {
                   this.targetMemory.setClosestHostile(targetRef);
                   this.closestHostileDistanceSquared = distanceSquared;

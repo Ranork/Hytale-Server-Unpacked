@@ -4,9 +4,6 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushOrigin;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushShape;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -22,6 +19,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class EditLineCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -49,7 +48,7 @@ public class EditLineCommand extends AbstractPlayerCommand {
 
    public EditLineCommand() {
       super("editline", "server.commands.editline.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override
@@ -65,9 +64,9 @@ public class EditLineCommand extends AbstractPlayerCommand {
       assert transformComponent != null;
 
       Vector3d playerPos = transformComponent.getPosition();
-      int baseX = MathUtil.floor(playerPos.getX());
-      int baseY = MathUtil.floor(playerPos.getY());
-      int baseZ = MathUtil.floor(playerPos.getZ());
+      int baseX = MathUtil.floor(playerPos.x());
+      int baseY = MathUtil.floor(playerPos.y());
+      int baseZ = MathUtil.floor(playerPos.z());
       Vector3i start = this.startArg.get(context).resolve(baseX, baseY, baseZ);
       Vector3i end = this.endArg.get(context).resolve(baseX, baseY, baseZ);
       BlockPattern material = BlockPattern.parse(this.materialArg.get(context));

@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.npc.corecomponents.interaction;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.EnumSet;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SensorCanInteract extends SensorBase {
    protected final float viewCone;
@@ -56,10 +56,8 @@ public class SensorCanInteract extends SensorBase {
                      assert headRotationComponent != null;
 
                      Vector3d position = transformComponent.getPosition();
-                     float headRotationYaw = headRotationComponent.getRotation().getYaw();
-                     if (!NPCPhysicsMath.inViewSector(
-                        position.getX(), position.getZ(), headRotationYaw, this.viewCone, targetPosition.getX(), targetPosition.getZ()
-                     )) {
+                     float headRotationYaw = headRotationComponent.getRotation().yaw();
+                     if (!NPCPhysicsMath.inViewSector(position.x(), position.z(), headRotationYaw, this.viewCone, targetPosition.x(), targetPosition.z())) {
                         return false;
                      }
                   }

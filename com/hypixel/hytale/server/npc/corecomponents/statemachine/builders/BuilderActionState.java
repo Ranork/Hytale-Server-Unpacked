@@ -14,6 +14,8 @@ public class BuilderActionState extends BuilderActionBase {
    protected int stateIndex;
    protected int subStateIndex;
    protected boolean clearState;
+   protected boolean clearHeadMotion;
+   protected boolean clearBodyMotion;
    protected boolean componentLocal;
 
    @Nonnull
@@ -48,6 +50,24 @@ public class BuilderActionState extends BuilderActionBase {
       this.getBoolean(
          data, "ClearState", v -> this.clearState = v, true, BuilderDescriptorState.Stable, "Clear the state of things like set once flags on transition", null
       );
+      this.getBoolean(
+         data,
+         "ClearHeadMotion",
+         v -> this.clearHeadMotion = v,
+         true,
+         BuilderDescriptorState.Stable,
+         "Whether the head motion will be cleared during the state transition actions",
+         null
+      );
+      this.getBoolean(
+         data,
+         "ClearBodyMotion",
+         v -> this.clearBodyMotion = v,
+         true,
+         BuilderDescriptorState.Stable,
+         "Whether the body motion will be cleared during the state transition actions",
+         null
+      );
       this.componentLocal = this.isComponent();
       this.registerStateSetter(this.state, this.subState, (main, sub) -> {
          this.stateIndex = main;
@@ -67,6 +87,14 @@ public class BuilderActionState extends BuilderActionBase {
 
    public boolean isClearState() {
       return this.clearState;
+   }
+
+   public boolean isClearHeadMotion() {
+      return this.clearHeadMotion;
+   }
+
+   public boolean isClearBodyMotion() {
+      return this.clearBodyMotion;
    }
 
    public boolean isComponentLocal() {

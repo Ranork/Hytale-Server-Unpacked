@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.worldgen.cave;
 
 import com.hypixel.hytale.common.map.IWeightedMap;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.condition.IBlockFluidCondition;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateRndCondition;
@@ -16,6 +15,7 @@ import com.hypixel.hytale.server.worldgen.util.ListPool;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class CaveNodeType {
    public static final CaveNodeType[] EMPTY_ARRAY = new CaveNodeType[0];

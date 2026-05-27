@@ -12,7 +12,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.server.core.asset.type.item.config.BuilderToolItemReferenceAsset;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSystems;
@@ -26,25 +26,24 @@ import javax.annotation.Nonnull;
 public class BuilderToolsSystems {
    public static class EnsureBuilderTools extends HolderSystem<EntityStore> {
       @Nonnull
-      private static final ComponentType<EntityStore, Player> PLAYER_COMPONENT_TYPE = Player.getComponentType();
+      private static final ComponentType<EntityStore, InventoryComponent.Tool> TOOL_COMPONENT_TYPE = InventoryComponent.Tool.getComponentType();
       private final Set<Dependency<EntityStore>> dependencies = Set.of(new SystemDependency<>(Order.AFTER, PlayerSystems.PlayerInitSystem.class));
 
       @Nonnull
       @Override
       public Query<EntityStore> getQuery() {
-         return PLAYER_COMPONENT_TYPE;
+         return Query.and(Player.getComponentType(), TOOL_COMPONENT_TYPE);
       }
 
       @Override
       public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         Player playerComponent = holder.getComponent(PLAYER_COMPONENT_TYPE);
-
-         assert playerComponent != null;
-
          Map<String, BuilderToolItemReferenceAsset> builderTools = BuilderToolItemReferenceAsset.getAssetMap().getAssetMap();
-         Inventory playerInventory = playerComponent.getInventory();
-         ItemContainer playerTools = playerInventory.getTools();
-         playerTools.clear();
+         InventoryComponent.Tool toolsComponent = holder.getComponent(TOOL_COMPONENT_TYPE);
+
+         assert toolsComponent != null;
+
+         ItemContainer toolsInventory = toolsComponent.getInventory();
+         toolsInventory.clear();
          List<ItemStack> toolsToAdd = new ObjectArrayList();
 
          for (BuilderToolItemReferenceAsset builderTool : builderTools.values()) {
@@ -55,7 +54,7 @@ public class BuilderToolsSystems {
             }
          }
 
-         if (!playerTools.addItemStacks(toolsToAdd).succeeded()) {
+         if (!toolsInventory.addItemStacks(toolsToAdd).succeeded()) {
             throw new IllegalArgumentException("Could not add items to the Tools container");
          }
       }

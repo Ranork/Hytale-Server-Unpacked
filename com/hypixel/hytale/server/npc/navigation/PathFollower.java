@@ -2,7 +2,7 @@ package com.hypixel.hytale.server.npc.navigation;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PathFollower {
    @Nullable
@@ -100,7 +101,7 @@ public class PathFollower {
 
    public void setPath(IWaypoint firstWaypoint, @Nonnull Vector3d startPosition) {
       this.currentWaypoint = firstWaypoint;
-      this.lastWaypointPosition.assign(startPosition);
+      this.lastWaypointPosition.set(startPosition);
       this.currentWaypointDistanceSquared = Double.MAX_VALUE;
       this.shouldSmoothPath = true;
       this.isWaypointFrozen = false;
@@ -133,7 +134,7 @@ public class PathFollower {
          if (this.currentWaypoint == this.frozenWaypoint) {
             return true;
          } else {
-            this.frozenWaypoint.position.assign(this.currentWaypoint.getPosition());
+            this.frozenWaypoint.position.set(this.currentWaypoint.getPosition());
             this.currentWaypoint = this.frozenWaypoint;
             this.isWaypointFrozen = true;
             return true;
@@ -152,31 +153,31 @@ public class PathFollower {
    public void executePath(@Nonnull Vector3d currentPosition, @Nonnull MotionController activeMotionController, @Nonnull Steering desiredSteering) {
       Vector3d target = this.getCurrentWaypointPosition();
       if (target != null) {
-         this.tempVector.assign(target).subtract(currentPosition);
+         this.tempVector.set(target).sub(currentPosition);
          double length = this.tempVector.length();
          desiredSteering.setMaxDistance(length);
          if (length > this.waypointRadius) {
-            this.direction.assign(this.tempVector);
+            this.direction.set(this.tempVector);
             this.computeRejection(currentPosition, target, activeMotionController);
-            this.direction.subtract(this.rejection);
-            desiredSteering.setTranslation(this.direction.scale(this.relativeSpeed / length));
+            this.direction.sub(this.rejection);
+            desiredSteering.setTranslation(this.direction.mul(this.relativeSpeed / length));
          } else {
             if (length > 0.1) {
-               this.direction.assign(this.tempVector);
+               this.direction.set(this.tempVector);
             }
 
-            desiredSteering.setTranslation(this.direction.scale(this.relativeSpeedWaypoint / length));
+            desiredSteering.setTranslation(this.direction.mul(this.relativeSpeedWaypoint / length));
          }
       }
    }
 
    public void computeRejection(@Nonnull Vector3d currentPosition, @Nonnull Vector3d target, @Nonnull MotionController activeMotionController) {
-      this.tempPath.assign(target).subtract(this.lastWaypointPosition).scale(activeMotionController.getComponentSelector());
-      this.tempVector.assign(currentPosition).subtract(this.lastWaypointPosition).scale(activeMotionController.getComponentSelector());
-      double dotDD = this.tempPath.squaredLength();
+      this.tempPath.set(target).sub(this.lastWaypointPosition).mul(activeMotionController.getComponentSelector());
+      this.tempVector.set(currentPosition).sub(this.lastWaypointPosition).mul(activeMotionController.getComponentSelector());
+      double dotDD = this.tempPath.lengthSquared();
       double dotDP = this.tempPath.dot(this.tempVector);
-      this.projection.assign(this.tempPath).scale(dotDP / dotDD);
-      this.rejection.assign(this.tempVector).subtract(this.projection).scale(this.rejectionWeight);
+      this.projection.set(this.tempPath).mul(dotDP / dotDD);
+      this.rejection.set(this.tempVector).sub(this.projection).mul(this.rejectionWeight);
    }
 
    public boolean updateCurrentTarget(@Nonnull Vector3d entityPosition, @Nonnull MotionController motionController) {
@@ -205,13 +206,13 @@ public class PathFollower {
                   !reachedWaypoint,
                   Math.sqrt(distanceSquared),
                   projectionLength,
-                  Vector3d.formatShortString(entityPosition),
-                  Vector3d.formatShortString(waypointPosition)
+                  Vector3dUtil.formatShortString(entityPosition),
+                  Vector3dUtil.formatShortString(waypointPosition)
                );
          }
 
          if (reachedWaypoint) {
-            this.lastWaypointPosition.assign(waypointPosition);
+            this.lastWaypointPosition.set(waypointPosition);
             this.currentWaypoint = this.currentWaypoint.next();
             if (this.currentWaypoint == null) {
                this.isWaypointFrozen = false;
@@ -238,7 +239,7 @@ public class PathFollower {
                if (nextWaypoint == null) {
                   return true;
                } else {
-                  this.tempVector.assign(nextWaypoint.getPosition()).subtract(waypointPosition);
+                  this.tempVector.set(nextWaypoint.getPosition()).sub(waypointPosition);
                   distanceSquared = NPCPhysicsMath.projectedLengthSquared(this.tempVector, motionController.getComponentSelector());
                   if (distanceSquared < 0.001) {
                      return true;
@@ -300,9 +301,9 @@ public class PathFollower {
                      "=== New Target len=%s skipped=%s pos=%s tgt=%s dist=%s",
                      l,
                      startLength - l,
-                     Vector3d.formatShortString(position),
-                     Vector3d.formatShortString(startNode.getPosition()),
-                     position.distanceTo(startNode.getPosition())
+                     Vector3dUtil.formatShortString(position),
+                     Vector3dUtil.formatShortString(startNode.getPosition()),
+                     position.distance(startNode.getPosition())
                   );
             }
 

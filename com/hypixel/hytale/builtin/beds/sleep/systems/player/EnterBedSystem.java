@@ -139,7 +139,7 @@ public class EnterBedSystem extends RefChangeSystem<EntityStore, MountedComponen
       // 08: istore 2
       // 09: aload 1
       // 0a: iload 2
-      // 0b: invokedynamic typeSwitch (Ljava/lang/Object;I)I bsm=java/lang/runtime/SwitchBootstraps.typeSwitch (Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite; args=[ null.invoke Ljava/lang/Enum$EnumDesc;, com/hypixel/hytale/builtin/beds/sleep/systems/world/CanSleepInWorld$NotDuringSleepHoursRange ]
+      // 0b: invokedynamic typeSwitch (Lcom/hypixel/hytale/builtin/beds/sleep/systems/world/CanSleepInWorld$Result;I)I bsm=java/lang/runtime/SwitchBootstraps.typeSwitch (Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite; args=[ null.invoke Ljava/lang/Enum$EnumDesc;, com/hypixel/hytale/builtin/beds/sleep/systems/world/CanSleepInWorld$NotDuringSleepHoursRange ]
       // 10: lookupswitch 45 2 0 28 1 34
       // 2c: getstatic com/hypixel/hytale/builtin/beds/sleep/systems/player/EnterBedSystem.MESSAGE_SERVER_INTERACTIONS_SLEEP_GAME_TIME_PAUSED Lcom/hypixel/hytale/server/core/Message;
       // 2f: goto 40

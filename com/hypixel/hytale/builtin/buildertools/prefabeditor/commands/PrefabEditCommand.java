@@ -6,6 +6,7 @@ public class PrefabEditCommand extends AbstractCommandCollection {
    public PrefabEditCommand() {
       super("editprefab", "server.commands.editprefab.desc");
       this.addAliases("prefabedit", "pedit");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new PrefabEditExitCommand());
       this.addSubCommand(new PrefabEditLoadCommand());
       this.addSubCommand(new PrefabEditCreateNewCommand());

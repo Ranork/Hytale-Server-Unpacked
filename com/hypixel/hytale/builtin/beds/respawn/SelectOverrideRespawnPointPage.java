@@ -2,7 +2,6 @@ package com.hypixel.hytale.builtin.beds.respawn;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.meta.state.RespawnBlock;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class SelectOverrideRespawnPointPage extends RespawnPointPage {
    @Nonnull
@@ -59,7 +59,7 @@ public class SelectOverrideRespawnPointPage extends RespawnPointPage {
       if (playerRefComponent != null) {
          HeadRotation rotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
          if (rotationComponent != null) {
-            float lookYaw = rotationComponent.getRotation().getYaw();
+            float lookYaw = rotationComponent.getRotation().yaw();
             double direction = Math.toDegrees(lookYaw);
 
             for (int i = 0; i < this.respawnPoints.length; i++) {
@@ -68,7 +68,7 @@ public class SelectOverrideRespawnPointPage extends RespawnPointPage {
                commandBuilder.append("#RespawnPointList", "Pages/OverrideRespawnPointButton.ui");
                commandBuilder.set(selector + " #Name.Text", respawnPoint.getName());
                Vector3i respawnPointPosition = respawnPoint.getBlockPosition();
-               int distance = (int)this.respawnPointToAddPosition.distanceTo(respawnPointPosition.x, this.respawnPointToAddPosition.y, respawnPointPosition.z);
+               int distance = (int)this.respawnPointToAddPosition.distance(respawnPointPosition.x, this.respawnPointToAddPosition.y, respawnPointPosition.z);
                commandBuilder.set(selector + " #Distance.Text", Message.translation("server.customUI.respawnPointDistance").param("distance", distance));
                double angle = Math.atan2(respawnPointPosition.z - this.respawnPointToAddPosition.z, respawnPointPosition.x - this.respawnPointToAddPosition.x);
                commandBuilder.set(selector + " #Icon.Angle", Math.toDegrees(angle) + direction + 90.0);

@@ -1,15 +1,16 @@
 package com.hypixel.hytale.server.npc.corecomponents;
 
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
 import com.hypixel.hytale.server.npc.blackboard.view.resource.ResourceView;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BlockTarget {
-   private final Vector3d position = new Vector3d(Vector3d.MIN);
+   private final Vector3d position = new Vector3d(Vector3dUtil.MIN);
    private int chunkChangeRevision = -1;
    private int foundBlockType = Integer.MIN_VALUE;
    @Nullable
@@ -47,7 +48,7 @@ public class BlockTarget {
       }
 
       this.reservationHolder = null;
-      this.position.assign(Vector3d.MIN);
+      this.position.set(Vector3dUtil.MIN);
       this.chunkChangeRevision = -1;
       this.foundBlockType = Integer.MIN_VALUE;
    }

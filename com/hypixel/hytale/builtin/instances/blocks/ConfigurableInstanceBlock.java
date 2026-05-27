@@ -13,14 +13,15 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ConfigurableInstanceBlock implements Component<ChunkStore> {
    @Nonnull
@@ -41,13 +42,13 @@ public class ConfigurableInstanceBlock implements Component<ChunkStore> {
       .appendInherited(new KeyedCodec<>("InstanceKey", Codec.STRING), (o, i) -> o.instanceKey = i, o -> o.instanceKey, (o, p) -> o.instanceKey = p.instanceKey)
       .add()
       .appendInherited(
-         new KeyedCodec<>("PositionOffset", Vector3d.CODEC),
+         new KeyedCodec<>("PositionOffset", Vector3dUtil.CODEC),
          (o, i) -> o.positionOffset = i,
          o -> o.positionOffset,
          (o, p) -> o.positionOffset = p.positionOffset
       )
       .add()
-      .appendInherited(new KeyedCodec<>("Rotation", Vector3f.ROTATION), (o, i) -> o.rotation = i, o -> o.rotation, (o, p) -> o.rotation = p.rotation)
+      .appendInherited(new KeyedCodec<>("Rotation", Rotation3f.CODEC), (o, i) -> o.rotation = i, o -> o.rotation, (o, p) -> o.rotation = p.rotation)
       .add()
       .appendInherited(
          new KeyedCodec<>("PersonalReturnPoint", Codec.BOOLEAN),
@@ -72,7 +73,7 @@ public class ConfigurableInstanceBlock implements Component<ChunkStore> {
    @Nullable
    private Vector3d positionOffset;
    @Nullable
-   private Vector3f rotation;
+   private Rotation3f rotation;
    private boolean personalReturnPoint = false;
    private double removeBlockAfter = -1.0;
 
@@ -90,7 +91,7 @@ public class ConfigurableInstanceBlock implements Component<ChunkStore> {
       String instanceName,
       String instanceKey,
       @Nullable Vector3d positionOffset,
-      @Nullable Vector3f rotation,
+      @Nullable Rotation3f rotation,
       boolean personalReturnPoint,
       double removeBlockAfter
    ) {
@@ -154,11 +155,11 @@ public class ConfigurableInstanceBlock implements Component<ChunkStore> {
    }
 
    @Nullable
-   public Vector3f getRotation() {
+   public Rotation3f getRotation() {
       return this.rotation;
    }
 
-   public void setRotation(@Nullable Vector3f rotation) {
+   public void setRotation(@Nullable Rotation3f rotation) {
       this.rotation = rotation;
    }
 

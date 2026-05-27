@@ -9,6 +9,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -55,42 +56,71 @@ public class SetMachinimaActorModel implements Packet, ToClientPacket {
 
    @Nonnull
    public static SetMachinimaActorModel deserialize(@Nonnull ByteBuf buf, int offset) {
-      SetMachinimaActorModel obj = new SetMachinimaActorModel();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
-         obj.model = Model.deserialize(buf, varPos0);
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("SetMachinimaActorModel", 13, buf.readableBytes() - offset);
+      } else {
+         SetMachinimaActorModel obj = new SetMachinimaActorModel();
+         byte nullBits = buf.getByte(offset);
+         if ((nullBits & 1) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 1);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+               throw ProtocolException.invalidOffset("Model", varPosBase0, buf.readableBytes());
+            }
+
+            int varPos0 = offset + 13 + varPosBase0;
+            obj.model = Model.deserialize(buf, varPos0);
+         }
+
+         if ((nullBits & 2) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 5);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+               throw ProtocolException.invalidOffset("SceneName", varPosBase1, buf.readableBytes());
+            }
+
+            int varPos1 = offset + 13 + varPosBase1;
+            int sceneNameLen = VarInt.peek(buf, varPos1);
+            if (sceneNameLen < 0) {
+               throw ProtocolException.invalidVarInt("SceneName");
+            }
+
+            int sceneNameVarIntLen = VarInt.size(sceneNameLen);
+            if (sceneNameLen > 4096000) {
+               throw ProtocolException.stringTooLong("SceneName", sceneNameLen, 4096000);
+            }
+
+            if (varPos1 + sceneNameVarIntLen + sceneNameLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("SceneName", varPos1 + sceneNameVarIntLen + sceneNameLen, buf.readableBytes());
+            }
+
+            obj.sceneName = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
+         }
+
+         if ((nullBits & 4) != 0) {
+            int varPosBase2 = buf.getIntLE(offset + 9);
+            if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+               throw ProtocolException.invalidOffset("ActorName", varPosBase2, buf.readableBytes());
+            }
+
+            int varPos2 = offset + 13 + varPosBase2;
+            int actorNameLen = VarInt.peek(buf, varPos2);
+            if (actorNameLen < 0) {
+               throw ProtocolException.invalidVarInt("ActorName");
+            }
+
+            int actorNameVarIntLen = VarInt.size(actorNameLen);
+            if (actorNameLen > 4096000) {
+               throw ProtocolException.stringTooLong("ActorName", actorNameLen, 4096000);
+            }
+
+            if (varPos2 + actorNameVarIntLen + actorNameLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("ActorName", varPos2 + actorNameVarIntLen + actorNameLen, buf.readableBytes());
+            }
+
+            obj.actorName = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
+         }
+
+         return obj;
       }
-
-      if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
-         int sceneNameLen = VarInt.peek(buf, varPos1);
-         if (sceneNameLen < 0) {
-            throw ProtocolException.negativeLength("SceneName", sceneNameLen);
-         }
-
-         if (sceneNameLen > 4096000) {
-            throw ProtocolException.stringTooLong("SceneName", sceneNameLen, 4096000);
-         }
-
-         obj.sceneName = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
-      }
-
-      if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         int actorNameLen = VarInt.peek(buf, varPos2);
-         if (actorNameLen < 0) {
-            throw ProtocolException.negativeLength("ActorName", actorNameLen);
-         }
-
-         if (actorNameLen > 4096000) {
-            throw ProtocolException.stringTooLong("ActorName", actorNameLen, 4096000);
-         }
-
-         obj.actorName = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
-      }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -98,6 +128,10 @@ public class SetMachinimaActorModel implements Packet, ToClientPacket {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Model", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          pos0 += Model.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -107,9 +141,13 @@ public class SetMachinimaActorModel implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("SceneName", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -117,15 +155,101 @@ public class SetMachinimaActorModel implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("ActorName", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 13, "Model")) : null;
+   }
+
+   @Nullable
+   public static String getSceneName(MemorySegment mem) {
+      return getSceneName(mem, 0);
+   }
+
+   @Nullable
+   public static String getSceneName(MemorySegment mem, int offset) {
+      return hasSceneName(mem, offset)
+         ? PacketIO.readVarString("SceneName", mem, offset + getValidatedOffset(mem, offset, 5, 13, "SceneName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getActorName(MemorySegment mem) {
+      return getActorName(mem, 0);
+   }
+
+   @Nullable
+   public static String getActorName(MemorySegment mem, int offset) {
+      return hasActorName(mem, offset)
+         ? PacketIO.readVarString("ActorName", mem, offset + getValidatedOffset(mem, offset, 9, 13, "ActorName"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSceneName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasActorName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static SetMachinimaActorModel toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetMachinimaActorModel toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetMachinimaActorModel", offset + 13, (int)mem.byteSize());
+      } else {
+         return new SetMachinimaActorModel(
+            hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 13, "Model")) : null,
+            hasSceneName(mem, offset)
+               ? PacketIO.readVarString("SceneName", mem, offset + getValidatedOffset(mem, offset, 5, 13, "SceneName"), 4096000, PacketIO.UTF8)
+               : null,
+            hasActorName(mem, offset)
+               ? PacketIO.readVarString("ActorName", mem, offset + getValidatedOffset(mem, offset, 9, 13, "ActorName"), 4096000, PacketIO.UTF8)
+               : null
+         );
+      }
    }
 
    @Override
@@ -175,6 +299,47 @@ public class SetMachinimaActorModel implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.sceneName != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.actorName != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 13;
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 1), varOffset - offset - 13);
+         varOffset += this.model.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 1), -1);
+      }
+
+      if (this.sceneName != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 5), varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.sceneName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 5), -1);
+      }
+
+      if (this.actorName != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 9), varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.actorName, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 9), -1);
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 13;
       if (this.model != null) {
@@ -199,15 +364,11 @@ public class SetMachinimaActorModel implements Packet, ToClientPacket {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 1) != 0) {
             int modelOffset = buffer.getIntLE(offset + 1);
-            if (modelOffset < 0) {
+            if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 13) {
                return ValidationResult.error("Invalid offset for Model");
             }
 
             int pos = offset + 13 + modelOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Model");
-            }
-
             ValidationResult modelResult = Model.validateStructure(buffer, pos);
             if (!modelResult.isValid()) {
                return ValidationResult.error("Invalid Model: " + modelResult.error());
@@ -218,16 +379,12 @@ public class SetMachinimaActorModel implements Packet, ToClientPacket {
 
          if ((nullBits & 2) != 0) {
             int sceneNameOffset = buffer.getIntLE(offset + 5);
-            if (sceneNameOffset < 0) {
+            if (sceneNameOffset < 0 || sceneNameOffset > buffer.writerIndex() - offset - 13) {
                return ValidationResult.error("Invalid offset for SceneName");
             }
 
-            int posx = offset + 13 + sceneNameOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for SceneName");
-            }
-
-            int sceneNameLen = VarInt.peek(buffer, posx);
+            int pos = offset + 13 + sceneNameOffset;
+            int sceneNameLen = VarInt.peek(buffer, pos);
             if (sceneNameLen < 0) {
                return ValidationResult.error("Invalid string length for SceneName");
             }
@@ -236,25 +393,21 @@ public class SetMachinimaActorModel implements Packet, ToClientPacket {
                return ValidationResult.error("SceneName exceeds max length 4096000");
             }
 
-            posx += VarInt.length(buffer, posx);
-            posx += sceneNameLen;
-            if (posx > buffer.writerIndex()) {
+            pos += VarInt.size(sceneNameLen);
+            pos += sceneNameLen;
+            if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading SceneName");
             }
          }
 
          if ((nullBits & 4) != 0) {
             int actorNameOffset = buffer.getIntLE(offset + 9);
-            if (actorNameOffset < 0) {
+            if (actorNameOffset < 0 || actorNameOffset > buffer.writerIndex() - offset - 13) {
                return ValidationResult.error("Invalid offset for ActorName");
             }
 
-            int posxx = offset + 13 + actorNameOffset;
-            if (posxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for ActorName");
-            }
-
-            int actorNameLen = VarInt.peek(buffer, posxx);
+            int posx = offset + 13 + actorNameOffset;
+            int actorNameLen = VarInt.peek(buffer, posx);
             if (actorNameLen < 0) {
                return ValidationResult.error("Invalid string length for ActorName");
             }
@@ -263,9 +416,9 @@ public class SetMachinimaActorModel implements Packet, ToClientPacket {
                return ValidationResult.error("ActorName exceeds max length 4096000");
             }
 
-            posxx += VarInt.length(buffer, posxx);
-            posxx += actorNameLen;
-            if (posxx > buffer.writerIndex()) {
+            posx += VarInt.size(actorNameLen);
+            posx += actorNameLen;
+            if (posx > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading ActorName");
             }
          }

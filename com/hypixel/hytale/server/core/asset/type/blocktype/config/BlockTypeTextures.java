@@ -144,6 +144,10 @@ public class BlockTypeTextures {
       return this.weight;
    }
 
+   public boolean isUniform() {
+      return this.up.equals(this.down) && this.up.equals(this.north) && this.up.equals(this.south) && this.up.equals(this.east) && this.up.equals(this.west);
+   }
+
    @Nonnull
    public BlockTextures toPacket(float totalWeight) {
       BlockTextures packet = new BlockTextures();

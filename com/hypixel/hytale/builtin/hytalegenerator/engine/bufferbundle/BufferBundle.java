@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.Buffer;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.type.BufferType;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.MemInstrument;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BufferBundle implements MemInstrument {
    @Nonnull
@@ -167,18 +167,17 @@ public class BufferBundle implements MemInstrument {
 
          assert this.bounds_bufferGrid.min.y == 0 && this.bounds_bufferGrid.max.y == 40;
 
-         Vector3i position_bufferGrid = this.bounds_bufferGrid.min.clone();
-         position_bufferGrid.setY(0);
+         Vector3i position_bufferGrid = new Vector3i(this.bounds_bufferGrid.min);
+         position_bufferGrid.y = 0;
          BufferBundle.Grid.TrackedBuffer[] trackedBuffersOutput = new BufferBundle.Grid.TrackedBuffer[40];
 
          for (position_bufferGrid.z = this.bounds_bufferGrid.min.z; position_bufferGrid.z < this.bounds_bufferGrid.max.z; position_bufferGrid.z++) {
             for (position_bufferGrid.x = this.bounds_bufferGrid.min.x; position_bufferGrid.x < this.bounds_bufferGrid.max.x; position_bufferGrid.x++) {
-               position_bufferGrid.setY(0);
+               position_bufferGrid.y = 0;
                this.grid.ensureBufferColumnExists(position_bufferGrid, trackedBuffersOutput);
                int i = 0;
 
                for (position_bufferGrid.y = 0; position_bufferGrid.y < 40; position_bufferGrid.y++) {
-                  position_bufferGrid.dropHash();
                   int index = GridUtils.toIndexFromPositionYXZ(position_bufferGrid, this.bounds_bufferGrid);
                   this.buffers[index] = trackedBuffersOutput[i];
                   i++;
@@ -297,7 +296,7 @@ public class BufferBundle implements MemInstrument {
             Vector3i positionClone_bufferGrid = new Vector3i(position_bufferGrid);
 
             for (int i = 0; i < trackedBuffersOut.length; i++) {
-               positionClone_bufferGrid.setY(i + 0);
+               positionClone_bufferGrid.y = i + 0;
                trackedBuffersOut[i] = this.buffers.get(positionClone_bufferGrid);
 
                assert trackedBuffersOut[i] != null;
@@ -362,7 +361,7 @@ public class BufferBundle implements MemInstrument {
          Vector3i removalPosition_bufferGrid = new Vector3i(position_bufferGrid);
 
          for (int y = 0; y < 40; y++) {
-            removalPosition_bufferGrid.setY(y);
+            removalPosition_bufferGrid.y = y;
             this.buffers.remove(removalPosition_bufferGrid);
          }
       }

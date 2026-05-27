@@ -111,7 +111,7 @@ public class OAuthClient {
                server.setExecutor(null);
                server.start();
                String authUrl = this.buildAuthUrl(encodedState, codeChallenge, redirectUri);
-               flow.onFlowInfo(authUrl);
+               flow.onFlowInfo(authUrl, formatVerificationCode(codeChallenge));
                String authCode = authCodeFuture.get(5L, TimeUnit.MINUTES);
                if (cancelled.get()) {
                   flow.onFailure("Authentication cancelled");
@@ -240,6 +240,11 @@ public class OAuthClient {
          + "&code_challenge="
          + URLEncoder.encode(codeChallenge, StandardCharsets.UTF_8)
          + "&code_challenge_method=S256";
+   }
+
+   private static String formatVerificationCode(String codeChallenge) {
+      String clean = codeChallenge.replaceAll("[^A-Za-z0-9]", "");
+      return clean.length() < 8 ? clean : clean.substring(0, 4) + "-" + clean.substring(4, 8);
    }
 
    @Nullable

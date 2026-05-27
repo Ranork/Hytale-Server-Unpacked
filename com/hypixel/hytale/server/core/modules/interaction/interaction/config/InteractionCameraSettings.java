@@ -6,12 +6,13 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.LegacyValidator;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.protocol.Direction;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
 
 public class InteractionCameraSettings implements NetworkSerializable<com.hypixel.hytale.protocol.InteractionCameraSettings> {
    public static final BuilderCodec<InteractionCameraSettings> CODEC = BuilderCodec.builder(InteractionCameraSettings.class, InteractionCameraSettings::new)
@@ -96,7 +97,7 @@ public class InteractionCameraSettings implements NetworkSerializable<com.hypixe
          .addValidator(Validators.greaterThan(0.0F))
          .add()
          .<Vector3f>appendInherited(
-            new KeyedCodec<>("Position", ProtocolCodecs.VECTOR3F), (o, i) -> o.position = i, o -> o.position, (o, p) -> o.position = p.position
+            new KeyedCodec<>("Position", Vector3fUtil.CODEC), (o, i) -> o.position = i, o -> o.position, (o, p) -> o.position = p.position
          )
          .addValidator(Validators.nonNull())
          .add()

@@ -1,7 +1,6 @@
 package com.hypixel.hytale.common.semver;
 
 import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.codec.function.FunctionCodec;
 import com.hypixel.hytale.common.util.StringUtil;
 import java.util.Arrays;
 import java.util.Objects;
@@ -9,7 +8,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class Semver implements Comparable<Semver> {
-   public static final Codec<Semver> CODEC = new FunctionCodec<>(Codec.STRING, Semver::fromString, Semver::toString);
+   public static final Codec<Semver> CODEC = SemverCodec.INSTANCE;
    private final long major;
    private final long minor;
    private final long patch;
@@ -22,11 +21,11 @@ public class Semver implements Comparable<Semver> {
 
    public Semver(long major, long minor, long patch, String[] preRelease, String build) {
       if (major < 0L) {
-         throw new IllegalArgumentException("Major must be a non-negative integers");
+         throw new IllegalArgumentException("Major must be a non-negative integer");
       } else if (minor < 0L) {
-         throw new IllegalArgumentException("Major must be a non-negative integers");
+         throw new IllegalArgumentException("Minor must be a non-negative integer");
       } else if (patch < 0L) {
-         throw new IllegalArgumentException("Major must be a non-negative integers");
+         throw new IllegalArgumentException("Patch must be a non-negative integer");
       } else {
          validatePreRelease(preRelease);
          validateBuild(build);
@@ -51,7 +50,11 @@ public class Semver implements Comparable<Semver> {
    }
 
    public String[] getPreRelease() {
-      return (String[])this.preRelease.clone();
+      return this.preRelease == null ? new String[0] : (String[])this.preRelease.clone();
+   }
+
+   public boolean hasPreRelease() {
+      return this.preRelease != null && this.preRelease.length > 0;
    }
 
    public String getBuild() {
@@ -69,10 +72,14 @@ public class Semver implements Comparable<Semver> {
          return Long.compare(this.minor, other.minor);
       } else if (this.patch != other.patch) {
          return Long.compare(this.patch, other.patch);
-      } else if (this.preRelease == null || other.preRelease != null && other.preRelease.length != 0) {
-         if ((this.preRelease == null || this.preRelease.length == 0) && other.preRelease != null) {
+      } else {
+         boolean thisHasPre = this.hasPreRelease();
+         boolean otherHasPre = other.hasPreRelease();
+         if (thisHasPre && !otherHasPre) {
+            return -1;
+         } else if (!thisHasPre && otherHasPre) {
             return 1;
-         } else if (this.preRelease == null) {
+         } else if (!thisHasPre) {
             return 0;
          } else {
             int i;
@@ -98,8 +105,6 @@ public class Semver implements Comparable<Semver> {
                return other.preRelease.length > i ? -1 : 0;
             }
          }
-      } else {
-         return -1;
       }
    }
 
@@ -125,22 +130,22 @@ public class Semver implements Comparable<Semver> {
 
    @Nonnull
    public static Semver fromString(String str, boolean strict) {
-      Objects.requireNonNull(str, "String can't be null!");
+      Objects.requireNonNull(str, "Semver string can't be null!");
       str = str.trim();
       if (str.isEmpty()) {
-         throw new IllegalArgumentException("String is empty!");
+         throw new IllegalArgumentException("Semver string is empty (input: '" + str + "')");
       } else {
          if (str.charAt(0) == '=' || str.charAt(0) == 'v') {
             str = str.substring(1);
          }
 
-         if (str.charAt(0) == '=' || str.charAt(0) == 'v') {
+         if (!str.isEmpty() && (str.charAt(0) == '=' || str.charAt(0) == 'v')) {
             str = str.substring(1);
          }
 
          str = str.trim();
          if (str.isEmpty()) {
-            throw new IllegalArgumentException("String is empty!");
+            throw new IllegalArgumentException("Semver string is empty after stripping leading '='/'v' (input: '" + str + "')");
          } else {
             String build = null;
             if (str.contains("+")) {
@@ -163,7 +168,7 @@ public class Semver implements Comparable<Semver> {
                if (split.length < 1) {
                   throw new IllegalArgumentException("String doesn't match <major>.<minor>.<patch> (" + str + ")");
                } else {
-                  long major = Long.parseLong(split[0]);
+                  long major = parseComponent(split[0], "Major", str);
                   if (major < 0L) {
                      throw new IllegalArgumentException("Major must be a non-negative integers (" + str + ")");
                   } else if (!strict && split.length == 1) {
@@ -171,7 +176,7 @@ public class Semver implements Comparable<Semver> {
                   } else if (split.length < 2) {
                      throw new IllegalArgumentException("String doesn't match <major>.<minor>.<patch> (" + str + ")");
                   } else {
-                     long minor = Long.parseLong(split[1]);
+                     long minor = parseComponent(split[1], "Minor", str);
                      if (minor < 0L) {
                         throw new IllegalArgumentException("Minor must be a non-negative integers (" + str + ")");
                      } else if (!strict && split.length == 2) {
@@ -179,29 +184,7 @@ public class Semver implements Comparable<Semver> {
                      } else if (split.length != 3) {
                         throw new IllegalArgumentException("String doesn't match <major>.<minor>.<patch> (" + str + ")");
                      } else {
-                        String patchStr = split[2];
-                        if (!strict && preRelease == null) {
-                           String pre = "";
-                           StringBuilder s = new StringBuilder();
-
-                           for (int i = 0; i < patchStr.length(); i++) {
-                              char c = patchStr.charAt(i);
-                              if (!Character.isDigit(c)) {
-                                 pre = patchStr.substring(i);
-                                 patchStr = s.toString();
-                                 break;
-                              }
-
-                              s.append(c);
-                           }
-
-                           if (!pre.trim().isEmpty()) {
-                              preRelease = pre.split("\\.");
-                              validatePreRelease(preRelease);
-                           }
-                        }
-
-                        long patch = Long.parseLong(patchStr);
+                        long patch = parseComponent(split[2], "Patch", str);
                         if (patch < 0L) {
                            throw new IllegalArgumentException("Patch must be a non-negative integers (" + str + ")");
                         } else {
@@ -214,6 +197,23 @@ public class Semver implements Comparable<Semver> {
                throw new IllegalArgumentException("Failed to parse digits (" + str + ")");
             }
          }
+      }
+   }
+
+   private static long parseComponent(@Nonnull String value, @Nonnull String component, @Nonnull String original) {
+      try {
+         return Long.parseLong(value);
+      } catch (NumberFormatException var4) {
+         throw new IllegalArgumentException(
+            "Invalid version '"
+               + original
+               + "': "
+               + component.toLowerCase()
+               + " must be a non-negative integer, got '"
+               + value
+               + "'. Expected format: <major>.<minor>.<patch>.",
+            var4
+         );
       }
    }
 

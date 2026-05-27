@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.asseteditor;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -45,34 +47,38 @@ public class AssetEditorSetupAssetTypes implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorSetupAssetTypes deserialize(@Nonnull ByteBuf buf, int offset) {
-      AssetEditorSetupAssetTypes obj = new AssetEditorSetupAssetTypes();
-      byte nullBits = buf.getByte(offset);
-      int pos = offset + 1;
-      if ((nullBits & 1) != 0) {
-         int assetTypesCount = VarInt.peek(buf, pos);
-         if (assetTypesCount < 0) {
-            throw ProtocolException.negativeLength("AssetTypes", assetTypesCount);
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorSetupAssetTypes", 1, buf.readableBytes() - offset);
+      } else {
+         AssetEditorSetupAssetTypes obj = new AssetEditorSetupAssetTypes();
+         byte nullBits = buf.getByte(offset);
+         int pos = offset + 1;
+         if ((nullBits & 1) != 0) {
+            int assetTypesCount = VarInt.peek(buf, pos);
+            if (assetTypesCount < 0) {
+               throw ProtocolException.invalidVarInt("AssetTypes");
+            }
+
+            int assetTypesVarLen = VarInt.size(assetTypesCount);
+            if (assetTypesCount > 4096000) {
+               throw ProtocolException.arrayTooLong("AssetTypes", assetTypesCount, 4096000);
+            }
+
+            if (pos + assetTypesVarLen + assetTypesCount * 3L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("AssetTypes", pos + assetTypesVarLen + assetTypesCount * 3, buf.readableBytes());
+            }
+
+            pos += assetTypesVarLen;
+            obj.assetTypes = new AssetEditorAssetType[assetTypesCount];
+
+            for (int i = 0; i < assetTypesCount; i++) {
+               obj.assetTypes[i] = AssetEditorAssetType.deserialize(buf, pos);
+               pos += AssetEditorAssetType.computeBytesConsumed(buf, pos);
+            }
          }
 
-         if (assetTypesCount > 4096000) {
-            throw ProtocolException.arrayTooLong("AssetTypes", assetTypesCount, 4096000);
-         }
-
-         int assetTypesVarLen = VarInt.size(assetTypesCount);
-         if (pos + assetTypesVarLen + assetTypesCount * 3L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("AssetTypes", pos + assetTypesVarLen + assetTypesCount * 3, buf.readableBytes());
-         }
-
-         pos += assetTypesVarLen;
-         obj.assetTypes = new AssetEditorAssetType[assetTypesCount];
-
-         for (int i = 0; i < assetTypesCount; i++) {
-            obj.assetTypes[i] = AssetEditorAssetType.deserialize(buf, pos);
-            pos += AssetEditorAssetType.computeBytesConsumed(buf, pos);
-         }
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -80,7 +86,7 @@ public class AssetEditorSetupAssetTypes implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += AssetEditorAssetType.computeBytesConsumed(buf, pos);
@@ -88,6 +94,90 @@ public class AssetEditorSetupAssetTypes implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static AssetEditorAssetType[] getAssetTypes(MemorySegment mem) {
+      return getAssetTypes(mem, 0);
+   }
+
+   @Nullable
+   public static AssetEditorAssetType[] getAssetTypes(MemorySegment mem, int offset) {
+      if (!hasAssetTypes(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("AssetTypes", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("AssetTypes", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("AssetTypes", off + lenOffset + len, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               AssetEditorAssetType[] data = new AssetEditorAssetType[len];
+
+               for (int i = 0; i < len; i++) {
+                  data[i] = AssetEditorAssetType.toObject(mem, off);
+                  off += data[i].computeSize();
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   public static boolean hasAssetTypes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorSetupAssetTypes toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorSetupAssetTypes toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorSetupAssetTypes", offset + 1, (int)mem.byteSize());
+      } else {
+         AssetEditorAssetType[] assetTypes = null;
+         if (hasAssetTypes(mem, offset)) {
+            int off = offset + 1;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("AssetTypes", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.arrayTooLong("AssetTypes", len, 4096000);
+            }
+
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("AssetTypes", off + lenOffset + len, (int)mem.byteSize());
+            }
+
+            off += lenOffset;
+            assetTypes = new AssetEditorAssetType[len];
+
+            for (int i = 0; i < len; i++) {
+               assetTypes[i] = AssetEditorAssetType.toObject(mem, off);
+               off += assetTypes[i].computeSize();
+            }
+         }
+
+         return new AssetEditorSetupAssetTypes(assetTypes);
+      }
    }
 
    @Override
@@ -109,6 +199,33 @@ public class AssetEditorSetupAssetTypes implements Packet, ToClientPacket {
             item.serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.assetTypes != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 1;
+      if (this.assetTypes != null) {
+         if (this.assetTypes.length > 4096000) {
+            throw ProtocolException.arrayTooLong("AssetTypes", this.assetTypes.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.assetTypes.length);
+         int assetTypesValueOffset = 0;
+
+         for (int i = 0; i < this.assetTypes.length; i++) {
+            assetTypesValueOffset += this.assetTypes[i].serialize(mem, varOffset + assetTypesValueOffset);
+         }
+
+         varOffset += assetTypesValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -143,7 +260,7 @@ public class AssetEditorSetupAssetTypes implements Packet, ToClientPacket {
                return ValidationResult.error("AssetTypes exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(assetTypesCount);
 
             for (int i = 0; i < assetTypesCount; i++) {
                ValidationResult structResult = AssetEditorAssetType.validateStructure(buffer, pos);

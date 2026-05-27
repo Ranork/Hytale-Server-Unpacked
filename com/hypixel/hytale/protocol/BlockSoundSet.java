@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -42,52 +43,71 @@ public class BlockSoundSet {
 
    @Nonnull
    public static BlockSoundSet deserialize(@Nonnull ByteBuf buf, int offset) {
-      BlockSoundSet obj = new BlockSoundSet();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         obj.moveInRepeatRange = FloatRange.deserialize(buf, offset + 1);
-      }
-
-      if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 17 + buf.getIntLE(offset + 9);
-         int idLen = VarInt.peek(buf, varPos0);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("BlockSoundSet", 17, buf.readableBytes() - offset);
+      } else {
+         BlockSoundSet obj = new BlockSoundSet();
+         byte nullBits = buf.getByte(offset);
+         if ((nullBits & 1) != 0) {
+            obj.moveInRepeatRange = FloatRange.deserialize(buf, offset + 1);
          }
 
-         if (idLen > 4096000) {
-            throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+         if ((nullBits & 2) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 9);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 17) {
+               throw ProtocolException.invalidOffset("Id", varPosBase0, buf.readableBytes());
+            }
+
+            int varPos0 = offset + 17 + varPosBase0;
+            int idLen = VarInt.peek(buf, varPos0);
+            if (idLen < 0) {
+               throw ProtocolException.invalidVarInt("Id");
+            }
+
+            int idVarIntLen = VarInt.size(idLen);
+            if (idLen > 4096000) {
+               throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+            }
+
+            if (varPos0 + idVarIntLen + idLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Id", varPos0 + idVarIntLen + idLen, buf.readableBytes());
+            }
+
+            obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
          }
 
-         obj.id = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
-      }
+         if ((nullBits & 4) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 13);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 17) {
+               throw ProtocolException.invalidOffset("SoundEventIndices", varPosBase1, buf.readableBytes());
+            }
 
-      if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 17 + buf.getIntLE(offset + 13);
-         int soundEventIndicesCount = VarInt.peek(buf, varPos1);
-         if (soundEventIndicesCount < 0) {
-            throw ProtocolException.negativeLength("SoundEventIndices", soundEventIndicesCount);
-         }
+            int varPos1 = offset + 17 + varPosBase1;
+            int soundEventIndicesCount = VarInt.peek(buf, varPos1);
+            if (soundEventIndicesCount < 0) {
+               throw ProtocolException.invalidVarInt("SoundEventIndices");
+            }
 
-         if (soundEventIndicesCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("SoundEventIndices", soundEventIndicesCount, 4096000);
-         }
+            int varIntLen = VarInt.size(soundEventIndicesCount);
+            if (soundEventIndicesCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("SoundEventIndices", soundEventIndicesCount, 4096000);
+            }
 
-         int varIntLen = VarInt.length(buf, varPos1);
-         obj.soundEventIndices = new HashMap<>(soundEventIndicesCount);
-         int dictPos = varPos1 + varIntLen;
+            obj.soundEventIndices = new HashMap<>(soundEventIndicesCount);
+            int dictPos = varPos1 + varIntLen;
 
-         for (int i = 0; i < soundEventIndicesCount; i++) {
-            BlockSoundEvent key = BlockSoundEvent.fromValue(buf.getByte(dictPos));
-            int val = buf.getIntLE(++dictPos);
-            dictPos += 4;
-            if (obj.soundEventIndices.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("soundEventIndices", key);
+            for (int i = 0; i < soundEventIndicesCount; i++) {
+               BlockSoundEvent key = BlockSoundEvent.fromValue(buf.getByte(dictPos));
+               int val = buf.getIntLE(++dictPos);
+               dictPos += 4;
+               if (obj.soundEventIndices.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("soundEventIndices", key);
+               }
             }
          }
-      }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -95,9 +115,13 @@ public class BlockSoundSet {
       int maxEnd = 17;
       if ((nullBits & 2) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 9);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("Id", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 17 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -105,9 +129,13 @@ public class BlockSoundSet {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 13);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 17) {
+            throw ProtocolException.invalidOffset("SoundEventIndices", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 17 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 = ++pos1 + 4;
@@ -119,6 +147,131 @@ public class BlockSoundSet {
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 9, 17, "Id"), 4096000, PacketIO.UTF8) : null;
+   }
+
+   @Nullable
+   public static Map<BlockSoundEvent, Integer> getSoundEventIndices(MemorySegment mem) {
+      return getSoundEventIndices(mem, 0);
+   }
+
+   @Nullable
+   public static Map<BlockSoundEvent, Integer> getSoundEventIndices(MemorySegment mem, int offset) {
+      if (!hasSoundEventIndices(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 13, 17, "SoundEventIndices");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("SoundEventIndices", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SoundEventIndices", len, 4096000);
+         } else {
+            Map<BlockSoundEvent, Integer> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               BlockSoundEvent key = BlockSoundEvent.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)off));
+               int value = mem.get(PacketIO.PROTO_INT, (long)(++off));
+               off += 4;
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("SoundEventIndices", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   @Nullable
+   public static FloatRange getMoveInRepeatRange(MemorySegment mem) {
+      return getMoveInRepeatRange(mem, 0);
+   }
+
+   @Nullable
+   public static FloatRange getMoveInRepeatRange(MemorySegment mem, int offset) {
+      return hasMoveInRepeatRange(mem, offset) ? FloatRange.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean hasMoveInRepeatRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasSoundEventIndices(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BlockSoundSet toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockSoundSet toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockSoundSet", offset + 17, (int)mem.byteSize());
+      } else {
+         Map<BlockSoundEvent, Integer> soundEventIndices = null;
+         if (hasSoundEventIndices(mem, offset)) {
+            int off = offset + getValidatedOffset(mem, offset, 13, 17, "SoundEventIndices");
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("SoundEventIndices", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("SoundEventIndices", len, 4096000);
+            }
+
+            soundEventIndices = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               BlockSoundEvent key = BlockSoundEvent.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)off));
+               int value = mem.get(PacketIO.PROTO_INT, (long)(++off));
+               off += 4;
+               if (soundEventIndices.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("SoundEventIndices", key);
+               }
+            }
+         }
+
+         return new BlockSoundSet(
+            hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + getValidatedOffset(mem, offset, 9, 17, "Id"), 4096000, PacketIO.UTF8) : null,
+            soundEventIndices,
+            hasMoveInRepeatRange(mem, offset) ? FloatRange.toObject(mem, offset + 1) : null
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -172,6 +325,55 @@ public class BlockSoundSet {
       }
    }
 
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.moveInRepeatRange != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.soundEventIndices != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      if (this.moveInRepeatRange != null) {
+         this.moveInRepeatRange.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 8L).fill((byte)0);
+      }
+
+      int varOffset = offset + 17;
+      if (this.id != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 9), varOffset - offset - 17);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 9), -1);
+      }
+
+      if (this.soundEventIndices != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 13), varOffset - offset - 17);
+         if (this.soundEventIndices.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("SoundEventIndices", this.soundEventIndices.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.soundEventIndices.size());
+
+         for (Entry<BlockSoundEvent, Integer> e : this.soundEventIndices.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, (long)varOffset, (byte)e.getKey().getValue());
+            mem.set(PacketIO.PROTO_INT, (long)(++varOffset), e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 13), -1);
+      }
+
+      return varOffset - offset;
+   }
+
    public int computeSize() {
       int size = 17;
       if (this.id != null) {
@@ -192,15 +394,11 @@ public class BlockSoundSet {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 2) != 0) {
             int idOffset = buffer.getIntLE(offset + 9);
-            if (idOffset < 0) {
+            if (idOffset < 0 || idOffset > buffer.writerIndex() - offset - 17) {
                return ValidationResult.error("Invalid offset for Id");
             }
 
             int pos = offset + 17 + idOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Id");
-            }
-
             int idLen = VarInt.peek(buffer, pos);
             if (idLen < 0) {
                return ValidationResult.error("Invalid string length for Id");
@@ -210,7 +408,7 @@ public class BlockSoundSet {
                return ValidationResult.error("Id exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(idLen);
             pos += idLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Id");
@@ -219,15 +417,11 @@ public class BlockSoundSet {
 
          if ((nullBits & 4) != 0) {
             int soundEventIndicesOffset = buffer.getIntLE(offset + 13);
-            if (soundEventIndicesOffset < 0) {
+            if (soundEventIndicesOffset < 0 || soundEventIndicesOffset > buffer.writerIndex() - offset - 17) {
                return ValidationResult.error("Invalid offset for SoundEventIndices");
             }
 
             int posx = offset + 17 + soundEventIndicesOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for SoundEventIndices");
-            }
-
             int soundEventIndicesCount = VarInt.peek(buffer, posx);
             if (soundEventIndicesCount < 0) {
                return ValidationResult.error("Invalid dictionary count for SoundEventIndices");
@@ -237,9 +431,14 @@ public class BlockSoundSet {
                return ValidationResult.error("SoundEventIndices exceeds max length 4096000");
             }
 
-            posx += VarInt.length(buffer, posx);
+            posx += VarInt.size(soundEventIndicesCount);
 
             for (int i = 0; i < soundEventIndicesCount; i++) {
+               int v = buffer.getByte(posx) & 255;
+               if (v >= 9) {
+                  return ValidationResult.error("Invalid BlockSoundEvent value for key");
+               }
+
                posx = ++posx + 4;
                if (posx > buffer.writerIndex()) {
                   return ValidationResult.error("Buffer overflow reading value");

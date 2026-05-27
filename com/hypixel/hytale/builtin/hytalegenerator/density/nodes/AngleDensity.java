@@ -3,8 +3,8 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.VectorProvider;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class AngleDensity extends Density {
    private static final double HALF_PI = Math.PI / 2;
@@ -19,7 +19,7 @@ public class AngleDensity extends Density {
    private final VectorProvider.Context rVectorProviderContext;
 
    public AngleDensity(@Nonnull VectorProvider vectorProvider, @Nonnull Vector3d vector, boolean toAxis) {
-      this.vector = vector.clone();
+      this.vector = new Vector3d(vector);
       this.vectorProvider = vectorProvider;
       this.toAxis = toAxis;
       this.rOtherVector = new Vector3d();

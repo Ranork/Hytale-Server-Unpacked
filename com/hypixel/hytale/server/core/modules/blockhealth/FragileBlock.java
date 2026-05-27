@@ -1,9 +1,11 @@
 package com.hypixel.hytale.server.core.modules.blockhealth;
 
-import io.netty.buffer.ByteBuf;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public class FragileBlock implements Cloneable {
+   public static final int BYTE_SIZE = 4;
    private float durationSeconds;
 
    public FragileBlock(float durationSeconds) {
@@ -21,12 +23,12 @@ public class FragileBlock implements Cloneable {
       this.durationSeconds = durationSeconds;
    }
 
-   public void deserialize(@Nonnull ByteBuf buf, byte version) {
-      this.durationSeconds = buf.readFloat();
+   public void deserialize(@Nonnull MemorySegment data, int offset, byte version) {
+      this.durationSeconds = data.get(MemorySegmentUtil.FLOAT_BE, (long)offset);
    }
 
-   public void serialize(@Nonnull ByteBuf buf) {
-      buf.writeFloat(this.durationSeconds);
+   public void serialize(@Nonnull MemorySegment data, int offset) {
+      data.set(MemorySegmentUtil.FLOAT_BE, (long)offset, this.durationSeconds);
    }
 
    @Nonnull

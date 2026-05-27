@@ -13,6 +13,7 @@ import com.hypixel.hytale.builtin.deployables.config.DeployableTrapConfig;
 import com.hypixel.hytale.builtin.deployables.config.DeployableTrapSpawnerConfig;
 import com.hypixel.hytale.builtin.deployables.config.DeployableTurretConfig;
 import com.hypixel.hytale.builtin.deployables.interaction.SpawnDeployableAtHitLocationInteraction;
+import com.hypixel.hytale.builtin.deployables.interaction.SpawnDeployableAtLocationInteraction;
 import com.hypixel.hytale.builtin.deployables.interaction.SpawnDeployableFromRaycastInteraction;
 import com.hypixel.hytale.builtin.deployables.system.DeployablesSystem;
 import com.hypixel.hytale.component.ComponentRegistryProxy;
@@ -68,6 +69,7 @@ public class DeployablesPlugin extends JavaPlugin {
       DeployableConfig.CODEC.register("Aoe", DeployableAoeConfig.class, DeployableAoeConfig.CODEC);
       DeployableConfig.CODEC.register("Turret", DeployableTurretConfig.class, DeployableTurretConfig.CODEC);
       Interaction.CODEC.register("SpawnDeployableAtHitLocation", SpawnDeployableAtHitLocationInteraction.class, SpawnDeployableAtHitLocationInteraction.CODEC);
+      Interaction.CODEC.register("SpawnDeployableAtLocation", SpawnDeployableAtLocationInteraction.class, SpawnDeployableAtLocationInteraction.CODEC);
       Interaction.CODEC.register("SpawnDeployableFromRaycast", SpawnDeployableFromRaycastInteraction.class, SpawnDeployableFromRaycastInteraction.CODEC);
       entityStoreRegistry.registerSystem(new DeployablesSystem.DeployableTicker());
       entityStoreRegistry.registerSystem(new DeployablesSystem.DeployableRegisterer());

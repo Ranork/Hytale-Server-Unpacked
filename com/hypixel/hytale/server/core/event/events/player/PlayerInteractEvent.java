@@ -2,13 +2,13 @@ package com.hypixel.hytale.server.core.event.events.player;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.ICancellable;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 @Deprecated
 public class PlayerInteractEvent extends PlayerEvent<String> implements ICancellable {

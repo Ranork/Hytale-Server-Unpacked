@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.EnumSetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.FloatHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.IntHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleRangeValidator;
@@ -15,10 +16,14 @@ import com.hypixel.hytale.server.npc.asset.builder.validators.RelationalOperator
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderBodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.BodyMotionWanderBase;
 import com.hypixel.hytale.server.npc.instructions.BodyMotion;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
+import java.util.EnumSet;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public abstract class BuilderBodyMotionWanderBase extends BuilderBodyMotionBase {
+   private static final String[] AVOID_OR_RELAXED_ATTRIBUTES = new String[]{"AvoidBlockDamage", "RelaxedConstraints"};
+   private static final String[] LEGACY_OR_RELAXED_ATTRIBUTES = new String[]{"RelaxedMoveConstraints", "RelaxedConstraints"};
    protected final DoubleHolder minWalkTime = new DoubleHolder();
    protected final DoubleHolder maxWalkTime = new DoubleHolder();
    protected final FloatHolder minHeadingChange = new FloatHolder();
@@ -28,9 +33,12 @@ public abstract class BuilderBodyMotionWanderBase extends BuilderBodyMotionBase 
    protected final DoubleHolder minMoveDistance = new DoubleHolder();
    protected final DoubleHolder stopDistance = new DoubleHolder();
    protected final BooleanHolder isAvoidingBlockDamage = new BooleanHolder();
-   protected final BooleanHolder isRelaxedMoveConstraints = new BooleanHolder();
+   protected final BooleanHolder isLegacyRelaxedMoveConstraints = new BooleanHolder();
+   protected final EnumSetHolder<RelaxedConstraint> relaxedConstraints = new EnumSetHolder<>();
    protected final IntHolder testsPerTick = new IntHolder();
    protected final DoubleHolder desiredAltitudeWeight = new DoubleHolder();
+   private final boolean[] avoidOrRelaxedPresent = new boolean[2];
+   private final boolean[] legacyOrRelaxedPresent = new boolean[2];
 
    @Nullable
    public BodyMotionWanderBase build(@Nonnull BuilderSupport builderSupport) {
@@ -115,18 +123,31 @@ public abstract class BuilderBodyMotionWanderBase extends BuilderBodyMotionBase 
          data, "StopDistance", this.stopDistance, 0.5, DoubleSingleValidator.greater0(), BuilderDescriptorState.Stable, "Distance to stop at target", null
       );
       this.getInt(data, "TestsPerTick", this.testsPerTick, 1, IntSingleValidator.greater0(), BuilderDescriptorState.Stable, "Direction tests per tick", null);
-      this.getBoolean(
-         data, "AvoidBlockDamage", this.isAvoidingBlockDamage, true, BuilderDescriptorState.Stable, "Should avoid environmental damage from blocks", null
+      this.avoidOrRelaxedPresent[0] = this.getBoolean(
+         data, "AvoidBlockDamage", this.isAvoidingBlockDamage, true, BuilderDescriptorState.Deprecated, "Should avoid environmental damage from blocks", null
       );
-      this.getBoolean(
+      this.legacyOrRelaxedPresent[0] = this.getBoolean(
          data,
          "RelaxedMoveConstraints",
-         this.isRelaxedMoveConstraints,
+         this.isLegacyRelaxedMoveConstraints,
          false,
-         BuilderDescriptorState.Stable,
+         BuilderDescriptorState.Deprecated,
          "NPC can do movements like wading (depends on motion controller type)",
          null
       );
+      this.avoidOrRelaxedPresent[1] = this.getEnumSet(
+         data,
+         "RelaxedConstraints",
+         this.relaxedConstraints,
+         RelaxedConstraint.class,
+         EnumSet.noneOf(RelaxedConstraint.class),
+         BuilderDescriptorState.Stable,
+         "List of constraints to relax for this motion (new mode; empty = no relaxed constraints)",
+         null
+      );
+      this.legacyOrRelaxedPresent[1] = this.avoidOrRelaxedPresent[1];
+      this.validateOneOrNonePresent(AVOID_OR_RELAXED_ATTRIBUTES, this.avoidOrRelaxedPresent);
+      this.validateOneOrNonePresent(LEGACY_OR_RELAXED_ATTRIBUTES, this.legacyOrRelaxedPresent);
       this.getDouble(
          data,
          "DesiredAltitudeWeight",
@@ -178,8 +199,17 @@ public abstract class BuilderBodyMotionWanderBase extends BuilderBodyMotionBase 
       return this.isAvoidingBlockDamage.get(support.getExecutionContext());
    }
 
-   public boolean isRelaxedMoveConstraints(@Nonnull BuilderSupport support) {
-      return this.isRelaxedMoveConstraints.get(support.getExecutionContext());
+   public boolean isLegacyRelaxedMoveConstraints(@Nonnull BuilderSupport support) {
+      return this.isLegacyRelaxedMoveConstraints.get(support.getExecutionContext());
+   }
+
+   @Nonnull
+   public EnumSet<RelaxedConstraint> getRelaxedConstraints(@Nonnull BuilderSupport support) {
+      return this.relaxedConstraints.get(support.getExecutionContext());
+   }
+
+   public boolean isRelaxedConstraintsPresent() {
+      return this.avoidOrRelaxedPresent[1];
    }
 
    public int getTestsPerTick(@Nonnull BuilderSupport support) {

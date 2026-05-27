@@ -160,6 +160,17 @@ public class PrefabStore {
       return result;
    }
 
+   @Nonnull
+   public List<PrefabStore.AssetPackPrefabPath> getAllBrowsablePrefabPaths() {
+      List<PrefabStore.AssetPackPrefabPath> result = new ObjectArrayList(this.getAllAssetPrefabPaths());
+      Path serverPath = this.getServerPrefabsPath();
+      if (Files.isDirectory(serverPath)) {
+         result.add(new PrefabStore.AssetPackPrefabPath(null, serverPath));
+      }
+
+      return result;
+   }
+
    @Nullable
    public BlockSelection getAssetPrefabFromAnyPack(@Nonnull String key) {
       for (AssetPack pack : AssetModule.get().getAssetPacks()) {

@@ -4,8 +4,10 @@ import com.hypixel.hytale.protocol.ItemQuantity;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -56,9 +58,40 @@ public class DropCreativeItem implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static ItemQuantity getItem(MemorySegment mem) {
+      return getItem(mem, 0);
+   }
+
+   public static ItemQuantity getItem(MemorySegment mem, int offset) {
+      return ItemQuantity.toObject(mem, offset + 0);
+   }
+
+   public static DropCreativeItem toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static DropCreativeItem toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DropCreativeItem", offset + 0, (int)mem.byteSize());
+      } else {
+         return new DropCreativeItem(ItemQuantity.toObject(mem, offset + 0));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       this.item.serialize(buf);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      varOffset += this.item.serialize(mem, varOffset);
+      return varOffset - offset;
    }
 
    @Override

@@ -1,10 +1,12 @@
 package com.hypixel.hytale.server.core.universe.world.chunk.section;
 
+import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
-import io.netty.buffer.Unpooled;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.BitSet;
+import java.util.HexFormat;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -13,30 +15,18 @@ public class ChunkLightDataBuilder extends ChunkLightData {
    protected BitSet currentSegments;
 
    public ChunkLightDataBuilder(short changeId) {
-      super(null, changeId);
+      super(Arena.ofAuto(), null, changeId);
    }
 
    public ChunkLightDataBuilder(@Nonnull ChunkLightData lightData, short changeId) {
-      super(lightData.light != null ? lightData.light.copy() : null, changeId);
+      super(lightData.lightData, changeId);
       if (lightData instanceof ChunkLightDataBuilder) {
          throw new IllegalArgumentException("ChunkLightDataBuilder light data isn't compacted so we can't read this cleanly atm");
       } else {
-         if (this.light != null) {
-            this.currentSegments = new BitSet();
-            this.currentSegments.set(0);
-            findSegments(this.light, 0, this.currentSegments);
-         }
-      }
-   }
-
-   protected static void findSegments(@Nonnull ByteBuf light, int position, @Nonnull BitSet currentSegments) {
-      int mask = light.getByte(position * 17);
-
-      for (int i = 0; i < 8; i++) {
-         int val = light.getUnsignedShort(position * 17 + i * 2 + 1);
-         if ((mask >> i & 1) == 1) {
-            currentSegments.set(val);
-            findSegments(light, val, currentSegments);
+         if (this.lightData != null) {
+            int segmentCount = (int)(this.lightData.byteSize() / 17L);
+            this.currentSegments = new BitSet(segmentCount);
+            this.currentSegments.set(0, segmentCount);
          }
       }
    }
@@ -71,8 +61,8 @@ public class ChunkLightDataBuilder extends ChunkLightData {
 
    public void setLightRaw(int index, short value) {
       if (index >= 0 && index < 32768) {
-         if (this.light == null) {
-            this.light = Unpooled.buffer(2176);
+         if (this.lightData == null) {
+            this.lightData = this.arena.allocate(2176L);
          }
 
          if (this.currentSegments == null) {
@@ -80,7 +70,7 @@ public class ChunkLightDataBuilder extends ChunkLightData {
             this.currentSegments.set(0);
          }
 
-         setTraverse(this.light, this.currentSegments, index, 0, 0, value);
+         this.setTraverse(this.currentSegments, index, 0, 0, value);
       } else {
          throw new IllegalArgumentException("Index " + index + " is outside of the bounds!");
       }
@@ -88,147 +78,59 @@ public class ChunkLightDataBuilder extends ChunkLightData {
 
    @Nonnull
    public ChunkLightData build() {
-      if (this.light == null) {
+      if (this.lightData == null) {
          return new ChunkLightData(null, this.changeId);
       } else {
-         ByteBuf buffer = Unpooled.buffer(this.currentSegments.cardinality() * 17);
-         buffer.writerIndex(17);
-         this.serializeOctree(buffer, 0, 0);
-         return new ChunkLightData(buffer, this.changeId);
+         Arena arena = Arena.ofAuto();
+         int cardinality = this.currentSegments.cardinality();
+         MemorySegment buffer = arena.allocate(cardinality * 17L);
+         if (cardinality == this.currentSegments.length()) {
+            MemorySegment.copy(this.lightData, 0L, buffer, 0L, buffer.byteSize());
+            return new ChunkLightData(arena, buffer, this.changeId);
+         } else {
+            this.serializeOctree(buffer, 0, 0);
+            return new ChunkLightData(arena, buffer, this.changeId);
+         }
       }
    }
 
-   private int serializeOctree(@Nonnull ByteBuf to, int position, int segmentIndex) {
+   private int serializeOctree(@Nonnull MemorySegment to, int position, int segmentIndex) {
       int toPosition = segmentIndex;
-      int mask = this.light.getByte(position * 17);
-      to.setByte(segmentIndex * 17, mask);
+      int mask = this.lightData.get(VL_BYTE, position * 17L);
+      to.set(VL_BYTE, segmentIndex * 17L, (byte)mask);
 
       for (int i = 0; i < 8; i++) {
-         int val = this.light.getUnsignedShort(position * 17 + i * 2 + 1);
+         int val = Short.toUnsignedInt(this.lightData.get(VL_SHORT, position * 17L + i * 2 + 1L));
          if ((mask >> i & 1) == 1) {
-            to.ensureWritable(17);
-            to.writerIndex((++segmentIndex + 1) * 17);
+            segmentIndex++;
             int from = val;
             val = segmentIndex;
             segmentIndex = this.serializeOctree(to, from, segmentIndex);
          }
 
-         to.setShort(toPosition * 17 + i * 2 + 1, val);
+         to.set(VL_SHORT, toPosition * 17L + i * 2 + 1L, (short)val);
       }
 
       return segmentIndex;
    }
 
    @Nullable
-   private static ChunkLightDataBuilder.Res setTraverse(@Nonnull ByteBuf local, @Nonnull BitSet currentSegments, int index, int pointer, int depth, short value) {
+   private ChunkLightDataBuilder.Res setTraverse(@Nonnull BitSet currentSegments, int index, int pointer, int depth, short value) {
       int headerLocation = pointer * 17;
-      byte i = local.getByte(headerLocation);
+      byte i = this.lightData.get(VL_BYTE, (long)headerLocation);
       int innerIndex = index >> 12 - depth & 7;
       int position = innerIndex * 2 + headerLocation + 1;
-      short currentValue = local.getShort(position);
+      short currentValue = this.lightData.get(VL_SHORT, (long)position);
 
       try {
          if ((i >> innerIndex & 1) == 1) {
-            int currentValueMasked = currentValue & '\uffff';
-            if (depth == 12) {
-               throw new RuntimeException(
-                  "Discovered branch at deepest point in octree! Mask "
-                     + i
-                     + " innerIndex "
-                     + innerIndex
-                     + " depth "
-                     + depth
-                     + " setValue "
-                     + value
-                     + " currentValue "
-                     + currentValue
-                     + " at index "
-                     + index
-                     + " pointer "
-                     + pointer
-               );
-            }
-
-            if (setTraverse(local, currentSegments, index, currentValueMasked, depth + 3, value) != null) {
-               currentSegments.clear(currentValueMasked);
-               local.setShort(position, value);
-               int mask = ~(1 << innerIndex);
-               i = (byte)(i & mask);
-               local.setByte(headerLocation, i);
-               if (i == 0) {
-                  for (int j = 0; j < 8; j++) {
-                     short s = local.getShort(j * 2 + headerLocation + 1);
-                     if (s != value) {
-                        return null;
-                     }
-                  }
-
-                  return ChunkLightDataBuilder.Res.INSTANCE;
-               }
-            }
-         } else if (value != currentValue) {
-            if (depth > 12) {
-               throw new IllegalStateException(
-                  "Somehow have invalid octree state: "
-                     + octreeToString(local)
-                     + " when setTraverse("
-                     + index
-                     + ", "
-                     + pointer
-                     + ", "
-                     + depth
-                     + ", "
-                     + value
-                     + ");"
-               );
-            }
-
-            if (depth == 12) {
-               byte[] bytes = null;
-               if (DEBUG) {
-                  bytes = new byte[17];
-                  local.getBytes(headerLocation, bytes, 0, bytes.length);
-               }
-
-               local.setShort(position, value);
-
-               for (int jx = 0; jx < 8; jx++) {
-                  short s = local.getShort(jx * 2 + headerLocation + 1);
-                  if (s != value) {
-                     return null;
-                  }
-               }
-
-               return DEBUG ? new ChunkLightDataBuilder.Res(ByteBufUtil.hexDump(bytes)) : ChunkLightDataBuilder.Res.INSTANCE;
-            }
-
-            i = (byte)(i | 1 << innerIndex);
-            local.setByte(headerLocation, i);
-            int newSegmentIndex = growSegment(local, currentSegments, currentValue);
-            local.setShort(position, newSegmentIndex);
-            ChunkLightDataBuilder.Res out = setTraverse(local, currentSegments, index, newSegmentIndex, depth + 3, value);
-            if (out != null) {
-               throw new RuntimeException(
-                  "Created new segment that instantly collapsed with ("
-                     + index
-                     + ", "
-                     + pointer
-                     + ", "
-                     + depth
-                     + ", "
-                     + value
-                     + "): with currentValue mismatch "
-                     + currentValue
-                     + " res "
-                     + out
-               );
-            }
-
-            return null;
+            return this.setTraverseBranch(currentSegments, index, pointer, depth, value, headerLocation, i, innerIndex, position, currentValue);
+         } else {
+            return value != currentValue
+               ? this.setTraverseLeaf(currentSegments, index, pointer, depth, value, headerLocation, i, innerIndex, position, currentValue)
+               : null;
          }
-
-         return null;
-      } catch (Throwable var15) {
+      } catch (Throwable var12) {
          throw new RuntimeException(
             "Failed to setTraverse("
                + index
@@ -246,24 +148,151 @@ public class ChunkLightDataBuilder extends ChunkLightData {
                + position
                + ", currentValue "
                + currentValue,
-            var15
+            var12
          );
       }
    }
 
-   protected static int growSegment(@Nonnull ByteBuf local, @Nonnull BitSet currentSegments, short val) {
-      int newSegmentIndex = currentSegments.nextClearBit(0);
-      currentSegments.set(newSegmentIndex);
-      int currentCapacity = local.capacity();
-      if (currentCapacity <= (newSegmentIndex + 1) * 17) {
-         int newCap = currentCapacity + 1088;
-         local.capacity(newCap);
+   @Nullable
+   private ChunkLightDataBuilder.Res setTraverseBranch(
+      @Nonnull BitSet currentSegments,
+      int index,
+      int pointer,
+      int depth,
+      short value,
+      int headerLocation,
+      byte i,
+      int innerIndex,
+      int position,
+      short currentValue
+   ) {
+      int currentValueMasked = currentValue & '\uffff';
+      if (depth == 12) {
+         throw new RuntimeException(
+            "Discovered branch at deepest point in octree! Mask "
+               + i
+               + " innerIndex "
+               + innerIndex
+               + " depth "
+               + depth
+               + " setValue "
+               + value
+               + " currentValue "
+               + currentValue
+               + " at index "
+               + index
+               + " pointer "
+               + pointer
+         );
+      } else {
+         if (this.setTraverse(currentSegments, index, currentValueMasked, depth + 3, value) != null) {
+            currentSegments.clear(currentValueMasked);
+            this.lightData.set(VL_SHORT, (long)position, value);
+            int mask = ~(1 << innerIndex);
+            i = (byte)(i & mask);
+            this.lightData.set(VL_BYTE, (long)headerLocation, i);
+            if (i == 0 && this.allLeavesEqual(headerLocation, value)) {
+               return ChunkLightDataBuilder.Res.INSTANCE;
+            }
+         }
+
+         return null;
+      }
+   }
+
+   @Nullable
+   private ChunkLightDataBuilder.Res setTraverseLeaf(
+      @Nonnull BitSet currentSegments,
+      int index,
+      int pointer,
+      int depth,
+      short value,
+      int headerLocation,
+      byte i,
+      int innerIndex,
+      int position,
+      short currentValue
+   ) {
+      if (depth > 12) {
+         throw new IllegalStateException(
+            "Somehow have invalid octree state: "
+               + octreeToString(this.lightData)
+               + " when setTraverse("
+               + index
+               + ", "
+               + pointer
+               + ", "
+               + depth
+               + ", "
+               + value
+               + ");"
+         );
+      } else if (depth == 12) {
+         byte[] bytes = null;
+         if (DEBUG) {
+            bytes = this.lightData.asSlice(headerLocation, 17L).toArray(ValueLayout.JAVA_BYTE);
+         }
+
+         this.lightData.set(VL_SHORT, (long)position, value);
+         if (!this.allLeavesEqual(headerLocation, value)) {
+            return null;
+         } else {
+            return DEBUG ? new ChunkLightDataBuilder.Res(HexFormat.of().formatHex(bytes)) : ChunkLightDataBuilder.Res.INSTANCE;
+         }
+      } else {
+         i = (byte)(i | 1 << innerIndex);
+         this.lightData.set(VL_BYTE, (long)headerLocation, i);
+         int newSegmentIndex = this.growSegment(currentSegments, currentValue);
+         this.lightData.set(VL_SHORT, (long)position, (short)newSegmentIndex);
+         ChunkLightDataBuilder.Res out = this.setTraverse(currentSegments, index, newSegmentIndex, depth + 3, value);
+         if (out != null) {
+            throw new RuntimeException(
+               "Created new segment that instantly collapsed with ("
+                  + index
+                  + ", "
+                  + pointer
+                  + ", "
+                  + depth
+                  + ", "
+                  + value
+                  + "): with currentValue mismatch "
+                  + currentValue
+                  + " res "
+                  + out
+            );
+         } else {
+            return null;
+         }
+      }
+   }
+
+   private boolean allLeavesEqual(int headerLocation, short value) {
+      for (int j = 0; j < 8; j++) {
+         short s = this.lightData.get(VL_SHORT, (long)(j * 2) + headerLocation + 1L);
+         if (s != value) {
+            return false;
+         }
       }
 
-      local.setByte(newSegmentIndex * 17, 0);
+      return true;
+   }
+
+   protected int growSegment(@Nonnull BitSet currentSegments, short val) {
+      int newSegmentIndex = currentSegments.nextClearBit(0);
+      currentSegments.set(newSegmentIndex);
+      long currentCapacity = this.lightData.byteSize();
+      long newSize = (newSegmentIndex + 1) * 17L;
+      if (currentCapacity < newSize) {
+         int newCap = Math.max(ArrayUtil.grow((int)currentCapacity), (int)newSize);
+         MemorySegment old = this.lightData;
+         this.lightData = this.arena.allocate(newCap);
+         this.lightData.copyFrom(old);
+      }
+
+      this.lightData.set(VL_BYTE, newSegmentIndex * 17L, (byte)0);
 
       for (int j = 0; j < 8; j++) {
-         local.setShort(newSegmentIndex * 17 + j * 2 + 1, val);
+         this.lightData.set(VL_SHORT, newSegmentIndex * 17L + j * 2 + 1L, val);
       }
 
       return newSegmentIndex;
@@ -271,11 +300,11 @@ public class ChunkLightDataBuilder extends ChunkLightData {
 
    @Nonnull
    public String toStringOctree() {
-      return this.light == null ? "NULL" : octreeToString(this.light);
+      return this.lightData == null ? "NULL" : octreeToString(this.lightData);
    }
 
    @Nonnull
-   public static String octreeToString(@Nonnull ByteBuf buffer) {
+   public static String octreeToString(@Nonnull MemorySegment buffer) {
       StringBuffer out = new StringBuffer();
 
       try {
@@ -287,12 +316,12 @@ public class ChunkLightDataBuilder extends ChunkLightData {
       return out.toString();
    }
 
-   public static void octreeToString(@Nonnull ByteBuf buffer, int pointer, @Nonnull StringBuffer out, int recursion) {
-      int i = buffer.getByte(pointer * 17);
+   public static void octreeToString(@Nonnull MemorySegment buffer, int pointer, @Nonnull StringBuffer out, int recursion) {
+      int i = buffer.get(VL_BYTE, pointer * 17L);
 
       for (int j = 0; j < 8; j++) {
          int loc = pointer * 17 + j * 2 + 1;
-         int s = buffer.getUnsignedShort(loc);
+         int s = Short.toUnsignedInt(buffer.get(VL_SHORT, (long)loc));
          out.append("\t".repeat(Math.max(0, recursion)));
          if ((i & 1 << j) != 0) {
             out.append("SUBTREE AT ").append(j).append('\n');

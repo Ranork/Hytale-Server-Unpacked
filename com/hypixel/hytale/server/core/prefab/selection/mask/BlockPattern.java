@@ -174,7 +174,7 @@ public class BlockPattern {
          }
       } catch (NumberFormatException var4) {
          blockText = blockText.replace(";", ",");
-         int oldData = blockText.indexOf(124);
+         int oldData = blockText.indexOf("|");
          if (oldData != -1) {
             blockText = blockText.substring(0, oldData);
          }
@@ -187,6 +187,29 @@ public class BlockPattern {
       }
 
       return blockId;
+   }
+
+   public static boolean canParseBlock(@Nonnull String blockText) {
+      try {
+         int blockId = Integer.parseInt(blockText);
+         if (BlockType.getAssetMap().getAsset(blockId) == null) {
+            throw new IllegalArgumentException("Block with id '" + blockText + "' doesn't exist!");
+         }
+      } catch (NumberFormatException var4) {
+         blockText = blockText.replace(";", ",");
+         int oldData = blockText.indexOf("|");
+         if (oldData != -1) {
+            blockText = blockText.substring(0, oldData);
+         }
+
+         int blockIdx = BlockType.getAssetMap().getIndex(blockText);
+         if (blockIdx == Integer.MIN_VALUE) {
+            LOGGER.at(Level.WARNING).log("Invalid block name '%s' - using empty block", blockText);
+            return false;
+         }
+      }
+
+      return true;
    }
 
    @Nullable
@@ -238,17 +261,17 @@ public class BlockPattern {
          int filler = 0;
          if (key.contains("|Filler=")) {
             int start = key.indexOf("|Filler=") + "|Filler=".length();
-            int firstComma = key.indexOf(44, start);
+            int firstComma = key.indexOf(",", start);
             if (firstComma == -1) {
                throw new IllegalArgumentException("Invalid filler metadata! Missing comma");
             }
 
-            int secondComma = key.indexOf(44, firstComma + 1);
+            int secondComma = key.indexOf(",", firstComma + 1);
             if (secondComma == -1) {
                throw new IllegalArgumentException("Invalid filler metadata! Missing second comma");
             }
 
-            int end = key.indexOf(124, start);
+            int end = key.indexOf("|", start);
             if (end == -1) {
                end = key.length();
             }
@@ -284,7 +307,7 @@ public class BlockPattern {
 
          if (key.contains("|Roll=")) {
             int startx = key.indexOf("|Roll=") + "|Roll=".length();
-            int end = key.indexOf(124, startx);
+            int end = key.indexOf("|", startx);
             if (end == -1) {
                end = key.length();
             }
@@ -292,7 +315,7 @@ public class BlockPattern {
             rotationRoll = Rotation.ofDegrees(Integer.parseInt(key, startx, end, 10));
          }
 
-         int end = key.indexOf(124);
+         int end = key.indexOf("|");
          if (end == -1) {
             end = key.length();
          }

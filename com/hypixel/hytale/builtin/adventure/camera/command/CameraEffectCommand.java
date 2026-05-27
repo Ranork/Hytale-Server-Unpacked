@@ -27,6 +27,7 @@ public class CameraEffectCommand extends AbstractCommandCollection {
 
    public CameraEffectCommand() {
       super("camshake", "server.commands.camshake.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new CameraEffectCommand.DamageCommand());
       this.addSubCommand(new CameraEffectCommand.DebugCommand());
    }

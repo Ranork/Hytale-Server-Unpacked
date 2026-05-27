@@ -1,7 +1,9 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public final class CachedPacket<T extends ToClientPacket> implements ToClientPacket, AutoCloseable {
@@ -44,6 +46,12 @@ public final class CachedPacket<T extends ToClientPacket> implements ToClientPac
       } else {
          buf.writeBytes(this.cachedBytes, this.cachedBytes.readerIndex(), this.cachedBytes.readableBytes());
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment buffer, int offset) {
+      MemorySegment.copy(this.cachedBytes.array(), this.cachedBytes.arrayOffset(), buffer, PacketIO.PROTO_BYTE, offset, this.cachedBytes.readableBytes());
+      return this.cachedBytes.readableBytes();
    }
 
    @Override

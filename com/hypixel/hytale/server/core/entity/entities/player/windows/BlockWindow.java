@@ -68,7 +68,7 @@ public abstract class BlockWindow extends Window implements ValidatedWindow {
    public boolean validate(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> store) {
       World world = store.getExternalData().getWorld();
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
-      if (transformComponent != null && !(transformComponent.getPosition().distanceSquaredTo(this.x, this.y, this.z) > this.maxDistanceSqr)) {
+      if (transformComponent != null && !(transformComponent.getPosition().distanceSquared(this.x, this.y, this.z) > this.maxDistanceSqr)) {
          ChunkStore chunkStore = world.getChunkStore();
          long chunkIndex = ChunkUtil.indexChunkFromBlock(this.x, this.z);
          Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);

@@ -48,7 +48,7 @@ public class ResourceView extends BlockRegionView<ResourceView> {
       return section == null ? false : section.contains(indexBlock(x, y, z));
    }
 
-   public void reserveBlock(@Nonnull NPCEntity entity, int x, int y, int z) {
+   public void reserveBlock(@Nonnull Ref<EntityStore> ref, int x, int y, int z) {
       int sectionIndex = indexSection(y);
       IntSet section = this.reservationsBySection[sectionIndex];
       if (section == null) {
@@ -58,7 +58,7 @@ public class ResourceView extends BlockRegionView<ResourceView> {
 
       int blockIndex = indexBlock(x, y, z);
       section.add(blockIndex);
-      this.reservationsByEntity.put(entity.getReference(), new ResourceView.BlockReservation(sectionIndex, blockIndex));
+      this.reservationsByEntity.put(ref, new ResourceView.BlockReservation(sectionIndex, blockIndex));
    }
 
    public void clearReservation(@Nonnull Ref<EntityStore> ref) {

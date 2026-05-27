@@ -31,6 +31,7 @@ import com.hypixel.hytale.common.plugin.AuthorInfo;
 import com.hypixel.hytale.common.plugin.PluginIdentifier;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.semver.Semver;
+import com.hypixel.hytale.common.semver.SemverRange;
 import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.PathUtil;
@@ -85,6 +86,7 @@ import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.io.handlers.InitialPacketHandler;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.i18n.event.MessagesUpdated;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
@@ -416,6 +418,9 @@ public class AssetEditorPlugin extends JavaPlugin {
 
       try {
          switch (this.initState) {
+            case NOT_INITIALIZED:
+            default:
+               break;
             case INITIALIZING:
                this.scheduledReinitFuture = HytaleServer.SCHEDULED_EXECUTOR.schedule(this::tryReinitializeAssetEditor, 1L, TimeUnit.SECONDS);
                break;
@@ -637,10 +642,10 @@ public class AssetEditorPlugin extends JavaPlugin {
    private void initializeClient(@Nonnull EditorClient editorClient) {
       DataSource defaultDataSource = this.assetPackDataSources.get("Hytale:Hytale");
       boolean canDiscard = false;
-      boolean canEditAssets = editorClient.hasPermission("hytale.editor.asset");
-      boolean canEditAssetPacks = editorClient.hasPermission("hytale.editor.packs.edit");
-      boolean canCreateAssetPacks = editorClient.hasPermission("hytale.editor.packs.create");
-      boolean canDeleteAssetPacks = editorClient.hasPermission("hytale.editor.packs.delete");
+      boolean canEditAssets = editorClient.hasPermission(HytalePermissions.ASSET_EDITOR);
+      boolean canEditAssetPacks = editorClient.hasPermission(HytalePermissions.ASSET_EDITOR_PACKS_EDIT);
+      boolean canCreateAssetPacks = editorClient.hasPermission(HytalePermissions.ASSET_EDITOR_PACKS_CREATE);
+      boolean canDeleteAssetPacks = editorClient.hasPermission(HytalePermissions.ASSET_EDITOR_PACKS_DELETE);
       editorClient.getPacketHandler().write(new AssetEditorCapabilities(false, canEditAssets, canCreateAssetPacks, canEditAssetPacks, canDeleteAssetPacks));
       editorClient.getPacketHandler().write(this.setupSchemasPacket);
       this.assetTypeRegistry.sendPacket(editorClient);
@@ -735,8 +740,10 @@ public class AssetEditorPlugin extends JavaPlugin {
             } else {
                try {
                   FileUtil.deleteDirectory(targetPath);
+                  editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Success, Messages.PACK_DELETED);
                } catch (Exception var9) {
                   ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var9)).log("Failed to delete asset pack %s from disk", packId);
+                  editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.PACK_DELETION_FAILED);
                }
             }
          }
@@ -779,8 +786,8 @@ public class AssetEditorPlugin extends JavaPlugin {
                if (packetManifest.version != null && !packetManifest.version.isEmpty()) {
                   try {
                      manifest.setVersion(Semver.fromString(packetManifest.version));
-                  } catch (IllegalArgumentException var15) {
-                     ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var15)).log("Invalid version format: %s", packetManifest.version);
+                  } catch (IllegalArgumentException var16) {
+                     ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var16)).log("Invalid version format: %s", packetManifest.version);
                      editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.INVALID_VERSION_FORMAT);
                      return;
                   }
@@ -801,7 +808,18 @@ public class AssetEditorPlugin extends JavaPlugin {
                }
 
                if (packetManifest.serverVersion != null) {
-                  manifest.setServerVersion(packetManifest.serverVersion);
+                  if (packetManifest.serverVersion.isBlank()) {
+                     manifest.setServerVersion(SemverRange.WILDCARD);
+                  } else {
+                     try {
+                        manifest.setServerVersion(SemverRange.fromString(packetManifest.serverVersion));
+                     } catch (IllegalArgumentException var15) {
+                        ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var15))
+                           .log("Rejected manifest update for pack %s: invalid ServerVersion range '%s'", packId, packetManifest.serverVersion);
+                        editorClient.sendPopupNotification(AssetEditorPopupNotificationType.Error, Messages.INVALID_SERVER_VERSION);
+                        return;
+                     }
+                  }
                }
 
                Path manifestPath = dataSource.getRootPath().resolve("manifest.json");
@@ -831,7 +849,9 @@ public class AssetEditorPlugin extends JavaPlugin {
 
                   AssetModule assetModule = AssetModule.get();
                   assetModule.unregisterPack(packId);
-                  assetModule.registerPack(newPackId, packPath, manifest, false);
+                  if (!assetModule.registerPack(newPackId, packPath, manifest, AssetPack.PackSource.RUNTIME)) {
+                     this.getLogger().at(Level.SEVERE).log("Failed to re-register asset pack '%s' after update", newPackId);
+                  }
                }
             }
          }
@@ -868,8 +888,8 @@ public class AssetEditorPlugin extends JavaPlugin {
          if (packetManifest.version != null && !packetManifest.version.isEmpty()) {
             try {
                manifest.setVersion(Semver.fromString(packetManifest.version));
-            } catch (IllegalArgumentException var15) {
-               ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var15)).log("Invalid version format: %s", packetManifest.version);
+            } catch (IllegalArgumentException var16) {
+               ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var16)).log("Invalid version format: %s", packetManifest.version);
                editorClient.sendFailureReply(requestToken, Messages.INVALID_VERSION_FORMAT);
                return;
             }
@@ -889,7 +909,19 @@ public class AssetEditorPlugin extends JavaPlugin {
             manifest.setAuthors(authors);
          }
 
-         manifest.setServerVersion(packetManifest.serverVersion);
+         if (packetManifest.serverVersion != null && !packetManifest.serverVersion.isBlank()) {
+            try {
+               manifest.setServerVersion(SemverRange.fromString(packetManifest.serverVersion));
+            } catch (IllegalArgumentException var15) {
+               ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var15))
+                  .log("Rejected pack creation: invalid ServerVersion range '%s'", packetManifest.serverVersion);
+               editorClient.sendFailureReply(requestToken, Messages.INVALID_SERVER_VERSION);
+               return;
+            }
+         } else {
+            manifest.setServerVersion(SemverRange.WILDCARD);
+         }
+
          String packId = new PluginIdentifier(manifest).toString();
          if (this.assetPackDataSources.containsKey(packId)) {
             editorClient.sendFailureReply(requestToken, Messages.PACK_ALREADY_EXISTS);
@@ -921,7 +953,11 @@ public class AssetEditorPlugin extends JavaPlugin {
                            HytaleServerConfig.save(serverConfig).join();
                         }
 
-                        AssetModule.get().registerPack(packId, packPath, manifest, false);
+                        if (!AssetModule.get().registerPack(packId, packPath, manifest, AssetPack.PackSource.RUNTIME)) {
+                           editorClient.sendFailureReply(requestToken, Messages.PACK_CREATION_FAILED);
+                           return;
+                        }
+
                         editorClient.sendSuccessReply(requestToken, Messages.PACK_CREATED);
                         this.getLogger().at(Level.INFO).log("Created new pack: %s at %s", packId, packPath);
                      } catch (IOException var14) {
@@ -947,7 +983,7 @@ public class AssetEditorPlugin extends JavaPlugin {
       packet.group = manifest.getGroup();
       packet.version = manifest.getVersion() != null ? manifest.getVersion().toString() : "";
       packet.website = manifest.getWebsite() != null ? manifest.getWebsite() : "";
-      packet.serverVersion = manifest.getServerVersion() != null ? manifest.getServerVersion() : "";
+      packet.serverVersion = manifest.getServerVersion() != null ? manifest.getServerVersion().toString() : "";
       List<com.hypixel.hytale.protocol.packets.asseteditor.AuthorInfo> authors = new ObjectArrayList();
 
       for (AuthorInfo a : manifest.getAuthors()) {

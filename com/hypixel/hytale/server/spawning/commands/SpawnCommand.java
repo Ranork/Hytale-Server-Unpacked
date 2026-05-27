@@ -14,6 +14,7 @@ public class SpawnCommand extends AbstractCommandCollection {
    public SpawnCommand() {
       super("spawning", "server.commands.spawning.desc");
       this.addAliases("sp");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new SpawnCommand.EnableCommand());
       this.addSubCommand(new SpawnCommand.DisableCommand());
       this.addSubCommand(new SpawnBeaconsCommand());

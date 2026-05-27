@@ -42,6 +42,21 @@ public class BlockSphereUtil {
    public static <T> boolean forEachBlock(
       int originX, int originY, int originZ, int radiusX, int radiusY, int radiusZ, @Nullable T t, @Nonnull TriIntObjPredicate<T> consumer
    ) {
+      return forEachBlock(originX, originY, originZ, radiusX, radiusY, radiusZ, false, false, t, consumer);
+   }
+
+   public static <T> boolean forEachBlock(
+      int originX,
+      int originY,
+      int originZ,
+      int radiusX,
+      int radiusY,
+      int radiusZ,
+      boolean evenXZ,
+      boolean evenY,
+      @Nullable T t,
+      @Nonnull TriIntObjPredicate<T> consumer
+   ) {
       if (radiusX <= 0) {
          throw new IllegalArgumentException(String.valueOf(radiusX));
       } else if (radiusY <= 0) {
@@ -49,24 +64,47 @@ public class BlockSphereUtil {
       } else if (radiusZ <= 0) {
          throw new IllegalArgumentException(String.valueOf(radiusZ));
       } else {
+         float offsetXZ = evenXZ ? 0.5F : 0.0F;
+         float offsetY = evenY ? 0.5F : 0.0F;
+         int minX = -radiusX;
+         int maxX = evenXZ ? radiusX - 1 : radiusX;
+         int minY = -radiusY;
+         int maxY = evenY ? radiusY - 1 : radiusY;
+         int minZ = -radiusZ;
+         int maxZ = evenXZ ? radiusZ - 1 : radiusZ;
          float radiusXAdjusted = radiusX + 0.41F;
          float radiusYAdjusted = radiusY + 0.41F;
          float radiusZAdjusted = radiusZ + 0.41F;
          float invRadiusXSqr = 1.0F / (radiusXAdjusted * radiusXAdjusted);
          float invRadiusYSqr = 1.0F / (radiusYAdjusted * radiusYAdjusted);
 
-         for (int x = 0; x <= radiusX; x++) {
-            float qx = 1.0F - x * x * invRadiusXSqr;
-            double dy = Math.sqrt(qx) * radiusYAdjusted;
-            int maxY = (int)dy;
-
-            for (int y = 0; y <= maxY; y++) {
-               double dz = Math.sqrt(qx - y * y * invRadiusYSqr) * radiusZAdjusted;
-               int maxZ = (int)dz;
-
-               for (int z = 0; z <= maxZ; z++) {
-                  if (!test(originX, originY, originZ, x, y, z, t, consumer)) {
-                     return false;
+         for (int x = minX; x <= maxX; x++) {
+            float sx = x + offsetXZ;
+            float qx = 1.0F - sx * sx * invRadiusXSqr;
+            if (!(qx < 0.0F)) {
+               double dy = Math.sqrt(qx) * radiusYAdjusted;
+               int loY = MathUtil.ceil(-dy - offsetY);
+               int hiY = (int)(dy - offsetY);
+               loY = Math.max(loY, minY);
+               hiY = Math.min(hiY, maxY);
+               if (loY <= hiY) {
+                  for (int y = loY; y <= hiY; y++) {
+                     float sy = y + offsetY;
+                     float qxy = qx - sy * sy * invRadiusYSqr;
+                     if (!(qxy < 0.0F)) {
+                        double dz = Math.sqrt(qxy) * radiusZAdjusted;
+                        int loZ = MathUtil.ceil(-dz - offsetXZ);
+                        int hiZ = (int)(dz - offsetXZ);
+                        loZ = Math.max(loZ, minZ);
+                        hiZ = Math.min(hiZ, maxZ);
+                        if (loZ <= hiZ) {
+                           for (int z = loZ; z <= hiZ; z++) {
+                              if (!consumer.test(originX + x, originY + y, originZ + z, t)) {
+                                 return false;
+                              }
+                           }
+                        }
+                     }
                   }
                }
             }
@@ -83,8 +121,24 @@ public class BlockSphereUtil {
    public static <T> boolean forEachBlock(
       int originX, int originY, int originZ, int radiusX, int radiusY, int radiusZ, int thickness, @Nullable T t, @Nonnull TriIntObjPredicate<T> consumer
    ) {
+      return forEachBlock(originX, originY, originZ, radiusX, radiusY, radiusZ, thickness, false, false, t, consumer);
+   }
+
+   public static <T> boolean forEachBlock(
+      int originX,
+      int originY,
+      int originZ,
+      int radiusX,
+      int radiusY,
+      int radiusZ,
+      int thickness,
+      boolean evenXZ,
+      boolean evenY,
+      @Nullable T t,
+      @Nonnull TriIntObjPredicate<T> consumer
+   ) {
       if (thickness < 1) {
-         return forEachBlock(originX, originY, originZ, radiusX, radiusY, radiusZ, t, consumer);
+         return forEachBlock(originX, originY, originZ, radiusX, radiusY, radiusZ, evenXZ, evenY, t, consumer);
       } else if (radiusX <= 0) {
          throw new IllegalArgumentException(String.valueOf(radiusX));
       } else if (radiusY <= 0) {
@@ -92,6 +146,14 @@ public class BlockSphereUtil {
       } else if (radiusZ <= 0) {
          throw new IllegalArgumentException(String.valueOf(radiusZ));
       } else {
+         float offsetXZ = evenXZ ? 0.5F : 0.0F;
+         float offsetY = evenY ? 0.5F : 0.0F;
+         int minX = -radiusX;
+         int maxX = evenXZ ? radiusX - 1 : radiusX;
+         int minY = -radiusY;
+         int maxY = evenY ? radiusY - 1 : radiusY;
+         int minZ = -radiusZ;
+         int maxZ = evenXZ ? radiusZ - 1 : radiusZ;
          float radiusXAdjusted = radiusX + 0.41F;
          float radiusYAdjusted = radiusY + 0.41F;
          float radiusZAdjusted = radiusZ + 0.41F;
@@ -104,46 +166,44 @@ public class BlockSphereUtil {
          float invInnerRadiusX2 = 1.0F / (innerRadiusXAdjusted * innerRadiusXAdjusted);
          float invInnerRadiusY2 = 1.0F / (innerRadiusYAdjusted * innerRadiusYAdjusted);
          float invInnerRadiusZ2 = 1.0F / (innerRadiusZAdjusted * innerRadiusZAdjusted);
-         int y = 0;
+         float invRadiusXSqr = invRadiusX2;
+         float invRadiusYSqr = invRadiusY2;
 
-         for (int y1 = 1; y <= radiusY; y1++) {
-            float qy = y * y * invRadiusY2;
-            double dx = Math.sqrt(1.0F - qy) * radiusXAdjusted;
-            int maxX = (int)dx;
-            float innerQy = y * y * invInnerRadiusY2;
-            float outerQy = y1 * y1 * invRadiusY2;
-            int x = 0;
-
-            for (int x1 = 1; x <= maxX; x1++) {
-               float qx = x * x * invRadiusX2;
-               double dz = Math.sqrt(1.0F - qx - qy) * radiusZAdjusted;
-               int maxZ = (int)dz;
-               float innerQx = x * x * invInnerRadiusX2;
-               float outerQx = x1 * x1 * invRadiusX2;
-               int z = 0;
-
-               for (int z1 = 1; z <= maxZ; z1++) {
-                  label47: {
-                     float innerQz = z * z * invInnerRadiusZ2;
-                     if (innerQx + innerQy + innerQz < 1.0F) {
-                        float outerQz = z1 * z1 * invRadiusZ2;
-                        if (outerQx + outerQy + outerQz < 1.0F) {
-                           break label47;
+         for (int x = minX; x <= maxX; x++) {
+            float sx = x + offsetXZ;
+            float qx = 1.0F - sx * sx * invRadiusXSqr;
+            if (!(qx < 0.0F)) {
+               double dy = Math.sqrt(qx) * radiusYAdjusted;
+               int loY = MathUtil.ceil(-dy - offsetY);
+               int hiY = (int)(dy - offsetY);
+               loY = Math.max(loY, minY);
+               hiY = Math.min(hiY, maxY);
+               if (loY <= hiY) {
+                  for (int y = loY; y <= hiY; y++) {
+                     float sy = y + offsetY;
+                     float qxy = qx - sy * sy * invRadiusYSqr;
+                     if (!(qxy < 0.0F)) {
+                        double dz = Math.sqrt(qxy) * radiusZAdjusted;
+                        int loZ = MathUtil.ceil(-dz - offsetXZ);
+                        int hiZ = (int)(dz - offsetXZ);
+                        loZ = Math.max(loZ, minZ);
+                        hiZ = Math.min(hiZ, maxZ);
+                        if (loZ <= hiZ) {
+                           for (int z = loZ; z <= hiZ; z++) {
+                              float sz = z + offsetXZ;
+                              float outerVal = sx * sx * invRadiusX2 + sy * sy * invRadiusY2 + sz * sz * invRadiusZ2;
+                              if (!(outerVal > 1.0F)) {
+                                 float innerVal = sx * sx * invInnerRadiusX2 + sy * sy * invInnerRadiusY2 + sz * sz * invInnerRadiusZ2;
+                                 if (!(innerVal < 1.0F) && !consumer.test(originX + x, originY + y, originZ + z, t)) {
+                                    return false;
+                                 }
+                              }
+                           }
                         }
                      }
-
-                     if (!test(originX, originY, originZ, x, y, z, t, consumer)) {
-                        return false;
-                     }
                   }
-
-                  z++;
                }
-
-               x++;
             }
-
-            y++;
          }
 
          return true;

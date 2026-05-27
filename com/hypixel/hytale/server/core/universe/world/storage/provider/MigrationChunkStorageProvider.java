@@ -9,8 +9,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.longs.LongSet;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
@@ -61,6 +62,14 @@ public class MigrationChunkStorageProvider implements IChunkStorageProvider<Migr
 
       data.saverData = this.to.initialize(store);
       return data;
+   }
+
+   public void delete(@Nonnull MigrationChunkStorageProvider.MigrationData migrationData, @Nonnull Store<ChunkStore> store) throws IOException {
+      for (int i = 0; i < this.from.length; i++) {
+         ((IChunkStorageProvider<Object>)this.from[i]).delete(migrationData.loaderData[i], store);
+      }
+
+      ((IChunkStorageProvider<Object>)this.to).delete(migrationData.saverData, store);
    }
 
    public void close(@NonNullDecl MigrationChunkStorageProvider.MigrationData migrationData, @NonNullDecl Store<ChunkStore> store) throws IOException {
@@ -147,14 +156,14 @@ public class MigrationChunkStorageProvider implements IChunkStorageProvider<Migr
 
       @Nonnull
       @Override
-      public LongSet getIndexes() throws IOException {
+      public LongList getIndexes() throws IOException {
          LongOpenHashSet indexes = new LongOpenHashSet();
 
          for (IChunkLoader loader : this.loaders) {
             indexes.addAll(loader.getIndexes());
          }
 
-         return indexes;
+         return new LongArrayList(indexes);
       }
    }
 

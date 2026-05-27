@@ -27,12 +27,9 @@ public class WorldConfigPauseTimeCommand extends AbstractWorldCommand {
       WorldConfig worldConfig = world.getWorldConfig();
       worldConfig.setGameTimePaused(timePause);
       worldConfig.markChanged();
-      Message timePausedMessage = Message.translation(timePause ? "server.general.paused" : "server.general.resumed");
+      String timePausedMessageKey = timePause ? "server.commands.pausetime.timeInfo" : "server.commands.pausetime.timeInfoResumed";
       commandSender.sendMessage(
-         Message.translation("server.commands.pausetime.timeInfo")
-            .param("msg", timePausedMessage)
-            .param("worldName", world.getName())
-            .param("time", worldTimeResource.getGameTime().toString())
+         Message.translation(timePausedMessageKey).param("worldName", world.getName()).param("time", worldTimeResource.getGameTime().toString())
       );
    }
 }

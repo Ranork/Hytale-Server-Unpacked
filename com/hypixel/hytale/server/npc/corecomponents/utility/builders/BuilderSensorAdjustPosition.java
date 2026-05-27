@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.npc.corecomponents.utility.builders;
 
 import com.google.gson.JsonElement;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderObjectReferenceHelper;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
@@ -17,6 +16,7 @@ import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BuilderSensorAdjustPosition extends BuilderSensorBase {
    protected final BuilderObjectReferenceHelper<Sensor> sensor = new BuilderObjectReferenceHelper<>(Sensor.class, this);

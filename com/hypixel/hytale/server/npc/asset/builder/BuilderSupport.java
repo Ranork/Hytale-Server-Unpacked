@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.asset.builder;
 
 import com.hypixel.hytale.common.thread.ticking.Tickable;
 import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.view.event.block.BlockEventType;
@@ -41,6 +40,7 @@ import java.util.Objects;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BuilderSupport {
    private final BuilderManager builderManager;

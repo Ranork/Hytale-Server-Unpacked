@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.modules.entity.damage;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.system.CancellableEcsEvent;
-import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
 import com.hypixel.hytale.server.core.asset.type.particle.config.WorldParticle;
@@ -20,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Locale;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector4d;
 
 public class Damage extends CancellableEcsEvent implements IMetaStore<Damage> {
    @Nonnull
@@ -143,7 +143,7 @@ public class Damage extends CancellableEcsEvent implements IMetaStore<Damage> {
       @Override
       public Message getDeathMessage(@Nonnull Damage info, @Nonnull Ref<EntityStore> targetRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
          return Message.translation("server.general.killedByCommand")
-            .param("displayName", this.commandSender.getDisplayName())
+            .param("displayName", this.commandSender.getUsername())
             .param("commandName", this.commandName != null ? this.commandName : "Unknown");
       }
    }

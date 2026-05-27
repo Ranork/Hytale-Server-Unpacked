@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -42,73 +43,106 @@ public class ModelOverride {
 
    @Nonnull
    public static ModelOverride deserialize(@Nonnull ByteBuf buf, int offset) {
-      ModelOverride obj = new ModelOverride();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
-         int modelLen = VarInt.peek(buf, varPos0);
-         if (modelLen < 0) {
-            throw ProtocolException.negativeLength("Model", modelLen);
-         }
-
-         if (modelLen > 4096000) {
-            throw ProtocolException.stringTooLong("Model", modelLen, 4096000);
-         }
-
-         obj.model = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
-      }
-
-      if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
-         int textureLen = VarInt.peek(buf, varPos1);
-         if (textureLen < 0) {
-            throw ProtocolException.negativeLength("Texture", textureLen);
-         }
-
-         if (textureLen > 4096000) {
-            throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
-         }
-
-         obj.texture = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
-      }
-
-      if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         int animationSetsCount = VarInt.peek(buf, varPos2);
-         if (animationSetsCount < 0) {
-            throw ProtocolException.negativeLength("AnimationSets", animationSetsCount);
-         }
-
-         if (animationSetsCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("AnimationSets", animationSetsCount, 4096000);
-         }
-
-         int varIntLen = VarInt.length(buf, varPos2);
-         obj.animationSets = new HashMap<>(animationSetsCount);
-         int dictPos = varPos2 + varIntLen;
-
-         for (int i = 0; i < animationSetsCount; i++) {
-            int keyLen = VarInt.peek(buf, dictPos);
-            if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("ModelOverride", 13, buf.readableBytes() - offset);
+      } else {
+         ModelOverride obj = new ModelOverride();
+         byte nullBits = buf.getByte(offset);
+         if ((nullBits & 1) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 1);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+               throw ProtocolException.invalidOffset("Model", varPosBase0, buf.readableBytes());
             }
 
-            if (keyLen > 4096000) {
-               throw ProtocolException.stringTooLong("key", keyLen, 4096000);
+            int varPos0 = offset + 13 + varPosBase0;
+            int modelLen = VarInt.peek(buf, varPos0);
+            if (modelLen < 0) {
+               throw ProtocolException.invalidVarInt("Model");
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
-            String key = PacketIO.readVarString(buf, dictPos);
-            dictPos += keyVarLen + keyLen;
-            AnimationSet val = AnimationSet.deserialize(buf, dictPos);
-            dictPos += AnimationSet.computeBytesConsumed(buf, dictPos);
-            if (obj.animationSets.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("animationSets", key);
+            int modelVarIntLen = VarInt.size(modelLen);
+            if (modelLen > 4096000) {
+               throw ProtocolException.stringTooLong("Model", modelLen, 4096000);
+            }
+
+            if (varPos0 + modelVarIntLen + modelLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Model", varPos0 + modelVarIntLen + modelLen, buf.readableBytes());
+            }
+
+            obj.model = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
+         }
+
+         if ((nullBits & 2) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 5);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+               throw ProtocolException.invalidOffset("Texture", varPosBase1, buf.readableBytes());
+            }
+
+            int varPos1 = offset + 13 + varPosBase1;
+            int textureLen = VarInt.peek(buf, varPos1);
+            if (textureLen < 0) {
+               throw ProtocolException.invalidVarInt("Texture");
+            }
+
+            int textureVarIntLen = VarInt.size(textureLen);
+            if (textureLen > 4096000) {
+               throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
+            }
+
+            if (varPos1 + textureVarIntLen + textureLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Texture", varPos1 + textureVarIntLen + textureLen, buf.readableBytes());
+            }
+
+            obj.texture = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
+         }
+
+         if ((nullBits & 4) != 0) {
+            int varPosBase2 = buf.getIntLE(offset + 9);
+            if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+               throw ProtocolException.invalidOffset("AnimationSets", varPosBase2, buf.readableBytes());
+            }
+
+            int varPos2 = offset + 13 + varPosBase2;
+            int animationSetsCount = VarInt.peek(buf, varPos2);
+            if (animationSetsCount < 0) {
+               throw ProtocolException.invalidVarInt("AnimationSets");
+            }
+
+            int varIntLen = VarInt.size(animationSetsCount);
+            if (animationSetsCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("AnimationSets", animationSetsCount, 4096000);
+            }
+
+            obj.animationSets = new HashMap<>(animationSetsCount);
+            int dictPos = varPos2 + varIntLen;
+
+            for (int i = 0; i < animationSetsCount; i++) {
+               int keyLen = VarInt.peek(buf, dictPos);
+               if (keyLen < 0) {
+                  throw ProtocolException.invalidVarInt("key");
+               }
+
+               int keyVarLen = VarInt.size(keyLen);
+               if (keyLen > 4096000) {
+                  throw ProtocolException.stringTooLong("key", keyLen, 4096000);
+               }
+
+               if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+                  throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+               }
+
+               String key = PacketIO.readVarString(buf, dictPos);
+               dictPos += keyVarLen + keyLen;
+               AnimationSet val = AnimationSet.deserialize(buf, dictPos);
+               dictPos += AnimationSet.computeBytesConsumed(buf, dictPos);
+               if (obj.animationSets.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("animationSets", key);
+               }
             }
          }
-      }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -116,9 +150,13 @@ public class ModelOverride {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Model", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -126,9 +164,13 @@ public class ModelOverride {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Texture", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -136,13 +178,17 @@ public class ModelOverride {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("AnimationSets", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          int dictLen = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2);
+         pos2 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos2);
-            pos2 += VarInt.length(buf, pos2) + sl;
+            pos2 += VarInt.size(sl) + sl;
             pos2 += AnimationSet.computeBytesConsumed(buf, pos2);
          }
 
@@ -152,6 +198,145 @@ public class ModelOverride {
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static String getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static String getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset)
+         ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Model"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem) {
+      return getTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem, int offset) {
+      return hasTexture(mem, offset)
+         ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 5, 13, "Texture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static Map<String, AnimationSet> getAnimationSets(MemorySegment mem) {
+      return getAnimationSets(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, AnimationSet> getAnimationSets(MemorySegment mem, int offset) {
+      if (!hasAnimationSets(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 9, 13, "AnimationSets");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("AnimationSets", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("AnimationSets", len, 4096000);
+         } else {
+            Map<String, AnimationSet> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               long keyPacked = VarInt.getWithLength(mem, off);
+               int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+               String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+               off += nkey;
+               AnimationSet value = AnimationSet.toObject(mem, off);
+               off += value.computeSize();
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("AnimationSets", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasAnimationSets(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static ModelOverride toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ModelOverride toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ModelOverride", offset + 13, (int)mem.byteSize());
+      } else {
+         Map<String, AnimationSet> animationSets = null;
+         if (hasAnimationSets(mem, offset)) {
+            int off = offset + getValidatedOffset(mem, offset, 9, 13, "AnimationSets");
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("AnimationSets", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("AnimationSets", len, 4096000);
+            }
+
+            animationSets = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               long keyPacked = VarInt.getWithLength(mem, off);
+               int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+               String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+               off += nkey;
+               AnimationSet value = AnimationSet.toObject(mem, off);
+               off += value.computeSize();
+               if (animationSets.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("AnimationSets", key);
+               }
+            }
+         }
+
+         return new ModelOverride(
+            hasModel(mem, offset)
+               ? PacketIO.readVarString("Model", mem, offset + getValidatedOffset(mem, offset, 1, 13, "Model"), 4096000, PacketIO.UTF8)
+               : null,
+            hasTexture(mem, offset)
+               ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 5, 13, "Texture"), 4096000, PacketIO.UTF8)
+               : null,
+            animationSets
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -208,6 +393,55 @@ public class ModelOverride {
       }
    }
 
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.texture != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.animationSets != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 13;
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 1), varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.model, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 1), -1);
+      }
+
+      if (this.texture != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 5), varOffset - offset - 13);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.texture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 5), -1);
+      }
+
+      if (this.animationSets != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 9), varOffset - offset - 13);
+         if (this.animationSets.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("AnimationSets", this.animationSets.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.animationSets.size());
+
+         for (Entry<String, AnimationSet> e : this.animationSets.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 9), -1);
+      }
+
+      return varOffset - offset;
+   }
+
    public int computeSize() {
       int size = 13;
       if (this.model != null) {
@@ -238,15 +472,11 @@ public class ModelOverride {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 1) != 0) {
             int modelOffset = buffer.getIntLE(offset + 1);
-            if (modelOffset < 0) {
+            if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 13) {
                return ValidationResult.error("Invalid offset for Model");
             }
 
             int pos = offset + 13 + modelOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Model");
-            }
-
             int modelLen = VarInt.peek(buffer, pos);
             if (modelLen < 0) {
                return ValidationResult.error("Invalid string length for Model");
@@ -256,7 +486,7 @@ public class ModelOverride {
                return ValidationResult.error("Model exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(modelLen);
             pos += modelLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Model");
@@ -265,15 +495,11 @@ public class ModelOverride {
 
          if ((nullBits & 2) != 0) {
             int textureOffset = buffer.getIntLE(offset + 5);
-            if (textureOffset < 0) {
+            if (textureOffset < 0 || textureOffset > buffer.writerIndex() - offset - 13) {
                return ValidationResult.error("Invalid offset for Texture");
             }
 
             int posx = offset + 13 + textureOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Texture");
-            }
-
             int textureLen = VarInt.peek(buffer, posx);
             if (textureLen < 0) {
                return ValidationResult.error("Invalid string length for Texture");
@@ -283,7 +509,7 @@ public class ModelOverride {
                return ValidationResult.error("Texture exceeds max length 4096000");
             }
 
-            posx += VarInt.length(buffer, posx);
+            posx += VarInt.size(textureLen);
             posx += textureLen;
             if (posx > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Texture");
@@ -292,15 +518,11 @@ public class ModelOverride {
 
          if ((nullBits & 4) != 0) {
             int animationSetsOffset = buffer.getIntLE(offset + 9);
-            if (animationSetsOffset < 0) {
+            if (animationSetsOffset < 0 || animationSetsOffset > buffer.writerIndex() - offset - 13) {
                return ValidationResult.error("Invalid offset for AnimationSets");
             }
 
             int posxx = offset + 13 + animationSetsOffset;
-            if (posxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for AnimationSets");
-            }
-
             int animationSetsCount = VarInt.peek(buffer, posxx);
             if (animationSetsCount < 0) {
                return ValidationResult.error("Invalid dictionary count for AnimationSets");
@@ -310,7 +532,7 @@ public class ModelOverride {
                return ValidationResult.error("AnimationSets exceeds max length 4096000");
             }
 
-            posxx += VarInt.length(buffer, posxx);
+            posxx += VarInt.size(animationSetsCount);
 
             for (int i = 0; i < animationSetsCount; i++) {
                int keyLen = VarInt.peek(buffer, posxx);
@@ -322,7 +544,7 @@ public class ModelOverride {
                   return ValidationResult.error("key exceeds max length 4096000");
                }
 
-               posxx += VarInt.length(buffer, posxx);
+               posxx += VarInt.size(keyLen);
                posxx += keyLen;
                if (posxx > buffer.writerIndex()) {
                   return ValidationResult.error("Buffer overflow reading key");

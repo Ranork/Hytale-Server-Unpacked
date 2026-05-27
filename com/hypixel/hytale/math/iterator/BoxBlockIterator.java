@@ -2,8 +2,8 @@ package com.hypixel.hytale.math.iterator;
 
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public final class BoxBlockIterator {
    @Nonnull

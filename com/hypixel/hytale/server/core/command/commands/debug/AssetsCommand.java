@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 public class AssetsCommand extends AbstractCommandCollection {
    public AssetsCommand() {
       super("assets", "server.commands.assets.desc");
+      this.setPermissionGroups("hytale:ServerEditor");
       this.addSubCommand(new AssetTagsCommand());
       this.addSubCommand(new AssetsDuplicatesCommand());
       this.addSubCommand(new AssetsCommand.AssetLongestAssetNameCommand());

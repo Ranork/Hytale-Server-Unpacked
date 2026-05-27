@@ -2,9 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.vectorproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.TerrainDensityProvider;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class VectorProvider {
    public abstract void process(@Nonnull VectorProvider.Context var1, @Nonnull Vector3d var2);

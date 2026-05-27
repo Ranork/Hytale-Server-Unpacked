@@ -7,25 +7,22 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.MovementStates;
-import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
-import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
-import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class LivingEntity extends Entity {
    @Nonnull
@@ -45,7 +42,6 @@ public abstract class LivingEntity extends Entity {
    public static final int DEFAULT_ITEM_THROW_SPEED = 6;
    private Inventory inventory;
    protected double currentFallDistance;
-   private boolean isEquipmentNetworkOutdated;
 
    public LivingEntity() {
       this.setInventory(new Inventory());
@@ -54,13 +50,6 @@ public abstract class LivingEntity extends Entity {
    public LivingEntity(@Nonnull World world) {
       super(world);
       this.setInventory(new Inventory());
-   }
-
-   public boolean canBreathe(
-      @Nonnull Ref<EntityStore> ref, @Nonnull BlockMaterial breathingMaterial, int fluidId, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      boolean invulnerable = componentAccessor.getArchetype(ref).contains(Invulnerable.getComponentType());
-      return invulnerable || breathingMaterial == BlockMaterial.Empty && fluidId == 0;
    }
 
    public static long getPackedMaterialAndFluidAtBreathingHeight(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -105,8 +94,8 @@ public abstract class LivingEntity extends Entity {
       if (fallDamageActive) {
          Vector3d position = transformComponent.getPosition();
          if (!movementStates.onGround) {
-            if (position.getY() > locY) {
-               this.currentFallDistance = this.currentFallDistance + (position.getY() - locY);
+            if (position.y() > locY) {
+               this.currentFallDistance = this.currentFallDistance + (position.y() - locY);
             }
          } else {
             this.currentFallDistance = 0.0;
@@ -118,45 +107,7 @@ public abstract class LivingEntity extends Entity {
       super.moveTo(ref, locX, locY, locZ, componentAccessor);
    }
 
-   @Nullable
-   public static ItemStackSlotTransaction decreaseItemStackDurability(
-      @Nonnull Ref<EntityStore> ref, @Nullable ItemStack itemStack, int inventoryId, int slotId, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      if (EntityUtils.getEntity(ref, componentAccessor) instanceof LivingEntity livingEntity) {
-         if (!ItemUtils.canDecreaseItemStackDurability(ref, componentAccessor)) {
-            return null;
-         } else if (itemStack == null || itemStack.isEmpty() || itemStack.getItem() == null) {
-            return null;
-         } else if (itemStack.isBroken()) {
-            return null;
-         } else {
-            Item item = itemStack.getItem();
-            ItemContainer section = livingEntity.getInventory().getSectionById(inventoryId);
-            if (section == null) {
-               return null;
-            } else if (item.getArmor() != null) {
-               ItemStackSlotTransaction transaction = livingEntity.updateItemStackDurability(
-                  ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor
-               );
-               if (transaction.getSlotAfter().isBroken()) {
-                  EntityStatMap entityStatMap = componentAccessor.getComponent(ref, EntityStatMap.getComponentType());
-                  if (entityStatMap != null) {
-                     entityStatMap.getStatModifiersManager().scheduleRecalculate();
-                  }
-               }
-
-               return transaction;
-            } else {
-               return item.getWeapon() != null
-                  ? livingEntity.updateItemStackDurability(ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor)
-                  : null;
-            }
-         }
-      } else {
-         return null;
-      }
-   }
-
+   @Deprecated(forRemoval = true)
    @Nullable
    public ItemStackSlotTransaction updateItemStackDurability(
       @Nonnull Ref<EntityStore> ref,
@@ -166,18 +117,7 @@ public abstract class LivingEntity extends Entity {
       double durabilityChange,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      ItemStack updatedItemStack = itemStack.withIncreasedDurability(durabilityChange);
-      return container.replaceItemStackInSlot((short)slotId, itemStack, updatedItemStack);
-   }
-
-   public void invalidateEquipmentNetwork() {
-      this.isEquipmentNetworkOutdated = true;
-   }
-
-   public boolean consumeEquipmentNetworkOutdated() {
-      boolean temp = this.isEquipmentNetworkOutdated;
-      this.isEquipmentNetworkOutdated = false;
-      return temp;
+      return ItemUtils.updateItemStackDurability(ref, itemStack, container, slotId, durabilityChange, componentAccessor);
    }
 
    public double getCurrentFallDistance() {

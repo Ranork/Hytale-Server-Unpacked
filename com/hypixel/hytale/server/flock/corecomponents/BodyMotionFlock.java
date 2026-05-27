@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.flock.corecomponents;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.entity.group.EntityGroup;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BodyMotionFlock extends BodyMotionBase {
    private static final ComponentType<EntityStore, FlockMembership> FLOCK_MEMBERSHIP_COMPONENT_TYPE = FlockMembership.getComponentType();
@@ -66,37 +66,37 @@ public class BodyMotionFlock extends BodyMotionBase {
             assert leaderTransformComponent != null;
 
             Vector3d position = leaderTransformComponent.getPosition();
-            Vector3d toLeader = new Vector3d(position.getX(), position.getY(), position.getZ());
-            if (sumOfVelocities.squaredLength() > 1.0E-4) {
-               desiredSteering.setYaw(PhysicsMath.headingFromDirection(sumOfVelocities.getX(), sumOfVelocities.getZ()));
+            Vector3d toLeader = new Vector3d(position.x(), position.y(), position.z());
+            if (sumOfVelocities.lengthSquared() > 1.0E-4) {
+               desiredSteering.setYaw(PhysicsMath.headingFromDirection(sumOfVelocities.x(), sumOfVelocities.z()));
             } else {
                TransformComponent parentEntityTransformComponent = componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
 
                assert parentEntityTransformComponent != null;
 
-               desiredSteering.setYaw(parentEntityTransformComponent.getRotation().getYaw());
+               desiredSteering.setYaw(parentEntityTransformComponent.getRotation().yaw());
             }
 
-            sumOfPositions.subtract(position.getX(), position.getY(), position.getZ()).scale(componentSelector);
-            if (sumOfPositions.squaredLength() > 1.0E-4) {
-               sumOfPositions.normalize().scale(weightCohesion);
+            sumOfPositions.sub(position.x(), position.y(), position.z()).mul(componentSelector);
+            if (sumOfPositions.lengthSquared() > 1.0E-4) {
+               sumOfPositions.normalize().mul(weightCohesion);
             } else {
-               sumOfPositions.assign(0.0);
+               sumOfPositions.zero();
             }
 
-            if (sumOfDistances.squaredLength() > 1.0E-4) {
-               sumOfDistances.normalize().scale(-weightSeparation);
+            if (sumOfDistances.lengthSquared() > 1.0E-4) {
+               sumOfDistances.normalize().mul(-weightSeparation);
             } else {
-               sumOfDistances.assign(0.0);
+               sumOfDistances.zero();
             }
 
-            toLeader.subtract(position.getX(), position.getY(), position.getZ()).scale(componentSelector);
-            toLeader.normalize().scale(0.5);
+            toLeader.sub(position.x(), position.y(), position.z()).mul(componentSelector);
+            toLeader.normalize().mul(0.5);
             sumOfPositions.add(sumOfDistances).add(toLeader);
-            if (sumOfPositions.squaredLength() > 1.0E-4) {
+            if (sumOfPositions.lengthSquared() > 1.0E-4) {
                sumOfPositions.normalize();
             } else {
-               sumOfPositions.assign(0.0);
+               sumOfPositions.zero();
             }
 
             desiredSteering.setTranslation(sumOfPositions);

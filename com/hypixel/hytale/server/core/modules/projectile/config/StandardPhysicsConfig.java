@@ -8,7 +8,6 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.PhysicsType;
 import com.hypixel.hytale.protocol.RotationMode;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class StandardPhysicsConfig implements PhysicsConfig {
    @Nonnull

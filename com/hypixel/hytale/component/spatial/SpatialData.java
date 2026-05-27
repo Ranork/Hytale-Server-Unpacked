@@ -1,11 +1,11 @@
 package com.hypixel.hytale.component.spatial;
 
 import com.hypixel.hytale.common.util.ArrayUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.ints.IntArrays;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SpatialData<T> {
    public static final Vector3d[] EMPTY_VECTOR_ARRAY = new Vector3d[0];
@@ -51,7 +51,7 @@ public class SpatialData<T> {
 
       int index = this.size++;
       this.indexes[index] = index;
-      this.vectors[index].assign(vector);
+      this.vectors[index].set(vector);
       this.data[index] = value;
    }
 
@@ -73,7 +73,7 @@ public class SpatialData<T> {
       Objects.requireNonNull(value);
       int index = this.size++;
       this.indexes[index] = index;
-      this.vectors[index].assign(vector);
+      this.vectors[index].set(vector);
       this.data[index] = value;
    }
 

@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
@@ -23,6 +24,11 @@ public abstract class PlayCommandBase extends CommandBase {
       super(name, description);
       this.singleplayerModule = singleplayerModule;
       this.commandAccess = commandAccess;
+   }
+
+   @Override
+   public boolean hasPermission(@Nonnull CommandSender sender) {
+      return Constants.SINGLEPLAYER && SingleplayerModule.isOwner(sender.getUuid()) ? true : super.hasPermission(sender);
    }
 
    @Override

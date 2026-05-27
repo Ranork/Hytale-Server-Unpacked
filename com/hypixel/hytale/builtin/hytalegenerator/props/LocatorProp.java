@@ -5,9 +5,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
-import com.hypixel.hytale.math.vector.Vector3i;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class LocatorProp extends Prop {
    @Nonnull
@@ -33,6 +34,10 @@ public class LocatorProp extends Prop {
    private Prop.Context rContext;
    @Nonnull
    private final Pipe.One<Vector3i> rScannerPipe = new Pipe.One<Vector3i>() {
+      {
+         Objects.requireNonNull(LocatorProp.this);
+      }
+
       public void accept(@NonNullDecl Vector3i position, @NonNullDecl Control control) {
          if (LocatorProp.this.rPlacedCount[0] >= LocatorProp.this.placementCap) {
             control.stop = true;

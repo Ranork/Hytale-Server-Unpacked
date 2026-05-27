@@ -2,7 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.props;
 
 import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
-import com.hypixel.hytale.builtin.hytalegenerator.props.UnionProp;
+import com.hypixel.hytale.builtin.hytalegenerator.props.QueueProp;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
@@ -33,7 +33,7 @@ public class QueuePropAsset extends PropAsset {
             props.add(asset.build(argument));
          }
 
-         return new UnionProp(props);
+         return new QueueProp(props);
       }
    }
 

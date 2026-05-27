@@ -13,10 +13,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -31,6 +29,7 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
@@ -44,6 +43,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class TeleportConfigInstanceInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -81,6 +82,10 @@ public class TeleportConfigInstanceInteraction extends SimpleBlockInteraction {
       Ref<EntityStore> ref = context.getEntity();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (playerComponent != null && !playerComponent.isWaitingForClientReady()) {
+         PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+
+         assert playerRefComponent != null;
+
          Archetype<EntityStore> archetype = commandBuffer.getArchetype(ref);
          if (!archetype.contains(Teleport.getComponentType()) && !archetype.contains(PendingTeleport.getComponentType())) {
             InstancesPlugin module = InstancesPlugin.get();
@@ -98,7 +103,7 @@ public class TeleportConfigInstanceInteraction extends SimpleBlockInteraction {
                      .getComponent(blockRef, ConfigurableInstanceBlock.getComponentType());
                   if (configurableInstanceBlock != null) {
                      if (configurableInstanceBlock.getInstanceName() == null) {
-                        playerComponent.sendMessage(MESSAGE_GENERAL_INTERACTION_CONFIGURE_INSTANCE_NO_INSTANCE_NAME);
+                        playerRefComponent.sendMessage(MESSAGE_GENERAL_INTERACTION_CONFIGURE_INSTANCE_NO_INSTANCE_NAME);
                      } else {
                         CompletableFuture<World> targetWorldFuture = null;
                         Transform returnPoint = null;
@@ -236,11 +241,13 @@ public class TeleportConfigInstanceInteraction extends SimpleBlockInteraction {
                         position.x = position.x + (hitbox.middleX() + targetBlock.x);
                         position.y = position.y + (hitbox.middleY() + targetBlock.y);
                         position.z = position.z + (hitbox.middleZ() + targetBlock.z);
-                        Vector3f rotationOutput = Vector3f.NaN;
+                        Rotation3f rotationOutput;
                         if (state.getRotation() != null) {
-                           rotationOutput = state.getRotation().clone();
+                           rotationOutput = new Rotation3f(state.getRotation());
                            rotationOutput.addRotationOnAxis(Axis.Y, rotation.yaw().getDegrees());
                            rotationOutput.addRotationOnAxis(Axis.X, rotation.pitch().getDegrees());
+                        } else {
+                           rotationOutput = new Rotation3f(Rotation3f.NaN);
                         }
 
                         return new Transform(position, rotationOutput);

@@ -5,8 +5,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
@@ -20,6 +19,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class BlockInspectPhysicsCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -30,7 +31,7 @@ public class BlockInspectPhysicsCommand extends AbstractPlayerCommand {
 
    public BlockInspectPhysicsCommand() {
       super("inspectphys", "server.commands.block.inspectphys.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override
@@ -43,9 +44,9 @@ public class BlockInspectPhysicsCommand extends AbstractPlayerCommand {
 
       Vector3d position = transformComponent.getPosition();
       boolean all = this.ALL.get(context);
-      int x = MathUtil.floor(position.getX());
-      int z = MathUtil.floor(position.getZ());
-      int y = MathUtil.floor(position.getY());
+      int x = MathUtil.floor(position.x());
+      int z = MathUtil.floor(position.z());
+      int y = MathUtil.floor(position.y());
       int chunkX = ChunkUtil.chunkCoordinate(x);
       int chunkY = ChunkUtil.chunkCoordinate(y);
       int chunkZ = ChunkUtil.chunkCoordinate(z);
@@ -66,26 +67,26 @@ public class BlockInspectPhysicsCommand extends AbstractPlayerCommand {
                   Vector3d pos = new Vector3d(bx, by, bz);
                   pos.add(0.5, 0.5, 0.5);
                   pos.add(offset);
-                  Vector3f colour;
+                  Vector3f color;
                   if (supportValue == 15) {
-                     colour = new Vector3f(0.0F, 1.0F, 0.0F);
+                     color = new Vector3f(0.0F, 1.0F, 0.0F);
                   } else {
-                     BlockType block = world.getBlockType(pos.toVector3i());
+                     BlockType block = world.getBlockType(Vector3dUtil.toVector3i(pos));
                      if (!block.hasSupport()) {
                         if (supportValue == 0) {
                            continue;
                         }
 
-                        colour = new Vector3f(1.0F, 1.0F, 0.0F);
+                        color = new Vector3f(1.0F, 1.0F, 0.0F);
                      } else if (block.getMaxSupportDistance() != 0) {
                         float len = (float)supportValue / block.getMaxSupportDistance();
-                        colour = new Vector3f(len, 0.0F, 1.0F - len);
+                        color = new Vector3f(len, 0.0F, 1.0F - len);
                      } else {
-                        colour = new Vector3f(0.0F, 1.0F, 1.0F);
+                        color = new Vector3f(0.0F, 1.0F, 1.0F);
                      }
                   }
 
-                  DebugUtils.addCube(chunkStore.getExternalData().getWorld(), pos, colour, 1.05, 30.0F);
+                  DebugUtils.addCube(chunkStore.getExternalData().getWorld(), pos, color, 1.05, 30.0F);
                }
             }
 

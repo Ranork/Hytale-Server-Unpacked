@@ -4,7 +4,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.splitvelocity.VelocityConfig;
@@ -13,11 +13,12 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class Velocity implements Component<EntityStore> {
    @Nonnull
    public static final BuilderCodec<Velocity> CODEC = BuilderCodec.builder(Velocity.class, Velocity::new)
-      .append(new KeyedCodec<>("Velocity", Vector3d.CODEC), (entity, o) -> entity.velocity.assign(o), entity -> entity.velocity)
+      .append(new KeyedCodec<>("Velocity", Vector3dUtil.CODEC), (entity, o) -> entity.velocity.set(o), entity -> entity.velocity)
       .add()
       .build();
    @Nonnull
@@ -36,63 +37,63 @@ public class Velocity implements Component<EntityStore> {
    }
 
    public Velocity(@Nonnull Velocity other) {
-      this(other.velocity.clone());
+      this(new Vector3d(other.velocity));
    }
 
    public Velocity(@Nonnull Vector3d initialVelocity) {
-      this.velocity.assign(initialVelocity);
+      this.velocity.set(initialVelocity);
    }
 
    public void setZero() {
       this.set(0.0, 0.0, 0.0);
    }
 
-   public void addForce(@Nonnull Vector3d force) {
-      this.velocity.add(force);
+   public void addVelocity(@Nonnull Vector3d velocityDelta) {
+      this.velocity.add(velocityDelta);
    }
 
-   public void addForce(double x, double y, double z) {
+   public void addVelocity(double x, double y, double z) {
       this.velocity.add(x, y, z);
    }
 
    public void set(@Nonnull Vector3d newVelocity) {
-      this.set(newVelocity.getX(), newVelocity.getY(), newVelocity.getZ());
+      this.set(newVelocity.x(), newVelocity.y(), newVelocity.z());
    }
 
    public void set(double x, double y, double z) {
-      this.velocity.assign(x, y, z);
+      this.velocity.set(x, y, z);
    }
 
    public void setClient(@Nonnull Vector3d newVelocity) {
-      this.setClient(newVelocity.getX(), newVelocity.getY(), newVelocity.getZ());
+      this.setClient(newVelocity.x(), newVelocity.y(), newVelocity.z());
    }
 
    public void setClient(double x, double y, double z) {
-      this.clientVelocity.assign(x, y, z);
+      this.clientVelocity.set(x, y, z);
    }
 
    public void setX(double x) {
-      this.velocity.setX(x);
+      this.velocity.x = x;
    }
 
    public void setY(double y) {
-      this.velocity.setY(y);
+      this.velocity.y = y;
    }
 
    public void setZ(double z) {
-      this.velocity.setZ(z);
+      this.velocity.z = z;
    }
 
    public double getX() {
-      return this.velocity.getX();
+      return this.velocity.x();
    }
 
    public double getY() {
-      return this.velocity.getY();
+      return this.velocity.y();
    }
 
    public double getZ() {
-      return this.velocity.getZ();
+      return this.velocity.z();
    }
 
    public double getSpeed() {
@@ -120,7 +121,7 @@ public class Velocity implements Component<EntityStore> {
 
    @Nonnull
    public Vector3d assignVelocityTo(@Nonnull Vector3d vector) {
-      return vector.assign(this.velocity);
+      return vector.set(this.velocity);
    }
 
    @Nonnull

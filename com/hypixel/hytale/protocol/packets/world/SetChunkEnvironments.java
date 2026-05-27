@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -51,37 +53,41 @@ public class SetChunkEnvironments implements Packet, ToClientPacket {
 
    @Nonnull
    public static SetChunkEnvironments deserialize(@Nonnull ByteBuf buf, int offset) {
-      SetChunkEnvironments obj = new SetChunkEnvironments();
-      byte nullBits = buf.getByte(offset);
-      obj.x = buf.getIntLE(offset + 1);
-      obj.z = buf.getIntLE(offset + 5);
-      int pos = offset + 9;
-      if ((nullBits & 1) != 0) {
-         int environmentsCount = VarInt.peek(buf, pos);
-         if (environmentsCount < 0) {
-            throw ProtocolException.negativeLength("Environments", environmentsCount);
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("SetChunkEnvironments", 9, buf.readableBytes() - offset);
+      } else {
+         SetChunkEnvironments obj = new SetChunkEnvironments();
+         byte nullBits = buf.getByte(offset);
+         obj.x = buf.getIntLE(offset + 1);
+         obj.z = buf.getIntLE(offset + 5);
+         int pos = offset + 9;
+         if ((nullBits & 1) != 0) {
+            int environmentsCount = VarInt.peek(buf, pos);
+            if (environmentsCount < 0) {
+               throw ProtocolException.invalidVarInt("Environments");
+            }
+
+            int environmentsVarLen = VarInt.size(environmentsCount);
+            if (environmentsCount > 4096000) {
+               throw ProtocolException.arrayTooLong("Environments", environmentsCount, 4096000);
+            }
+
+            if (pos + environmentsVarLen + environmentsCount * 1L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Environments", pos + environmentsVarLen + environmentsCount * 1, buf.readableBytes());
+            }
+
+            pos += environmentsVarLen;
+            obj.environments = new byte[environmentsCount];
+
+            for (int i = 0; i < environmentsCount; i++) {
+               obj.environments[i] = buf.getByte(pos + i * 1);
+            }
+
+            pos += environmentsCount * 1;
          }
 
-         if (environmentsCount > 4096000) {
-            throw ProtocolException.arrayTooLong("Environments", environmentsCount, 4096000);
-         }
-
-         int environmentsVarLen = VarInt.size(environmentsCount);
-         if (pos + environmentsVarLen + environmentsCount * 1L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Environments", pos + environmentsVarLen + environmentsCount * 1, buf.readableBytes());
-         }
-
-         pos += environmentsVarLen;
-         obj.environments = new byte[environmentsCount];
-
-         for (int i = 0; i < environmentsCount; i++) {
-            obj.environments[i] = buf.getByte(pos + i * 1);
-         }
-
-         pos += environmentsCount * 1;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -89,10 +95,101 @@ public class SetChunkEnvironments implements Packet, ToClientPacket {
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   public static int getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static int getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 1));
+   }
+
+   public static int getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static int getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 5));
+   }
+
+   @Nullable
+   public static byte[] getEnvironments(MemorySegment mem) {
+      return getEnvironments(mem, 0);
+   }
+
+   @Nullable
+   public static byte[] getEnvironments(MemorySegment mem, int offset) {
+      if (!hasEnvironments(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 9;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Environments", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Environments", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len * 1L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Environments", off + lenOffset + len * 1, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               byte[] data = new byte[len];
+               MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+               return data;
+            }
+         }
+      }
+   }
+
+   public static boolean hasEnvironments(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static SetChunkEnvironments toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetChunkEnvironments toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetChunkEnvironments", offset + 9, (int)mem.byteSize());
+      } else {
+         byte[] environments = null;
+         if (hasEnvironments(mem, offset)) {
+            int off = offset + 9;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("Environments", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.arrayTooLong("Environments", len, 4096000);
+            }
+
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len * 1L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Environments", off + lenOffset + len * 1, (int)mem.byteSize());
+            }
+
+            off += lenOffset;
+            environments = new byte[len];
+            MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, environments, 0, len);
+         }
+
+         return new SetChunkEnvironments(mem.get(PacketIO.PROTO_INT, (long)(offset + 1)), mem.get(PacketIO.PROTO_INT, (long)(offset + 5)), environments);
+      }
    }
 
    @Override
@@ -116,6 +213,30 @@ public class SetChunkEnvironments implements Packet, ToClientPacket {
             buf.writeByte(item);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.environments != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 1), this.x);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 5), this.z);
+      int varOffset = offset + 9;
+      if (this.environments != null) {
+         if (this.environments.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Environments", this.environments.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.environments.length);
+         MemorySegment.copy(this.environments, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.environments.length);
+         varOffset += this.environments.length * 1;
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -144,7 +265,7 @@ public class SetChunkEnvironments implements Packet, ToClientPacket {
                return ValidationResult.error("Environments exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(environmentsCount);
             pos += environmentsCount * 1;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Environments");

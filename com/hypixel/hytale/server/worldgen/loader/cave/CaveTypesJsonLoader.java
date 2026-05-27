@@ -45,7 +45,7 @@ public class CaveTypesJsonLoader extends JsonLoader<SeedStringResource, CaveType
 
             ModifyEvent.dispatch(
                ModifyEvents.CaveTypes.class,
-               new ModifyEvents.CaveTypes(this.caveContext, entries, content -> this.loadCaveType(this.getOrLoad(content).getAsJsonObject()))
+               new ModifyEvents.CaveTypes(this.seed, this.caveContext, entries, path -> this.loadCaveType(this.loadFile(path).getAsJsonObject()))
             );
             var7 = entries.toArray();
          }

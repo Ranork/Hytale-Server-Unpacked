@@ -17,4 +17,26 @@ public class BodyMotionSequence extends MotionSequence<BodyMotion> implements Bo
    public BodyMotion getSteeringMotion() {
       return this.activeMotion == null ? null : this.activeMotion.getSteeringMotion();
    }
+
+   @Nullable
+   @Override
+   public <T extends BodyMotion> T findWrappedBodyMotion(@Nonnull Class<T> clazz) {
+      T obj = BodyMotion.super.findWrappedBodyMotion(clazz);
+      if (obj != null) {
+         return obj;
+      } else {
+         for (BodyMotion step : this.steps) {
+            if (clazz.isInstance(step)) {
+               return clazz.cast(step);
+            }
+
+            T wrapped = step.findWrappedBodyMotion(clazz);
+            if (wrapped != null) {
+               return wrapped;
+            }
+         }
+
+         return null;
+      }
+   }
 }

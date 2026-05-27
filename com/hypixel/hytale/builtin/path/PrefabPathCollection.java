@@ -5,7 +5,6 @@ import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.builtin.path.path.IPrefabPath;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -19,6 +18,8 @@ import java.util.function.BiConsumer;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class PrefabPathCollection {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -65,7 +66,7 @@ public class PrefabPathCollection {
 
       for (IPrefabPath path : this.paths.values()) {
          if (disallowedPaths == null || !disallowedPaths.contains(path.getId())) {
-            double dist2 = position.distanceSquaredTo(path.getNearestWaypointPosition(position, componentAccessor));
+            double dist2 = position.distanceSquared(path.getNearestWaypointPosition(position, componentAccessor));
             if (dist2 < minDist2) {
                nearest = path;
                minDist2 = dist2;
@@ -135,8 +136,8 @@ public class PrefabPathCollection {
          for (int i = 0; i < this.paths.size(); i++) {
             IPrefabPath path = this.paths.get(i);
             if (disallowedPaths == null || !disallowedPaths.contains(path.getId())) {
-               Vector3d nearestWp = path.getNearestWaypointPosition(position, componentAccessor);
-               double dist2 = position.distanceSquaredTo(nearestWp);
+               Vector3dc nearestWp = path.getNearestWaypointPosition(position, componentAccessor);
+               double dist2 = position.distanceSquared(nearestWp);
                if (dist2 < minDist2) {
                   nearest = path;
                   minDist2 = dist2;

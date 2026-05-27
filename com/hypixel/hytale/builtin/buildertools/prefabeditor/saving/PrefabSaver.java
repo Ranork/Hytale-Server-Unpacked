@@ -9,8 +9,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.math.vector.VectorBoxUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -49,6 +47,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabSaver {
    protected static final String EDITOR_BLOCK = "Editor_Block";
@@ -233,15 +233,15 @@ public class PrefabSaver {
 
             TransformComponent transformx = holderx.getComponent(transformType);
             if (transformx != null && transformx.getPosition() != null) {
-               transformx.getPosition().subtract(selection.getX(), selection.getY(), selection.getZ());
+               transformx.getPosition().sub(selection.getX(), selection.getY(), selection.getZ());
             }
 
             selection.addEntityHolderRaw(holderx);
          });
-         ObjectIterator var53 = loadedChunks.values().iterator();
+         ObjectIterator var55 = loadedChunks.values().iterator();
 
-         while (var53.hasNext()) {
-            Ref<ChunkStore> chunkRef = (Ref<ChunkStore>)var53.next();
+         while (var55.hasNext()) {
+            Ref<ChunkStore> chunkRef = (Ref<ChunkStore>)var55.next();
             EntityChunk entityChunk = chunkStore.getStore().getComponent(chunkRef, EntityChunk.getComponentType());
             if (entityChunk != null) {
                for (Holder<EntityStore> holder : entityChunk.getEntityHolders()) {
@@ -270,7 +270,7 @@ public class PrefabSaver {
                         Holder<EntityStore> clonedHolder = holder.clone();
                         TransformComponent clonedTransform = clonedHolder.getComponent(transformType);
                         if (clonedTransform != null && clonedTransform.getPosition() != null) {
-                           clonedTransform.getPosition().subtract(selection.getX(), selection.getY(), selection.getZ());
+                           clonedTransform.getPosition().sub(selection.getX(), selection.getY(), selection.getZ());
                         }
 
                         selection.addEntityHolderRaw(clonedHolder);
@@ -281,6 +281,10 @@ public class PrefabSaver {
          }
 
          selection.sortEntitiesByPosition();
+      }
+
+      for (PrefabSaveContributor contributor : BuilderToolsPlugin.get().getPrefabSaveContributors()) {
+         contributor.contribute(selection, world, minPoint, maxPoint);
       }
 
       long end = System.nanoTime();

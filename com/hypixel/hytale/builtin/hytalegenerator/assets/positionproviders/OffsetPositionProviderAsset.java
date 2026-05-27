@@ -6,8 +6,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProv
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class OffsetPositionProviderAsset extends PositionProviderAsset {
    @Nonnull
@@ -20,7 +21,7 @@ public class OffsetPositionProviderAsset extends PositionProviderAsset {
          asset -> asset.positionProviderAsset
       )
       .add()
-      .append(new KeyedCodec<>("Offset", Vector3d.CODEC, true), (asset, value) -> asset.offset = value, asset -> asset.offset)
+      .append(new KeyedCodec<>("Offset", Vector3dUtil.CODEC, true), (asset, value) -> asset.offset = value, asset -> asset.offset)
       .add()
       .append(new KeyedCodec<>("OffsetX", Codec.INTEGER, true), (asset, value) -> asset.offsetX = value, asset -> asset.offsetX)
       .add()

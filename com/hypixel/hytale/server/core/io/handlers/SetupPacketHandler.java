@@ -6,15 +6,16 @@ import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.Asset;
-import com.hypixel.hytale.protocol.HostAddress;
+import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.ToServerPacket;
-import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.packets.auth.ClientReferral;
 import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.DisconnectType;
 import com.hypixel.hytale.protocol.packets.interface_.ServerInfo;
-import com.hypixel.hytale.protocol.packets.setup.PlayerOptions;
 import com.hypixel.hytale.protocol.packets.setup.RequestAssets;
+import com.hypixel.hytale.protocol.packets.setup.SetupFinalize;
 import com.hypixel.hytale.protocol.packets.setup.ViewRadius;
 import com.hypixel.hytale.protocol.packets.setup.WorldLoadFinished;
 import com.hypixel.hytale.protocol.packets.setup.WorldLoadProgress;
@@ -28,12 +29,9 @@ import com.hypixel.hytale.server.core.asset.common.CommonAssetModule;
 import com.hypixel.hytale.server.core.asset.common.PlayerCommonAssets;
 import com.hypixel.hytale.server.core.asset.common.events.SendCommonAssetsEvent;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
-import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
 import com.hypixel.hytale.server.core.event.events.player.PlayerSetupConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerSetupDisconnectEvent;
-import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
-import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -41,87 +39,52 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.DumpUtil;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class SetupPacketHandler extends GenericConnectionPacketHandler {
-   @Nonnull
-   private final UUID uuid;
-   private final String username;
-   private final byte[] referralData;
-   private final HostAddress referralSource;
    private PlayerCommonAssets assets;
    private boolean receivedRequest;
+   private boolean setupFinalized;
    private int clientViewRadiusChunks = 6;
 
-   public SetupPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language, @Nonnull UUID uuid, String username) {
-      this(channel, protocolVersion, language, uuid, username, null, null);
-   }
-
-   public SetupPacketHandler(
-      @Nonnull Channel channel,
-      @Nonnull ProtocolVersion protocolVersion,
-      String language,
-      @Nonnull UUID uuid,
-      String username,
-      byte[] referralData,
-      HostAddress referralSource
-   ) {
+   public SetupPacketHandler(@Nonnull ChannelConnection channel, @Nonnull ProtocolVersion protocolVersion, String language, @Nonnull PlayerAuthentication auth) {
       super(channel, protocolVersion, language);
-      this.uuid = uuid;
-      this.username = username;
-      this.referralData = referralData;
-      this.referralSource = referralSource;
-      this.auth = null;
-   }
-
-   public SetupPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language, @Nonnull PlayerAuthentication auth) {
-      super(channel, protocolVersion, language);
-      this.uuid = auth.getUuid();
-      this.username = auth.getUsername();
       this.auth = auth;
-      this.referralData = auth.getReferralData();
-      this.referralSource = auth.getReferralSource();
    }
 
    @Nonnull
    @Override
    public String getIdentifier() {
-      return "{Setup("
-         + NettyUtil.formatRemoteAddress(this.getChannel())
-         + "), "
-         + this.username
-         + ", "
-         + this.uuid
-         + ", "
-         + (this.auth != null ? "SECURE" : "INSECURE")
-         + "}";
+      return "{Setup(" + this.getChannel().formatRemoteAddress() + "), " + this.auth.getUsername() + ", " + this.auth.getUuid() + "}";
    }
 
    @Override
-   public void registered0(@Nonnull PacketHandler oldHandler) {
+   public void registered0(@Nonnull ConnectionHandler oldHandler) {
       HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
       this.enterStage("setup:world-settings", timeouts.getSetupWorldSettings(), () -> this.assets != null);
-      if (this.referralSource != null) {
+      if (this.auth.getReferralSource() != null) {
          HytaleLogger.getLogger()
             .at(Level.INFO)
             .log(
                "Player %s referred from %s:%d with %d bytes of data",
-               this.username,
-               this.referralSource.host,
-               this.referralSource.port,
-               this.referralData != null ? this.referralData.length : 0
+               this.auth.getUsername(),
+               this.auth.getReferralSource().host,
+               this.auth.getReferralSource().port,
+               this.auth.getReferralData() != null ? this.auth.getReferralData().length : 0
             );
       }
 
       PlayerSetupConnectEvent event = HytaleServer.get()
          .getEventBus()
          .<Void, PlayerSetupConnectEvent>dispatchFor(PlayerSetupConnectEvent.class)
-         .dispatch(new PlayerSetupConnectEvent(this, this.username, this.uuid, this.auth, this.referralData, this.referralSource));
+         .dispatch(
+            new PlayerSetupConnectEvent(
+               this, this.auth.getUsername(), this.auth.getUuid(), this.auth, this.auth.getReferralData(), this.auth.getReferralSource()
+            )
+         );
       if (event.isCancelled()) {
          this.disconnect(event.getReason());
       } else {
@@ -129,11 +92,11 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
          if (clientReferral != null) {
             this.writeNoCache(clientReferral);
          } else {
-            PlayerRef otherPlayer = Universe.get().getPlayer(this.uuid);
+            PlayerRef otherPlayer = Universe.get().getPlayer(this.auth.getUuid());
             if (otherPlayer != null) {
-               HytaleLogger.getLogger().at(Level.INFO).log("Found match of player %s on %s", this.uuid, otherPlayer.getUsername());
-               Channel otherPlayerChannel = otherPlayer.getPacketHandler().getChannel();
-               if (!NettyUtil.isFromSameOrigin(otherPlayerChannel, this.getChannel())) {
+               HytaleLogger.getLogger().at(Level.INFO).log("Found match of player %s on %s", this.auth.getUuid(), otherPlayer.getUsername());
+               ChannelConnection otherPlayerChannel = otherPlayer.getPacketHandler().getChannel();
+               if (!this.getChannel().isFromSameOrigin(otherPlayerChannel)) {
                   this.disconnect(Message.translation("client.general.disconnect.alreadyLoggedIn"));
                   otherPlayer.sendMessage(Message.translation("server.io.setuppackethandler.otherLoginAttempt"));
                   return;
@@ -155,7 +118,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
                }
             }
 
-            PacketHandler.logConnectionTimings(this.getChannel(), "Load Player Config", Level.FINE);
+            this.getChannel().logConnectionTimings("Load Player Config", Level.FINE);
             WorldSettings worldSettings = new WorldSettings();
             worldSettings.worldHeight = 320;
             Asset[] requiredAssets = CommonAssetModule.get().getRequiredAssets();
@@ -184,7 +147,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
             this.handle((ViewRadius)packet);
             break;
          case 33:
-            this.handle((PlayerOptions)packet);
+            this.handle((SetupFinalize)packet);
             break;
          default:
             this.disconnect(Message.translation("client.general.disconnect.protocol.unexpectedPacket").param("packetId", packet.getId()));
@@ -192,25 +155,26 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
    }
 
    @Override
-   public void closed(ChannelHandlerContext ctx) {
-      super.closed(ctx);
+   public void closed(@Nullable NetworkChannel networkChannel) {
+      super.closed(networkChannel);
       IEventDispatcher<PlayerSetupDisconnectEvent, PlayerSetupDisconnectEvent> dispatcher = HytaleServer.get()
          .getEventBus()
          .dispatchFor(PlayerSetupDisconnectEvent.class);
       if (dispatcher.hasListener()) {
-         dispatcher.dispatch(new PlayerSetupDisconnectEvent(this.username, this.uuid, this.auth, this.disconnectReason));
+         dispatcher.dispatch(new PlayerSetupDisconnectEvent(this.auth.getUsername(), this.auth.getUuid(), this.auth, this.disconnectReason));
       }
 
       if (Constants.SINGLEPLAYER) {
          if (Universe.get().getPlayerCount() == 0) {
             HytaleLogger.getLogger().at(Level.INFO).log("No players left on singleplayer server shutting down!");
             HytaleServer.get().shutdownServer();
-         } else if (SingleplayerModule.isOwner(this.auth, this.uuid)) {
+         } else if (SingleplayerModule.isOwner(this.auth.getUuid())) {
             HytaleLogger.getLogger().at(Level.INFO).log("Owner left the singleplayer server shutting down!");
             Universe.get()
                .getPlayers()
                .forEach(
-                  p -> p.getPacketHandler().disconnect(Message.translation("server.general.disconnect.singleplayerOwnerLeft").param("username", this.username))
+                  p -> p.getPacketHandler()
+                     .disconnect(Message.translation("server.general.disconnect.singleplayerOwnerLeft").param("username", this.auth.getUsername()))
                );
             HytaleServer.get().shutdownServer();
          }
@@ -223,16 +187,16 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
          .at(Level.INFO)
          .log(
             "%s - %s at %s left with reason: %s - %s",
-            this.uuid,
-            this.username,
-            NettyUtil.formatRemoteAddress(this.getChannel()),
+            this.auth.getUuid(),
+            this.auth.getUsername(),
+            this.getChannel().formatRemoteAddress(),
             packet.type.name(),
             packet.reason.name()
          );
-      ProtocolUtil.closeApplicationConnection(this.getChannel());
+      this.getChannel().closeApplicationConnection();
       if (packet.type == DisconnectType.Crash
          && Constants.SINGLEPLAYER
-         && (Universe.get().getPlayerCount() == 0 || SingleplayerModule.isOwner(this.auth, this.uuid))) {
+         && (Universe.get().getPlayerCount() == 0 || SingleplayerModule.isOwner(this.auth.getUuid()))) {
          DumpUtil.dump(true, false);
       }
    }
@@ -242,7 +206,7 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
          throw new IllegalArgumentException("Received duplicate RequestAssets!");
       } else {
          this.receivedRequest = true;
-         PacketHandler.logConnectionTimings(this.getChannel(), "Request Assets", Level.FINE);
+         this.getChannel().logConnectionTimings("Request Assets", Level.FINE);
          CompletableFuture<Void> future = CompletableFutureUtil._catch(
             HytaleServer.get()
                .getEventBus()
@@ -250,11 +214,11 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
                .dispatch(new SendCommonAssetsEvent(this, packet.assets))
                .thenAccept(event -> {
                   if (this.getChannel().isActive()) {
-                     PacketHandler.logConnectionTimings(this.getChannel(), "Send Common Assets", Level.FINE);
+                     this.getChannel().logConnectionTimings("Send Common Assets", Level.FINE);
                      this.assets.sent(event.getRequestedAssets());
                      AssetRegistryLoader.sendAssets(this);
                      I18nModule.get().sendTranslations(this, this.language);
-                     PacketHandler.logConnectionTimings(this.getChannel(), "Send Config Assets", Level.FINE);
+                     this.getChannel().logConnectionTimings("Send Config Assets", Level.FINE);
                      this.write(new WorldLoadProgress(Message.translation("client.general.worldLoad.loadingWorld").getFormattedMessage(), 0, 0));
                      this.write(new WorldLoadFinished());
                   }
@@ -277,43 +241,41 @@ public class SetupPacketHandler extends GenericConnectionPacketHandler {
       this.clientViewRadiusChunks = MathUtil.ceil(packet.value / 32.0F);
    }
 
-   public void handle(@Nonnull PlayerOptions packet) {
+   public void handle(@Nonnull SetupFinalize packet) {
       if (!this.receivedRequest) {
          throw new IllegalArgumentException("Hasn't received RequestAssets yet!");
       } else {
-         PacketHandler.logConnectionTimings(this.getChannel(), "Player Options", Level.FINE);
+         this.getChannel().logConnectionTimings("Setup Finalize", Level.FINE);
          if (this.getChannel().isActive()) {
-            if (packet.skin != null) {
-               try {
-                  CosmeticsModule.get().validateSkin(packet.skin);
-               } catch (CosmeticsModule.InvalidSkinException var4) {
-                  this.disconnect(Message.translation("client.general.disconnect.invalidSkin").param("details", var4.getMessage()));
-                  return;
+            if (this.setupFinalized) {
+               this.disconnect(Message.translation("client.general.disconnect.protocol.unexpectedPacket"));
+            } else {
+               this.setupFinalized = true;
+               if (this.auth == null) {
+                  this.disconnect(Message.translation("server.general.disconnect.authenticationRequired"));
+               } else {
+                  CompletableFuture<Void> future = CompletableFutureUtil._catch(
+                     Universe.get()
+                        .addPlayer(this.getChannel(), this.language, this.protocolVersion, this.auth, this.clientViewRadiusChunks)
+                        .thenAccept(player -> {
+                           if (this.getChannel().isActive()) {
+                              this.getChannel().logConnectionTimings("Add To Universe", Level.FINE);
+                              this.clearTimeout();
+                           }
+                        })
+                        .exceptionally(throwable -> {
+                           if (!this.getChannel().isActive()) {
+                              return null;
+                           } else {
+                              this.disconnect(Message.translation("client.general.disconnect.universeException"));
+                              throw new RuntimeException("Exception when player adding to universe", throwable);
+                           }
+                        })
+                  );
+                  HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
+                  this.continueStage("setup:add-to-universe", timeouts.getSetupAddToUniverse(), () -> future.isDone() || !future.cancel(true));
                }
             }
-
-            CompletableFuture<Void> future = CompletableFutureUtil._catch(
-               Universe.get()
-                  .addPlayer(
-                     this.getChannel(), this.language, this.protocolVersion, this.uuid, this.username, this.auth, this.clientViewRadiusChunks, packet.skin
-                  )
-                  .thenAccept(player -> {
-                     if (this.getChannel().isActive()) {
-                        PacketHandler.logConnectionTimings(this.getChannel(), "Add To Universe", Level.FINE);
-                        this.clearTimeout();
-                     }
-                  })
-                  .exceptionally(throwable -> {
-                     if (!this.getChannel().isActive()) {
-                        return null;
-                     } else {
-                        this.disconnect(Message.translation("client.general.disconnect.universeException"));
-                        throw new RuntimeException("Exception when player adding to universe", throwable);
-                     }
-                  })
-            );
-            HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
-            this.continueStage("setup:add-to-universe", timeouts.getSetupAddToUniverse(), () -> future.isDone() || !future.cancel(true));
          }
       }
    }

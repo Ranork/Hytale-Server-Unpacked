@@ -30,6 +30,7 @@ import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -484,10 +485,12 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
    }
 
    public abstract class CombatOptionHolder extends Evaluator<CombatActionOption>.OptionHolder {
-      protected long lastUsedNanos = Evaluator.NOT_USED;
+      protected long lastUsedNanos;
 
       protected CombatOptionHolder(CombatActionOption option) {
+         Objects.requireNonNull(CombatActionEvaluator.this);
          super(option);
+         this.lastUsedNanos = Evaluator.NOT_USED;
       }
 
       public void setLastUsedNanos(long lastUsedNanos) {
@@ -503,12 +506,14 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
    public class MultipleTargetCombatOptionHolder extends CombatActionEvaluator.CombatOptionHolder {
       protected List<Ref<EntityStore>> targets;
       @Nonnull
-      protected final DoubleList targetUtilities = new DoubleArrayList();
+      protected final DoubleList targetUtilities;
       @Nullable
       protected Ref<EntityStore> pickedTarget;
 
       protected MultipleTargetCombatOptionHolder(CombatActionOption option) {
+         Objects.requireNonNull(CombatActionEvaluator.this);
          super(option);
+         this.targetUtilities = new DoubleArrayList();
       }
 
       @Override
@@ -583,6 +588,7 @@ public class CombatActionEvaluator extends Evaluator<CombatActionOption> impleme
 
    public class SelfCombatOptionHolder extends CombatActionEvaluator.CombatOptionHolder {
       protected SelfCombatOptionHolder(CombatActionOption option) {
+         Objects.requireNonNull(CombatActionEvaluator.this);
          super(option);
       }
 

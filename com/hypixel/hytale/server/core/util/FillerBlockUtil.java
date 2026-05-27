@@ -349,33 +349,30 @@ public class FillerBlockUtil {
                int blockY = baseY + y1;
                int blockZ = baseZ + z1;
                if (ChunkUtil.isSameChunkSection(x, y, z, blockX, blockY, blockZ)) {
-                  int otherBlockId = blockSection.get(blockX, blockY, blockZ);
-                  if (otherBlockId == blockId) {
+                  if (blockSection.get(blockX, blockY, blockZ) == blockId) {
                      removeFiller(accessor, blockSection, blockX, blockY, blockZ, changeReason);
                   }
                } else {
                   ChunkStore chunkStore = accessor.getExternalData();
-                  Ref<ChunkStore> section = chunkStore.getWorld().isInThread() ? chunkStore.getChunkSectionReferenceAtBlock(blockX, blockY, blockZ) : null;
-                  if (section != null) {
-                     BlockSection otherBlockSection = accessor.getComponent(section, BlockSection.getComponentType());
+                  Ref<ChunkStore> sectionRef = chunkStore.getWorld().isInThread() ? chunkStore.getChunkSectionReferenceAtBlock(blockX, blockY, blockZ) : null;
+                  if (sectionRef != null) {
+                     BlockSection otherBlockSection = accessor.getComponent(sectionRef, BlockSection.getComponentType());
                      if (otherBlockSection == null) {
                         return;
                      }
 
-                     int otherBlockId = otherBlockSection.get(blockX, blockY, blockZ);
-                     if (otherBlockId == blockId) {
+                     if (otherBlockSection.get(blockX, blockY, blockZ) == blockId) {
                         removeFiller(accessor, otherBlockSection, blockX, blockY, blockZ, changeReason);
                      }
                   } else {
-                     chunkStore.getChunkSectionReferenceAtBlockAsync(blockX, blockY, blockZ).thenAcceptAsync(section1 -> {
-                        BlockSection otherBlockSectionx = section1.getStore().getComponent((Ref<ChunkStore>)section1, BlockSection.getComponentType());
+                     CompletableFutureUtil._catch(chunkStore.getChunkSectionReferenceAtBlockAsync(blockX, blockY, blockZ).thenAcceptAsync(asyncRef -> {
+                        BlockSection otherBlockSectionx = asyncRef.getStore().getComponent((Ref<ChunkStore>)asyncRef, BlockSection.getComponentType());
                         if (otherBlockSectionx != null) {
-                           int otherBlockIdx = otherBlockSectionx.get(blockX, blockY, blockZ);
-                           if (otherBlockIdx == blockId) {
+                           if (otherBlockSectionx.get(blockX, blockY, blockZ) == blockId) {
                               removeFiller(accessor, otherBlockSectionx, blockX, blockY, blockZ, changeReason);
                            }
                         }
-                     }, accessor.getExternalData().getWorld());
+                     }, chunkStore.getWorld()));
                   }
                }
             }

@@ -144,8 +144,8 @@ public abstract class BenchWindow extends BlockWindow implements MaterialContain
    public void updateBenchTierLevel(int newValue) {
       this.windowData.addProperty("tierLevel", newValue);
       this.updateBenchUpgradeJob(0.0F);
+      this.invalidateExtraResources();
       this.setNeedRebuild();
-      this.invalidate();
    }
 
    @Nonnull

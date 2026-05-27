@@ -2,8 +2,8 @@ package com.hypixel.hytale.server.core.modules.collision;
 
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class MovingBoxBoxCollisionEvaluator extends BlockContactData implements IBlockCollisionEvaluator {
    protected boolean touching;
@@ -67,8 +67,8 @@ public class MovingBoxBoxCollisionEvaluator extends BlockContactData implements 
 
    @Nonnull
    public MovingBoxBoxCollisionEvaluator setMove(@Nonnull Vector3d pos, @Nonnull Vector3d v) {
-      this.pos.assign(pos);
-      this.v.assign(v);
+      this.pos.set(pos);
+      this.v.set(v);
       this.cX.v = v.x;
       this.cY.v = v.y;
       this.cZ.v = v.z;
@@ -95,20 +95,20 @@ public class MovingBoxBoxCollisionEvaluator extends BlockContactData implements 
          } else {
             this.collisionStart = 0.0;
             this.collisionEnd = Double.MAX_VALUE;
-            this.collisionNormal.assign(0.0, 0.0, 0.0);
+            this.collisionNormal.set(0.0, 0.0, 0.0);
             if (this.cX.tLeave < this.collisionEnd) {
                this.collisionEnd = this.cX.tLeave;
-               this.collisionNormal.assign(this.cX.normal, 0.0, 0.0);
+               this.collisionNormal.set(this.cX.normal, 0.0, 0.0);
             }
 
             if (this.cY.tLeave < this.collisionEnd) {
                this.collisionEnd = this.cY.tLeave;
-               this.collisionNormal.assign(0.0, this.cY.normal, 0.0);
+               this.collisionNormal.set(0.0, this.cY.normal, 0.0);
             }
 
             if (this.cZ.tLeave < this.collisionEnd) {
                this.collisionEnd = this.cZ.tLeave;
-               this.collisionNormal.assign(0.0, 0.0, this.cZ.normal);
+               this.collisionNormal.set(0.0, 0.0, this.cZ.normal);
             }
 
             return true;
@@ -117,17 +117,17 @@ public class MovingBoxBoxCollisionEvaluator extends BlockContactData implements 
          this.collisionStart = -Double.MAX_VALUE;
          this.collisionEnd = Double.MAX_VALUE;
          if (this.cX.kind == 0) {
-            this.collisionNormal.assign(this.cX.normal, 0.0, 0.0);
+            this.collisionNormal.set(this.cX.normal, 0.0, 0.0);
             this.collisionStart = this.cX.tEnter;
          }
 
          if (this.cY.kind == 0 && this.cY.tEnter > this.collisionStart) {
-            this.collisionNormal.assign(0.0, this.cY.normal, 0.0);
+            this.collisionNormal.set(0.0, this.cY.normal, 0.0);
             this.collisionStart = this.cY.tEnter;
          }
 
          if (this.cZ.kind == 0 && this.cZ.tEnter > this.collisionStart) {
-            this.collisionNormal.assign(0.0, 0.0, this.cZ.normal);
+            this.collisionNormal.set(0.0, 0.0, this.cZ.normal);
             this.collisionStart = this.cZ.tEnter;
          }
 
@@ -135,9 +135,9 @@ public class MovingBoxBoxCollisionEvaluator extends BlockContactData implements 
             if (this.checkForOnGround && this.cY.kind == 3) {
                this.collisionStart = MathUtil.maxValue(this.cX.tEnter, this.cY.tEnter, this.cZ.tEnter);
                this.collisionEnd = MathUtil.minValue(this.cX.tLeave, this.cY.tLeave, this.cZ.tLeave);
-               this.collisionPoint.assign(this.pos);
-               this.collisionPoint.addScaled(this.v, this.collisionStart);
-               this.collisionNormal.assign(0.0, this.cY.normal, 0.0);
+               this.collisionPoint.set(this.pos);
+               this.collisionPoint.fma(this.collisionStart, this.v);
+               this.collisionNormal.set(0.0, this.cY.normal, 0.0);
                this.onGround = true;
                this.touching = true;
             }
@@ -148,10 +148,10 @@ public class MovingBoxBoxCollisionEvaluator extends BlockContactData implements 
             if (this.collisionStart > this.collisionEnd) {
                return false;
             } else {
-               this.collisionPoint.assign(this.pos);
-               this.collisionPoint.addScaled(this.v, this.collisionStart);
+               this.collisionPoint.set(this.pos);
+               this.collisionPoint.fma(this.collisionStart, this.v);
                if (this.checkForOnGround && this.cY.kind == 3) {
-                  this.collisionNormal.assign(0.0, this.cY.normal, 0.0);
+                  this.collisionNormal.set(0.0, this.cY.normal, 0.0);
                   this.onGround = true;
                   this.touching = true;
                   return false;

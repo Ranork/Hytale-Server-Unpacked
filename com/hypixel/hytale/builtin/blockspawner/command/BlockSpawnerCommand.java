@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class BlockSpawnerCommand extends AbstractCommandCollection {
    public BlockSpawnerCommand() {
       super("blockspawner", "server.commands.blockspawner.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new BlockSpawnerSetCommand());
       this.addSubCommand(new BlockSpawnerGetCommand());
    }

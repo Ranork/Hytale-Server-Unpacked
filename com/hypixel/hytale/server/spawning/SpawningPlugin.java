@@ -14,17 +14,12 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.component.AddReason;
-import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.component.data.unknown.UnknownComponents;
-import com.hypixel.hytale.component.dependency.Dependency;
-import com.hypixel.hytale.component.dependency.RootDependency;
-import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.KDTree;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.logger.HytaleLogger;
@@ -37,14 +32,8 @@ import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.responsecurve.config.ResponseCurve;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
-import com.hypixel.hytale.server.core.modules.entity.AllLegacyEntityTypesQuery;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
-import com.hypixel.hytale.server.core.modules.entity.component.HiddenFromAdventurePlayers;
-import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
@@ -132,7 +121,6 @@ import java.util.Map.Entry;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bson.BsonDocument;
 
 public class SpawningPlugin extends JavaPlugin {
    private static final String DEFAULT_SPAWN_MARKER_MODEL = "NPC_Spawn_Marker";
@@ -336,7 +324,6 @@ public class SpawningPlugin extends JavaPlugin {
          );
       this.getEntityStoreRegistry().registerSystem(new SpawnBeaconSystems.SpawnJobTick(legacySpawnBeaconComponentType, this.initialBeaconDelayComponentType));
       this.getEntityStoreRegistry().registerSystem(new SpawnBeaconSystems.LoadTimeDelay(this.initialBeaconDelayComponentType));
-      this.getEntityStoreRegistry().registerSystem(new SpawnMarkerSystems.LegacyEntityMigration());
       this.getEntityStoreRegistry().registerSystem(new SpawnMarkerSystems.EnsureNetworkSendable());
       this.getEntityStoreRegistry().registerSystem(new SpawnMarkerSystems.CacheMarker(this.spawnMarkerComponentType));
       this.getEntityStoreRegistry().registerSystem(new SpawnMarkerSystems.EntityAdded(this.spawnMarkerComponentType));
@@ -383,8 +370,6 @@ public class SpawningPlugin extends JavaPlugin {
       this.getChunkStoreRegistry().registerSystem(new SpawnMarkerBlockStateSystems.TickHeartbeat(this.spawnMarkerBlockComponentType));
       this.getEntityStoreRegistry().registerSystem(new SpawnMarkerBlockStateSystems.SpawnMarkerAddedFromExternal(this.spawnMarkerBlockReferenceComponentType));
       this.getEntityStoreRegistry().registerSystem(new SpawnMarkerBlockStateSystems.SpawnMarkerTickHeartbeat(this.spawnMarkerBlockReferenceComponentType));
-      this.getEntityStoreRegistry().registerSystem(new EntityModule.HiddenFromPlayerMigrationSystem(this.spawnSuppressorComponentType), true);
-      this.getEntityStoreRegistry().registerSystem(new SpawningPlugin.LegacySpawnSuppressorEntityMigration());
       Interaction.CODEC.register("TriggerSpawnMarkers", TriggerSpawnMarkersInteraction.class, TriggerSpawnMarkersInteraction.CODEC);
    }
 
@@ -397,7 +382,7 @@ public class SpawningPlugin extends JavaPlugin {
       DefaultAssetMap<String, ModelAsset> modelAssetMap = ModelAsset.getAssetMap();
       ModelAsset modelAsset = modelAssetMap.getAsset(spawnMarkerModelId);
       if (modelAsset == null) {
-         this.getLogger().at(Level.SEVERE).log("Spawn marker model %s does not exist");
+         this.getLogger().at(Level.SEVERE).log("Spawn marker model %s does not exist", spawnMarkerModelId);
          modelAsset = modelAssetMap.getAsset("NPC_Spawn_Marker");
          if (modelAsset == null) {
             throw new IllegalStateException(String.format("Default spawn marker '%s' not found", "NPC_Spawn_Marker"));
@@ -914,58 +899,6 @@ public class SpawningPlugin extends JavaPlugin {
             FormatUtil.nanosToString(System.nanoTime() - event.getBootStart()),
             FormatUtil.nanosToString(System.nanoTime() - start)
          );
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class LegacySpawnSuppressorEntityMigration extends EntityModule.MigrationSystem {
-      private final ComponentType<EntityStore, PersistentModel> persistentModelComponentType = PersistentModel.getComponentType();
-      private final ComponentType<EntityStore, Nameplate> nameplateComponentType = Nameplate.getComponentType();
-      private final ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
-      private final ComponentType<EntityStore, UnknownComponents<EntityStore>> unknownComponentsComponentType = EntityStore.REGISTRY.getUnknownComponentType();
-      private final Query<EntityStore> query = Query.and(this.unknownComponentsComponentType, Query.not(AllLegacyEntityTypesQuery.INSTANCE));
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         UnknownComponents<EntityStore> unknownComponent = holder.getComponent(this.unknownComponentsComponentType);
-
-         assert unknownComponent != null;
-
-         Map<String, BsonDocument> unknownComponents = unknownComponent.getUnknownComponents();
-         BsonDocument spawnSuppressor = unknownComponents.remove("SpawnSuppressor");
-         if (spawnSuppressor != null) {
-            Archetype<EntityStore> archetype = holder.getArchetype();
-            if (!archetype.contains(this.persistentModelComponentType)) {
-               Model.ModelReference modelReference = Entity.MODEL.get(spawnSuppressor).get();
-               holder.addComponent(this.persistentModelComponentType, new PersistentModel(modelReference));
-            }
-
-            if (!archetype.contains(this.nameplateComponentType)) {
-               holder.addComponent(this.nameplateComponentType, new Nameplate(Entity.DISPLAY_NAME.get(spawnSuppressor).get()));
-            }
-
-            if (!archetype.contains(this.uuidComponentType)) {
-               holder.addComponent(this.uuidComponentType, new UUIDComponent(Entity.UUID.get(spawnSuppressor).get()));
-            }
-
-            holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
-         }
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return this.query;
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<EntityStore>> getDependencies() {
-         return RootDependency.firstSet();
-      }
    }
 
    public static class NPCSpawningConfig {

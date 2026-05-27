@@ -10,12 +10,13 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.ScanResult;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.ArrayVoxelSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class PondFillerProp extends Prop {
    private static final int TRAVERSED = 1;
@@ -47,8 +48,8 @@ public class PondFillerProp extends Prop {
       @Nonnull Scanner scanner,
       @Nonnull Pattern pattern
    ) {
-      this.boundingMin = boundingMin.clone();
-      this.boundingMax = boundingMax.clone();
+      this.boundingMin = new Vector3i(boundingMin);
+      this.boundingMax = new Vector3i(boundingMax);
       this.solidSet = solidSet;
       this.fillerMaterialProvider = fillerMaterialProvider;
       this.scanner = scanner;
@@ -56,6 +57,22 @@ public class PondFillerProp extends Prop {
       this.readBounds_voxelGrid = this.scanner.getBoundsWithPattern_voxelGrid(pattern);
       this.writeBounds_voxelGrid = new Bounds3i(boundingMin, boundingMax);
       this.writeBounds_voxelGrid.stack(this.readBounds_voxelGrid);
+   }
+
+   private static boolean isTraversed(int maskValue) {
+      return (maskValue & 1) == 1;
+   }
+
+   private static boolean isLeaks(int maskValue) {
+      return (maskValue & 16) == 16;
+   }
+
+   private static boolean isSolid(int maskValue) {
+      return (maskValue & 256) == 256;
+   }
+
+   private static boolean isStacked(int maskValue) {
+      return (maskValue & 4096) == 4096;
    }
 
    @Nonnull
@@ -79,10 +96,10 @@ public class PondFillerProp extends Prop {
 
    @Nonnull
    private List<Vector3i> renderFluidBlocks(@Nonnull Vector3i origin, @Nonnull VoxelSpace<Material> materialSpace) {
-      Vector3i min = this.boundingMin.clone().add(origin);
-      Vector3i max = this.boundingMax.clone().add(origin);
-      min = Vector3i.max(min, materialSpace.getBounds().min);
-      max = Vector3i.min(max, materialSpace.getBounds().max);
+      Vector3i min = new Vector3i(this.boundingMin).add(origin);
+      Vector3i max = new Vector3i(this.boundingMax).add(origin);
+      min = Vector3iUtil.max(min, materialSpace.getBounds().min);
+      max = Vector3iUtil.min(max, materialSpace.getBounds().max);
       Bounds3i maskBounds = new Bounds3i(min, max);
       ArrayVoxelSpace<Integer> mask = new ArrayVoxelSpace<>(new Bounds3i(min, max));
       mask.setAll(0);
@@ -134,7 +151,7 @@ public class PondFillerProp extends Prop {
                               material = materialSpace.get(poppedPos.x, poppedPos.y, poppedPos.z);
                               contextMaterialHash = material.hashMaterialIds();
                               if (!this.solidSet.test(contextMaterialHash)) {
-                                 stack.push(poppedPos.clone());
+                                 stack.push(new Vector3i(poppedPos));
                                  mask.set(4096 | poppedMaskValue, poppedPos.x, poppedPos.y, poppedPos.z);
                               }
                            }
@@ -147,7 +164,7 @@ public class PondFillerProp extends Prop {
                               material = materialSpace.get(poppedPos.x, poppedPos.y, poppedPos.z);
                               contextMaterialHash = material.hashMaterialIds();
                               if (!this.solidSet.test(contextMaterialHash)) {
-                                 stack.push(poppedPos.clone());
+                                 stack.push(new Vector3i(poppedPos));
                                  mask.set(4096 | poppedMaskValue, poppedPos.x, poppedPos.y, poppedPos.z);
                               }
                            }
@@ -161,7 +178,7 @@ public class PondFillerProp extends Prop {
                               material = materialSpace.get(poppedPos.x, var30, poppedPos.z);
                               contextMaterialHash = material.hashMaterialIds();
                               if (!this.solidSet.test(contextMaterialHash)) {
-                                 stack.push(poppedPos.clone());
+                                 stack.push(new Vector3i(poppedPos));
                                  mask.set(4096 | poppedMaskValue, poppedPos.x, poppedPos.y, poppedPos.z);
                               }
                            }
@@ -174,7 +191,7 @@ public class PondFillerProp extends Prop {
                               material = materialSpace.get(poppedPos.x, poppedPos.y, poppedPos.z);
                               contextMaterialHash = material.hashMaterialIds();
                               if (!this.solidSet.test(contextMaterialHash)) {
-                                 stack.push(poppedPos.clone());
+                                 stack.push(new Vector3i(poppedPos));
                                  mask.set(4096 | poppedMaskValue, poppedPos.x, poppedPos.y, poppedPos.z);
                               }
                            }
@@ -236,21 +253,5 @@ public class PondFillerProp extends Prop {
    @Override
    public Bounds3i getWriteBounds_voxelGrid() {
       return this.writeBounds_voxelGrid;
-   }
-
-   private static boolean isTraversed(int maskValue) {
-      return (maskValue & 1) == 1;
-   }
-
-   private static boolean isLeaks(int maskValue) {
-      return (maskValue & 16) == 16;
-   }
-
-   private static boolean isSolid(int maskValue) {
-      return (maskValue & 256) == 256;
-   }
-
-   private static boolean isStacked(int maskValue) {
-      return (maskValue & 4096) == 4096;
    }
 }

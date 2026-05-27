@@ -9,8 +9,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
@@ -44,6 +42,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class RunOnBlockTypesInteraction extends SimpleInteraction {
    @Nonnull
@@ -127,6 +127,8 @@ public class RunOnBlockTypesInteraction extends SimpleInteraction {
                   case Finished:
                      anySucceeded = true;
                   case Failed:
+                  case Skip:
+                  case ItemChanged:
                }
             }
 

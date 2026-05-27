@@ -5,12 +5,11 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.modules.entity.component.ActiveAnimationComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -33,6 +32,7 @@ import java.time.temporal.ChronoField;
 import java.util.EnumSet;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class RoleDebugDisplay {
    protected boolean debugDisplayState;
@@ -61,8 +61,9 @@ public class RoleDebugDisplay {
 
       assert npcComponent != null;
 
+      Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
       if (this.debugDisplayInternalId) {
-         this.debugDisplay.append("ID-").append(archetypeChunk.getReferenceTo(index).getIndex()).append(" ");
+         this.debugDisplay.append("ID-").append(ref.getIndex()).append(" ");
       }
 
       if (this.debugDisplayName) {
@@ -160,9 +161,9 @@ public class RoleDebugDisplay {
             assert blockChunkComponent != null;
 
             Vector3d position = transformComponent.getPosition();
-            int x = MathUtil.floor(position.getX());
-            int y = MathUtil.floor(position.getY());
-            int z = MathUtil.floor(position.getZ());
+            int x = MathUtil.floor(position.x());
+            int y = MathUtil.floor(position.y());
+            int z = MathUtil.floor(position.z());
             double sunlightFactor = worldTimeResource.getSunlightFactor();
             this.debugDisplay
                .append(" LL:")
@@ -195,9 +196,10 @@ public class RoleDebugDisplay {
       }
 
       if (this.debugDisplayFreeSlots) {
-         Inventory inventory = npcComponent.getInventory();
-         int hotbarFreeSlots = InventoryHelper.countFreeSlots(inventory.getHotbar());
-         int inventoryFreeSlots = InventoryHelper.countFreeSlots(inventory.getStorage());
+         InventoryComponent.Hotbar hotbarComponent = commandBuffer.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         InventoryComponent.Storage storageComponent = commandBuffer.getComponent(ref, InventoryComponent.Storage.getComponentType());
+         int hotbarFreeSlots = hotbarComponent != null ? InventoryHelper.countFreeSlots(hotbarComponent.getInventory()) : 0;
+         int inventoryFreeSlots = storageComponent != null ? InventoryHelper.countFreeSlots(storageComponent.getInventory()) : 0;
          this.debugDisplay.append(" FS:").append(hotbarFreeSlots).append('/').append(inventoryFreeSlots);
       }
 
@@ -258,7 +260,6 @@ public class RoleDebugDisplay {
          if (nameplateComponent != null) {
             nameplateComponent.setText(this.debugDisplay.toString());
          } else {
-            Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
             commandBuffer.addComponent(ref, Nameplate.getComponentType(), new Nameplate(this.debugDisplay.toString()));
          }
 

@@ -29,8 +29,7 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.packets.assets.TrackOrUpdateObjective;
 import com.hypixel.hytale.protocol.packets.assets.UntrackObjective;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -53,6 +52,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ObjectiveLocationMarkerSystems {
    public static class EnsureNetworkSendableSystem extends HolderSystem<EntityStore> {
@@ -154,8 +154,8 @@ public class ObjectiveLocationMarkerSystems {
 
             assert transformComponent != null;
 
-            Vector3f rotation = transformComponent.getRotation();
-            objectiveLocationMarkerComponent.updateLocationMarkerValues(markerAsset, rotation.getYaw(), store);
+            Rotation3f rotation = transformComponent.getRotation();
+            objectiveLocationMarkerComponent.updateLocationMarkerValues(markerAsset, rotation.yaw(), store);
             ModelComponent modelComponent = store.getComponent(ref, this.modelComponentType);
 
             assert modelComponent != null;

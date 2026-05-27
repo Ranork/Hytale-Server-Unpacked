@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.player;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -44,20 +47,63 @@ public class ClientReady implements Packet, ToServerPacket {
 
    @Nonnull
    public static ClientReady deserialize(@Nonnull ByteBuf buf, int offset) {
-      ClientReady obj = new ClientReady();
-      obj.readyForChunks = buf.getByte(offset + 0) != 0;
-      obj.readyForGameplay = buf.getByte(offset + 1) != 0;
-      return obj;
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("ClientReady", 2, buf.readableBytes() - offset);
+      } else {
+         ClientReady obj = new ClientReady();
+         obj.readyForChunks = buf.getByte(offset + 0) != 0;
+         obj.readyForGameplay = buf.getByte(offset + 1) != 0;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 2;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static boolean getReadyForChunks(MemorySegment mem) {
+      return getReadyForChunks(mem, 0);
+   }
+
+   public static boolean getReadyForChunks(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0));
+   }
+
+   public static boolean getReadyForGameplay(MemorySegment mem) {
+      return getReadyForGameplay(mem, 0);
+   }
+
+   public static boolean getReadyForGameplay(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1));
+   }
+
+   public static ClientReady toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ClientReady toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ClientReady", offset + 2, (int)mem.byteSize());
+      } else {
+         return new ClientReady(mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0)), mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.readyForChunks ? 1 : 0);
       buf.writeByte(this.readyForGameplay ? 1 : 0);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.readyForChunks);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.readyForGameplay);
+      return 2;
    }
 
    @Override

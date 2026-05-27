@@ -7,7 +7,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionalit
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.codec.validation.LegacyValidator;
+import com.hypixel.hytale.codec.schema.SchemaContext;
+import com.hypixel.hytale.codec.schema.config.Schema;
+import com.hypixel.hytale.codec.validation.ValidationResults;
+import com.hypixel.hytale.codec.validation.Validator;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import javax.annotation.Nonnull;
 
@@ -17,11 +20,17 @@ public class StaticDirectionalityAsset extends DirectionalityAsset {
          StaticDirectionalityAsset.class, StaticDirectionalityAsset::new, DirectionalityAsset.ABSTRACT_CODEC
       )
       .append(new KeyedCodec<>("Rotation", Codec.INTEGER, false), (asset, v) -> asset.rotation = v, asset -> asset.rotation)
-      .addValidator((LegacyValidator<? super Integer>)((v, r) -> {
-         if (v != 0 && v != 90 && v != 180 && v != 270) {
-            r.fail("Rotation can only have the values: 0, 90, 180, 270");
+      .addValidator(new Validator<Integer>() {
+         public void accept(Integer v, ValidationResults r) {
+            if (v != 0 && v != 90 && v != 180 && v != 270) {
+               r.fail("Rotation can only have the values: 0, 90, 180, 270");
+            }
          }
-      }))
+
+         @Override
+         public void updateSchema(SchemaContext context, Schema target) {
+         }
+      })
       .add()
       .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (asset, v) -> asset.patternAsset = v, asset -> asset.patternAsset)
       .add()

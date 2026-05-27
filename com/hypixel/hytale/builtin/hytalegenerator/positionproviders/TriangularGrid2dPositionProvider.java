@@ -1,10 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
-import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class TriangularGrid2dPositionProvider extends PositionProvider {
    private static final double Y = 0.0;
@@ -15,49 +14,66 @@ public class TriangularGrid2dPositionProvider extends PositionProvider {
    @Nonnull
    private final Vector3d rPosition = new Vector3d();
    @Nonnull
-   private final Bounds3d rGridBounds = new Bounds3d();
-   @Nonnull
    private final Control rControl = new Control();
 
    @Override
    public void generate(@NonNullDecl PositionProvider.Context context) {
       if (!(context.bounds.min.y > 0.0) && !(context.bounds.max.y <= 0.0)) {
-         this.rGridBounds.min.assign(Math.floor(context.bounds.min.x), 0.0, Math.floor(context.bounds.min.z));
-         this.rGridBounds.max.assign(Math.ceil(context.bounds.max.x), 1.0, Math.ceil(context.bounds.max.z));
-         if (this.rGridBounds.min.x < context.bounds.min.x) {
-            this.rGridBounds.min.x++;
-         }
-
-         if (this.rGridBounds.min.z < context.bounds.min.z) {
-            this.rGridBounds.min.z++;
-         }
-
-         this.rGridBounds.min.x = this.rGridBounds.min.x * X_HEIGHT_INVERSE;
-         this.rGridBounds.max.x = this.rGridBounds.max.x * X_HEIGHT_INVERSE;
+         int minGridX = toCellGridInclusive(context.bounds.min.x);
+         int maxGridX = toCellGridExclusive(context.bounds.max.x);
          this.rControl.reset();
 
-         for (int x = (int)Math.floor(this.rGridBounds.min.x); x < this.rGridBounds.max.x; x++) {
-            double zOffset = x % 2 == 0 ? 0.5 : 0.0;
+         for (int x = minGridX; x <= maxGridX; x++) {
+            double zStart = firstGridZ(x, context.bounds.min.z);
+            double zEnd = lastGridZ(x, context.bounds.max.z);
 
-            for (double z = this.rGridBounds.min.z - zOffset; z < this.rGridBounds.max.z; z++) {
-               this.rPosition.assign(x * X_HEIGHT, 0.0, z);
-               if (context.bounds.contains(this.rPosition)) {
-                  if (this.rControl.stop) {
-                     return;
-                  }
-
-                  context.pipe.accept(this.rPosition, this.rControl);
+            for (double z = zStart; z <= zEnd; z++) {
+               this.rPosition.set(x * X_HEIGHT, 0.0, z);
+               if (this.rControl.stop) {
+                  return;
                }
+
+               assert context.bounds.contains(this.rPosition);
+
+               context.pipe.accept(this.rPosition, this.rControl);
             }
          }
       }
    }
 
-   private static double toX0(double position) {
-      return toCellGrid(position) * X_HEIGHT;
+   private static int toCellGridInclusive(double minInclusive) {
+      int gridX = (int)Math.floor(Math.nextUp(minInclusive) * X_HEIGHT_INVERSE);
+      if (gridX * X_HEIGHT < minInclusive) {
+         gridX++;
+      }
+
+      return gridX;
    }
 
-   private static double toCellGrid(double position) {
-      return Math.floor(position * X_HEIGHT_INVERSE);
+   private static int toCellGridExclusive(double maxExclusive) {
+      return (int)Math.floor(Math.nextDown(maxExclusive) * X_HEIGHT_INVERSE);
+   }
+
+   private static double firstGridZ(int gridX, double minInclusive) {
+      if (gridX % 2 == 0) {
+         int k = (int)Math.floor(Math.nextUp(minInclusive - 0.5));
+         if (k + 0.5 < minInclusive) {
+            k++;
+         }
+
+         return k + 0.5;
+      } else {
+         int z = (int)Math.floor(Math.nextUp(minInclusive));
+         if (z < minInclusive) {
+            z++;
+         }
+
+         return z;
+      }
+   }
+
+   private static double lastGridZ(int gridX, double maxExclusive) {
+      double maxZ = Math.nextDown(maxExclusive);
+      return gridX % 2 == 0 ? Math.floor(maxZ - 0.5) + 0.5 : Math.floor(maxZ);
    }
 }

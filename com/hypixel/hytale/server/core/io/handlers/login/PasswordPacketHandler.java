@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.core.io.handlers.login;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.protocol.HostAddress;
 import com.hypixel.hytale.protocol.ToServerPacket;
-import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.packets.auth.PasswordAccepted;
 import com.hypixel.hytale.protocol.packets.auth.PasswordRejected;
 import com.hypixel.hytale.protocol.packets.auth.PasswordResponse;
@@ -15,13 +15,10 @@ import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
 import com.hypixel.hytale.server.core.io.handlers.GenericConnectionPacketHandler;
-import com.hypixel.hytale.server.core.io.netty.NettyUtil;
-import io.netty.channel.Channel;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -30,30 +27,22 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final int MAX_PASSWORD_ATTEMPTS = 3;
    private static final int CHALLENGE_LENGTH = 32;
-   private final UUID playerUuid;
-   private final String username;
-   private final byte[] referralData;
-   private final HostAddress referralSource;
+   @Nonnull
+   private final PlayerAuthentication pendingAuth;
    private byte[] passwordChallenge;
    private final PasswordPacketHandler.SetupHandlerSupplier setupHandlerSupplier;
    private int attemptsRemaining = 3;
 
    public PasswordPacketHandler(
-      @Nonnull Channel channel,
+      @Nonnull ChannelConnection channel,
       @Nonnull ProtocolVersion protocolVersion,
       @Nonnull String language,
-      @Nonnull UUID playerUuid,
-      @Nonnull String username,
-      @Nullable byte[] referralData,
-      @Nullable HostAddress referralSource,
+      @Nonnull PlayerAuthentication pendingAuth,
       @Nullable byte[] passwordChallenge,
       @Nonnull PasswordPacketHandler.SetupHandlerSupplier setupHandlerSupplier
    ) {
       super(channel, protocolVersion, language);
-      this.playerUuid = playerUuid;
-      this.username = username;
-      this.referralData = referralData;
-      this.referralSource = referralSource;
+      this.pendingAuth = pendingAuth;
       this.passwordChallenge = passwordChallenge;
       this.setupHandlerSupplier = setupHandlerSupplier;
    }
@@ -61,17 +50,17 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
    @Nonnull
    @Override
    public String getIdentifier() {
-      return "{Password(" + NettyUtil.formatRemoteAddress(this.getChannel()) + "), " + this.username + "}";
+      return "{Password(" + this.getChannel().formatRemoteAddress() + "), " + this.pendingAuth.getUsername() + "}";
    }
 
    @Override
-   public void registered0(PacketHandler oldHandler) {
+   public void registered0(ConnectionHandler oldHandler) {
       HytaleServerConfig.TimeoutProfile timeouts = HytaleServer.get().getConfig().getConnectionTimeouts();
       if (this.passwordChallenge != null && this.passwordChallenge.length != 0) {
-         LOGGER.at(Level.FINE).log("Waiting for password response from %s", this.username);
+         LOGGER.at(Level.FINE).log("Waiting for password response from %s", this.pendingAuth.getUsername());
          this.enterStage("password", timeouts.getPassword(), () -> !this.registered);
       } else {
-         LOGGER.at(Level.FINE).log("No password required for %s, proceeding to setup", this.username);
+         LOGGER.at(Level.FINE).log("No password required for %s, proceeding to setup", this.pendingAuth.getUsername());
          this.proceedToSetup();
       }
    }
@@ -95,13 +84,13 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
       LOGGER.at(Level.INFO)
          .log(
             "%s (%s) at %s left with reason: %s - %s",
-            this.playerUuid,
-            this.username,
-            NettyUtil.formatRemoteAddress(this.getChannel()),
+            this.pendingAuth.getUuid(),
+            this.pendingAuth.getUsername(),
+            this.getChannel().formatRemoteAddress(),
             packet.type.name(),
             packet.reason.name()
          );
-      ProtocolUtil.closeApplicationConnection(this.getChannel());
+      this.getChannel().closeApplicationConnection();
    }
 
    public void handle(@Nonnull PasswordResponse packet) {
@@ -120,8 +109,8 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
                   LOGGER.at(Level.WARNING)
                      .log(
                         "Invalid password from %s (%s), %d attempts remaining",
-                        this.username,
-                        NettyUtil.formatRemoteAddress(this.getChannel()),
+                        this.pendingAuth.getUsername(),
+                        this.getChannel().formatRemoteAddress(),
                         this.attemptsRemaining
                      );
                   if (this.attemptsRemaining <= 0) {
@@ -133,7 +122,7 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
                      this.continueStage("password", timeouts.getPassword(), () -> !this.registered);
                   }
                } else {
-                  LOGGER.at(Level.INFO).log("Password accepted for %s (%s)", this.username, this.playerUuid);
+                  LOGGER.at(Level.INFO).log("Password accepted for %s (%s)", this.pendingAuth.getUsername(), this.pendingAuth.getUuid());
                   this.write(new PasswordAccepted());
                   this.proceedToSetup();
                }
@@ -142,11 +131,11 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
                this.disconnect(Message.translation("client.general.disconnect.serverConfigError"));
             }
          } else {
-            LOGGER.at(Level.WARNING).log("Received empty password hash from %s", NettyUtil.formatRemoteAddress(this.getChannel()));
+            LOGGER.at(Level.WARNING).log("Received empty password hash from %s", this.getChannel().formatRemoteAddress());
             this.disconnect(Message.translation("client.general.disconnect.invalidPasswordResponse"));
          }
       } else {
-         LOGGER.at(Level.WARNING).log("Received unexpected PasswordResponse from %s - no password required", NettyUtil.formatRemoteAddress(this.getChannel()));
+         LOGGER.at(Level.WARNING).log("Received unexpected PasswordResponse from %s - no password required", this.getChannel().formatRemoteAddress());
          this.disconnect(Message.translation("client.general.disconnect.protocol.unexpectedPasswordResponse"));
       }
    }
@@ -158,17 +147,10 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
    }
 
    private void proceedToSetup() {
-      this.auth = new PlayerAuthentication(this.playerUuid, this.username);
-      if (this.referralData != null) {
-         this.auth.setReferralData(this.referralData);
-      }
-
-      if (this.referralSource != null) {
-         this.auth.setReferralSource(this.referralSource);
-      }
-
-      LOGGER.at(Level.INFO).log("Connection complete for %s (%s) (SNI: %s), transitioning to setup", this.username, this.playerUuid, this.getSniHostname());
-      NettyUtil.setChannelHandler(this.getChannel(), this.setupHandlerSupplier.create(this.getChannel(), this.protocolVersion, this.language, this.auth));
+      this.auth = this.pendingAuth;
+      LOGGER.at(Level.INFO)
+         .log("Connection complete for %s (%s) (SNI: %s), transitioning to setup", this.auth.getUsername(), this.auth.getUuid(), this.getSniHostname());
+      this.getChannel().setChannelHandler(this.setupHandlerSupplier.create(this.getChannel(), this.protocolVersion, this.language, this.auth));
    }
 
    @Nullable
@@ -185,6 +167,6 @@ public class PasswordPacketHandler extends GenericConnectionPacketHandler {
 
    @FunctionalInterface
    public interface SetupHandlerSupplier {
-      PacketHandler create(Channel var1, ProtocolVersion var2, String var3, PlayerAuthentication var4);
+      PacketHandler create(ChannelConnection var1, ProtocolVersion var2, String var3, PlayerAuthentication var4);
    }
 }

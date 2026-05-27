@@ -195,6 +195,10 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
 
       assert playerComponent != null;
 
+      PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+
+      assert playerRefComponent != null;
+
       AssetPackSaveBrowser.ActionResult packResult = this.packBrowser
          .handleAction(data.action != null ? data.action.name() : null, data.packBrowserData, "#MainPage #SelectedPackLabel");
       if (packResult != null) {
@@ -295,7 +299,7 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                   PrefabEditingMetadata metadataxxx = prefabsToSave.get(i);
                   Path savePath = this.getWritableSavePath(metadataxxx);
                   saveFutures[i] = PrefabSaver.savePrefab(
-                        playerComponent,
+                        playerRefComponent,
                         editSessionWorld,
                         savePath,
                         metadataxxx.getAnchorPoint(),
@@ -426,7 +430,7 @@ public class PrefabEditorSaveSettingsPage extends InteractiveCustomUIPage<Prefab
                      UIEventBuilder eventBuilderx = new UIEventBuilder();
                      this.buildPrefabList(commandBuilderx, eventBuilderx);
                      this.sendUpdate(commandBuilderx, eventBuilderx, false);
-                  } catch (IllegalArgumentException var21) {
+                  } catch (IllegalArgumentException var22) {
                   }
                }
                break;

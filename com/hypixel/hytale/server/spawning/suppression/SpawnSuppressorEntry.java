@@ -3,11 +3,12 @@ package com.hypixel.hytale.server.spawning.suppression;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import org.joml.Vector3d;
 
 public class SpawnSuppressorEntry {
    public static final BuilderCodec<SpawnSuppressorEntry> CODEC = BuilderCodec.builder(SpawnSuppressorEntry.class, SpawnSuppressorEntry::new)
-      .append(new KeyedCodec<>("Position", Vector3d.CODEC), (entry, v) -> entry.position = v, entry -> entry.position)
+      .append(new KeyedCodec<>("Position", Vector3dUtil.CODEC), (entry, v) -> entry.position = v, entry -> entry.position)
       .add()
       .append(new KeyedCodec<>("Suppression", Codec.STRING), (entry, s) -> entry.suppressionId = s, entry -> entry.suppressionId)
       .add()

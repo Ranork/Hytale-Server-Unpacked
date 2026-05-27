@@ -4,7 +4,6 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -23,6 +22,7 @@ import it.unimi.dsi.fastutil.Pair;
 import java.util.List;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class NPCAllCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -54,8 +54,8 @@ public class NPCAllCommand extends AbstractPlayerCommand {
          assert transformComponent != null;
 
          Vector3d position = transformComponent.getPosition();
-         double px = position.getX() - squareSideLengthHalf;
-         double pz = position.getZ() - squareSideLengthHalf;
+         double px = position.x() - squareSideLengthHalf;
+         double pz = position.z() - squareSideLengthHalf;
          Vector3d pos = new Vector3d();
 
          for (int index = 0; index < roles.size(); index++) {
@@ -66,7 +66,7 @@ public class NPCAllCommand extends AbstractPlayerCommand {
                   double z = pz + distance * (index / columns);
                   double y = NPCPhysicsMath.heightOverGround(world, x, z);
                   if (!(y < 0.0)) {
-                     pos.assign(x, y, z);
+                     pos.set(x, y, z);
                      int roleIndex = npcModule.getIndex(name);
                      if (roleIndex < 0) {
                         throw new IllegalStateException("No such valid role: " + name);

@@ -14,6 +14,7 @@ import javax.annotation.Nonnull;
 public class SoundCommand extends AbstractPlayerCommand {
    public SoundCommand() {
       super("sound", "server.commands.sound.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new SoundPlay2DCommand());
       this.addSubCommand(new SoundPlay3DCommand());
    }

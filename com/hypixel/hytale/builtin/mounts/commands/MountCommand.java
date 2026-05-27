@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class MountCommand extends AbstractCommandCollection {
    public MountCommand() {
       super("mount", "server.commands.mount");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new DismountCommand());
       this.addSubCommand(new MountCheckCommand());
    }

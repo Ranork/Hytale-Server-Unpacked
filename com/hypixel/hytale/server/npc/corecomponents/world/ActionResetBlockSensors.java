@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.support.WorldSupport;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionResetBlockSensors extends ActionBase {
    protected final int[] blockSets;
@@ -24,7 +25,7 @@ public class ActionResetBlockSensors extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       WorldSupport worldSupport = role.getWorldSupport();
       if (this.blockSets.length == 0) {

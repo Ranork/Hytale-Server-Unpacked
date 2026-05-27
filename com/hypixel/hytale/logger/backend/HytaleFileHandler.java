@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -58,7 +59,7 @@ public class HytaleFileHandler extends Thread {
                Files.createDirectory(logsDirectory);
             }
 
-            String fileNamePart = "logs/" + LOG_FILE_DATE_FORMAT.format(LocalDateTime.now());
+            String fileNamePart = "logs/" + LOG_FILE_DATE_FORMAT.format(LocalDateTime.now(ZoneId.systemDefault()));
             String fileName = fileNamePart + "_server.log";
             if (Files.exists(Paths.get(fileName))) {
                fileName = fileNamePart + "%u_server.log";

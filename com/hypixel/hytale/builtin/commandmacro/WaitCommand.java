@@ -25,6 +25,7 @@ public class WaitCommand extends AbstractAsyncCommand {
 
    public WaitCommand() {
       super("wait", "server.commands.wait.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Nonnull

@@ -3,8 +3,7 @@ package com.hypixel.hytale.builtin.teleport.commands.teleport.variant;
 import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TeleportPlayerToCoordinatesCommand extends CommandBase {
    @Nonnull
@@ -29,7 +29,8 @@ public class TeleportPlayerToCoordinatesCommand extends CommandBase {
    @Nonnull
    private final RequiredArg<PlayerRef> playerArg = this.withRequiredArg("player", "server.commands.teleport.targetPlayer.desc", ArgTypes.PLAYER_REF);
    @Nonnull
-   private final RequiredArg<Coord> xArg = this.withRequiredArg("x", "server.commands.teleport.x.desc", ArgTypes.RELATIVE_DOUBLE_COORD);
+   private final RequiredArg<Coord> xArg = this.withRequiredArg("x", "server.commands.teleport.x.desc", ArgTypes.RELATIVE_DOUBLE_COORD)
+      .withSuggestionOverride(ArgTypes.RELATIVE_POSITION);
    @Nonnull
    private final RequiredArg<Coord> yArg = this.withRequiredArg("y", "server.commands.teleport.y.desc", ArgTypes.RELATIVE_DOUBLE_COORD);
    @Nonnull
@@ -63,26 +64,26 @@ public class TeleportPlayerToCoordinatesCommand extends CommandBase {
 
                assert headRotationComponent != null;
 
-               Vector3d previousPos = transformComponent.getPosition().clone();
-               Vector3f previousHeadRotation = headRotationComponent.getRotation().clone();
-               Vector3f previousBodyRotation = transformComponent.getRotation().clone();
+               Vector3d previousPos = new Vector3d(transformComponent.getPosition());
+               Rotation3f previousHeadRotation = new Rotation3f(headRotationComponent.getRotation());
+               Rotation3f previousBodyRotation = new Rotation3f(transformComponent.getRotation());
                Coord relX = this.xArg.get(context);
                Coord relY = this.yArg.get(context);
                Coord relZ = this.zArg.get(context);
-               double x = relX.resolveXZ(previousPos.getX());
-               double z = relZ.resolveXZ(previousPos.getZ());
-               double y = relY.resolveYAtWorldCoords(previousPos.getY(), targetWorld, x, z);
+               double x = relX.resolveXZ(previousPos.x());
+               double z = relZ.resolveXZ(previousPos.z());
+               double y = relY.resolveYAtWorldCoords(previousPos.y(), targetWorld, x, z);
                float yaw = this.yawArg.provided(context)
-                  ? this.yawArg.get(context).resolve(previousHeadRotation.getYaw() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
+                  ? this.yawArg.get(context).resolve(previousHeadRotation.yaw() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
                   : Float.NaN;
                float pitch = this.pitchArg.provided(context)
-                  ? this.pitchArg.get(context).resolve(previousHeadRotation.getPitch() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
+                  ? this.pitchArg.get(context).resolve(previousHeadRotation.pitch() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
                   : Float.NaN;
                float roll = this.rollArg.provided(context)
-                  ? this.rollArg.get(context).resolve(previousHeadRotation.getRoll() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
+                  ? this.rollArg.get(context).resolve(previousHeadRotation.roll() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
                   : Float.NaN;
                Teleport teleport = Teleport.createExact(
-                  new Vector3d(x, y, z), new Vector3f(previousBodyRotation.getPitch(), yaw, previousBodyRotation.getRoll()), new Vector3f(pitch, yaw, roll)
+                  new Vector3d(x, y, z), new Rotation3f(previousBodyRotation.pitch(), yaw, previousBodyRotation.roll()), new Rotation3f(pitch, yaw, roll)
                );
                store.addComponent(ref, Teleport.getComponentType(), teleport);
                Player player = store.getComponent(ref, Player.getComponentType());
@@ -93,9 +94,9 @@ public class TeleportPlayerToCoordinatesCommand extends CommandBase {
 
                boolean hasRotation = this.yawArg.provided(context) || this.pitchArg.provided(context) || this.rollArg.provided(context);
                if (hasRotation) {
-                  float displayYaw = Float.isNaN(yaw) ? previousHeadRotation.getYaw() * (180.0F / (float)Math.PI) : yaw * (180.0F / (float)Math.PI);
-                  float displayPitch = Float.isNaN(pitch) ? previousHeadRotation.getPitch() * (180.0F / (float)Math.PI) : pitch * (180.0F / (float)Math.PI);
-                  float displayRoll = Float.isNaN(roll) ? previousHeadRotation.getRoll() * (180.0F / (float)Math.PI) : roll * (180.0F / (float)Math.PI);
+                  float displayYaw = Float.isNaN(yaw) ? previousHeadRotation.yaw() * (180.0F / (float)Math.PI) : yaw * (180.0F / (float)Math.PI);
+                  float displayPitch = Float.isNaN(pitch) ? previousHeadRotation.pitch() * (180.0F / (float)Math.PI) : pitch * (180.0F / (float)Math.PI);
+                  float displayRoll = Float.isNaN(roll) ? previousHeadRotation.roll() * (180.0F / (float)Math.PI) : roll * (180.0F / (float)Math.PI);
                   context.sendMessage(
                      Message.translation("server.commands.teleport.teleportedToCoordinatesWithLook")
                         .param("x", x)

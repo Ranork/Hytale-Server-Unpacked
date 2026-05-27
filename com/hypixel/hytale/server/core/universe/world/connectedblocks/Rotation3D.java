@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.core.universe.world.connectedblocks;
 
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
 
 @Deprecated(forRemoval = true)
 public class Rotation3D {

@@ -1,8 +1,8 @@
 package com.hypixel.hytale.server.core.modules.physics.util;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public abstract class ForceProviderStandard implements ForceProvider {
    @Nonnull
@@ -30,7 +30,7 @@ public abstract class ForceProviderStandard implements ForceProvider {
       accumulator.force.add(extForce);
       double speed = accumulator.speed;
       double dragForceDivSpeed = standardState.dragCoefficient * this.getProjectedArea(bodyState, speed) * speed;
-      this.dragForce.assign(bodyState.velocity).scale(-dragForceDivSpeed);
+      this.dragForce.set(bodyState.velocity).mul(-dragForceDivSpeed);
       this.clipForce(this.dragForce, accumulator.resistanceForceLimit);
       accumulator.force.add(this.dragForce);
       double gravityForce = -standardState.gravity * this.getMass(this.getVolume());

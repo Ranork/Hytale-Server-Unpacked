@@ -7,8 +7,8 @@ import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProv
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class BaseHeightPositionProviderAsset extends PositionProviderAsset {
    @Nonnull

@@ -5,10 +5,8 @@ import com.hypixel.hytale.builtin.tagset.config.NPCGroup;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.InteractionType;
-import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.PlayerInteractEvent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -24,6 +22,7 @@ import com.hypixel.hytale.server.npc.blackboard.view.event.EventView;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class EntityEventView extends EventView<EntityEventView, EntityEventType, EntityEventNotification> {
    public EntityEventView(@Nonnull World world) {
@@ -53,8 +52,7 @@ public class EntityEventView extends EventView<EntityEventView, EntityEventType,
 
    @Override
    public void initialiseEntity(@Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent) {
-      for (int i = 0; i < EntityEventType.VALUES.length; i++) {
-         EntityEventType type = EntityEventType.VALUES[i];
+      for (EntityEventType type : EntityEventType.VALUES) {
          IntSet eventSets = npcComponent.getBlackboardEntityEventSet(type);
          if (eventSets != null) {
             this.entityMapsByEventType.get(type).initialiseEntity(ref, eventSets);
@@ -72,17 +70,17 @@ public class EntityEventView extends EventView<EntityEventView, EntityEventType,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor,
       EntityEventType type
    ) {
-      FlockMembership membership = componentAccessor.getComponent(skip, FlockMembership.getComponentType());
-      Ref<EntityStore> flockReference = membership != null ? membership.getFlockRef() : null;
-      this.reusableEventNotification.setFlockReference(flockReference);
+      FlockMembership flockMembershipComponent = componentAccessor.getComponent(skip, FlockMembership.getComponentType());
+      Ref<EntityStore> flockRef = flockMembershipComponent != null ? flockMembershipComponent.getFlockRef() : null;
+      this.reusableEventNotification.setFlockReference(flockRef);
       super.onEvent(senderTypeId, x, y, z, initiator, skip, componentAccessor, type);
    }
 
    private void onPlayerInteraction(@Nonnull PlayerInteractEvent event) {
-      Player playerComponent = event.getPlayer();
-      Ref<EntityStore> playerRef = playerComponent.getReference();
-      Store<EntityStore> store = playerRef.getStore();
       if (!event.isCancelled()) {
+         Player playerComponent = event.getPlayer();
+         Ref<EntityStore> playerRef = event.getPlayerRef();
+         Store<EntityStore> store = playerRef.getStore();
          if (playerComponent.getGameMode() == GameMode.Creative) {
             PlayerSettings playerSettingsComponent = store.getComponent(playerRef, PlayerSettings.getComponentType());
             if (playerSettingsComponent == null || !playerSettingsComponent.creativeSettings().allowNPCDetection()) {
@@ -90,39 +88,45 @@ public class EntityEventView extends EventView<EntityEventView, EntityEventType,
             }
          }
 
-         Entity entity = event.getTargetEntity();
-         if (entity != null && event.getActionType() == InteractionType.Use && entity instanceof NPCEntity) {
-            Ref<EntityStore> entityRef = event.getTargetRef();
-            TransformComponent transformComponent = store.getComponent(entityRef, TransformComponent.getComponentType());
+         Ref<EntityStore> targetRef = event.getTargetRef();
+         if (targetRef != null && targetRef.isValid()) {
+            NPCEntity targetNpcComponent = store.getComponent(targetRef, NPCEntity.getComponentType());
+            if (targetNpcComponent != null && event.getActionType() == InteractionType.Use) {
+               TransformComponent targetTransformComponent = store.getComponent(targetRef, TransformComponent.getComponentType());
 
-            assert transformComponent != null;
+               assert targetTransformComponent != null;
 
-            Vector3d pos = transformComponent.getPosition();
-            this.onEvent(((NPCEntity)entity).getRoleIndex(), pos.x, pos.y, pos.z, playerRef, entityRef, store, EntityEventType.INTERACTION);
+               Vector3d targetPos = targetTransformComponent.getPosition();
+               this.onEvent(targetNpcComponent.getRoleIndex(), targetPos.x, targetPos.y, targetPos.z, playerRef, targetRef, store, EntityEventType.INTERACTION);
+            }
          }
       }
    }
 
    public void processAttackedEvent(
-      @Nonnull Ref<EntityStore> victim,
-      @Nonnull Ref<EntityStore> attacker,
+      @Nonnull Ref<EntityStore> targetRef,
+      @Nonnull Ref<EntityStore> attackerRef,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor,
-      EntityEventType eventType
+      @Nonnull EntityEventType eventType
    ) {
       int roleIndex;
-      if (componentAccessor.getArchetype(victim).contains(Player.getComponentType())) {
+      if (componentAccessor.getArchetype(targetRef).contains(Player.getComponentType())) {
          roleIndex = BuilderManager.getPlayerGroupID();
       } else {
-         NPCEntity npc = componentAccessor.getComponent(victim, NPCEntity.getComponentType());
-         if (npc == null) {
+         NPCEntity targetNpcComponent = componentAccessor.getComponent(targetRef, NPCEntity.getComponentType());
+         if (targetNpcComponent == null) {
             return;
          }
 
-         roleIndex = npc.getRoleIndex();
+         roleIndex = targetNpcComponent.getRoleIndex();
       }
 
-      Store<EntityStore> store = victim.getStore();
-      Vector3d pos = store.getComponent(victim, TransformComponent.getComponentType()).getPosition();
-      this.onEvent(roleIndex, pos.x, pos.y, pos.z, attacker, attacker, componentAccessor, eventType);
+      Store<EntityStore> store = targetRef.getStore();
+      TransformComponent transformComponent = store.getComponent(targetRef, TransformComponent.getComponentType());
+
+      assert transformComponent != null;
+
+      Vector3d pos = transformComponent.getPosition();
+      this.onEvent(roleIndex, pos.x, pos.y, pos.z, attackerRef, attackerRef, componentAccessor, eventType);
    }
 }

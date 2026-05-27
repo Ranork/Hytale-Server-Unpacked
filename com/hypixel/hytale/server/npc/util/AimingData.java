@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.sensorinfo.ExtraInfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3dc;
 
 public class AimingData implements ExtraInfoProvider {
    public static final double MIN_MOVE_SPEED_STATIC = 0.01;
@@ -135,6 +136,15 @@ public class AimingData implements ExtraInfoProvider {
       this.haveOrientation = false;
       this.haveSolution = false;
       this.target = null;
+   }
+
+   public boolean computeSolution(@Nonnull Vector3dc sourcePos, @Nonnull Vector3dc targetPos, @Nullable Vector3dc targetVelocity) {
+      double x = targetPos.x() - sourcePos.x();
+      double y = targetPos.y() - sourcePos.y();
+      double z = targetPos.z() - sourcePos.z();
+      return targetVelocity == null
+         ? this.computeSolution(x, y, z, 0.0, 0.0, 0.0)
+         : this.computeSolution(x, y, z, targetVelocity.x(), targetVelocity.y(), targetVelocity.z());
    }
 
    public boolean computeSolution(double x, double y, double z, double vx, double vy, double vz) {

@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -72,24 +75,153 @@ public class BlockMovementSettings {
 
    @Nonnull
    public static BlockMovementSettings deserialize(@Nonnull ByteBuf buf, int offset) {
-      BlockMovementSettings obj = new BlockMovementSettings();
-      obj.isClimbable = buf.getByte(offset + 0) != 0;
-      obj.climbUpSpeedMultiplier = buf.getFloatLE(offset + 1);
-      obj.climbDownSpeedMultiplier = buf.getFloatLE(offset + 5);
-      obj.climbLateralSpeedMultiplier = buf.getFloatLE(offset + 9);
-      obj.isBouncy = buf.getByte(offset + 13) != 0;
-      obj.bounceVelocity = buf.getFloatLE(offset + 14);
-      obj.drag = buf.getFloatLE(offset + 18);
-      obj.friction = buf.getFloatLE(offset + 22);
-      obj.terminalVelocityModifier = buf.getFloatLE(offset + 26);
-      obj.horizontalSpeedMultiplier = buf.getFloatLE(offset + 30);
-      obj.acceleration = buf.getFloatLE(offset + 34);
-      obj.jumpForceMultiplier = buf.getFloatLE(offset + 38);
-      return obj;
+      if (buf.readableBytes() - offset < 42) {
+         throw ProtocolException.bufferTooSmall("BlockMovementSettings", 42, buf.readableBytes() - offset);
+      } else {
+         BlockMovementSettings obj = new BlockMovementSettings();
+         obj.isClimbable = buf.getByte(offset + 0) != 0;
+         obj.climbUpSpeedMultiplier = buf.getFloatLE(offset + 1);
+         obj.climbDownSpeedMultiplier = buf.getFloatLE(offset + 5);
+         obj.climbLateralSpeedMultiplier = buf.getFloatLE(offset + 9);
+         obj.isBouncy = buf.getByte(offset + 13) != 0;
+         obj.bounceVelocity = buf.getFloatLE(offset + 14);
+         obj.drag = buf.getFloatLE(offset + 18);
+         obj.friction = buf.getFloatLE(offset + 22);
+         obj.terminalVelocityModifier = buf.getFloatLE(offset + 26);
+         obj.horizontalSpeedMultiplier = buf.getFloatLE(offset + 30);
+         obj.acceleration = buf.getFloatLE(offset + 34);
+         obj.jumpForceMultiplier = buf.getFloatLE(offset + 38);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 42;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 42L;
+   }
+
+   public static boolean getIsClimbable(MemorySegment mem) {
+      return getIsClimbable(mem, 0);
+   }
+
+   public static boolean getIsClimbable(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0));
+   }
+
+   public static float getClimbUpSpeedMultiplier(MemorySegment mem) {
+      return getClimbUpSpeedMultiplier(mem, 0);
+   }
+
+   public static float getClimbUpSpeedMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 1));
+   }
+
+   public static float getClimbDownSpeedMultiplier(MemorySegment mem) {
+      return getClimbDownSpeedMultiplier(mem, 0);
+   }
+
+   public static float getClimbDownSpeedMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 5));
+   }
+
+   public static float getClimbLateralSpeedMultiplier(MemorySegment mem) {
+      return getClimbLateralSpeedMultiplier(mem, 0);
+   }
+
+   public static float getClimbLateralSpeedMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 9));
+   }
+
+   public static boolean getIsBouncy(MemorySegment mem) {
+      return getIsBouncy(mem, 0);
+   }
+
+   public static boolean getIsBouncy(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 13));
+   }
+
+   public static float getBounceVelocity(MemorySegment mem) {
+      return getBounceVelocity(mem, 0);
+   }
+
+   public static float getBounceVelocity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 14));
+   }
+
+   public static float getDrag(MemorySegment mem) {
+      return getDrag(mem, 0);
+   }
+
+   public static float getDrag(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 18));
+   }
+
+   public static float getFriction(MemorySegment mem) {
+      return getFriction(mem, 0);
+   }
+
+   public static float getFriction(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 22));
+   }
+
+   public static float getTerminalVelocityModifier(MemorySegment mem) {
+      return getTerminalVelocityModifier(mem, 0);
+   }
+
+   public static float getTerminalVelocityModifier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 26));
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem) {
+      return getHorizontalSpeedMultiplier(mem, 0);
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 30));
+   }
+
+   public static float getAcceleration(MemorySegment mem) {
+      return getAcceleration(mem, 0);
+   }
+
+   public static float getAcceleration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 34));
+   }
+
+   public static float getJumpForceMultiplier(MemorySegment mem) {
+      return getJumpForceMultiplier(mem, 0);
+   }
+
+   public static float getJumpForceMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 38));
+   }
+
+   public static BlockMovementSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockMovementSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 42 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockMovementSettings", offset + 42, (int)mem.byteSize());
+      } else {
+         return new BlockMovementSettings(
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 5)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 9)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 13)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 14)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 18)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 22)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 26)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 30)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 34)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 38))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -105,6 +237,22 @@ public class BlockMovementSettings {
       buf.writeFloatLE(this.horizontalSpeedMultiplier);
       buf.writeFloatLE(this.acceleration);
       buf.writeFloatLE(this.jumpForceMultiplier);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.isClimbable);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 1), this.climbUpSpeedMultiplier);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 5), this.climbDownSpeedMultiplier);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 9), this.climbLateralSpeedMultiplier);
+      mem.set(PacketIO.PROTO_BOOL, offset + 13, this.isBouncy);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 14), this.bounceVelocity);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 18), this.drag);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 22), this.friction);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 26), this.terminalVelocityModifier);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 30), this.horizontalSpeedMultiplier);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 34), this.acceleration);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 38), this.jumpForceMultiplier);
+      return 42;
    }
 
    public int computeSize() {

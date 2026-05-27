@@ -1,9 +1,10 @@
 package com.hypixel.hytale.math.shape;
 
-import com.hypixel.hytale.math.matrix.Matrix4d;
-import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.math.vector.Vector4dUtil;
 import java.util.Random;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
+import org.joml.Vector4d;
 
 public class Triangle4d {
    private Vector4d a;
@@ -17,7 +18,7 @@ public class Triangle4d {
    }
 
    public Triangle4d() {
-      this(new Vector4d(), new Vector4d(), new Vector4d());
+      this(new Vector4d().zero(), new Vector4d().zero(), new Vector4d().zero());
    }
 
    public Triangle4d(@Nonnull Vector4d[] points) {
@@ -68,15 +69,15 @@ public class Triangle4d {
 
    @Nonnull
    public Triangle4d assign(@Nonnull Vector4d v1, @Nonnull Vector4d v2, @Nonnull Vector4d v3) {
-      this.a.assign(v1);
-      this.b.assign(v2);
-      this.c.assign(v3);
+      this.a.set(v1);
+      this.b.set(v2);
+      this.c.set(v3);
       return this;
    }
 
    @Nonnull
    public Vector4d getRandom(@Nonnull Random random) {
-      return this.getRandom(random, new Vector4d());
+      return this.getRandom(random, new Vector4d().zero());
    }
 
    @Nonnull
@@ -84,7 +85,7 @@ public class Triangle4d {
       double p = random.nextDouble();
       double q = random.nextDouble() * (1.0 - p);
       double pq = 1.0 - p - q;
-      vec.assign(
+      vec.set(
          this.a.x * pq + this.b.x * p + this.c.x * q,
          this.a.y * pq + this.b.y * p + this.c.y * q,
          this.a.z * pq + this.b.z * p + this.c.z * q,
@@ -100,25 +101,25 @@ public class Triangle4d {
 
    @Nonnull
    public Triangle4d multiply(@Nonnull Matrix4d matrix, @Nonnull Triangle4d target) {
-      matrix.multiply(this.a, target.a);
-      matrix.multiply(this.b, target.b);
-      matrix.multiply(this.c, target.c);
+      matrix.transform(this.a, target.a);
+      matrix.transform(this.b, target.b);
+      matrix.transform(this.c, target.c);
       return target;
    }
 
    @Nonnull
    public Triangle2d to2d(@Nonnull Triangle2d target) {
-      target.getA().assign(this.a.x, this.a.y);
-      target.getB().assign(this.b.x, this.b.y);
-      target.getC().assign(this.c.x, this.c.y);
+      target.getA().set(this.a.x, this.a.y);
+      target.getB().set(this.b.x, this.b.y);
+      target.getC().set(this.c.x, this.c.y);
       return target;
    }
 
    @Nonnull
    public Triangle4d perspectiveTransform() {
-      this.a.perspectiveTransform();
-      this.b.perspectiveTransform();
-      this.c.perspectiveTransform();
+      Vector4dUtil.perspectiveTransform(this.a);
+      Vector4dUtil.perspectiveTransform(this.b);
+      Vector4dUtil.perspectiveTransform(this.c);
       return this;
    }
 

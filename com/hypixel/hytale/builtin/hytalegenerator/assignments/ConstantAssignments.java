@@ -2,10 +2,10 @@ package com.hypixel.hytale.builtin.hytalegenerator.assignments;
 
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.Collections;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ConstantAssignments extends Assignments {
    @Nonnull

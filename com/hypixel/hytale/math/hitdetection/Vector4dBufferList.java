@@ -1,7 +1,7 @@
 package com.hypixel.hytale.math.hitdetection;
 
-import com.hypixel.hytale.math.vector.Vector4d;
 import javax.annotation.Nonnull;
+import org.joml.Vector4d;
 
 public class Vector4dBufferList {
    private Vector4d[] vectors;
@@ -11,7 +11,7 @@ public class Vector4dBufferList {
       this.vectors = new Vector4d[size];
 
       for (int i = 0; i < size; i++) {
-         this.vectors[i] = new Vector4d();
+         this.vectors[i] = new Vector4d().zero();
       }
 
       this.size = 0;

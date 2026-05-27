@@ -12,6 +12,8 @@ import javax.annotation.Nonnull;
 
 public class BuilderActionParentState extends BuilderActionBase {
    protected String state;
+   protected boolean clearHeadMotion;
+   protected boolean clearBodyMotion;
 
    @Nonnull
    public ActionParentState build(@Nonnull BuilderSupport builderSupport) {
@@ -49,9 +51,35 @@ public class BuilderActionParentState extends BuilderActionBase {
          "The alias of the external state to set, as defined by _ImportStates in parameters",
          null
       );
+      this.getBoolean(
+         data,
+         "ClearHeadMotion",
+         v -> this.clearHeadMotion = v,
+         true,
+         BuilderDescriptorState.Stable,
+         "Whether the head motion will be cleared during the state transition actions",
+         null
+      );
+      this.getBoolean(
+         data,
+         "ClearBodyMotion",
+         v -> this.clearBodyMotion = v,
+         true,
+         BuilderDescriptorState.Stable,
+         "Whether the body motion will be cleared during the state transition actions",
+         null
+      );
       this.registerStateSetter(this.state, null, (m, s) -> {});
       this.requireInstructionType(InstructionType.StateChangeAllowedInstructions);
       return this;
+   }
+
+   public boolean isClearHeadMotion() {
+      return this.clearHeadMotion;
+   }
+
+   public boolean isClearBodyMotion() {
+      return this.clearBodyMotion;
    }
 
    @Nonnull

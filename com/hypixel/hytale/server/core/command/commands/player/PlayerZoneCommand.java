@@ -19,6 +19,7 @@ public class PlayerZoneCommand extends AbstractTargetPlayerCommand {
 
    public PlayerZoneCommand() {
       super("zone", "server.commands.player.zone.desc");
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

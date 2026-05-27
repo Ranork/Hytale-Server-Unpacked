@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.npc.navigation;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class AStarNode implements IWaypoint {
    public static final AStarNode ENTRY_NODE_TAG = new AStarNode(0);
@@ -118,7 +118,7 @@ public class AStarNode implements IWaypoint {
 
    @Nonnull
    public AStarNode initAsStartNode(@Nonnull Vector3d position, long positionIndex, float cost, float estimateCost) {
-      this.position.assign(position);
+      this.position.set(position);
       this.positionIndex = positionIndex;
       this.open = true;
       this.estimateToGoal = estimateCost;
@@ -142,7 +142,7 @@ public class AStarNode implements IWaypoint {
       float travelCost,
       float estimateCost
    ) {
-      this.position.assign(position);
+      this.position.set(position);
       this.positionIndex = positionIndex;
       this.open = true;
       this.estimateToGoal = estimateCost;
@@ -159,7 +159,7 @@ public class AStarNode implements IWaypoint {
 
    @Nonnull
    public AStarNode initAsInvalid(@Nonnull Vector3d position, long positionIndex) {
-      this.position.assign(position);
+      this.position.set(position);
       this.positionIndex = positionIndex;
       this.open = false;
       this.estimateToGoal = Float.MAX_VALUE;

@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import javax.annotation.Nonnull;
@@ -34,6 +35,7 @@ public class TintOperation extends ToolOperation {
    public TintOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
@@ -48,28 +50,28 @@ public class TintOperation extends ToolOperation {
          String hexColor = ColorParseUtil.toHexString(sampledTint & 16777215);
          InventoryComponent.Hotbar hotbar = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
          ItemStack itemStack = hotbar.getActiveItem();
-         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(player);
+         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
 
          try {
             ItemStack newItemStack = builderTool.updateArgMetadata(itemStack, "bTintColor", hexColor);
             hotbar.getInventory().setItemStackForSlot(hotbar.getActiveSlot(), newItemStack);
             BuilderToolsPlugin.sendFeedback(
-               Message.translation("server.builderTools.pickedColor").param("color", hexColor), player, NotificationStyle.Success, componentAccessor
+               Message.translation("server.builderTools.pickedColor").param("color", hexColor), playerRef, NotificationStyle.Success, componentAccessor
             );
-         } catch (ToolArgException var11) {
-            player.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", hexColor));
+         } catch (ToolArgException var12) {
+            playerRef.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", hexColor));
          }
       } else {
          String colorText = (String)this.args.tool().getOrDefault("bTintColor", "ffffff");
 
          try {
             this.tintColor = ColorParseUtil.hexStringToRGBInt(colorText);
-         } catch (NumberFormatException var12) {
-            player.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", colorText));
-            throw var12;
+         } catch (NumberFormatException var13) {
+            playerRef.sendMessage(Message.translation("server.builderTools.tintOperation.colorParseError").param("value", colorText));
+            throw var13;
          }
 
-         this.opacity = ((Integer)this.args.tool().getOrDefault("cOpacity", 0)).intValue() / 100.0;
+         this.opacity = ((Integer)this.args.tool().getOrDefault("cOpacity", 100)).intValue() / 100.0;
          UUIDComponent uuidComponent = ref.getStore().getComponent(ref, UUIDComponent.getComponentType());
          PrototypePlayerBuilderToolSettings prototypeSettings = PROTOTYPE_TOOL_SETTINGS.get(uuidComponent.getUuid());
          if (!packet.isHoldDownInteraction) {
@@ -100,7 +102,7 @@ public class TintOperation extends ToolOperation {
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       if (this.isHoldingAltModeDown && this.blendMode) {
          return true;
       } else {
@@ -111,7 +113,7 @@ public class TintOperation extends ToolOperation {
             this.packedPlacedTinsPositions.add(packed);
             if (this.blendMode) {
                int targetColor = this.sampleKernelBlend(x, z);
-               this.edit.setTint(x, z, targetColor, 0.0);
+               this.edit.setTint(x, z, targetColor, 1.0);
             } else {
                this.edit.setTint(x, z, this.tintColor, this.opacity);
             }

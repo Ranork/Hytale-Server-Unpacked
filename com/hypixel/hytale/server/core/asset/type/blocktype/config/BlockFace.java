@@ -1,20 +1,22 @@
 package com.hypixel.hytale.server.core.asset.type.blocktype.config;
 
 import com.hypixel.hytale.codec.codecs.EnumCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.BlockNeighbor;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public enum BlockFace {
-   UP(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.Up, Vector3i.UP),
-   DOWN(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.Down, Vector3i.DOWN),
-   NORTH(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.North, Vector3i.NORTH),
-   EAST(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.East, Vector3i.EAST),
-   SOUTH(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.South, Vector3i.SOUTH),
-   WEST(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.West, Vector3i.WEST),
+   UP(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.Up, Vector3iUtil.UP),
+   DOWN(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.Down, Vector3iUtil.DOWN),
+   NORTH(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.North, Vector3iUtil.NORTH),
+   EAST(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.East, Vector3iUtil.EAST),
+   SOUTH(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.South, Vector3iUtil.SOUTH),
+   WEST(BlockFace.FaceConnectionType.FLIP, BlockNeighbor.West, Vector3iUtil.WEST),
    UP_NORTH(BlockFace.FaceConnectionType.ROTATE_X, BlockNeighbor.UpNorth, UP, NORTH),
    UP_SOUTH(BlockFace.FaceConnectionType.ROTATE_X, BlockNeighbor.UpSouth, UP, SOUTH),
    UP_EAST(BlockFace.FaceConnectionType.ROTATE_Z, BlockNeighbor.UpEast, UP, EAST),
@@ -39,16 +41,16 @@ public enum BlockFace {
    public static final EnumCodec<BlockFace> CODEC = new EnumCodec<>(BlockFace.class);
    public static final BlockFace[] VALUES = values();
    @Nonnull
-   private static final Map<Vector3i, BlockFace> DIRECTION_MAP = new Object2ObjectOpenHashMap();
+   private static final Map<Vector3ic, BlockFace> DIRECTION_MAP = new Object2ObjectOpenHashMap();
    private final BlockFace.FaceConnectionType faceConnectionType;
    @Nonnull
    private final BlockFace[] components;
-   private final Vector3i direction;
+   private final Vector3ic direction;
    private final BlockNeighbor blockNeighbor;
    private BlockFace[] connectingFaces;
-   private Vector3i[] connectingFaceOffsets;
+   private Vector3ic[] connectingFaceOffsets;
 
-   private BlockFace(BlockFace.FaceConnectionType faceConnectionType, BlockNeighbor blockNeighbor, Vector3i direction) {
+   private BlockFace(BlockFace.FaceConnectionType faceConnectionType, BlockNeighbor blockNeighbor, Vector3ic direction) {
       this.faceConnectionType = faceConnectionType;
       this.direction = direction;
       this.blockNeighbor = blockNeighbor;
@@ -65,12 +67,13 @@ public enum BlockFace {
          }
       }
 
-      this.direction = new Vector3i();
+      Vector3i direction = new Vector3i();
 
       for (BlockFace componentx : components) {
-         this.direction.add(componentx.direction);
+         direction.add(componentx.direction);
       }
 
+      this.direction = direction;
       this.blockNeighbor = blockNeighbor;
    }
 
@@ -83,7 +86,7 @@ public enum BlockFace {
       return this.components;
    }
 
-   public Vector3i getDirection() {
+   public Vector3ic getDirection() {
       return this.direction;
    }
 
@@ -91,7 +94,7 @@ public enum BlockFace {
       return this.connectingFaces;
    }
 
-   public Vector3i[] getConnectingFaceOffsets() {
+   public Vector3ic[] getConnectingFaceOffsets() {
       return this.connectingFaceOffsets;
    }
 
@@ -139,16 +142,16 @@ public enum BlockFace {
    @Nonnull
    private Vector3i directionTo(@Nonnull BlockFace connectingFace) {
       Vector3i vector3i = new Vector3i();
-      if (this.direction.getX() == -connectingFace.direction.getX()) {
-         vector3i.setX(this.direction.getX());
+      if (this.direction.x() == -connectingFace.direction.x()) {
+         vector3i.x = this.direction.x();
       }
 
-      if (this.direction.getY() == -connectingFace.direction.getY()) {
-         vector3i.setY(this.direction.getY());
+      if (this.direction.y() == -connectingFace.direction.y()) {
+         vector3i.y = this.direction.y();
       }
 
-      if (this.direction.getZ() == -connectingFace.direction.getZ()) {
-         vector3i.setZ(this.direction.getZ());
+      if (this.direction.z() == -connectingFace.direction.z()) {
+         vector3i.z = this.direction.z();
       }
 
       return vector3i;
@@ -169,7 +172,7 @@ public enum BlockFace {
    }
 
    public static BlockFace flip(@Nonnull BlockFace blockFace) {
-      Vector3i flipped = blockFace.direction.clone().scale(-1);
+      Vector3i flipped = new Vector3i(blockFace.direction).mul(-1);
       return lookup(flipped);
    }
 

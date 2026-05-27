@@ -61,24 +61,48 @@ public class VelocityConfig implements NetworkSerializable<com.hypixel.hytale.pr
       return this.groundResistance;
    }
 
+   public void setGroundResistance(float groundResistance) {
+      this.groundResistance = groundResistance;
+   }
+
    public float getAirResistance() {
       return this.airResistance;
+   }
+
+   public void setAirResistance(float airResistance) {
+      this.airResistance = airResistance;
    }
 
    public float getGroundResistanceMax() {
       return this.groundResistanceMax;
    }
 
+   public void setGroundResistanceMax(float groundResistanceMax) {
+      this.groundResistanceMax = groundResistanceMax;
+   }
+
    public float getAirResistanceMax() {
       return this.airResistanceMax;
+   }
+
+   public void setAirResistanceMax(float airResistanceMax) {
+      this.airResistanceMax = airResistanceMax;
    }
 
    public float getThreshold() {
       return this.threshold;
    }
 
+   public void setThreshold(float threshold) {
+      this.threshold = threshold;
+   }
+
    public VelocityThresholdStyle getStyle() {
       return this.style;
+   }
+
+   public void setStyle(VelocityThresholdStyle style) {
+      this.style = style;
    }
 
    @Nonnull

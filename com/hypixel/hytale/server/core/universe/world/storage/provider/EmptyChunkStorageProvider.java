@@ -6,8 +6,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
-import it.unimi.dsi.fastutil.longs.LongSet;
-import it.unimi.dsi.fastutil.longs.LongSets;
+import it.unimi.dsi.fastutil.longs.LongList;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
@@ -28,6 +27,9 @@ public class EmptyChunkStorageProvider implements IChunkStorageProvider<Void> {
 
    public Void initialize(@NonNullDecl Store<ChunkStore> store) throws IOException {
       return null;
+   }
+
+   public void delete(@Nonnull Void unused, @Nonnull Store<ChunkStore> store) throws IOException {
    }
 
    public void close(@NonNullDecl Void o, @NonNullDecl Store<ChunkStore> store) throws IOException {
@@ -62,8 +64,8 @@ public class EmptyChunkStorageProvider implements IChunkStorageProvider<Void> {
 
       @Nonnull
       @Override
-      public LongSet getIndexes() {
-         return LongSets.EMPTY_SET;
+      public LongList getIndexes() {
+         return LongList.of();
       }
    }
 
@@ -86,8 +88,8 @@ public class EmptyChunkStorageProvider implements IChunkStorageProvider<Void> {
 
       @Nonnull
       @Override
-      public LongSet getIndexes() {
-         return LongSets.EMPTY_SET;
+      public LongList getIndexes() {
+         return LongList.of();
       }
 
       @Override

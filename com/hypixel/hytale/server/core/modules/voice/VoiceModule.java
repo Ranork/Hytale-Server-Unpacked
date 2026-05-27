@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.packets.serveraccess.Access;
 import com.hypixel.hytale.protocol.packets.stream.StreamType;
 import com.hypixel.hytale.server.core.Constants;
@@ -44,6 +43,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class VoiceModule extends JavaPlugin {
    private static final long POSITION_CACHE_UPDATE_INTERVAL_MS = 100L;
@@ -405,9 +405,9 @@ public class VoiceModule extends JavaPlugin {
    }
 
    private boolean isEyeInFluid(@Nonnull Vector3d position, @Nonnull World world) {
-      int blockX = MathUtil.floor(position.getX());
-      int blockY = MathUtil.floor(position.getY() + 1.62);
-      int blockZ = MathUtil.floor(position.getZ());
+      int blockX = MathUtil.floor(position.x());
+      int blockY = MathUtil.floor(position.y() + 1.62);
+      int blockZ = MathUtil.floor(position.z());
       ChunkStore chunkStore = world.getChunkStore();
       long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ);
       Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
@@ -439,7 +439,7 @@ public class VoiceModule extends JavaPlugin {
          .put(
             playerId,
             new VoiceModule.PositionSnapshot(
-               position.getX(), position.getY() + 1.62, position.getZ(), isUnderwater, worldId, networkId, isDead, System.currentTimeMillis()
+               position.x(), position.y() + 1.62, position.z(), isUnderwater, worldId, networkId, isDead, System.currentTimeMillis()
             )
          );
    }

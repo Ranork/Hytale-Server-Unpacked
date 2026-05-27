@@ -13,14 +13,14 @@ public enum PaletteTypeEnum {
    private static final PaletteTypeEnum[] values = values();
    @Nonnull
    private final PaletteType paletteType;
-   private final Supplier<? extends ISectionPalette> constructor;
+   private final Supplier<? extends AbstractSectionPalette> constructor;
    private final byte paletteId;
 
    public static PaletteTypeEnum get(byte paletteId) {
       return values[paletteId];
    }
 
-   private <T extends ISectionPalette> PaletteTypeEnum(@Nonnull PaletteType paletteType, Supplier<T> constructor) {
+   private <T extends AbstractSectionPalette> PaletteTypeEnum(@Nonnull PaletteType paletteType, Supplier<T> constructor) {
       this.paletteType = paletteType;
       this.constructor = constructor;
       this.paletteId = (byte)paletteType.ordinal();
@@ -31,7 +31,7 @@ public enum PaletteTypeEnum {
       return this.paletteType;
    }
 
-   public Supplier<? extends ISectionPalette> getConstructor() {
+   public Supplier<? extends AbstractSectionPalette> getConstructor() {
       return this.constructor;
    }
 

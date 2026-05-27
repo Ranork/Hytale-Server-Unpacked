@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -26,13 +29,41 @@ public class BoolParamValue extends ParamValue {
 
    @Nonnull
    public static BoolParamValue deserialize(@Nonnull ByteBuf buf, int offset) {
-      BoolParamValue obj = new BoolParamValue();
-      obj.value = buf.getByte(offset + 0) != 0;
-      return obj;
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("BoolParamValue", 1, buf.readableBytes() - offset);
+      } else {
+         BoolParamValue obj = new BoolParamValue();
+         obj.value = buf.getByte(offset + 0) != 0;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 1;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static boolean getValue(MemorySegment mem) {
+      return getValue(mem, 0);
+   }
+
+   public static boolean getValue(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0));
+   }
+
+   public static BoolParamValue toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BoolParamValue toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BoolParamValue", offset + 1, (int)mem.byteSize());
+      } else {
+         return new BoolParamValue(mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0)));
+      }
    }
 
    @Override
@@ -40,6 +71,12 @@ public class BoolParamValue extends ParamValue {
       int startPos = buf.writerIndex();
       buf.writeByte(this.value ? 1 : 0);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.value);
+      return 1;
    }
 
    @Override

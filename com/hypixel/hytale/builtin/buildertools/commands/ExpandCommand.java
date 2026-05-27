@@ -5,8 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -19,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class ExpandCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -30,7 +29,7 @@ public class ExpandCommand extends AbstractPlayerCommand {
 
    public ExpandCommand() {
       super("expand", "server.commands.expand.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override
@@ -41,17 +40,17 @@ public class ExpandCommand extends AbstractPlayerCommand {
 
       assert playerComponent != null;
 
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          Integer distance = this.distanceArg.get(context);
          Vector3i direction;
          if (this.axisArg.provided(context)) {
-            direction = this.axisArg.get(context).getDirection().scale(distance);
+            direction = this.axisArg.get(context).getDirection().mul(distance, new Vector3i());
          } else {
             HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
 
             assert headRotationComponent != null;
 
-            direction = headRotationComponent.getAxisDirection().scale(distance);
+            direction = headRotationComponent.getAxisDirection().mul(distance);
          }
 
          BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> s.expand(r, direction, componentAccessor));

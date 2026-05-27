@@ -1,9 +1,9 @@
 package com.hypixel.hytale.math.iterator;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class LineIterator implements Iterator<Vector3i> {
    private final int x_inc;

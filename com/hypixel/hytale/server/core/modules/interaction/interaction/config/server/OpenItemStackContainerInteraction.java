@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemStackContainerWindow;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemStackItemContainer;
@@ -30,6 +31,9 @@ public class OpenItemStackContainerInteraction extends SimpleInstantInteraction 
    @Override
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
+
+      assert commandBuffer != null;
+
       Ref<EntityStore> ref = context.getEntity();
       Store<EntityStore> store = ref.getStore();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
@@ -39,13 +43,15 @@ public class OpenItemStackContainerInteraction extends SimpleInstantInteraction 
             ItemStack heldItem = context.getHeldItem();
             if (!ItemStack.isEmpty(heldItem)) {
                byte heldItemSlot = context.getHeldItemSlot();
-               ItemContainer itemContainer = playerComponent.getInventory().getSectionById(context.getHeldItemSectionId());
+               ItemContainer itemContainer = InventoryUtils.getSectionById(ref, context.getHeldItemSectionId(), commandBuffer);
                if (itemContainer != null) {
                   ItemStack itemStack = itemContainer.getItemStack(heldItemSlot);
-                  ItemStackContainerConfig config = itemStack.getItem().getItemStackContainerConfig();
-                  ItemStackItemContainer itemStackItemContainer = ItemStackItemContainer.ensureConfiguredContainer(itemContainer, heldItemSlot, config);
-                  if (itemStackItemContainer != null) {
-                     pageManager.setPageWithWindows(ref, store, Page.Bench, true, new ItemStackContainerWindow(itemStackItemContainer));
+                  if (itemStack != null) {
+                     ItemStackContainerConfig config = itemStack.getItem().getItemStackContainerConfig();
+                     ItemStackItemContainer itemStackItemContainer = ItemStackItemContainer.ensureConfiguredContainer(itemContainer, heldItemSlot, config);
+                     if (itemStackItemContainer != null) {
+                        pageManager.setPageWithWindows(ref, store, Page.Bench, true, new ItemStackContainerWindow(itemStackItemContainer));
+                     }
                   }
                }
             }

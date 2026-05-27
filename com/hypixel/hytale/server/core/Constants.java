@@ -6,7 +6,9 @@ import com.hypixel.hytale.server.core.asset.common.CommonAssetModule;
 import com.hypixel.hytale.server.core.blocktype.BlockTypeModule;
 import com.hypixel.hytale.server.core.console.ConsoleModule;
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
+import com.hypixel.hytale.server.core.discovery.DiscoveryModule;
 import com.hypixel.hytale.server.core.io.ServerManager;
+import com.hypixel.hytale.server.core.liveconfig.LiveConfigModule;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.accesscontrol.AccessControlModule;
 import com.hypixel.hytale.server.core.modules.anchoraction.AnchorActionModule;
@@ -33,6 +35,7 @@ import com.hypixel.hytale.server.core.modules.splitvelocity.SplitVelocity;
 import com.hypixel.hytale.server.core.modules.time.TimeModule;
 import com.hypixel.hytale.server.core.modules.voice.VoiceModule;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
+import com.hypixel.hytale.server.core.telemetry.TelemetryModule;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlocksModule;
 import com.hypixel.hytale.server.core.update.UpdateModule;
@@ -45,15 +48,21 @@ public final class Constants {
    private static final OptionSet OPTION_SET = Options.getOptionSet();
    public static final boolean DEBUG = true;
    public static final boolean SINGLEPLAYER = OPTION_SET.has(Options.SINGLEPLAYER);
+   public static final boolean BOOTSTRAP = OPTION_SET.has(Options.BOOTSTRAP);
    public static final boolean ALLOWS_SELF_OP_COMMAND = OPTION_SET.has(Options.ALLOW_SELF_OP_COMMAND);
    public static final boolean FRESH_UNIVERSE = checkFreshUniverse();
    public static final boolean FORCE_NETWORK_FLUSH = (Boolean)OPTION_SET.valueOf(Options.FORCE_NETWORK_FLUSH);
    public static final Path UNIVERSE_PATH = getUniversePath();
    @Nonnull
+   public static final PluginManifest[] BOOTSTRAP_PLUGINS = new PluginManifest[]{
+      ConsoleModule.MANIFEST, PermissionsModule.MANIFEST, I18nModule.MANIFEST, UpdateModule.MANIFEST
+   };
+   @Nonnull
    public static final PluginManifest[] CORE_PLUGINS = new PluginManifest[]{
       ConsoleModule.MANIFEST,
       PermissionsModule.MANIFEST,
       UpdateModule.MANIFEST,
+      LiveConfigModule.MANIFEST,
       FlyCameraModule.MANIFEST,
       AssetModule.MANIFEST,
       CommonAssetModule.MANIFEST,
@@ -85,7 +94,9 @@ public final class Constants {
       AccessControlModule.MANIFEST,
       SingleplayerModule.MANIFEST,
       Universe.MANIFEST,
-      ConnectedBlocksModule.MANIFEST
+      TelemetryModule.MANIFEST,
+      ConnectedBlocksModule.MANIFEST,
+      DiscoveryModule.MANIFEST
    };
 
    public static void init() {

@@ -8,9 +8,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.tintproviders.TintProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.VectorProvider;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class Density {
    @Nonnull
@@ -79,21 +80,21 @@ public abstract class Density {
       }
 
       public Context(@Nonnull TintProvider.Context context) {
-         this.position = context.position.toVector3d();
+         this.position = Vector3iUtil.toVector3d(context.position);
       }
 
       public Context(@Nonnull EnvironmentProvider.Context context) {
-         this.position = context.position.toVector3d();
+         this.position = Vector3iUtil.toVector3d(context.position);
       }
 
       public Context(@Nonnull MaterialProvider.Context context) {
-         this.position = context.position.toVector3d();
+         this.position = Vector3iUtil.toVector3d(context.position);
          this.terrainDensityProvider = context.terrainDensityProvider;
          this.distanceToBiomeEdge = context.distanceToBiomeEdge;
       }
 
       public Context(@Nonnull Pattern.Context context) {
-         this.position = context.position.toVector3d();
+         this.position = Vector3iUtil.toVector3d(context.position);
       }
 
       public void assign(@Nonnull Density.Context other) {
@@ -112,21 +113,21 @@ public abstract class Density {
       }
 
       public void assign(@Nonnull MaterialProvider.Context context) {
-         this.position.assign(context.position.x, context.position.y, context.position.z);
+         this.position.set(context.position.x, context.position.y, context.position.z);
          this.terrainDensityProvider = context.terrainDensityProvider;
          this.distanceToBiomeEdge = context.distanceToBiomeEdge;
       }
 
       public void assign(@Nonnull EnvironmentProvider.Context context) {
-         this.position.assign(context.position.x, context.position.y, context.position.z);
+         this.position.set(context.position.x, context.position.y, context.position.z);
       }
 
       public void assign(@Nonnull Pattern.Context context) {
-         this.position.assign(context.position.x, context.position.y, context.position.z);
+         this.position.set(context.position.x, context.position.y, context.position.z);
       }
 
       public void assign(@Nonnull Prop.Context other) {
-         this.position.assign(other.position);
+         this.position.set(other.position);
          this.distanceToBiomeEdge = other.distanceToBiomeEdge;
          this.densityAnchor = null;
          this.positionsAnchor = null;

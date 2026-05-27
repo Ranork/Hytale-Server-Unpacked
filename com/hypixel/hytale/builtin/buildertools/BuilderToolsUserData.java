@@ -26,7 +26,8 @@ public class BuilderToolsUserData implements Component<EntityStore> {
       .addValidator(Validators.nonNull())
       .documentation("Controls whether changes to the block selection box are recorded in the undo/redo history.")
       .add()
-      .addField(new KeyedCodec<>("LastSavePack", Codec.STRING), BuilderToolsUserData::setLastSavePack, BuilderToolsUserData::getLastSavePack)
+      .append(new KeyedCodec<>("LastSavePack", Codec.STRING), BuilderToolsUserData::setLastSavePack, BuilderToolsUserData::getLastSavePack)
+      .add()
       .build();
    private boolean selectionHistory = true;
    @Nullable

@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.corecomponents.movement;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.entity.group.EntityGroup;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -15,6 +14,8 @@ import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class BodyMotionWanderInCircle extends BodyMotionWanderBase {
    protected final double radius;
@@ -57,12 +58,12 @@ public class BodyMotionWanderInCircle extends BodyMotionWanderBase {
             }
          }
       } else {
-         Vector3d n = activeMotionController.getWorldNormal();
-         double endDist2 = NPCPhysicsMath.squaredDistProjected(targetPosition.getX(), targetPosition.getY(), targetPosition.getZ(), referencePoint, n);
+         Vector3dc n = activeMotionController.getWorldNormal();
+         double endDist2 = NPCPhysicsMath.squaredDistProjected(targetPosition.x(), targetPosition.y(), targetPosition.z(), referencePoint, n);
          if (endDist2 <= r2) {
             return moveDist;
          } else {
-            double startDist2 = NPCPhysicsMath.squaredDistProjected(probePosition.getX(), probePosition.getY(), probePosition.getZ(), referencePoint, n);
+            double startDist2 = NPCPhysicsMath.squaredDistProjected(probePosition.x(), probePosition.y(), probePosition.z(), referencePoint, n);
             if (startDist2 >= r2) {
                return endDist2 <= startDist2 ? moveDist : 0.0;
             } else {
@@ -93,12 +94,12 @@ public class BodyMotionWanderInCircle extends BodyMotionWanderBase {
                assert leaderTransformComponent != null;
 
                Vector3d leaderPosition = leaderTransformComponent.getPosition();
-               this.referencePoint.assign(leaderPosition.getX(), leaderPosition.getY(), leaderPosition.getZ());
+               this.referencePoint.set(leaderPosition.x(), leaderPosition.y(), leaderPosition.z());
                return this.referencePoint;
             }
          }
 
-         this.referencePoint.assign(entityPosition);
+         this.referencePoint.set(entityPosition);
          return this.referencePoint;
       } else {
          NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());

@@ -1,33 +1,38 @@
 package com.hypixel.hytale.server.core.modules.voice;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.protocol.Packet;
+import com.hypixel.hytale.protocol.NetworkChannel;
+import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.packets.stream.StreamType;
 import com.hypixel.hytale.protocol.packets.voice.VoiceData;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
-public class VoiceStreamHandler extends SimpleChannelInboundHandler<Packet> {
+public class VoiceStreamHandler implements ConnectionHandler {
    private final PacketHandler packetHandler;
+   private final ChannelConnection channel;
    private final VoiceModule voiceModule;
    private final HytaleLogger logger;
    private volatile PlayerRef cachedPlayerRef;
    private volatile boolean loggedFirstPacket = false;
    private volatile boolean loggedFirstVoiceData = false;
 
-   public VoiceStreamHandler(@Nonnull PacketHandler packetHandler) {
+   public VoiceStreamHandler(@Nonnull PacketHandler packetHandler, @Nonnull ChannelConnection channel) {
       this.packetHandler = packetHandler;
+      this.channel = channel;
       this.voiceModule = VoiceModule.get();
       this.logger = this.voiceModule.getLogger();
    }
 
-   public void handlerAdded(@Nonnull ChannelHandlerContext ctx) throws Exception {
-      this.packetHandler.setChannel(StreamType.Voice, ctx.channel());
+   @Override
+   public void registered(@Nullable ConnectionHandler oldHandler) {
+      this.packetHandler.setChannel(StreamType.Voice, this.channel);
       if (this.packetHandler instanceof GamePacketHandler gameHandler) {
          this.cachedPlayerRef = gameHandler.getPlayerRef();
       }
@@ -37,13 +42,13 @@ public class VoiceStreamHandler extends SimpleChannelInboundHandler<Packet> {
          .log(
             "[VoiceStream] Voice stream registered for %s (channel active=%s, playerRef=%s)",
             this.packetHandler.getIdentifier(),
-            ctx.channel().isActive(),
+            this.channel.isActive(),
             this.cachedPlayerRef != null ? this.cachedPlayerRef.getUsername() : "null"
          );
-      super.handlerAdded(ctx);
    }
 
-   protected void channelRead0(@Nonnull ChannelHandlerContext ctx, @Nonnull Packet packet) {
+   @Override
+   public void handle(@Nonnull ToServerPacket packet) {
       if (!this.loggedFirstPacket) {
          this.loggedFirstPacket = true;
          this.logger
@@ -153,15 +158,18 @@ public class VoiceStreamHandler extends SimpleChannelInboundHandler<Packet> {
       }
    }
 
-   public void channelInactive(@Nonnull ChannelHandlerContext ctx) throws Exception {
-      this.packetHandler.compareAndSetChannel(StreamType.Voice, ctx.channel(), null);
+   @Override
+   public void closed(@Nullable NetworkChannel networkChannel) {
+      this.packetHandler.compareAndSetChannel(StreamType.Voice, this.channel, null);
       this.logger.at(Level.FINE).log("[VoiceStream] Voice stream closed for %s", this.packetHandler.getIdentifier());
-      super.channelInactive(ctx);
    }
 
-   public void exceptionCaught(@Nonnull ChannelHandlerContext ctx, @Nonnull Throwable cause) {
-      ((HytaleLogger.Api)this.logger.at(Level.WARNING).withCause(cause))
-         .log("[VoiceStream] Exception in voice stream for %s", this.packetHandler.getIdentifier());
-      ctx.close();
+   @Override
+   public void unregistered(@Nullable ConnectionHandler newHandler) {
+      this.packetHandler.compareAndSetChannel(StreamType.Voice, this.channel, null);
+   }
+
+   @Override
+   public void logCloseMessage() {
    }
 }

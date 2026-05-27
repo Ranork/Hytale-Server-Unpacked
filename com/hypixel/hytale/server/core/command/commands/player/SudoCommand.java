@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.core.command.commands.player;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.NameMatching;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -9,13 +8,11 @@ import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.List;
+import java.util.Collection;
 import javax.annotation.Nonnull;
 
 public class SudoCommand extends CommandBase {
@@ -42,7 +39,7 @@ public class SudoCommand extends CommandBase {
             commandToExecute = commandToExecute.substring(1);
          }
 
-         List<PlayerRef> players;
+         Collection<PlayerRef> players;
          if (playerName.equals("*")) {
             players = Universe.get().getPlayers();
          } else {
@@ -61,18 +58,10 @@ public class SudoCommand extends CommandBase {
          } else {
             String finalCommand = commandToExecute;
 
-            for (PlayerRef player : players) {
-               Ref<EntityStore> ref = player.getReference();
+            for (PlayerRef playerRef : players) {
+               Ref<EntityStore> ref = playerRef.getReference();
                if (ref != null && ref.isValid()) {
-                  Store<EntityStore> store = ref.getStore();
-                  World world = store.getExternalData().getWorld();
-                  world.execute(() -> {
-                     Player playerComponent = store.getComponent(ref, Player.getComponentType());
-
-                     assert playerComponent != null;
-
-                     CommandManager.get().handleCommand(playerComponent, finalCommand);
-                  });
+                  CommandManager.get().handleCommand(playerRef, finalCommand);
                }
             }
          }

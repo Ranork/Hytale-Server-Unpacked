@@ -1,6 +1,7 @@
 package com.hypixel.hytale.common.util;
 
 import com.hypixel.hytale.logger.HytaleLogger;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
@@ -56,7 +57,7 @@ public class CompletableFutureUtil {
       int listSize = list.size();
 
       while (!all.isDone()) {
-         Thread.sleep(millisSleep);
+         Thread.sleep(Duration.ofMillis(millisSleep));
          long now;
          if (last + nanosProgress < (now = System.nanoTime())) {
             last = now;

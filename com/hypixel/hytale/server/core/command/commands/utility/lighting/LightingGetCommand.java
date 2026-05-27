@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.command.commands.utility.lighting;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkLightDat
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class LightingGetCommand extends AbstractWorldCommand {
    @Nonnull
@@ -52,21 +52,29 @@ public class LightingGetCommand extends AbstractWorldCommand {
          byte blueLight = ChunkLightData.getLightValue(lightValue, 2);
          byte skyLight = ChunkLightData.getLightValue(lightValue, 3);
          boolean displayHex = this.hexFlag.get(context);
-         Message messageToSend = Message.translation("server.commands.light.get").param("x", x).param("y", y).param("z", z).param("worldName", world.getName());
          if (displayHex) {
-            String hexString = Integer.toHexString(lightValue);
-            messageToSend.insert("#" + "0".repeat(8 - hexString.length()) + hexString);
+            String hexFormatted = "%08x".formatted(lightValue);
+            context.sendMessage(
+               Message.translation("server.commands.light.getHex")
+                  .param("x", x)
+                  .param("y", y)
+                  .param("z", z)
+                  .param("worldName", world.getName())
+                  .param("hex", hexFormatted)
+            );
          } else {
-            messageToSend.insert(
-               Message.translation("server.commands.light.value")
+            context.sendMessage(
+               Message.translation("server.commands.light.get")
+                  .param("x", x)
+                  .param("y", y)
+                  .param("z", z)
+                  .param("worldName", world.getName())
                   .param("red", (int)redLight)
                   .param("green", (int)greenLight)
                   .param("blue", (int)blueLight)
                   .param("sky", (int)skyLight)
             );
          }
-
-         context.sendMessage(messageToSend);
       } else {
          Message errorMessage = Message.translation("server.commands.errors.chunkNotLoaded")
             .param("chunkX", ChunkUtil.chunkCoordinate(x))

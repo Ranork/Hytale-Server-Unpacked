@@ -38,6 +38,7 @@ public class HitboxCollision implements Component<EntityStore> {
 
    public void setHitboxCollisionConfigIndex(int hitboxCollisionConfigIndex) {
       this.hitboxCollisionConfigIndex = hitboxCollisionConfigIndex;
+      this.isNetworkOutdated = true;
    }
 
    public boolean consumeNetworkOutdated() {

@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -14,6 +13,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import com.hypixel.hytale.server.npc.util.ViewTest;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class EntityFilterSpotsMe extends EntityFilterBase {
    public static final int COST = 400;
@@ -63,7 +63,7 @@ public class EntityFilterSpotsMe extends EntityFilterBase {
       assert headRotationComponent != null;
 
       return NPCPhysicsMath.inViewSector(
-         position.getX(), position.getZ(), headRotationComponent.getRotation().getYaw(), this.viewAngle, targetPosition.getX(), targetPosition.getZ()
+         position.x(), position.z(), headRotationComponent.getRotation().yaw(), this.viewAngle, targetPosition.x(), targetPosition.z()
       );
    }
 

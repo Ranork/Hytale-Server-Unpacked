@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.npc.role.builders;
 
 import com.google.gson.JsonElement;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
 import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
 import com.hypixel.hytale.server.npc.NPCPlugin;
@@ -54,6 +53,7 @@ import com.hypixel.hytale.server.npc.config.ItemAttitudeGroup;
 import com.hypixel.hytale.server.npc.config.balancing.BalanceAsset;
 import com.hypixel.hytale.server.npc.decisionmaker.stateevaluator.StateEvaluator;
 import com.hypixel.hytale.server.npc.instructions.Instruction;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.controllers.BuilderMotionControllerMapUtil;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotionControllerBase;
@@ -74,8 +74,10 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BuilderRole extends SpawnableWithModelBuilder<Role> implements SpawnEffect {
    protected static final double[] DEFAULT_HEAD_PITCH_RANGE = new double[]{-89.0, 89.0};
@@ -245,11 +247,14 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
          }
       }
 
+      validationHelper.pushPrecedingScope();
+      boolean instructionListValid = this.instructionList.validate(configName, validationHelper, this.builderManager, context, globalScope, errors);
+      validationHelper.popPrecedingScope();
       return super.validate(configName, validationHelper, context, globalScope, errors)
          & hotbarValid
          & offHandValid
          & validInitialMotionController
-         & this.instructionList.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
+         & instructionListValid
          & this.interactionInstruction.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
          & this.deathInstruction.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
          & this.stateTransitionController.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
@@ -493,7 +498,13 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       );
       this.getBoolean(data, "ApplyAvoidance", b -> this.applyAvoidance = b, false, BuilderDescriptorState.Experimental, "Apply avoidance steering force", null);
       this.getBoolean(
-         data, "AvoidanceFallCheck", this.avoidanceFallCheck, false, BuilderDescriptorState.Experimental, "Perform extra avoidance fall check", null
+         data,
+         "AvoidanceFallCheck",
+         this.avoidanceFallCheck,
+         false,
+         BuilderDescriptorState.Deprecated,
+         "Deprecated no-op retained for backwards compatibility",
+         null
       );
       this.getBoolean(data, "ApplySeparation", this.applySeparation, false, BuilderDescriptorState.Experimental, "Apply separation steering force", null);
       this.getEnum(
@@ -1057,13 +1068,22 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
          if (result != SpawnTestResult.TEST_OK) {
             return result;
          }
-
-         if (!context.canBreathe(this.breathesInAir.get(context.getExecutionContext()), this.breathesInWater.get(context.getExecutionContext()))) {
-            return SpawnTestResult.FAIL_NOT_BREATHABLE;
-         }
       }
 
       return SpawnTestResult.TEST_OK;
+   }
+
+   @Override
+   public void getMovementModes(
+      @Nonnull SpawningContext context,
+      @Nonnull Set<MovementMode> outSupportedMovementModes,
+      @Nonnull Set<MovementMode> outDefaultMovementModes,
+      @Nonnull Set<MovementMode> outSafeMovementModes
+   ) {
+      Builder<Map<String, MotionController>> builder = this.motionControllers.getBuilder(this.builderManager, context.getExecutionContext(), this);
+      if (builder instanceof ISpawnable) {
+         ((ISpawnable)builder).getMovementModes(context, outSupportedMovementModes, outDefaultMovementModes, outSafeMovementModes);
+      }
    }
 
    @Nonnull
@@ -1101,7 +1121,7 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
 
    @Override
    public Vector3d getSpawnParticleOffset(@Nonnull BuilderSupport support) {
-      return createVector3d(this.spawnParticleOffset.get(support.getExecutionContext()), Vector3d.ZERO::clone);
+      return createVector3d(this.spawnParticleOffset.get(support.getExecutionContext()), Vector3d::new);
    }
 
    @Override
@@ -1141,12 +1161,14 @@ public class BuilderRole extends SpawnableWithModelBuilder<Role> implements Spaw
       return this.appearance.get(builderSupport.getExecutionContext());
    }
 
-   public boolean isBreathesInAir(BuilderSupport support) {
-      return this.breathesInAir.get(support.getExecutionContext());
+   @Override
+   public boolean breathesInAir(@Nonnull ExecutionContext context, @Nullable Scope modifierScope) {
+      return this.breathesInAir.get(context);
    }
 
-   public boolean isBreathesInWater(BuilderSupport support) {
-      return this.breathesInWater.get(support.getExecutionContext());
+   @Override
+   public boolean breathesInWater(@Nonnull ExecutionContext context, @Nullable Scope modifierScope) {
+      return this.breathesInWater.get(context);
    }
 
    public int getOpaqueBlockSet() {

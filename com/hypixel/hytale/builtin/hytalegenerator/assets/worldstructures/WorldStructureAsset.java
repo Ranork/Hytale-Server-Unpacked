@@ -44,6 +44,10 @@ public abstract class WorldStructureAsset implements Cleanable, JsonAssetWithMap
       return this.id;
    }
 
+   public void setId(String id) {
+      this.id = id;
+   }
+
    @Override
    public void cleanUp() {
    }

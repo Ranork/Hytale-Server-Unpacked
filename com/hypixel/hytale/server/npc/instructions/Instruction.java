@@ -112,6 +112,31 @@ public class Instruction implements RoleStateChange, IAnnotatedComponentCollecti
    }
 
    @Nullable
+   public <T extends BodyMotion> T findNearestPrecedingBodyMotion(@Nonnull Class<T> clazz) {
+      if (this.index < 0) {
+         return null;
+      } else if (this.parent instanceof Instruction parentInstruction) {
+         for (int var6 = this.index - 1; var6 >= 0; var6--) {
+            BodyMotion candidate = parentInstruction.instructionList[var6].getBodyMotion();
+            if (clazz.isInstance(candidate)) {
+               return clazz.cast(candidate);
+            }
+
+            if (candidate != null) {
+               T wrapped = candidate.findWrappedBodyMotion(clazz);
+               if (wrapped != null) {
+                  return wrapped;
+               }
+            }
+         }
+
+         return null;
+      } else {
+         return null;
+      }
+   }
+
+   @Nullable
    public HeadMotion getHeadMotion() {
       return this.headMotion;
    }

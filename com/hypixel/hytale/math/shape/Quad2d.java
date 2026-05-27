@@ -1,8 +1,8 @@
 package com.hypixel.hytale.math.shape;
 
-import com.hypixel.hytale.math.vector.Vector2d;
 import java.util.Random;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class Quad2d {
    private Vector2d a;
@@ -120,7 +120,7 @@ public class Quad2d {
 
    @Nonnull
    public Vector2d getCenter(@Nonnull Vector2d target) {
-      return target.assign((this.a.x + this.c.x) * 0.5, (this.a.y + this.c.y) * 0.5);
+      return target.set((this.a.x + this.c.x) * 0.5, (this.a.y + this.c.y) * 0.5);
    }
 
    @Nonnull
@@ -139,9 +139,9 @@ public class Quad2d {
 
       double pq = 1.0 - p - q;
       if (random.nextBoolean()) {
-         vec.assign(-this.a.x * pq + this.b.x * p + this.c.x * q, -this.a.y * pq + this.b.y * p + this.c.y * q);
+         vec.set(-this.a.x * pq + this.b.x * p + this.c.x * q, -this.a.y * pq + this.b.y * p + this.c.y * q);
       } else {
-         vec.assign(-this.a.x * pq + this.c.x * p + this.d.x * q, -this.a.y * pq + this.c.y * p + this.d.y * q);
+         vec.set(-this.a.x * pq + this.c.x * p + this.d.x * q, -this.a.y * pq + this.c.y * p + this.d.y * q);
       }
 
       return vec;

@@ -6,8 +6,8 @@ import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -19,6 +19,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class NPCPhysicsMath {
    public static final double EPSILON_LENGTH = 1.0E-6;
@@ -27,12 +29,12 @@ public class NPCPhysicsMath {
    private NPCPhysicsMath() {
    }
 
-   public static boolean near(@Nonnull Vector3d v, @Nonnull Vector3d w) {
+   public static boolean near(@Nonnull Vector3dc v, @Nonnull Vector3dc w) {
       return near(v, w, 1.0E-12);
    }
 
-   public static boolean near(@Nonnull Vector3d v, @Nonnull Vector3d w, double epsilonLength) {
-      return v.distanceSquaredTo(w) <= epsilonLength;
+   public static boolean near(@Nonnull Vector3dc v, @Nonnull Vector3dc w, double epsilonLength) {
+      return v.distanceSquared(w) <= epsilonLength;
    }
 
    public static boolean near(double v, double w) {
@@ -53,9 +55,24 @@ public class NPCPhysicsMath {
       return s < 1.0E-12 ? def : TrigMathUtil.atan2(y, Math.sqrt(s));
    }
 
+   public static void rotationFromDirection(double x, double y, double z, @Nonnull Rotation3fc inRotation, @Nonnull Rotation3f outRotation) {
+      double s = x * x + z * z;
+      outRotation.setYaw(s < 1.0E-12 ? inRotation.yaw() : PhysicsMath.headingFromDirection(x, z));
+      outRotation.setPitch(s < 1.0E-12 ? inRotation.pitch() : TrigMathUtil.atan2(y, Math.sqrt(s)));
+      outRotation.setRoll(inRotation.roll());
+   }
+
+   public static void rotationFromDirection(@Nonnull Vector3dc direction, @Nonnull Rotation3fc inRotation, @Nonnull Rotation3f outRotation) {
+      rotationFromDirection(direction.x(), direction.y(), direction.z(), inRotation, outRotation);
+   }
+
+   public static void rotationFromDirection(@Nonnull Vector3dc from, @Nonnull Vector3dc to, @Nonnull Rotation3fc inRotation, @Nonnull Rotation3f outRotation) {
+      rotationFromDirection(to.x() - from.x(), to.y() - from.y(), to.z() - from.z(), inRotation, outRotation);
+   }
+
    @Nonnull
-   public static Vector3d getViewDirection(@Nonnull Vector3f lookDirection, @Nonnull Vector3d outDirection) {
-      return PhysicsMath.vectorFromAngles(lookDirection.getYaw(), lookDirection.getPitch(), outDirection);
+   public static Vector3d getViewDirection(@Nonnull Rotation3f rotation, @Nonnull Vector3d outDirection) {
+      return PhysicsMath.vectorFromAngles(rotation.yaw(), rotation.pitch(), outDirection);
    }
 
    public static double cosAngleBetweenVectors(@Nonnull Vector3d v, @Nonnull Vector3d w) {
@@ -254,8 +271,8 @@ public class NPCPhysicsMath {
    public static int intersectLineSphere(
       @Nonnull Vector3d center, double radius, @Nonnull Vector3d p, @Nonnull Vector3d q, @Nonnull Vector3d x1, @Nonnull Vector3d x2, boolean segmentOnly
    ) {
-      x1.assign(q).subtract(p);
-      x2.assign(p).subtract(center);
+      x1.set(q).sub(p);
+      x2.set(p).sub(center);
       double a = x1.dot(x1);
       double b = 2.0 * x1.dot(x2);
       double c = x2.dot(x2) - radius * radius;
@@ -264,7 +281,7 @@ public class NPCPhysicsMath {
          if (k != 0.0) {
             return 0;
          } else {
-            x1.assign(p);
+            x1.set(p);
             return 1;
          }
       } else if (k < 0.0) {
@@ -286,9 +303,9 @@ public class NPCPhysicsMath {
             }
 
             if (d1 >= 0.0) {
-               x1.assign(p).addScaled(x2, d1);
+               x1.set(p).fma(d1, x2);
                if (d2 <= 1.0) {
-                  x2.scale(d2).add(p);
+                  x2.mul(d2).add(p);
                   return 2;
                }
 
@@ -296,18 +313,18 @@ public class NPCPhysicsMath {
             }
 
             if (d2 >= 0.0 && d2 <= 1.0) {
-               x1.assign(p).addScaled(x2, d1);
+               x1.set(p).fma(d1, x2);
                return 1;
             }
          }
 
-         x1.assign(p).addScaled(x2, d1);
-         x2.scale(d2).add(p);
+         x1.set(p).fma(d1, x2);
+         x2.mul(d2).add(p);
          return 2;
       } else {
          double dx = -b / (2.0 * a);
          if (!segmentOnly || !(dx < 0.0) && !(dx > 1.0)) {
-            x1.assign(p).addScaled(x2, dx);
+            x1.set(p).fma(dx, x2);
             return 1;
          } else {
             return 0;
@@ -324,8 +341,8 @@ public class NPCPhysicsMath {
       @Nonnull Vector3d t2,
       @Nonnull Vector3d componentSelector
    ) {
-      t1.assign(q).subtract(p).scale(componentSelector);
-      t2.assign(p).subtract(center).scale(componentSelector);
+      t1.set(q).sub(p).mul(componentSelector);
+      t2.set(p).sub(center).mul(componentSelector);
       double a = t1.dot(t1);
       double b = 2.0 * t1.dot(t2);
       double c = t2.dot(t2) - radius * radius;
@@ -405,7 +422,7 @@ public class NPCPhysicsMath {
    }
 
    public static void lerpDistance(@Nonnull Vector3d start, @Nonnull Vector3d end, double distance, @Nonnull Vector3d result) {
-      lerp(start, end, distance / start.distanceTo(end), result);
+      lerp(start, end, distance / start.distance(end), result);
    }
 
    public static void lerp(@Nonnull Vector3d start, @Nonnull Vector3d end, double lambda, @Nonnull Vector3d result) {
@@ -420,11 +437,11 @@ public class NPCPhysicsMath {
    }
 
    public static void offsetVector(@Nonnull Vector3d start, double dx, double dy, double dz, double lambda, @Nonnull Vector3d result) {
-      result.assign(start.x + lambda * dx, start.y + lambda * dy, start.z + lambda * dz);
+      result.set(start.x + lambda * dx, start.y + lambda * dy, start.z + lambda * dz);
    }
 
    public static void offsetVector(double sx, double sy, double sz, double dx, double dy, double dz, double lambda, @Nonnull Vector3d result) {
-      result.assign(sx + lambda * dx, sy + lambda * dy, sz + lambda * dz);
+      result.set(sx + lambda * dx, sy + lambda * dy, sz + lambda * dz);
    }
 
    public static void orthoComposition(@Nonnull Vector3d start, @Nonnull Vector3d end, @Nonnull Vector3d ortho, double distance, @Nonnull Vector3d result) {
@@ -438,16 +455,16 @@ public class NPCPhysicsMath {
    }
 
    public static void orthoComposition(
-      @Nonnull Vector3d start, @Nonnull Vector3d end, double distanceStart, @Nonnull Vector3d ortho, double distance, @Nonnull Vector3d result
+      @Nonnull Vector3dc start, @Nonnull Vector3dc end, double distanceStart, @Nonnull Vector3dc ortho, double distance, @Nonnull Vector3d result
    ) {
-      double dx = end.x - start.x;
-      double dy = end.y - start.y;
-      double dz = end.z - start.z;
-      double ox = dy * ortho.z - dz * ortho.y;
-      double oy = dz * ortho.x - dx * ortho.z;
-      double oz = dx * ortho.y - dy * ortho.x;
+      double dx = end.x() - start.x();
+      double dy = end.y() - start.y();
+      double dz = end.z() - start.z();
+      double ox = dy * ortho.z() - dz * ortho.y();
+      double oy = dz * ortho.x() - dx * ortho.z();
+      double oz = dx * ortho.y() - dy * ortho.x();
       double lambda = distanceStart / length(dx, dy, dz);
-      offsetVector(start.x + lambda * dx, start.y + lambda * dy, start.z + lambda * dz, ox, oy, oz, distance / length(ox, oy, oz), result);
+      offsetVector(start.x() + lambda * dx, start.y() + lambda * dy, start.z() + lambda * dz, ox, oy, oz, distance / length(ox, oy, oz), result);
    }
 
    public static float lookatHeading(@Nonnull Vector3d self, @Nonnull Vector3d pointOfInterest, float headingHint) {
@@ -580,7 +597,7 @@ public class NPCPhysicsMath {
       @Nonnull Vector3d p2,
       @Nonnull Vector3d velocity2,
       double radius2,
-      @Nonnull Vector3d componentSelector,
+      @Nonnull Vector3dc componentSelector,
       double[] results
    ) {
       return intersectSweptSpheres(
@@ -616,15 +633,15 @@ public class NPCPhysicsMath {
       double velocity2y,
       double velocity2z,
       double radius,
-      @Nonnull Vector3d componentSelector,
+      @Nonnull Vector3dc componentSelector,
       double[] results
    ) {
-      double px = (p2x - p1x) * componentSelector.x;
-      double py = (p2y - p1y) * componentSelector.y;
-      double pz = (p2z - p1z) * componentSelector.z;
-      double vx = (velocity2x - velocity1x) * componentSelector.x;
-      double vy = (velocity2y - velocity1y) * componentSelector.y;
-      double vz = (velocity2z - velocity1z) * componentSelector.z;
+      double px = (p2x - p1x) * componentSelector.x();
+      double py = (p2y - p1y) * componentSelector.y();
+      double pz = (p2z - p1z) * componentSelector.z();
+      double vx = (velocity2x - velocity1x) * componentSelector.x();
+      double vy = (velocity2y - velocity1y) * componentSelector.y();
+      double vz = (velocity2z - velocity1z) * componentSelector.z();
       double a = dotProduct(vx, vy, vz);
       double b = 2.0 * dotProduct(px, py, pz, vx, vy, vz);
       double c = dotProduct(px, py, pz) - radius * radius;
@@ -694,19 +711,21 @@ public class NPCPhysicsMath {
       }
    }
 
-   public static double rayCircleIntersect(@Nonnull Vector3d start, @Nonnull Vector3d end, @Nonnull Vector3d center, double radius, @Nonnull Vector3d normal) {
-      if (normal.x == 0.0) {
-         return rayCircleIntersect(start.y - center.y, start.z - center.z, end.y - start.y, end.z - start.z, radius);
+   public static double rayCircleIntersect(
+      @Nonnull Vector3dc start, @Nonnull Vector3dc end, @Nonnull Vector3dc center, double radius, @Nonnull Vector3dc normal
+   ) {
+      if (normal.x() == 0.0) {
+         return rayCircleIntersect(start.y() - center.y(), start.z() - center.z(), end.y() - start.y(), end.z() - start.z(), radius);
       } else {
-         return normal.y == 0.0
-            ? rayCircleIntersect(start.x - center.x, start.z - center.z, end.x - start.x, end.z - start.z, radius)
-            : rayCircleIntersect(start.x - center.x, start.y - center.y, end.x - start.x, end.y - start.y, radius);
+         return normal.y() == 0.0
+            ? rayCircleIntersect(start.x() - center.x(), start.z() - center.z(), end.x() - start.x(), end.z() - start.z(), radius)
+            : rayCircleIntersect(start.x() - center.x(), start.y() - center.y(), end.x() - start.x(), end.y() - start.y(), radius);
       }
    }
 
    @Nonnull
    public static Vector3d projection(@Nonnull Vector3d v, @Nonnull Vector3d p, @Nonnull Vector3d result) {
-      result.assign(v).scale(p.dot(v) / v.dot(v));
+      result.set(v).mul(p.dot(v) / v.dot(v));
       return result;
    }
 
@@ -719,7 +738,7 @@ public class NPCPhysicsMath {
 
    @Nonnull
    public static Vector3d subtractVector(@Nonnull Vector3d p, @Nonnull Vector3d q, @Nonnull Vector3d result) {
-      return result.assign(p.x - q.x, p.y - q.y, p.z - q.z);
+      return result.set(p.x - q.x, p.y - q.y, p.z - q.z);
    }
 
    @Nonnull
@@ -729,7 +748,7 @@ public class NPCPhysicsMath {
 
    @Nonnull
    public static Vector3d projection(@Nonnull Vector3d base, @Nonnull Vector3d v, @Nonnull Vector3d p, @Nonnull Vector3d result) {
-      subtractVector(v, base, result).scale(dotProduct(base, p, v) / dotProduct(base, v, v));
+      subtractVector(v, base, result).mul(dotProduct(base, p, v) / dotProduct(base, v, v));
       return result;
    }
 
@@ -748,23 +767,23 @@ public class NPCPhysicsMath {
       return v;
    }
 
-   public static double squaredDistProjected(double px, double py, double pz, @Nonnull Vector3d q, @Nonnull Vector3d normal) {
+   public static double squaredDistProjected(double px, double py, double pz, @Nonnull Vector3d q, @Nonnull Vector3dc normal) {
       return squaredDistProjected(px, py, pz, q.x, q.y, q.z, normal);
    }
 
-   public static double squaredDistProjected(double px, double py, double pz, double qx, double qy, double qz, @Nonnull Vector3d normal) {
+   public static double squaredDistProjected(double px, double py, double pz, double qx, double qy, double qz, @Nonnull Vector3dc normal) {
       double d2 = 0.0;
-      if (normal.x == 0.0) {
+      if (normal.x() == 0.0) {
          double d = qx - px;
          d2 += d * d;
       }
 
-      if (normal.y == 0.0) {
+      if (normal.y() == 0.0) {
          double d = qy - py;
          d2 += d * d;
       }
 
-      if (normal.z == 0.0) {
+      if (normal.z() == 0.0) {
          double d = qz - pz;
          d2 += d * d;
       }
@@ -802,7 +821,7 @@ public class NPCPhysicsMath {
       double s2 = y - d;
       double v = Math.sqrt(s1 / gravity);
       float phi = TrigMathUtil.atan(-v * v / (gravity * x));
-      velocity.assign(dx, TrigMathUtil.sin(phi) * x, dz).setLength(v);
+      velocity.set(dx, TrigMathUtil.sin(phi) * x, dz).normalize(v);
       return v;
    }
 

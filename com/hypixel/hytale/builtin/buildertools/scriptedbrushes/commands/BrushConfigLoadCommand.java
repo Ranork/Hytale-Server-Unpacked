@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.AssetArgumentType;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -58,6 +58,8 @@ public class BrushConfigLoadCommand extends AbstractPlayerCommand {
          "server.commands.brushConfig.cannotUseCommandDuringExec"
       );
       @Nonnull
+      private static final Message MESSAGE_COMMANDS_BRUSH_CONFIG_NO_HOTBAR_COMPONENT = Message.translation("server.commands.brushConfig.noHotbarComponent");
+      @Nonnull
       private final RequiredArg<ScriptedBrushAsset> brushNameArg = this.withRequiredArg(
          "brushName",
          "server.commands.scriptedbrushes.load.brushName.desc",
@@ -75,11 +77,13 @@ public class BrushConfigLoadCommand extends AbstractPlayerCommand {
          @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
       ) {
          UUID playerUUID = playerRef.getUuid();
-         Player playerComponent = store.getComponent(ref, Player.getComponentType());
          PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(playerUUID);
          BrushConfig brushConfig = prototypeSettings.getBrushConfig();
          BrushConfigCommandExecutor brushConfigCommandExecutor = prototypeSettings.getBrushConfigCommandExecutor();
-         if (brushConfig.isCurrentlyExecuting()) {
+         InventoryComponent.Hotbar hotbarComponent = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent == null) {
+            playerRef.sendMessage(MESSAGE_COMMANDS_BRUSH_CONFIG_NO_HOTBAR_COMPONENT);
+         } else if (brushConfig.isCurrentlyExecuting()) {
             playerRef.sendMessage(MESSAGE_COMMANDS_BRUSH_CONFIG_CANNOT_USE_COMMAND_DURING_EXEC);
          } else {
             ScriptedBrushAsset brushAssetArg = this.brushNameArg.get(context);
@@ -87,14 +91,13 @@ public class BrushConfigLoadCommand extends AbstractPlayerCommand {
             brushAssetArg.loadIntoExecutor(brushConfigCommandExecutor);
             prototypeSettings.setCurrentlyLoadedBrushConfigName(brushId);
             prototypeSettings.setUsePrototypeBrushConfigurations(true);
-            Inventory inventory = playerComponent.getInventory();
-            ItemContainer hotbar = inventory.getHotbar();
+            ItemContainer hotbarInventory = hotbarComponent.getInventory();
             String editorToolItemId = ScriptedBrushAsset.getEditorToolItemId(brushId);
             if (editorToolItemId == null) {
                editorToolItemId = "EditorTool_ScriptedBrushTemplate";
             }
 
-            hotbar.setItemStackForSlot(inventory.getActiveHotbarSlot(), new ItemStack(editorToolItemId));
+            hotbarInventory.setItemStackForSlot(hotbarComponent.getActiveSlot(), new ItemStack(editorToolItemId));
             prototypeSettings.setPrototypeItemId(editorToolItemId);
             playerRef.sendMessage(Message.translation("server.commands.brushConfig.loaded").param("name", brushId));
          }

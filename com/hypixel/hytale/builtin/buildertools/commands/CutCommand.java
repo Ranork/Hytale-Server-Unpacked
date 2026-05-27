@@ -5,8 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrefabCopyException;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -15,6 +13,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredAr
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TempAssetIdUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class CutCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -37,8 +37,8 @@ public class CutCommand extends AbstractPlayerCommand {
 
    public CutCommand() {
       super("cut", "server.commands.cut.desc");
-      this.setPermissionGroup(GameMode.Creative);
-      this.requirePermission("hytale.editor.selection.clipboard");
+      this.setPermissionGroups("hytale:WorldEditor");
+      this.requirePermission(HytalePermissions.EDITOR_SELECTION_CLIPBOARD);
       this.addUsageVariant(new CutCommand.CutRegionCommand());
    }
 
@@ -50,7 +50,7 @@ public class CutCommand extends AbstractPlayerCommand {
 
       assert playerComponent != null;
 
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
          boolean entitiesOnly = this.entitiesOnlyFlag.get(context);
          boolean noEntities = this.noEntitiesFlag.get(context);
@@ -82,7 +82,7 @@ public class CutCommand extends AbstractPlayerCommand {
 
                Vector3i min = selection.getSelectionMin();
                Vector3i max = selection.getSelectionMax();
-               builderState.copyOrCut(r, min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), settingsFinal, componentAccessor);
+               builderState.copyOrCut(r, min.x(), min.y(), min.z(), max.x(), max.y(), max.z(), settingsFinal, componentAccessor);
             } catch (PrefabCopyException var9x) {
                context.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", var9x.getMessage()));
             }
@@ -124,7 +124,7 @@ public class CutCommand extends AbstractPlayerCommand {
 
          assert playerComponent != null;
 
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
             boolean entitiesOnly = this.entitiesOnlyFlag.get(context);
             boolean noEntities = this.noEntitiesFlag.get(context);

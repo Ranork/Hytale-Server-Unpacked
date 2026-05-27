@@ -13,7 +13,6 @@ import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.iterator.SpiralIterator;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -33,6 +32,7 @@ import java.util.List;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class WorldSpawnTrackingSystem extends RefSystem<EntityStore> {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -85,12 +85,12 @@ public class WorldSpawnTrackingSystem extends RefSystem<EntityStore> {
                ChunkStore chunkStore = world.getChunkStore();
                Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
                Vector3d position = store.getComponent(ref, this.transformComponentType).getPosition();
-               int originX = ChunkUtil.chunkCoordinate(position.getX());
-               int originZ = ChunkUtil.chunkCoordinate(position.getZ());
+               int originX = ChunkUtil.chunkCoordinate(position.x());
+               int originZ = ChunkUtil.chunkCoordinate(position.z());
                Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunk(originX, originZ));
-               double count = trackNewNPC(
-                  chunkRef, environmentIndex, 1.0, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType, chunkComponentStore
-               );
+               double count = chunkRef != null
+                  ? trackNewNPC(chunkRef, environmentIndex, 1.0, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType, chunkComponentStore)
+                  : 1.0;
                if (count <= 0.0) {
                   return;
                }
@@ -177,6 +177,7 @@ public class WorldSpawnTrackingSystem extends RefSystem<EntityStore> {
          WorldSpawnData worldSpawnData = store.getResource(this.worldSpawnDataResourceType);
          switch (reason) {
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                int environmentIndex = npcComponent.getEnvironment();
                if (!untrackNPC(environmentIndex, npcComponent.getSpawnRoleIndex(), worldSpawnData)) {
                   return;
@@ -190,12 +191,14 @@ public class WorldSpawnTrackingSystem extends RefSystem<EntityStore> {
                assert transformComponent != null;
 
                Vector3d position = transformComponent.getPosition();
-               int originX = ChunkUtil.chunkCoordinate(position.getX());
-               int originZ = ChunkUtil.chunkCoordinate(position.getZ());
+               int originX = ChunkUtil.chunkCoordinate(position.x());
+               int originZ = ChunkUtil.chunkCoordinate(position.z());
                Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(ChunkUtil.indexChunk(originX, originZ));
-               double count = untrackRemovedNPC(
-                  chunkRef, environmentIndex, 1.0, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType, chunkComponentStore
-               );
+               double count = chunkRef != null
+                  ? untrackRemovedNPC(
+                     chunkRef, environmentIndex, 1.0, this.chunkSpawnDataComponentType, this.chunkSpawnedNPCDataComponentType, chunkComponentStore
+                  )
+                  : 1.0;
                if (count <= 0.0) {
                   return;
                }

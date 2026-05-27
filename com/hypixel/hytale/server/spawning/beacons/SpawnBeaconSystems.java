@@ -21,8 +21,7 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.asset.type.responsecurve.ScaledXYResponseCurve;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -61,6 +60,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SpawnBeaconSystems {
    public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -242,7 +242,7 @@ public class SpawnBeaconSystems {
                            assert spawnedEntityTransformComponent != null;
 
                            Vector3d npcPosition = spawnedEntityTransformComponent.getPosition();
-                           double beaconDistance = npcPosition.distanceSquaredTo(position);
+                           double beaconDistance = npcPosition.distanceSquared(position);
                            if ((despawnNPCsIfIdle && !hasTarget || beaconDistance > beaconRadiusSquared) && !role.getStateSupport().isInBusyState()) {
                               double timeout = entityTimeoutCounter.mergeDouble(spawnedEntityReference, dt, Double::sum);
                               if (timeout >= despawnNPCAfterTimeout) {
@@ -262,7 +262,7 @@ public class SpawnBeaconSystems {
             if (!isReadyToRespawn(legacySpawnBeaconComponent, timeManager)) {
                validatedEntityList.clear();
             } else {
-               int y = MathUtil.floor(position.getY());
+               int y = MathUtil.floor(position.y());
                BeaconSpawnWrapper spawnWrapper = legacySpawnBeaconComponent.getSpawnWrapper();
                int[] yRange = spawnWrapper.getSpawn().getYRange();
                double minY = y + yRange[0];
@@ -283,7 +283,7 @@ public class SpawnBeaconSystems {
 
                      assert resultTransformComponent != null;
 
-                     double yPos = resultTransformComponent.getPosition().getY();
+                     double yPos = resultTransformComponent.getPosition().y();
                      if (!(yPos < minY) && !(yPos > maxY) && !commandBuffer.getArchetype(result).contains(this.deathComponentComponentType)) {
                         playersInRegion.add(resultPlayerComponent);
                      }
@@ -305,7 +305,7 @@ public class SpawnBeaconSystems {
                      assert playerTransformComponent != null;
 
                      Vector3d playerPos = playerTransformComponent.getPosition();
-                     if (playerPos.distanceSquaredTo(position) <= spawnController.getSpawnRadiusSquared()) {
+                     if (playerPos.distanceSquared(position) <= spawnController.getSpawnRadiusSquared()) {
                         playersInSpawnRange = true;
                         break;
                      }
@@ -719,7 +719,7 @@ public class SpawnBeaconSystems {
       protected SpawnJobSystem.Result trySpawn(
          @Nonnull BeaconSpawnController spawnController, @Nonnull NPCBeaconSpawnJob spawnJob, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         return this.spawn(spawnJob.getSpawningContext().world, spawnController, spawnJob, commandBuffer);
+         return this.spawn(commandBuffer.getExternalData().getWorld(), spawnController, spawnJob, commandBuffer);
       }
 
       @Nonnull
@@ -728,8 +728,9 @@ public class SpawnBeaconSystems {
       ) {
          SpawningContext spawningContext = spawnJob.getSpawningContext();
          Vector3d position = spawningContext.newPosition();
-         Vector3f rotation = spawningContext.newRotation();
+         Rotation3f rotation = spawningContext.newRotation();
          int roleIndex = spawnJob.getRoleIndex();
+         String mcType = spawningContext.activeMotionControllerType;
          commandBuffer.run(
             _store -> {
                try {
@@ -740,7 +741,7 @@ public class SpawnBeaconSystems {
                         position,
                         rotation,
                         spawningContext.getModel(),
-                        (npc, ref, store) -> postSpawn(npc, ref, roleIndex, spawnController.isDebugSpawnFrozen(), store)
+                        (npc, ref, store) -> postSpawn(npc, ref, roleIndex, mcType, spawnController.isDebugSpawnFrozen(), store)
                      );
                   Ref<EntityStore> npcRef = (Ref<EntityStore>)npcPair.first();
                   FlockPlugin.trySpawnFlock(
@@ -752,14 +753,14 @@ public class SpawnBeaconSystems {
                      spawnJob.getFlockSize(),
                      spawnJob.getFlockAsset(),
                      null,
-                     (npc, ref, store) -> postSpawn(npc, ref, roleIndex, spawnController.isDebugSpawnFrozen(), store),
+                     (npc, ref, store) -> postSpawn(npc, ref, roleIndex, mcType, spawnController.isDebugSpawnFrozen(), store),
                      _store
                   );
                   this.onSpawn(npcRef, spawnController, spawnJob, _store);
                   this.endProbing(spawnController, spawnJob, SpawnJobSystem.Result.SUCCESS, _store);
-               } catch (RuntimeException var10) {
+               } catch (RuntimeException var11) {
                   LOGGER.at(Level.WARNING)
-                     .log("Spawn job %s: Failed to create %s: %s", spawnJob.getJobId(), NPCPlugin.get().getName(roleIndex), var10.getMessage());
+                     .log("Spawn job %s: Failed to create %s: %s", spawnJob.getJobId(), NPCPlugin.get().getName(roleIndex), var11.getMessage());
                   this.endProbing(spawnController, spawnJob, SpawnJobSystem.Result.FAILED, _store);
                }
 
@@ -789,22 +790,24 @@ public class SpawnBeaconSystems {
 
          assert playerRef != null;
 
-         Player playerComponent = store.getComponent(spawnJob.getPlayer(), this.playerComponentType);
-
-         assert playerComponent != null;
-
          Ref<EntityStore> ownerRef = spawnController.getOwnerRef();
          LegacySpawnBeaconEntity legacySpawnBeaconComponent = store.getComponent(ownerRef, LegacySpawnBeaconEntity.getComponentType());
 
          assert legacySpawnBeaconComponent != null;
 
-         legacySpawnBeaconComponent.notifySpawn(playerComponent, npcReference, store);
+         legacySpawnBeaconComponent.notifySpawn(playerRef, npcReference, store);
       }
 
       private static void postSpawn(
-         @Nonnull NPCEntity entity, @Nonnull Ref<EntityStore> ref, int roleIndex, boolean spawnFrozen, @Nonnull Store<EntityStore> store
+         @Nonnull NPCEntity entity,
+         @Nonnull Ref<EntityStore> ref,
+         int roleIndex,
+         @Nullable String activeMotionControllerName,
+         boolean spawnFrozen,
+         @Nonnull Store<EntityStore> store
       ) {
          entity.setSpawnRoleIndex(roleIndex);
+         entity.setActiveMotionControllerName(activeMotionControllerName);
          if (spawnFrozen) {
             store.ensureComponent(ref, Frozen.getComponentType());
          }

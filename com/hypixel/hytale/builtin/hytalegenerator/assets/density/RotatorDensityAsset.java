@@ -6,15 +6,16 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.RotatorDensity;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class RotatorDensityAsset extends DensityAsset {
    @Nonnull
    public static final BuilderCodec<RotatorDensityAsset> CODEC = BuilderCodec.builder(
          RotatorDensityAsset.class, RotatorDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("NewYAxis", Vector3d.CODEC, true), (t, k) -> t.newYAxis = k, t -> t.newYAxis)
+      .append(new KeyedCodec<>("NewYAxis", Vector3dUtil.CODEC, true), (t, k) -> t.newYAxis = k, t -> t.newYAxis)
       .add()
       .append(new KeyedCodec<>("SpinAngle", Codec.DOUBLE, true), (t, k) -> t.spinAngle = k, t -> t.spinAngle)
       .add()

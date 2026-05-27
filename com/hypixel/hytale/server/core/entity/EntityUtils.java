@@ -7,7 +7,12 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
+import com.hypixel.hytale.server.core.event.events.ecs.BreathingCheckEvent;
+import com.hypixel.hytale.server.core.modules.entity.component.BreathingComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.CachedStatsComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.physics.component.PhysicsValues;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -15,24 +20,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class EntityUtils {
-   @Nonnull
-   public static Holder<EntityStore> toHolder(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk) {
-      Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
-      Archetype<EntityStore> archetype = archetypeChunk.getArchetype();
-
-      for (int i = archetype.getMinIndex(); i < archetype.length(); i++) {
-         ComponentType componentType = archetype.get(i);
-         if (componentType != null) {
-            Component component = archetypeChunk.getComponent(index, componentType);
-            if (component != null) {
-               holder.addComponent(componentType, component);
-            }
-         }
-      }
-
-      return holder;
-   }
-
    @Nullable
    private static <T extends Entity> ComponentType<EntityStore, T> findComponentType(@Nonnull Archetype<EntityStore> archetype) {
       return findComponentType(archetype, Entity.class);
@@ -104,6 +91,31 @@ public class EntityUtils {
          ModelComponent modelComponent = componentAccessor.getComponent(ref, ModelComponent.getComponentType());
          Model model = modelComponent != null ? modelComponent.getModel() : null;
          return model != null && model.getPhysicsValues() != null ? model.getPhysicsValues() : PhysicsValues.getDefault();
+      }
+   }
+
+   public static void processEntityBreathing(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull BreathingComponent breathingComponent,
+      @Nullable CachedStatsComponent cachedStatsComponent,
+      boolean invulnerable,
+      boolean skipComparisons,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      long packed = LivingEntity.getPackedMaterialAndFluidAtBreathingHeight(ref, componentAccessor);
+      BlockMaterial material = BlockMaterial.VALUES[MathUtil.unpackLeft(packed)];
+      int fluidId = MathUtil.unpackRight(packed);
+      if (skipComparisons || breathingComponent.getLastBreathingMaterial() != material || breathingComponent.getLastFluidId() != fluidId) {
+         boolean canBreathe = invulnerable || material == BlockMaterial.Empty && fluidId == 0;
+         BreathingCheckEvent event = new BreathingCheckEvent(material, fluidId, canBreathe);
+         componentAccessor.invoke(ref, event);
+         canBreathe = event.canBreathe();
+         breathingComponent.setLastBreathingMaterial(material);
+         breathingComponent.setLastFluidId(fluidId);
+         breathingComponent.setSuffocating(!canBreathe);
+         if (cachedStatsComponent != null) {
+            cachedStatsComponent.setCanBreathe(canBreathe);
+         }
       }
    }
 }

@@ -44,8 +44,6 @@ public class MountGamePacketHandler implements SubPacketHandler {
                }
             }
          });
-      } else {
-         throw new RuntimeException("Unable to process DismountNPC packet. Player ref is invalid!");
       }
    }
 }

@@ -11,8 +11,8 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.particle.config.WorldParticle;
 import com.hypixel.hytale.server.core.asset.type.projectile.config.Projectile;
@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
+import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
@@ -44,6 +45,7 @@ import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ProjectileComponent implements Component<EntityStore> {
    @Nonnull
@@ -79,7 +81,7 @@ public class ProjectileComponent implements Component<EntityStore> {
       )
       .add()
       .append(
-         new KeyedCodec<>("LastBouncePosition", Vector3d.CODEC),
+         new KeyedCodec<>("LastBouncePosition", Vector3dUtil.CODEC),
          (projectileEntity, lastBouncePosition) -> projectileEntity.lastBouncePosition = lastBouncePosition,
          projectileEntity -> projectileEntity.lastBouncePosition
       )
@@ -97,7 +99,7 @@ public class ProjectileComponent implements Component<EntityStore> {
       )
       .add()
       .append(
-         new KeyedCodec<>("SppVelocity", Vector3d.CODEC),
+         new KeyedCodec<>("SppVelocity", Vector3dUtil.CODEC),
          (projectileEntity, v) -> projectileEntity.simplePhysicsProvider.setVelocity(v),
          projectileEntity -> projectileEntity.simplePhysicsProvider.getVelocity()
       )
@@ -129,7 +131,7 @@ public class ProjectileComponent implements Component<EntityStore> {
 
    @Nonnull
    public static Holder<EntityStore> assembleDefaultProjectile(
-      @Nonnull TimeResource time, @Nonnull String projectileAssetName, @Nonnull Vector3d position, @Nonnull Vector3f rotation
+      @Nonnull TimeResource time, @Nonnull String projectileAssetName, @Nonnull Vector3d position, @Nonnull Rotation3f rotation
    ) {
       if (projectileAssetName.isEmpty()) {
          throw new IllegalArgumentException("No projectile config typeName provided");
@@ -137,8 +139,9 @@ public class ProjectileComponent implements Component<EntityStore> {
          Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
          ProjectileComponent projectileComponent = new ProjectileComponent(projectileAssetName);
          holder.putComponent(getComponentType(), projectileComponent);
+         holder.ensureComponent(Intangible.getComponentType());
          holder.putComponent(DespawnComponent.getComponentType(), DespawnComponent.despawnInMilliseconds(time, 60000L));
-         holder.putComponent(TransformComponent.getComponentType(), new TransformComponent(position.clone(), rotation));
+         holder.putComponent(TransformComponent.getComponentType(), new TransformComponent(new Vector3d(position), rotation));
          holder.ensureComponent(Velocity.getComponentType());
          holder.ensureComponent(UUIDComponent.getComponentType());
          MovementStatesComponent movementStatesComponent = holder.ensureAndGetComponent(MovementStatesComponent.getComponentType());
@@ -223,11 +226,11 @@ public class ProjectileComponent implements Component<EntityStore> {
       if (this.lastBouncePosition == null) {
          this.lastBouncePosition = new Vector3d(position);
       } else {
-         if (!(this.lastBouncePosition.distanceSquaredTo(position) >= 0.5)) {
+         if (!(this.lastBouncePosition.distanceSquared(position) >= 0.5)) {
             return;
          }
 
-         this.lastBouncePosition.assign(position);
+         this.lastBouncePosition.set(position);
       }
 
       this.onProjectileBounce(position, componentAccessor);
@@ -306,17 +309,17 @@ public class ProjectileComponent implements Component<EntityStore> {
       z += direction.z;
       holder.ensureAndGetComponent(TransformComponent.getComponentType()).setPosition(new Vector3d(x, y, z));
       PhysicsMath.vectorFromAngles(yaw, pitch, direction);
-      direction.setLength(this.projectile.getMuzzleVelocity());
+      direction.normalize(this.projectile.getMuzzleVelocity());
       this.simplePhysicsProvider.setVelocity(direction);
    }
 
    public static void computeStartOffset(
       boolean pitchAdjust, double verticalCenterShot, double horizontalCenterShot, double depthShot, float yaw, float pitch, @Nonnull Vector3d offset
    ) {
-      offset.assign(0.0, 0.0, 0.0);
+      offset.set(0.0, 0.0, 0.0);
       if (depthShot != 0.0) {
          PhysicsMath.vectorFromAngles(yaw, pitchAdjust ? pitch : 0.0F, offset);
-         offset.setLength(depthShot);
+         offset.normalize(depthShot);
       }
 
       offset.add(horizontalCenterShot * -PhysicsMath.headingZ(yaw), -verticalCenterShot, horizontalCenterShot * PhysicsMath.headingX(yaw));
@@ -345,6 +348,10 @@ public class ProjectileComponent implements Component<EntityStore> {
 
    public void applyBrokenPenalty(float penalty) {
       this.brokenDamageModifier = 1.0F - penalty;
+   }
+
+   public UUID getCreatorUuid() {
+      return this.creatorUuid;
    }
 
    public ProjectileComponent(@Nonnull ProjectileComponent other) {

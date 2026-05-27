@@ -93,7 +93,7 @@ public class DiskResourceStorageProvider implements IResourceStorageProvider {
 
       public DiskResourceStorage(@Nonnull Path path) {
          this.path = path;
-         if (!Options.getOptionSet().has(Options.BARE)) {
+         if (!Options.isBare()) {
             try {
                Files.createDirectories(path);
             } catch (IOException var3) {

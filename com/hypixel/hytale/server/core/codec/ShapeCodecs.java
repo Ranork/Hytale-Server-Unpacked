@@ -9,13 +9,13 @@ import com.hypixel.hytale.math.shape.Cylinder;
 import com.hypixel.hytale.math.shape.Ellipsoid;
 import com.hypixel.hytale.math.shape.OriginShape;
 import com.hypixel.hytale.math.shape.Shape;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 
 public class ShapeCodecs {
    public static final CodecMapCodec<Shape> SHAPE = new CodecMapCodec<>();
    public static final BuilderCodec<Box> BOX = BuilderCodec.builder(Box.class, Box::new)
-      .addField(new KeyedCodec<>("Min", Vector3d.CODEC), (shape, min) -> shape.min.assign(min), shape -> shape.min)
-      .addField(new KeyedCodec<>("Max", Vector3d.CODEC), (shape, max) -> shape.max.assign(max), shape -> shape.max)
+      .addField(new KeyedCodec<>("Min", Vector3dUtil.CODEC), (shape, min) -> shape.min.set(min), shape -> shape.min)
+      .addField(new KeyedCodec<>("Max", Vector3dUtil.CODEC), (shape, max) -> shape.max.set(max), shape -> shape.max)
       .build();
    public static final BuilderCodec<Ellipsoid> ELLIPSOID = BuilderCodec.builder(Ellipsoid.class, Ellipsoid::new)
       .addField(new KeyedCodec<>("RadiusX", Codec.DOUBLE), (shape, radius) -> shape.radiusX = radius, shape -> shape.radiusX)
@@ -30,7 +30,7 @@ public class ShapeCodecs {
       .addField(new KeyedCodec<>("Radius", Codec.DOUBLE), Cylinder::assign, shape -> null)
       .build();
    public static final BuilderCodec<OriginShape<Shape>> ORIGIN_SHAPE = BuilderCodec.builder(OriginShape.class, OriginShape::new)
-      .addField(new KeyedCodec<>("Origin", Vector3d.CODEC), (shape, origin) -> shape.origin.assign(origin), shape -> shape.origin)
+      .addField(new KeyedCodec<>("Origin", Vector3dUtil.CODEC), (shape, origin) -> shape.origin.set(origin), shape -> shape.origin)
       .addField(new KeyedCodec<>("Shape", SHAPE), (shape, childShape) -> shape.shape = (S)childShape, shape -> shape.shape)
       .build();
 

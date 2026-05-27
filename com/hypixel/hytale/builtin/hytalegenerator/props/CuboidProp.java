@@ -3,9 +3,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.props;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class CuboidProp extends Prop {
    @Nonnull

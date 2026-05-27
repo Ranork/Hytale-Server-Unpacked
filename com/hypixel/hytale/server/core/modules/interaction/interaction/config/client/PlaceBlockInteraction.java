@@ -6,9 +6,8 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.GameMode;
@@ -20,28 +19,27 @@ import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.interaction.BlockPlaceUtils;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.util.InteractionValidation;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PlaceBlockInteraction extends SimpleInteraction {
-   public static final int TEMP_MAX_ADVENTURE_PLACEMENT_RANGE_SQUARED = 49;
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
    public static final BuilderCodec<PlaceBlockInteraction> CODEC = BuilderCodec.builder(
          PlaceBlockInteraction.class, PlaceBlockInteraction::new, SimpleInteraction.CODEC
@@ -122,23 +120,20 @@ public class PlaceBlockInteraction extends SimpleInteraction {
                return;
             }
 
-            TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
-            Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-            if (transformComponent != null && playerComponent != null && playerComponent.getGameMode() != GameMode.Creative) {
-               Vector3d position = transformComponent.getPosition();
-               Vector3d blockCenter = new Vector3d(blockPosition.x + 0.5, blockPosition.y + 0.5, blockPosition.z + 0.5);
-               if (position.distanceSquaredTo(blockCenter) > 49.0) {
-                  context.getState().state = InteractionState.Failed;
-                  return;
-               }
-            }
-
-            Inventory inventory = null;
-            if (EntityUtils.getEntity(ref, commandBuffer) instanceof LivingEntity livingEntity) {
-               inventory = livingEntity.getInventory();
-            }
-
             Vector3i targetBlockPosition = new Vector3i(blockPosition.x, blockPosition.y, blockPosition.z);
+            if (!InteractionValidation.canPlayerInteractWithBlock(ref, commandBuffer, context.getHeldItem(), targetBlockPosition)) {
+               LOGGER.at(Level.WARNING)
+                  .log(
+                     "Entity %d failed place block interaction distance check at [%d, %d, %d]",
+                     ref.getIndex(),
+                     targetBlockPosition.x,
+                     targetBlockPosition.y,
+                     targetBlockPosition.z
+                  );
+               context.getState().state = InteractionState.Failed;
+               return;
+            }
+
             String interactionBlockTypeKey = this.blockTypeKey != null ? this.blockTypeKey : heldItemStack.getBlockKey();
             if (interactionBlockTypeKey == null) {
                return;
@@ -163,17 +158,19 @@ public class PlaceBlockInteraction extends SimpleInteraction {
                heldItemStack,
                clientPlacedBlockTypeKey != null ? clientPlacedBlockTypeKey : this.blockTypeKey,
                heldItemContainer,
-               BlockFace.fromProtocolFace(context.getClientState().blockFace).getDirection(),
+               new Vector3i(BlockFace.fromProtocolFace(context.getClientState().blockFace).getDirection()),
                targetBlockPosition,
                blockRotation,
-               inventory,
                context.getHeldItemSlot(),
                this.removeItemInHand,
                chunkReference,
                chunkStore,
                commandBuffer,
+               false,
+               false,
                false
             );
+            Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
             boolean isAdventure = playerComponent == null || playerComponent.getGameMode() == GameMode.Adventure;
             if (isAdventure && heldItemStack.getQuantity() == 1 && this.removeItemInHand) {
                context.setHeldItem(null);

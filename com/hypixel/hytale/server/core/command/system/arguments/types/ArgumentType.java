@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.Argument;
 import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionProvider;
 import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionResult;
 import java.util.Arrays;
+import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -20,6 +21,8 @@ public abstract class ArgumentType<DataType> implements SuggestionProvider {
    @Nonnull
    protected final String[] examples;
    protected int numberOfParameters;
+   @Nonnull
+   private String suggestionTypeId = UUID.randomUUID().toString();
 
    protected ArgumentType(@Nonnull Message name, @Nonnull Message argumentUsage, int numberOfParameters, @Nullable String... examples) {
       this.name = name;
@@ -77,6 +80,20 @@ public abstract class ArgumentType<DataType> implements SuggestionProvider {
 
    public boolean isGreedyString() {
       return false;
+   }
+
+   @Nonnull
+   public final String getSuggestionTypeId() {
+      return this.suggestionTypeId;
+   }
+
+   public <T extends ArgumentType<?>> T withSharedSuggestions(@Nonnull ArgumentType<?> other) {
+      this.suggestionTypeId = other.getSuggestionTypeId();
+      return (T)this;
+   }
+
+   public int getSuggestionValueCount() {
+      return -1;
    }
 
    @Nonnull

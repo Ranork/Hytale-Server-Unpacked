@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.permissions.provider;
 import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public interface PermissionProvider {
    @Nonnull
@@ -25,4 +26,15 @@ public interface PermissionProvider {
    void removeUserFromGroup(@Nonnull UUID var1, @Nonnull String var2);
 
    Set<String> getGroupsForUser(@Nonnull UUID var1);
+
+   void setUserGroup(@Nonnull UUID var1, @Nonnull String var2);
+
+   @Nullable
+   String getGroupParent(@Nonnull String var1);
+
+   @Nonnull
+   Set<String> getAllRegisteredGroups();
+
+   @Nonnull
+   Set<String> getEffectiveGroupPermissions(@Nonnull String var1);
 }

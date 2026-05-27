@@ -87,9 +87,10 @@ public class LayerContainerJsonLoader extends JsonLoader<SeedStringResource, Lay
          ModifyEvent.dispatch(
             ModifyEvents.BiomeStaticLayers.class,
             new ModifyEvents.BiomeStaticLayers(
+               this.seed,
                this.biomeContext,
                entries,
-               content -> new LayerContainerJsonLoader.StaticLayerJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+               path -> new LayerContainerJsonLoader.StaticLayerJsonLoader(seed.next(), this.dataFolder, this.loadFile(path)).load()
             )
          );
          e = entries.toArray();
@@ -116,9 +117,10 @@ public class LayerContainerJsonLoader extends JsonLoader<SeedStringResource, Lay
          ModifyEvent.dispatch(
             ModifyEvents.BiomeDynamicLayers.class,
             new ModifyEvents.BiomeDynamicLayers(
+               this.seed,
                this.biomeContext,
                entries,
-               content -> new LayerContainerJsonLoader.DynamicLayerJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+               path -> new LayerContainerJsonLoader.DynamicLayerJsonLoader(seed.next(), this.dataFolder, this.loadFile(path)).load()
             )
          );
          e = entries.toArray();

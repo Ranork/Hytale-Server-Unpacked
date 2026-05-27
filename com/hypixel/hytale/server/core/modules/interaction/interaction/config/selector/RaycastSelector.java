@@ -8,12 +8,8 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.consumer.TriIntConsumer;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.collision.CollisionMath;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
@@ -24,14 +20,20 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.non
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector3i;
+import org.joml.Vector4d;
 
 public class RaycastSelector extends SelectorType {
    public static final BuilderCodec<RaycastSelector> CODEC = BuilderCodec.builder(RaycastSelector.class, RaycastSelector::new, BASE_CODEC)
-      .appendInherited(new KeyedCodec<>("Offset", Vector3d.CODEC), (o, i) -> o.offset = i, o -> o.offset, (o, p) -> o.offset = p.offset)
+      .appendInherited(new KeyedCodec<>("Offset", Vector3dUtil.CODEC), (o, i) -> o.offset.set(i), o -> o.offset, (o, p) -> o.offset.set(p.offset))
       .documentation("The offset of the area to search for targets in.")
       .add()
       .<Integer>appendInherited(new KeyedCodec<>("Distance", Codec.INTEGER), (o, i) -> o.distance = i, o -> o.distance, (o, p) -> o.distance = p.distance)
@@ -57,7 +59,7 @@ public class RaycastSelector extends SelectorType {
          }
       })
       .build();
-   protected Vector3d offset = Vector3d.ZERO;
+   protected final Vector3d offset = new Vector3d();
    protected int distance = 30;
    protected boolean ignoreFluids = false;
    protected boolean ignoreEmptyCollisionMaterial = false;
@@ -81,9 +83,9 @@ public class RaycastSelector extends SelectorType {
       TransformComponent transformComponent = commandBuffer.getComponent(attacker, TransformComponent.getComponentType());
       Vector3d position = transformComponent.getPosition();
       if (this.offset.x != 0.0 || this.offset.y != 0.0 || this.offset.z != 0.0) {
-         position = this.offset.clone();
+         position = new Vector3d(this.offset);
          HeadRotation headRotation = commandBuffer.getComponent(attacker, HeadRotation.getComponentType());
-         position.rotateY(headRotation.getRotation().getYaw());
+         position.rotateY(headRotation.getRotation().yaw());
          position.add(transformComponent.getPosition());
       }
 
@@ -100,24 +102,31 @@ public class RaycastSelector extends SelectorType {
       public Ref<EntityStore> match;
       public double distance = Double.MAX_VALUE;
       @Nonnull
-      public Vector4d hitPosition = new Vector4d();
+      public Vector4d hitPosition = new Vector4d().zero();
    }
 
    private class RuntimeSelector implements Selector {
-      private final RaycastSelector.Result bestMatch = new RaycastSelector.Result();
-      private final Vector2d minMax = new Vector2d();
+      private final RaycastSelector.Result bestMatch;
+      private final Vector2d minMax;
       @Nullable
       private Vector3i blockPosition;
+
+      private RuntimeSelector() {
+         Objects.requireNonNull(RaycastSelector.this);
+         super();
+         this.bestMatch = new RaycastSelector.Result();
+         this.minMax = new Vector2d();
+      }
 
       @Override
       public void tick(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Ref<EntityStore> ref, float time, float runTime) {
          Vector3d position = RaycastSelector.this.selectTargetPosition(commandBuffer, ref);
          HeadRotation headRotation = commandBuffer.getComponent(ref, HeadRotation.getComponentType());
-         Vector3d direction = new Vector3d(headRotation.getRotation().getYaw(), headRotation.getRotation().getPitch());
+         Vector3d direction = Vector3dUtil.setYawPitch(headRotation.getRotation().yaw(), headRotation.getRotation().pitch(), new Vector3d());
          IntSet blockTags = RaycastSelector.this.blockTag == null ? null : BlockType.getAssetMap().getIndexesForTag(RaycastSelector.this.blockTagIndex);
          if (SelectInteraction.SHOW_VISUAL_DEBUG) {
-            Vector3d dir = direction.clone().scale(RaycastSelector.this.distance);
-            com.hypixel.hytale.math.vector.Vector3f color = new com.hypixel.hytale.math.vector.Vector3f(
+            Vector3d dir = new Vector3d(direction).mul(RaycastSelector.this.distance);
+            Vector3f color = new Vector3f(
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 10L),
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 11L),
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 12L)
@@ -153,21 +162,21 @@ public class RaycastSelector extends SelectorType {
             if (boundingBox != null) {
                TransformComponent transform = commandBuffer.getComponent(entityRef, TransformComponent.getComponentType());
                Vector3d ePos = transform.getPosition();
-               if (CollisionMath.intersectRayAABB(position, direction, ePos.getX(), ePos.getY(), ePos.getZ(), boundingBox.getBoundingBox(), this.minMax)) {
+               if (CollisionMath.intersectRayAABB(position, direction, ePos.x(), ePos.y(), ePos.z(), boundingBox.getBoundingBox(), this.minMax)) {
                   double hitPosX = position.x + direction.x * this.minMax.x;
                   double hitPosY = position.y + direction.y * this.minMax.x;
                   double hitPosZ = position.z + direction.z * this.minMax.x;
-                  double matchDistance = position.distanceSquaredTo(hitPosX, hitPosY, hitPosZ);
+                  double matchDistance = position.distanceSquared(hitPosX, hitPosY, hitPosZ);
                   if (!(matchDistance >= this.bestMatch.distance)) {
                      this.bestMatch.match = entityRef;
                      this.bestMatch.distance = matchDistance;
-                     this.bestMatch.hitPosition.assign(hitPosX, hitPosY, hitPosZ, 0.0);
+                     this.bestMatch.hitPosition.set(hitPosX, hitPosY, hitPosZ, 0.0);
                   }
                }
             }
          }, e -> !e.equals(ref));
          if (this.bestMatch.match != null && this.blockPosition != null) {
-            double blockDistance = position.distanceSquaredTo(this.blockPosition.x + 0.5, this.blockPosition.y + 0.5, this.blockPosition.z + 0.5);
+            double blockDistance = position.distanceSquared(this.blockPosition.x + 0.5, this.blockPosition.y + 0.5, this.blockPosition.z + 0.5);
             if (!(blockDistance < this.bestMatch.distance)) {
                this.blockPosition = null;
             }

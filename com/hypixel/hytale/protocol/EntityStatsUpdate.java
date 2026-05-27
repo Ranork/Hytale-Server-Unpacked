@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,56 +39,59 @@ public class EntityStatsUpdate extends ComponentUpdate {
       int pos = offset + 0;
       int entityStatUpdatesCount = VarInt.peek(buf, pos);
       if (entityStatUpdatesCount < 0) {
-         throw ProtocolException.negativeLength("EntityStatUpdates", entityStatUpdatesCount);
-      } else if (entityStatUpdatesCount > 4096000) {
-         throw ProtocolException.dictionaryTooLarge("EntityStatUpdates", entityStatUpdatesCount, 4096000);
+         throw ProtocolException.invalidVarInt("EntityStatUpdates");
       } else {
-         pos += VarInt.size(entityStatUpdatesCount);
-         obj.entityStatUpdates = new HashMap<>(entityStatUpdatesCount);
+         int entityStatUpdatesVarLen = VarInt.size(entityStatUpdatesCount);
+         if (entityStatUpdatesCount > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("EntityStatUpdates", entityStatUpdatesCount, 4096000);
+         } else {
+            pos += entityStatUpdatesVarLen;
+            obj.entityStatUpdates = new HashMap<>(entityStatUpdatesCount);
 
-         for (int i = 0; i < entityStatUpdatesCount; i++) {
-            int key = buf.getIntLE(pos);
-            pos += 4;
-            int valLen = VarInt.peek(buf, pos);
-            if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
+            for (int i = 0; i < entityStatUpdatesCount; i++) {
+               int key = buf.getIntLE(pos);
+               pos += 4;
+               int valLen = VarInt.peek(buf, pos);
+               if (valLen < 0) {
+                  throw ProtocolException.invalidVarInt("val");
+               }
+
+               int valVarLen = VarInt.size(valLen);
+               if (valLen > 64) {
+                  throw ProtocolException.arrayTooLong("val", valLen, 64);
+               }
+
+               if (pos + valVarLen + valLen * 13L > buf.readableBytes()) {
+                  throw ProtocolException.bufferTooSmall("val", pos + valVarLen + valLen * 13, buf.readableBytes());
+               }
+
+               pos += valVarLen;
+               EntityStatUpdate[] val = new EntityStatUpdate[valLen];
+
+               for (int valIdx = 0; valIdx < valLen; valIdx++) {
+                  val[valIdx] = EntityStatUpdate.deserialize(buf, pos);
+                  pos += EntityStatUpdate.computeBytesConsumed(buf, pos);
+               }
+
+               if (obj.entityStatUpdates.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("entityStatUpdates", key);
+               }
             }
 
-            if (valLen > 64) {
-               throw ProtocolException.arrayTooLong("val", valLen, 64);
-            }
-
-            int valVarLen = VarInt.length(buf, pos);
-            if (pos + valVarLen + valLen * 13L > buf.readableBytes()) {
-               throw ProtocolException.bufferTooSmall("val", pos + valVarLen + valLen * 13, buf.readableBytes());
-            }
-
-            pos += valVarLen;
-            EntityStatUpdate[] val = new EntityStatUpdate[valLen];
-
-            for (int valIdx = 0; valIdx < valLen; valIdx++) {
-               val[valIdx] = EntityStatUpdate.deserialize(buf, pos);
-               pos += EntityStatUpdate.computeBytesConsumed(buf, pos);
-            }
-
-            if (obj.entityStatUpdates.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("entityStatUpdates", key);
-            }
+            return obj;
          }
-
-         return obj;
       }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int dictLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos);
+      pos += VarInt.size(dictLen);
 
       for (int i = 0; i < dictLen; i++) {
          pos += 4;
          int al = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(al);
 
          for (int j = 0; j < al; j++) {
             pos += EntityStatUpdate.computeBytesConsumed(buf, pos);
@@ -94,6 +99,116 @@ public class EntityStatsUpdate extends ComponentUpdate {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static Map<Integer, EntityStatUpdate[]> getEntityStatUpdates(MemorySegment mem) {
+      return getEntityStatUpdates(mem, 0);
+   }
+
+   public static Map<Integer, EntityStatUpdate[]> getEntityStatUpdates(MemorySegment mem, int offset) {
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EntityStatUpdates", len);
+      } else if (len > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("EntityStatUpdates", len, 4096000);
+      } else {
+         Map<Integer, EntityStatUpdate[]> data = new HashMap<>(len);
+         off += (int)(packed >>> 32);
+
+         for (int i = 0; i < len; i++) {
+            int key = mem.get(PacketIO.PROTO_INT, (long)off);
+            off += 4;
+            long valuePacked = VarInt.getWithLength(mem, off);
+            int valueLen = (int)valuePacked;
+            int valueVarLen = (int)(valuePacked >>> 32);
+            if (valueLen < 0) {
+               throw ProtocolException.negativeLength("value", valueLen);
+            }
+
+            if (valueLen > 64) {
+               throw ProtocolException.arrayTooLong("value", valueLen, 64);
+            }
+
+            if (off + valueVarLen + valueLen * 13L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 13, (int)mem.byteSize());
+            }
+
+            off += valueVarLen;
+            EntityStatUpdate[] value = new EntityStatUpdate[valueLen];
+
+            for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+               value[valueIdx] = EntityStatUpdate.toObject(mem, off);
+               off += value[valueIdx].computeSize();
+            }
+
+            if (data.put(key, value) != null) {
+               throw ProtocolException.duplicateKey("EntityStatUpdates", key);
+            }
+         }
+
+         return data;
+      }
+   }
+
+   public static EntityStatsUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityStatsUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityStatsUpdate", offset + 0, (int)mem.byteSize());
+      } else {
+         int off = offset + 0;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("EntityStatUpdates", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("EntityStatUpdates", len, 4096000);
+         } else {
+            Map<Integer, EntityStatUpdate[]> entityStatUpdates = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               long valuePacked = VarInt.getWithLength(mem, off);
+               int valueLen = (int)valuePacked;
+               int valueVarLen = (int)(valuePacked >>> 32);
+               if (valueLen < 0) {
+                  throw ProtocolException.negativeLength("value", valueLen);
+               }
+
+               if (valueLen > 64) {
+                  throw ProtocolException.arrayTooLong("value", valueLen, 64);
+               }
+
+               if (off + valueVarLen + valueLen * 13L > mem.byteSize()) {
+                  throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 13, (int)mem.byteSize());
+               }
+
+               off += valueVarLen;
+               EntityStatUpdate[] value = new EntityStatUpdate[valueLen];
+
+               for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+                  value[valueIdx] = EntityStatUpdate.toObject(mem, off);
+                  off += value[valueIdx].computeSize();
+               }
+
+               if (entityStatUpdates.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("EntityStatUpdates", key);
+               }
+            }
+
+            return new EntityStatsUpdate(entityStatUpdates);
+         }
+      }
    }
 
    @Override
@@ -114,6 +229,28 @@ public class EntityStatsUpdate extends ComponentUpdate {
          }
 
          return buf.writerIndex() - startPos;
+      }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      if (this.entityStatUpdates.size() > 4096000) {
+         throw ProtocolException.dictionaryTooLarge("EntityStatUpdates", this.entityStatUpdates.size(), 4096000);
+      } else {
+         varOffset += VarInt.set(mem, varOffset, this.entityStatUpdates.size());
+
+         for (Entry<Integer, EntityStatUpdate[]> e : this.entityStatUpdates.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, (long)varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += VarInt.set(mem, varOffset, e.getValue().length);
+
+            for (EntityStatUpdate arrItem : e.getValue()) {
+               varOffset += arrItem.serialize(mem, varOffset);
+            }
+         }
+
+         return varOffset - offset;
       }
    }
 
@@ -140,7 +277,7 @@ public class EntityStatsUpdate extends ComponentUpdate {
          } else if (entityStatUpdatesCount > 4096000) {
             return ValidationResult.error("EntityStatUpdates exceeds max length 4096000");
          } else {
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(entityStatUpdatesCount);
 
             for (int i = 0; i < entityStatUpdatesCount; i++) {
                pos += 4;
@@ -153,7 +290,7 @@ public class EntityStatsUpdate extends ComponentUpdate {
                   return ValidationResult.error("Invalid array count for value");
                }
 
-               pos += VarInt.length(buffer, pos);
+               pos += VarInt.size(valueArrCount);
 
                for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
                   pos += EntityStatUpdate.computeBytesConsumed(buffer, pos);

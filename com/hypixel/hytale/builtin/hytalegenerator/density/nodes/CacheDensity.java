@@ -1,8 +1,8 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class CacheDensity extends Density {
    @Nonnull
@@ -27,7 +27,7 @@ public class CacheDensity extends Density {
             this.cache.position = new Vector3d();
          }
 
-         this.cache.position.assign(context.position);
+         this.cache.position.set(context.position);
          this.cache.value = this.input.process(context);
          return this.cache.value;
       }

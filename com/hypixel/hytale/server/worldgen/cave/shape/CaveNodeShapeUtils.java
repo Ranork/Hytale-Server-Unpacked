@@ -2,7 +2,7 @@ package com.hypixel.hytale.server.worldgen.cave.shape;
 
 import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.function.function.BiDoubleToDoubleFunction;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.procedurallib.condition.ConstantBlockFluidCondition;
 import com.hypixel.hytale.procedurallib.condition.IBlockFluidCondition;
 import com.hypixel.hytale.procedurallib.supplier.IDoubleRange;
@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class CaveNodeShapeUtils {
    public static final BiDoubleToDoubleFunction LEFT = (l, r) -> l;
@@ -31,7 +32,7 @@ public class CaveNodeShapeUtils {
       double x = bounds.fractionX(tx);
       double y = bounds.fractionY(ty);
       double z = bounds.fractionZ(tz);
-      return vector.assign(x, y, z);
+      return vector.set(x, y, z);
    }
 
    @Nonnull
@@ -39,7 +40,7 @@ public class CaveNodeShapeUtils {
       double x = o.x + v.x * t;
       double y = o.y + v.y * t;
       double z = o.z + v.z * t;
-      return vector.assign(x, y, z);
+      return vector.set(x, y, z);
    }
 
    @Nonnull
@@ -72,11 +73,11 @@ public class CaveNodeShapeUtils {
    @Nonnull
    public static Vector3d getOffset(@Nullable CaveNode parent, @Nonnull CaveNodeType.CaveNodeChildEntry childEntry) {
       Vector3d offset = childEntry.getOffset();
-      if (offset == Vector3d.ZERO) {
+      if (offset == Vector3dUtil.ZERO) {
          return offset;
       } else {
          if (parent != null && parent.getShape() instanceof PrefabCaveNodeShape) {
-            offset = offset.clone();
+            offset = new Vector3d(offset);
             ((PrefabCaveNodeShape)parent.getShape()).getPrefabRotation().rotate(offset);
          }
 
@@ -225,7 +226,7 @@ public class CaveNodeShapeUtils {
    ) {
       double len2 = tx * tx + ty * ty + tz * tz;
       if (len2 == 0.0) {
-         return vector.assign(x, y, z);
+         return vector.set(x, y, z);
       } else {
          double invLen = Math.sqrt(1.0 / len2);
          double dx = Math.abs(tx) * rx * invLen;
@@ -234,7 +235,7 @@ public class CaveNodeShapeUtils {
          x += dx * tx;
          y += dy * ty;
          z += dz * tz;
-         return vector.assign(x, y, z);
+         return vector.set(x, y, z);
       }
    }
 }

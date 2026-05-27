@@ -3,9 +3,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.PropDistribution;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class PositionProvider {
    public abstract void generate(@Nonnull PositionProvider.Context var1);

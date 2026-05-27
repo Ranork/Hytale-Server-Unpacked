@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.dependency.SystemTypeDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
 import com.hypixel.hytale.protocol.packets.entities.ChangeVelocity;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
@@ -23,6 +22,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PlayerVelocityInstructionSystem extends EntityTickingSystem<EntityStore> {
    @Nonnull
@@ -68,7 +68,7 @@ public class PlayerVelocityInstructionSystem extends EntityTickingSystem<EntityS
                   TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
                   if (transformComponent != null) {
                      World world = commandBuffer.getExternalData().getWorld();
-                     DebugUtils.addForce(world, transformComponent.getPosition(), velocityx, velocityConfigx);
+                     DebugUtils.addVelocity(world, transformComponent.getPosition(), velocityx, velocityConfigx);
                   }
                }
                break;
@@ -89,7 +89,7 @@ public class PlayerVelocityInstructionSystem extends EntityTickingSystem<EntityS
                   TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
                   if (transformComponent != null) {
                      World world = commandBuffer.getExternalData().getWorld();
-                     DebugUtils.addForce(world, transformComponent.getPosition(), new Vector3d(velocity.x, velocity.y, velocity.z), velocityConfig);
+                     DebugUtils.addVelocity(world, transformComponent.getPosition(), new Vector3d(velocity.x, velocity.y, velocity.z), velocityConfig);
                   }
                }
          }

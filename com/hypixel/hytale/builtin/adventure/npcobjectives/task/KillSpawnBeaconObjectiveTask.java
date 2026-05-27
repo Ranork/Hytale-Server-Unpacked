@@ -16,9 +16,9 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -30,6 +30,8 @@ import it.unimi.dsi.fastutil.Pair;
 import java.util.Arrays;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class KillSpawnBeaconObjectiveTask extends KillObjectiveTask {
    @Nonnull
@@ -77,7 +79,7 @@ public class KillSpawnBeaconObjectiveTask extends KillObjectiveTask {
          HytaleLogger logger = ObjectivePlugin.get().getLogger();
 
          for (int i = 0; i < spawnBeaconConfigs.length; i++) {
-            Vector3d spawnPosition = position.clone();
+            Vector3d spawnPosition = new Vector3d(position);
             KillSpawnBeaconObjectiveTaskAsset.ObjectiveSpawnBeacon spawnBeaconConfig = spawnBeaconConfigs[i];
             String spawnBeaconId = spawnBeaconConfig.getSpawnBeaconId();
             int index = BeaconNPCSpawn.getAssetMap().getIndex(spawnBeaconId);
@@ -93,9 +95,9 @@ public class KillSpawnBeaconObjectiveTask extends KillObjectiveTask {
 
             WorldLocationProvider worldLocationCondition = spawnBeaconConfig.getWorldLocationProvider();
             if (worldLocationCondition != null) {
-               Vector3i potentialSpawnLocation = worldLocationCondition.runCondition(world, spawnPosition.toVector3i());
+               Vector3i potentialSpawnLocation = worldLocationCondition.runCondition(world, Vector3dUtil.toVector3i(spawnPosition));
                if (potentialSpawnLocation != null) {
-                  spawnPosition = potentialSpawnLocation.toVector3d();
+                  spawnPosition = Vector3iUtil.toVector3d(potentialSpawnLocation);
                } else {
                   spawnPosition = null;
                }
@@ -106,7 +108,7 @@ public class KillSpawnBeaconObjectiveTask extends KillObjectiveTask {
             } else {
                BeaconSpawnWrapper wrapper = SpawningPlugin.get().getBeaconSpawnWrapper(index);
                Pair<Ref<EntityStore>, LegacySpawnBeaconEntity> spawnBeaconPair = LegacySpawnBeaconEntity.create(
-                  wrapper, spawnPosition, Vector3f.FORWARD, componentAccessor
+                  wrapper, spawnPosition, Rotation3f.IDENTITY, componentAccessor
                );
                ((LegacySpawnBeaconEntity)spawnBeaconPair.second()).setObjectiveUUID(objective.getObjectiveUUID());
                UUIDComponent spawnBeaconUuidComponent = componentAccessor.getComponent(

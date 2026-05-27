@@ -1,16 +1,15 @@
 package com.hypixel.hytale.server.core.modules.interaction;
 
 import com.hypixel.hytale.component.AddReason;
-import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.BlockSoundEvent;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
@@ -31,7 +30,6 @@ import com.hypixel.hytale.server.core.asset.type.item.config.ItemTool;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemToolSpec;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.event.events.ecs.BreakBlockEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.DamageBlockEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
@@ -61,6 +59,8 @@ import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class BlockHarvestUtils {
    @Nullable
@@ -160,14 +160,13 @@ public class BlockHarvestUtils {
       float damageScale,
       int setBlockSettings,
       @Nonnull Ref<ChunkStore> chunkReference,
-      @Nonnull CommandBuffer<EntityStore> commandBuffer,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
-      return performBlockDamage(null, null, targetBlock, itemStack, tool, null, false, damageScale, setBlockSettings, chunkReference, commandBuffer, chunkStore);
+      return performBlockDamage(null, targetBlock, itemStack, tool, null, false, damageScale, setBlockSettings, chunkReference, componentAccessor, chunkStore);
    }
 
    public static boolean performBlockDamage(
-      @Nullable LivingEntity entity,
       @Nullable Ref<EntityStore> ref,
       @Nonnull Vector3i targetBlockPos,
       @Nullable ItemStack itemStack,
@@ -212,7 +211,7 @@ public class BlockHarvestUtils {
                } else {
                   Vector3d targetBlockCenterPos = new Vector3d();
                   targetBlockType.getBlockCenter(targetRotationIndex, targetBlockCenterPos);
-                  targetBlockCenterPos.add(targetBlockPos);
+                  targetBlockCenterPos.add(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
                   Vector3i originBlock = new Vector3i(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
                   if (!targetBlockType.isUnknown()) {
                      int filler = targetSection.getFiller(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
@@ -220,9 +219,9 @@ public class BlockHarvestUtils {
                      int fillerY = FillerBlockUtil.unpackY(filler);
                      int fillerZ = FillerBlockUtil.unpackZ(filler);
                      if (fillerX != 0 || fillerY != 0 || fillerZ != 0) {
-                        originBlock = originBlock.clone().subtract(fillerX, fillerY, fillerZ);
+                        originBlock = new Vector3i(originBlock).sub(fillerX, fillerY, fillerZ);
                         String oldBlockTypeKey = targetBlockType.getId();
-                        targetBlockType = world.getBlockType(originBlock.getX(), originBlock.getY(), originBlock.getZ());
+                        targetBlockType = world.getBlockType(originBlock.x(), originBlock.y(), originBlock.z());
                         if (targetBlockType == null) {
                            return false;
                         }
@@ -265,7 +264,7 @@ public class BlockHarvestUtils {
                   } else {
                      if (!blockGathering.isSoft()) {
                         if (heldItem != null && heldItem.getWeapon() == null) {
-                           if (ref != null && entity != null) {
+                           if (ref != null) {
                               GatheringEffectsConfig unbreakableBlockConfig = gameplayConfig.getGatheringConfig().getUnbreakableBlockConfig();
                               if ((setBlockSettings & 4) == 0) {
                                  String particleSystemId = unbreakableBlockConfig.getParticleSystemId();
@@ -345,7 +344,7 @@ public class BlockHarvestUtils {
                      targetSection = blockChunkComponent.getSectionAtBlockY(targetBlockPos.y);
                      targetRotationIndex = targetSection.getRotationIndex(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
                      targetBlockType.getBlockCenter(targetRotationIndex, targetBlockCenterPos);
-                     targetBlockCenterPos.add(targetBlockPos);
+                     targetBlockCenterPos.add(targetBlockPos.x, targetBlockPos.y, targetBlockPos.z);
                      BlockHealth blockDamage = blockHealthComponent.damageBlock(timeResource.getNow(), world, targetBlockPos, damage);
                      if (blockHealthComponent.isBlockFragile(targetBlockPos) || blockDamage.isDestroyed()) {
                         BlockGathering.BlockToolData requiredTool = blockGathering.getToolData().get(toolId);
@@ -386,7 +385,9 @@ public class BlockHarvestUtils {
                               if ((setBlockSettings & 2048) == 0) {
                                  List<ItemStack> itemStacks = getDrops(targetBlockType, 1, requiredTool.getItemId(), requiredTool.getDropListId());
                                  Vector3d dropPosition = new Vector3d(targetBlockPos.x + 0.5, targetBlockPos.y, targetBlockPos.z + 0.5);
-                                 Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(entityStore, itemStacks, dropPosition, Vector3f.ZERO);
+                                 Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(
+                                    entityStore, itemStacks, dropPosition, Rotation3f.IDENTITY
+                                 );
                                  entityStore.addEntities(itemEntityHolders, AddReason.SPAWN);
                               }
                            } else {
@@ -410,7 +411,7 @@ public class BlockHarvestUtils {
                                  if (!toolDrops.isEmpty()) {
                                     Vector3d dropPosition = new Vector3d(targetBlockPos.x + 0.5, targetBlockPos.y, targetBlockPos.z + 0.5);
                                     Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(
-                                       entityStore, toolDrops, dropPosition, Vector3f.ZERO
+                                       entityStore, toolDrops, dropPosition, Rotation3f.IDENTITY
                                     );
                                     entityStore.addEntities(itemEntityHolders, AddReason.SPAWN);
                                  }
@@ -427,8 +428,8 @@ public class BlockHarvestUtils {
                         }
                      }
 
-                     if (ref != null && entity != null) {
-                        if ((setBlockSettings & 1024) == 0 && !targetBlockCenterPos.equals(Vector3d.MAX)) {
+                     if (ref != null) {
+                        if ((setBlockSettings & 1024) == 0 && !targetBlockCenterPos.equals(Vector3dUtil.MAX)) {
                            int hitSoundEventLayerIndex = 0;
                            if (itemToolSpec != null) {
                               hitSoundEventLayerIndex = itemToolSpec.getHitSoundLayerIndex();
@@ -440,12 +441,7 @@ public class BlockHarvestUtils {
 
                            if (hitSoundEventLayerIndex != 0) {
                               SoundUtil.playSoundEvent3d(
-                                 ref,
-                                 hitSoundEventLayerIndex,
-                                 targetBlockCenterPos.getX(),
-                                 targetBlockCenterPos.getY(),
-                                 targetBlockCenterPos.getZ(),
-                                 entityStore
+                                 ref, hitSoundEventLayerIndex, targetBlockCenterPos.x(), targetBlockCenterPos.y(), targetBlockCenterPos.z(), entityStore
                               );
                            }
                         }
@@ -472,15 +468,11 @@ public class BlockHarvestUtils {
                         }
                      }
 
-                     if (entity != null
-                        && ref != null
-                        && ItemUtils.canDecreaseItemStackDurability(ref, entityStore)
-                        && itemStack != null
-                        && !itemStack.isUnbreakable()) {
+                     if (ref != null && ItemUtils.canDecreaseItemStackDurability(ref, entityStore) && itemStack != null && !itemStack.isUnbreakable()) {
                         InventoryComponent.Hotbar hotbarComponent = entityStore.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
                         if (hotbarComponent != null && hotbarComponent.getActiveSlot() != -1) {
                            double durability = calculateDurabilityUse(heldItem, targetBlockType);
-                           entity.updateItemStackDurability(
+                           ItemUtils.updateItemStackDurability(
                               ref, itemStack, hotbarComponent.getInventory(), hotbarComponent.getActiveSlot(), -durability, entityStore
                            );
                         }
@@ -514,9 +506,9 @@ public class BlockHarvestUtils {
       @Nonnull ComponentAccessor<EntityStore> entityStore,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore
    ) {
-      int targetBlockX = targetBlock.getX();
-      int targetBlockY = targetBlock.getY();
-      int targetBlockZ = targetBlock.getZ();
+      int targetBlockX = targetBlock.x();
+      int targetBlockY = targetBlock.y();
+      int targetBlockZ = targetBlock.z();
       WorldChunk worldChunkComponent = chunkStore.getComponent(chunkReference, WorldChunk.getComponentType());
 
       assert worldChunkComponent != null;
@@ -538,7 +530,7 @@ public class BlockHarvestUtils {
                int fillerY = FillerBlockUtil.unpackY(filler);
                int fillerZ = FillerBlockUtil.unpackZ(filler);
                if (fillerX != 0 || fillerY != 0 || fillerZ != 0) {
-                  affectedBlock = targetBlock.clone().subtract(fillerX, fillerY, fillerZ);
+                  affectedBlock = new Vector3i(targetBlock).sub(fillerX, fillerY, fillerZ);
                   BlockType originBlock = world.getBlockType(affectedBlock);
                   if (originBlock != null && !targetBlockTypeAsset.getId().equals(originBlock.getId())) {
                      world.breakBlock(targetBlockX, targetBlockY, targetBlockZ, setBlockSettings);
@@ -580,8 +572,8 @@ public class BlockHarvestUtils {
 
                assert blockChunkComponent != null;
 
-               BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockPosition.getY());
-               blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+               BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockPosition.y());
+               blockSection.invalidateBlock(blockPosition.x(), blockPosition.y(), blockPosition.z());
                return;
             }
 
@@ -599,13 +591,13 @@ public class BlockHarvestUtils {
 
             assert blockChunkComponent != null;
 
-            BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockPosition.getY());
-            blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+            BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(blockPosition.y());
+            blockSection.invalidateBlock(blockPosition.x(), blockPosition.y(), blockPosition.z());
          }
 
-         int x = blockPosition.getX();
-         int y = blockPosition.getY();
-         int z = blockPosition.getZ();
+         int x = blockPosition.x();
+         int y = blockPosition.y();
+         int z = blockPosition.z();
          BlockChunk blockChunkComponent = chunkStore.getComponent(targetChunkReference, BlockChunk.getComponentType());
 
          assert blockChunkComponent != null;
@@ -615,9 +607,12 @@ public class BlockHarvestUtils {
          int blockTypeIndex = blockSection.get(x, y, z);
          BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeIndex);
          boolean isNaturalBlockBreak = BlockInteractionUtils.isNaturalAction(ref, entityStore);
-         setBlockSettings |= 256;
          if (!isNaturalBlockBreak) {
             setBlockSettings |= 2048;
+         }
+
+         if (!BlockInteractionUtils.isNoPhysics(ref, entityStore)) {
+            setBlockSettings |= 256;
          }
 
          naturallyRemoveBlock(
@@ -701,15 +696,15 @@ public class BlockHarvestUtils {
             int fillerY = FillerBlockUtil.unpackY(filler);
             int fillerZ = FillerBlockUtil.unpackZ(filler);
             if (fillerX != 0 || fillerY != 0 || fillerZ != 0) {
-               affectedBlock = blockPosition.clone().subtract(fillerX, fillerY, fillerZ);
+               affectedBlock = new Vector3i(blockPosition).sub(fillerX, fillerY, fillerZ);
                String oldBlockTypeKey = blockType.getId();
-               blockType = worldChunkComponent.getBlockType(affectedBlock.getX(), affectedBlock.getY(), affectedBlock.getZ());
+               blockType = worldChunkComponent.getBlockType(affectedBlock.x(), affectedBlock.y(), affectedBlock.z());
                if (blockType == null) {
                   throw new IllegalStateException("Null block type fetched for " + affectedBlock + " during block break");
                }
 
                if (!oldBlockTypeKey.equals(blockType.getId())) {
-                  worldChunkComponent.breakBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), setBlockSettings);
+                  worldChunkComponent.breakBlock(blockPosition.x(), blockPosition.y(), blockPosition.z(), setBlockSettings);
                   return;
                }
             }
@@ -720,11 +715,11 @@ public class BlockHarvestUtils {
             if (soundSet != null) {
                int soundEventIndex = soundSet.getSoundEventIndices().getOrDefault(BlockSoundEvent.Break, 0);
                if (soundEventIndex != 0) {
-                  BlockSection section = blockChunkComponent.getSectionAtBlockY(blockPosition.getY());
-                  int rotationIndex = section.getRotationIndex(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+                  BlockSection section = blockChunkComponent.getSectionAtBlockY(blockPosition.y());
+                  int rotationIndex = section.getRotationIndex(blockPosition.x(), blockPosition.y(), blockPosition.z());
                   Vector3d centerPosition = new Vector3d();
                   blockType.getBlockCenter(rotationIndex, centerPosition);
-                  centerPosition.add(blockPosition);
+                  centerPosition.add(blockPosition.x(), blockPosition.y(), blockPosition.z());
                   SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, centerPosition, entityStore);
                }
             }
@@ -732,9 +727,9 @@ public class BlockHarvestUtils {
 
          removeBlock(affectedBlock, blockType, setBlockSettings, chunkReference, chunkStore);
          if ((setBlockSettings & 2048) == 0 && quantity > 0) {
-            Vector3d dropPosition = blockPosition.toVector3d().add(0.5, 0.0, 0.5);
+            Vector3d dropPosition = Vector3iUtil.toVector3d(blockPosition).add(0.5, 0.0, 0.5);
             List<ItemStack> itemStacks = getDrops(blockType, quantity, itemId, dropListId);
-            Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(entityStore, itemStacks, dropPosition, Vector3f.ZERO);
+            Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(entityStore, itemStacks, dropPosition, Rotation3f.IDENTITY);
             entityStore.addEntities(itemEntityHolders, AddReason.SPAWN);
          }
       }
@@ -767,46 +762,53 @@ public class BlockHarvestUtils {
          int fillerY = FillerBlockUtil.unpackY(filler);
          int fillerZ = FillerBlockUtil.unpackZ(filler);
          if (fillerX != 0 || fillerY != 0 || fillerZ != 0) {
-            affectedBlock = targetBlock.clone().subtract(fillerX, fillerY, fillerZ);
+            affectedBlock = new Vector3i(targetBlock).sub(fillerX, fillerY, fillerZ);
             String oldBlockTypeKey = blockType.getId();
-            blockType = worldChunkComponent.getBlockType(affectedBlock.getX(), affectedBlock.getY(), affectedBlock.getZ());
+            blockType = worldChunkComponent.getBlockType(affectedBlock.x(), affectedBlock.y(), affectedBlock.z());
             if (blockType == null) {
                return;
             }
 
             if (!oldBlockTypeKey.equals(blockType.getId())) {
-               worldChunkComponent.breakBlock(targetBlock.getX(), targetBlock.getY(), targetBlock.getZ());
+               worldChunkComponent.breakBlock(targetBlock.x(), targetBlock.y(), targetBlock.z());
                return;
             }
          }
       }
 
-      BlockSection section = blockChunkComponent.getSectionAtBlockY(targetBlock.getY());
+      BlockSection section = blockChunkComponent.getSectionAtBlockY(targetBlock.y());
       Vector3d centerPosition = new Vector3d();
-      int rotationIndex = section.getRotationIndex(targetBlock.getX(), targetBlock.getY(), targetBlock.getZ());
+      int rotationIndex = section.getRotationIndex(targetBlock.x(), targetBlock.y(), targetBlock.z());
       blockType.getBlockCenter(rotationIndex, centerPosition);
-      centerPosition.add(targetBlock);
+      centerPosition.add(targetBlock.x(), targetBlock.y(), targetBlock.z());
       int setBlockSettings = 0;
       setBlockSettings |= 256;
-      if (!BlockInteractionUtils.isNaturalAction(ref, entityStore)) {
-         setBlockSettings |= 2048;
-      }
+      BreakBlockEvent event = new BreakBlockEvent(null, affectedBlock, blockType);
+      entityStore.invoke(ref, event);
+      if (event.isCancelled()) {
+         section.invalidateBlock(targetBlock.x(), targetBlock.y(), targetBlock.z());
+      } else {
+         affectedBlock = event.getTargetBlock();
+         if (!BlockInteractionUtils.isNaturalAction(ref, entityStore)) {
+            setBlockSettings |= 2048;
+         }
 
-      removeBlock(affectedBlock, blockType, setBlockSettings, chunkReference, chunkStore);
-      HarvestingDropType harvest = blockType.getGathering().getHarvest();
-      String itemId = harvest.getItemId();
-      String dropListId = harvest.getDropListId();
+         removeBlock(affectedBlock, blockType, setBlockSettings, chunkReference, chunkStore);
+         HarvestingDropType harvest = blockType.getGathering().getHarvest();
+         String itemId = harvest.getItemId();
+         String dropListId = harvest.getDropListId();
 
-      for (ItemStack itemStack : getDrops(blockType, 1, itemId, dropListId)) {
-         ItemUtils.interactivelyPickupItem(ref, itemStack, centerPosition, entityStore);
-      }
+         for (ItemStack itemStack : getDrops(blockType, 1, itemId, dropListId)) {
+            ItemUtils.interactivelyPickupItem(ref, itemStack, centerPosition, entityStore);
+         }
 
-      if ((setBlockSettings & 1024) == 0) {
-         BlockSoundSet soundSet = BlockSoundSet.getAssetMap().getAsset(blockType.getBlockSoundSetIndex());
-         if (soundSet != null) {
-            int soundEventIndex = soundSet.getSoundEventIndices().getOrDefault(BlockSoundEvent.Harvest, 0);
-            if (soundEventIndex != 0) {
-               SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, centerPosition, entityStore);
+         if ((setBlockSettings & 1024) == 0) {
+            BlockSoundSet soundSet = BlockSoundSet.getAssetMap().getAsset(blockType.getBlockSoundSetIndex());
+            if (soundSet != null) {
+               int soundEventIndex = soundSet.getSoundEventIndices().getOrDefault(BlockSoundEvent.Harvest, 0);
+               if (soundEventIndex != 0) {
+                  SoundUtil.playSoundEvent3d(soundEventIndex, SoundCategory.SFX, centerPosition, entityStore);
+               }
             }
          }
       }
@@ -834,21 +836,26 @@ public class BlockHarvestUtils {
 
       assert blockChunkComponent != null;
 
-      worldChunkComponent.breakBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), setBlockSettings);
+      worldChunkComponent.breakBlock(blockPosition.x(), blockPosition.y(), blockPosition.z(), setBlockSettings);
       if ((setBlockSettings & 256) != 0) {
          BlockSection section = blockChunkComponent.getSectionAtBlockY(blockPosition.y);
          int rotationIndex = section.getRotationIndex(blockPosition.x, blockPosition.y, blockPosition.z);
          BlockBoundingBoxes hitBoxType = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
          if (hitBoxType != null) {
             FillerBlockUtil.forEachFillerBlock(
-               hitBoxType.get(rotationIndex),
-               (x, y, z) -> world.performBlockUpdate(blockPosition.getX() + x, blockPosition.getY() + y, blockPosition.getZ() + z, false)
+               hitBoxType.get(rotationIndex), (x, y, z) -> world.performBlockUpdate(blockPosition.x() + x, blockPosition.y() + y, blockPosition.z() + z, false)
             );
          }
       }
 
       ConnectedBlocksUtil.setConnectedBlockAndNotifyNeighbors(
-         BlockType.getAssetMap().getIndex("Empty"), RotationTuple.NONE, Vector3i.ZERO, blockPosition, worldChunkComponent, blockChunkComponent
+         chunkStore.getExternalData(),
+         BlockType.getAssetMap().getIndex("Empty"),
+         RotationTuple.NONE,
+         Vector3iUtil.ZERO,
+         blockPosition,
+         worldChunkComponent,
+         blockChunkComponent
       );
    }
 

@@ -14,7 +14,7 @@ import javax.annotation.Nullable;
 public class PendingLoadJavaPlugin extends PendingLoadPlugin {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    @Nonnull
-   private final PluginClassLoader urlClassLoader;
+   private PluginClassLoader urlClassLoader;
 
    public PendingLoadJavaPlugin(@Nullable Path path, @Nonnull PluginManifest manifest, @Nonnull PluginClassLoader urlClassLoader) {
       super(path, manifest);
@@ -28,8 +28,17 @@ public class PendingLoadJavaPlugin extends PendingLoadPlugin {
    }
 
    @Override
-   public boolean isInServerClassPath() {
+   public boolean isCoreMod() {
       return this.urlClassLoader.isInServerClassPath();
+   }
+
+   @Nonnull
+   public PluginClassLoader getClassLoader() {
+      return this.urlClassLoader;
+   }
+
+   public void setClassLoader(@Nonnull PluginClassLoader classLoader) {
+      this.urlClassLoader = classLoader;
    }
 
    @Nonnull

@@ -9,13 +9,13 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.CustomUIPage;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PortalDevicePageSupplier implements OpenCustomUIInteraction.CustomPageSupplier {
    @Nonnull
@@ -52,7 +53,7 @@ public class PortalDevicePageSupplier implements OpenCustomUIInteraction.CustomP
          if (playerComponent == null) {
             return null;
          } else {
-            ItemStack inHand = playerComponent.getInventory().getItemInHand();
+            ItemStack itemInHand = InventoryComponent.getItemInHand(store, ref);
             World world = store.getExternalData().getWorld();
             BlockType blockType = world.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
             if (blockType == null) {
@@ -89,7 +90,7 @@ public class PortalDevicePageSupplier implements OpenCustomUIInteraction.CustomP
                      boolean isLoading = existingDevice != null && existingDevice.isLoadingWorld();
                      if ((existingDevice == null || destinationWorld == null) && !isLoading) {
                         chunkStore.getStore().putComponent(blockRef, PortalDevice.getComponentType(), new PortalDevice(this.config, blockType.getId()));
-                        return new PortalDeviceSummonPage(playerRef, this.config, blockRef, inHand);
+                        return new PortalDeviceSummonPage(playerRef, this.config, blockRef, itemInHand);
                      } else {
                         return new PortalDeviceActivePage(playerRef, this.config, blockRef);
                      }

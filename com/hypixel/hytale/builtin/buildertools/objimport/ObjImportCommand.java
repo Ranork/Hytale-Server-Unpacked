@@ -2,10 +2,10 @@ package com.hypixel.hytale.builtin.buildertools.objimport;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -15,8 +15,8 @@ public class ObjImportCommand extends AbstractPlayerCommand {
    public ObjImportCommand() {
       super("importobj", "server.commands.importobj.desc");
       this.addAliases("obj");
-      this.setPermissionGroup(GameMode.Creative);
-      this.requirePermission("hytale.editor.selection.clipboard");
+      this.setPermissionGroups("hytale:WorldEditor");
+      this.requirePermission(HytalePermissions.EDITOR_SELECTION_CLIPBOARD);
    }
 
    @Override

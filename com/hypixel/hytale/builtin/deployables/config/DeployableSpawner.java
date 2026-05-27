@@ -9,8 +9,9 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class DeployableSpawner implements JsonAssetWithMap<String, DefaultAssetMap<String, DeployableSpawner>> {
    @Nonnull
@@ -20,7 +21,9 @@ public class DeployableSpawner implements JsonAssetWithMap<String, DefaultAssetM
       .append(new KeyedCodec<>("Config", DeployableConfig.CODEC), (i, s) -> i.config = s, i -> i.config)
       .addValidator(Validators.nonNull())
       .add()
-      .append(new KeyedCodec<>("PositionOffsets", new ArrayCodec<>(Vector3d.CODEC, Vector3d[]::new)), (i, s) -> i.positionOffsets = s, i -> i.positionOffsets)
+      .append(
+         new KeyedCodec<>("PositionOffsets", new ArrayCodec<>(Vector3dUtil.CODEC, Vector3d[]::new)), (i, s) -> i.positionOffsets = s, i -> i.positionOffsets
+      )
       .add()
       .build();
    private static DefaultAssetMap<String, DeployableSpawner> ASSET_MAP;

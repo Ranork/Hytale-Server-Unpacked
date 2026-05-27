@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.server.core.asset.type.model.config.camera.CameraSettings;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -70,14 +70,14 @@ public class HeadMotionObserve extends HeadMotionBase {
 
          assert headRotationComponent != null;
 
-         Vector3f headRotation = headRotationComponent.getRotation();
-         this.steeringForceRotate.setHeading(headRotation.getYaw());
-         this.steeringForceRotate.setDesiredHeading(transformComponent.getRotation().getYaw() + this.targetBodyOffsetYaw);
+         Rotation3f headRotation = headRotationComponent.getRotation();
+         this.steeringForceRotate.setHeading(headRotation.yaw());
+         this.steeringForceRotate.setDesiredHeading(transformComponent.getRotation().yaw() + this.targetBodyOffsetYaw);
          if (this.steeringForceRotate.compute(desiredSteering)) {
             desiredSteering.setRelativeTurnSpeed(this.relativeTurnSpeed);
             return true;
          } else {
-            desiredSteering.setYaw(transformComponent.getRotation().getYaw() + this.targetBodyOffsetYaw);
+            desiredSteering.setYaw(transformComponent.getRotation().yaw() + this.targetBodyOffsetYaw);
             if (this.tickDelay(dt)) {
                return true;
             } else {

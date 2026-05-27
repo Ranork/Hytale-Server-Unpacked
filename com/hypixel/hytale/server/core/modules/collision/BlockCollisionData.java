@@ -23,6 +23,7 @@ public class BlockCollisionData extends BoxCollisionData {
    public Fluid fluid;
    public boolean touching;
    public boolean overlapping;
+   public boolean filteredByCollisionFilter;
 
    public void setBlockData(@Nonnull CollisionConfig collisionConfig) {
       this.x = collisionConfig.blockX;
@@ -35,6 +36,7 @@ public class BlockCollisionData extends BoxCollisionData {
       this.willDamage = (collisionConfig.blockMaterialMask & 16) != 0;
       this.fluidId = collisionConfig.fluidId;
       this.fluid = collisionConfig.fluid;
+      this.filteredByCollisionFilter = collisionConfig.blockFilteredOut;
    }
 
    public void setDetailBoxIndex(int detailBoxIndex) {
@@ -49,6 +51,7 @@ public class BlockCollisionData extends BoxCollisionData {
    public void clear() {
       this.blockType = null;
       this.blockMaterial = null;
+      this.filteredByCollisionFilter = false;
    }
 
    @Nonnull

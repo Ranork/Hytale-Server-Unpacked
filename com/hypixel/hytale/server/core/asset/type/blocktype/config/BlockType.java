@@ -28,8 +28,6 @@ import com.hypixel.hytale.common.util.MapUtil;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.BlockFlags;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.BlockNeighbor;
@@ -54,28 +52,31 @@ import com.hypixel.hytale.server.core.asset.type.blocksound.config.BlockSoundSet
 import com.hypixel.hytale.server.core.asset.type.blocktick.config.RandomTickProcedure;
 import com.hypixel.hytale.server.core.asset.type.blocktick.config.TickProcedure;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Bench;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.fallingblocks.FallingBlockSettings;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.farming.FarmingData;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.mountpoints.RotatedMountPointsArray;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BlockTypeListAsset;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.PrefabListAsset;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
+import com.hypixel.hytale.server.core.asset.type.physicalmaterial.config.PhysicalMaterial;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.soundevent.validator.SoundEventValidators;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
+import com.hypixel.hytale.server.core.entity.ExplosionConfig;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.InteractionTypeUtils;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
-import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.ISectionPalette;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.AbstractSectionPalette;
 import com.hypixel.hytale.server.core.universe.world.connectedblocks.ConnectedBlockRuleSet;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import io.netty.buffer.ByteBuf;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import java.lang.foreign.MemorySegment;
 import java.lang.ref.SoftReference;
 import java.util.Arrays;
 import java.util.Collections;
@@ -83,10 +84,11 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.ToIntFunction;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<String, BlockType>>, NetworkSerializable<com.hypixel.hytale.protocol.BlockType> {
    public static final AssetBuilderCodec<String, BlockType> CODEC = AssetBuilderCodec.builder(
@@ -312,6 +314,13 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          (blockType, parent) -> blockType.particleColor = parent.particleColor
       )
       .add()
+      .appendInherited(
+         new KeyedCodec<>("TextureComputedColor", ProtocolCodecs.COLOR),
+         (blockType, s) -> blockType.textureComputedColor = s,
+         blockType -> blockType.textureComputedColor,
+         (blockType, parent) -> blockType.textureComputedColor = parent.textureComputedColor
+      )
+      .add()
       .<ModelParticle[]>appendInherited(
          new KeyedCodec<>("Particles", ModelParticle.ARRAY_CODEC),
          (blockType, s) -> blockType.particles = s,
@@ -433,6 +442,14 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          (blockType, parent) -> blockType.farming = parent.farming
       )
       .add()
+      .<FallingBlockSettings>appendInherited(
+         new KeyedCodec<>("FallingBlockSettings", FallingBlockSettings.CODEC),
+         (blockType, settings) -> blockType.fallingBlockSettings = settings,
+         blockType -> blockType.fallingBlockSettings,
+         (blockType, parent) -> blockType.fallingBlockSettings = parent.fallingBlockSettings
+      )
+      .documentation("Settings for blocks that can become falling block entities.")
+      .add()
       .appendInherited(
          new KeyedCodec<>("IsDoor", Codec.BOOLEAN),
          (blockType, s) -> blockType.isDoor = s,
@@ -498,6 +515,25 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       .documentation("Sets the **BlockSoundSet** that will be used for this block for various events e.g. placement, breaking")
       .addValidator(BlockSoundSet.VALIDATOR_CACHE.getValidator())
       .metadata(new UIEditorSectionStart("Sounds"))
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("PhysicalMaterialId", Codec.STRING),
+         (blockType, o) -> blockType.physicalMaterialId = o,
+         blockType -> blockType.physicalMaterialId,
+         (blockType, parent) -> blockType.physicalMaterialId = parent.physicalMaterialId
+      )
+      .documentation("Sets the PhysicalMaterial of the block. Currently used primarily for acoustic properties.")
+      .addValidator(PhysicalMaterial.VALIDATOR_CACHE.getValidator())
+      .add()
+      .<Float>appendInherited(
+         new KeyedCodec<>("SoundOcclusionOpacity", Codec.FLOAT),
+         (blockType, o) -> blockType.soundOcclusionOpacity = o,
+         blockType -> blockType.soundOcclusionOpacity,
+         (blockType, parent) -> blockType.soundOcclusionOpacity = parent.soundOcclusionOpacity
+      )
+      .documentation(
+         "Scales per-source audio occlusion attenuation for this block. Multiplied with PhysicalMaterial AttenuationPerBlock. Set to 0, the material applies no attenuation. Set to 1 it applies the full specified attenuation. Can be set to values higher than 1 to increase attenuation until no sound penetrates."
+      )
       .add()
       .<String>appendInherited(
          new KeyedCodec<>("AmbientSoundEventId", Codec.STRING),
@@ -750,6 +786,14 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          new KeyedCodec<>("Rail", ProtocolCodecs.RAIL_CONFIG_CODEC), (o, v) -> o.railConfig = v, o -> o.railConfig, (o, p) -> o.railConfig = p.railConfig
       )
       .add()
+      .<ExplosionConfig>appendInherited(
+         new KeyedCodec<>("ExplosionConfig", ExplosionConfig.CODEC),
+         (blockType, s) -> blockType.explosionConfig = s,
+         blockType -> blockType.explosionConfig,
+         (blockType, parent) -> blockType.explosionConfig = parent.explosionConfig
+      )
+      .documentation("The explosion config associated with this block.")
+      .add()
       .afterDecode(BlockType::processConfig)
       .build();
    public static final String[] EMPTY_ALIAS_LIST = new String[0];
@@ -786,13 +830,30 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    );
    public static final ShaderType[] DEFAULT_SHADER_EFFECTS = new ShaderType[]{ShaderType.None};
    public static final BlockType DEFAULT_BLOCK_TYPE = new BlockType();
-   public static final ISectionPalette.KeySerializer KEY_SERIALIZER = (buf, id) -> {
-      String key = getAssetMap().getAssetOrDefault(id, BlockType.UNKNOWN).getId();
-      ByteBufUtil.writeUTF(buf, key);
+   public static final AbstractSectionPalette.KeyMemorySerializer KEY_MEMORY_SERIALIZER = new AbstractSectionPalette.KeyMemorySerializer() {
+      @Override
+      public int serialize(MemorySegment memorySegment, int offset, int index) {
+         String key = BlockType.getAssetMap().getAssetOrDefault(index, BlockType.UNKNOWN).getId();
+         return MemorySegmentUtil.writeUTF(memorySegment, offset, key);
+      }
+
+      @Override
+      public int keySize(int index) {
+         String key = BlockType.getAssetMap().getAssetOrDefault(index, BlockType.UNKNOWN).getId();
+         return MemorySegmentUtil.utf8Size(key);
+      }
    };
-   public static final ToIntFunction<ByteBuf> KEY_DESERIALIZER = byteBuf -> {
-      String blockType = ByteBufUtil.readUTF(byteBuf);
-      return getBlockIdOrUnknown(blockType, "Failed to find block '%s' in chunk section!", blockType);
+   public static final AbstractSectionPalette.KeyMemoryDeserializer KEY_MEMORY_DESERIALIZER = new AbstractSectionPalette.KeyMemoryDeserializer() {
+      @Override
+      public int deserialize(MemorySegment mem, int offset) {
+         String block = MemorySegmentUtil.readUTF(mem, offset);
+         return BlockType.getBlockIdOrUnknown(block, "Failed to find block '%s' in chunk section!", block);
+      }
+
+      @Override
+      public int keySize(MemorySegment mem, int offset) {
+         return MemorySegmentUtil.utf8Size(mem, offset);
+      }
    };
    public static final String EMPTY_KEY = "Empty";
    public static final String UNKNOWN_KEY = "Unknown";
@@ -859,10 +920,14 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    protected String prefabListAssetId;
    protected String blockSoundSetId = "EMPTY";
    protected transient int blockSoundSetIndex = 0;
+   protected String physicalMaterialId = "EMPTY";
+   protected transient int physicalMaterialIndex = 0;
+   protected float soundOcclusionOpacity = 1.0F;
    protected ModelParticle[] particles;
    protected String blockParticleSetId;
    protected String blockBreakingDecalId;
    protected Color particleColor;
+   protected Color textureComputedColor;
    protected TickProcedure tickProcedure;
    private RandomTickProcedure randomTickProcedure;
    protected ShaderType[] effect;
@@ -883,6 +948,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    @Nonnull
    protected Opacity opacity = Opacity.Solid;
    protected boolean requiresAlphaBlending;
+   private volatile Boolean uniformTextures;
    protected Color[] tintUp;
    protected Color[] tintDown;
    protected Color[] tintNorth;
@@ -940,6 +1006,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    protected boolean isLooping;
    protected Holder<ChunkStore> blockEntity;
    protected FarmingData farming;
+   @Nullable
+   protected FallingBlockSettings fallingBlockSettings;
    protected SupportDropType supportDropType = SupportDropType.BREAK;
    protected int maxSupportDistance;
    @Nullable
@@ -956,6 +1024,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
    protected RailConfig railConfig;
    @Nullable
    protected RailConfig[] rotatedRailConfig;
+   @Nullable
+   protected ExplosionConfig explosionConfig;
    protected String[] aliases = EMPTY_ALIAS_LIST;
    @Nullable
    private transient String defaultStateKey;
@@ -993,10 +1063,14 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       this.group = other.group;
       this.blockSoundSetId = other.blockSoundSetId;
       this.blockSoundSetIndex = other.blockSoundSetIndex;
+      this.physicalMaterialId = other.physicalMaterialId;
+      this.physicalMaterialIndex = other.physicalMaterialIndex;
+      this.soundOcclusionOpacity = other.soundOcclusionOpacity;
       this.particles = other.particles;
       this.blockParticleSetId = other.blockParticleSetId;
       this.blockBreakingDecalId = other.blockBreakingDecalId;
       this.particleColor = other.particleColor;
+      this.textureComputedColor = other.textureComputedColor;
       this.tickProcedure = other.tickProcedure;
       this.effect = other.effect;
       this.textures = other.textures;
@@ -1045,6 +1119,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       this.state = other.state;
       this.blockEntity = other.blockEntity;
       this.farming = other.farming;
+      this.fallingBlockSettings = other.fallingBlockSettings;
       this.supportDropType = other.supportDropType;
       this.maxSupportDistance = other.maxSupportDistance;
       this.support = other.support;
@@ -1085,9 +1160,12 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          }
 
          packet.blockSoundSetIndex = this.blockSoundSetIndex;
+         packet.physicalMaterialIndex = this.physicalMaterialIndex;
+         packet.soundOcclusionOpacity = this.soundOcclusionOpacity;
          packet.blockParticleSetId = this.blockParticleSetId;
          packet.blockBreakingDecalId = this.blockBreakingDecalId;
          packet.particleColor = this.particleColor;
+         packet.textureComputedColor = this.textureComputedColor;
          if (this.support != null) {
             Object2ObjectOpenHashMap<BlockNeighbor, com.hypixel.hytale.protocol.RequiredBlockFaceSupport[]> supportMap = new Object2ObjectOpenHashMap();
 
@@ -1408,6 +1486,10 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       return this.particleColor;
    }
 
+   public Color getTextureComputedColor() {
+      return this.textureComputedColor;
+   }
+
    public TickProcedure getTickProcedure() {
       return this.tickProcedure;
    }
@@ -1422,6 +1504,30 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
 
    public BlockTypeTextures[] getTextures() {
       return this.textures;
+   }
+
+   public boolean hasUniformTextures() {
+      if (this.uniformTextures == null) {
+         this.uniformTextures = this.computeHasUniformTextures();
+      }
+
+      return this.uniformTextures;
+   }
+
+   private boolean computeHasUniformTextures() {
+      if (this.drawType != DrawType.Cube && this.drawType != DrawType.CubeWithModel && this.drawType != DrawType.GizmoCube) {
+         return false;
+      } else if (this.textures != null && this.textures.length != 0) {
+         for (BlockTypeTextures tex : this.textures) {
+            if (!tex.isUniform()) {
+               return false;
+            }
+         }
+
+         return true;
+      } else {
+         return false;
+      }
    }
 
    public String getTextureSideMask() {
@@ -1644,6 +1750,11 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       return this.farming;
    }
 
+   @Nullable
+   public FallingBlockSettings getFallingBlockSettings() {
+      return this.fallingBlockSettings;
+   }
+
    public SupportDropType getSupportDropType() {
       return this.supportDropType;
    }
@@ -1767,16 +1878,10 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
             rotatedRail = this.railConfig.clone();
 
             for (RailPoint p : rotatedRail.points) {
-               Vector3f hyPoint = new Vector3f(p.point.x - 0.5F, p.point.y - 0.5F, p.point.z - 0.5F);
+               Vector3f hyPoint = new Vector3f(p.point.x() - 0.5F, p.point.y() - 0.5F, p.point.z() - 0.5F);
                hyPoint = Rotation.rotate(hyPoint, rotation.yaw(), rotation.pitch(), rotation.roll());
-               p.point.x = hyPoint.x + 0.5F;
-               p.point.y = hyPoint.y + 0.5F;
-               p.point.z = hyPoint.z + 0.5F;
-               Vector3f hyNormal = new Vector3f(p.normal.x, p.normal.y, p.normal.z);
-               hyNormal = Rotation.rotate(hyNormal, rotation.yaw(), rotation.pitch(), rotation.roll());
-               p.normal.x = hyNormal.x;
-               p.normal.y = hyNormal.y;
-               p.normal.z = hyNormal.z;
+               p.point = new Vector3f(hyPoint.x + 0.5F, hyPoint.y + 0.5F, hyPoint.z + 0.5F);
+               p.normal = Rotation.rotate(p.normal, rotation.yaw(), rotation.pitch(), rotation.roll());
             }
 
             this.rotatedRailConfig[rotationIndex] = rotatedRail;
@@ -1786,6 +1891,11 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       } else {
          return this.railConfig;
       }
+   }
+
+   @Nullable
+   public ExplosionConfig getExplosionConfig() {
+      return this.explosionConfig;
    }
 
    @Deprecated
@@ -1876,6 +1986,12 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          this.blockSoundSetIndex = 0;
       }
 
+      this.physicalMaterialIndex = this.physicalMaterialId.equals("EMPTY") ? 0 : PhysicalMaterial.getAssetMap().getIndex(this.physicalMaterialId);
+      if (this.physicalMaterialIndex == Integer.MIN_VALUE) {
+         HytaleLogger.getLogger().at(Level.WARNING).log("Unknown physical material '%s' for block '%s', using empty", this.physicalMaterialId, this.getId());
+         this.physicalMaterialIndex = 0;
+      }
+
       for (InteractionType type : this.interactions.keySet()) {
          if (InteractionTypeUtils.isCollisionType(type)) {
             this.isTrigger = true;
@@ -1906,7 +2022,7 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
       } else {
          BlockBoundingBoxes.RotatedVariantBoxes rotatedHitbox = hitboxAsset.get(rotationIndex);
          Box boundingBox = rotatedHitbox.getBoundingBox();
-         outCenter.assign(boundingBox.middleX(), boundingBox.middleY(), boundingBox.middleZ());
+         outCenter.set(boundingBox.middleX(), boundingBox.middleY(), boundingBox.middleZ());
       }
    }
 
@@ -1931,6 +2047,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          + this.blockBreakingDecalId
          + "', particleColor="
          + this.particleColor
+         + ", textureComputedColor="
+         + this.textureComputedColor
          + ", effect="
          + Arrays.toString((Object[])this.effect)
          + ", textures="
@@ -2037,6 +2155,8 @@ public class BlockType implements JsonAssetWithMap<String, BlockTypeAssetMap<Str
          + this.isLooping
          + ", farming="
          + this.farming
+         + ", fallingBlockSettings="
+         + this.fallingBlockSettings
          + ", supportDropType="
          + this.supportDropType
          + ", maxSupportDistance="

@@ -6,12 +6,13 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.BufferBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.EntityBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.entityfunnel.EntityFunnel;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class EntityBufferView implements EntityFunnel {
    @Nonnull
@@ -29,25 +30,15 @@ public class EntityBufferView implements EntityFunnel {
    }
 
    public void forEach(@Nonnull Consumer<EntityPlacementData> consumer) {
-      Vector3i position_bufferGrid = this.bounds_voxelGrid.min.clone();
-      position_bufferGrid.setX(this.bounds_bufferGrid.min.x);
+      Vector3i position_bufferGrid = new Vector3i(this.bounds_voxelGrid.min);
 
-      while (position_bufferGrid.x < this.bounds_bufferGrid.max.x) {
-         position_bufferGrid.setZ(this.bounds_bufferGrid.min.z);
-
-         while (position_bufferGrid.z < this.bounds_bufferGrid.max.z) {
-            position_bufferGrid.setY(this.bounds_bufferGrid.min.y);
-
-            while (position_bufferGrid.y < this.bounds_bufferGrid.max.y) {
+      for (position_bufferGrid.x = this.bounds_bufferGrid.min.x; position_bufferGrid.x < this.bounds_bufferGrid.max.x; position_bufferGrid.x++) {
+         for (position_bufferGrid.z = this.bounds_bufferGrid.min.z; position_bufferGrid.z < this.bounds_bufferGrid.max.z; position_bufferGrid.z++) {
+            for (position_bufferGrid.y = this.bounds_bufferGrid.min.y; position_bufferGrid.y < this.bounds_bufferGrid.max.y; position_bufferGrid.y++) {
                EntityBuffer buffer = this.getBuffer_fromBufferGrid(position_bufferGrid);
                buffer.forEach(consumer);
-               position_bufferGrid.setY(position_bufferGrid.y + 1);
             }
-
-            position_bufferGrid.setZ(position_bufferGrid.z + 1);
          }
-
-         position_bufferGrid.setX(position_bufferGrid.x + 1);
       }
    }
 
@@ -61,31 +52,21 @@ public class EntityBufferView implements EntityFunnel {
 
       Bounds3i thisBounds_bufferGrid = this.access.getBounds_bufferGrid();
       Vector3i pos_bufferGrid = new Vector3i();
-      pos_bufferGrid.setX(thisBounds_bufferGrid.min.x);
 
-      while (pos_bufferGrid.x < thisBounds_bufferGrid.max.x) {
-         pos_bufferGrid.setY(thisBounds_bufferGrid.min.y);
-
-         while (pos_bufferGrid.y < thisBounds_bufferGrid.max.y) {
-            pos_bufferGrid.setZ(thisBounds_bufferGrid.min.z);
-
-            while (pos_bufferGrid.z < thisBounds_bufferGrid.max.z) {
+      for (pos_bufferGrid.x = thisBounds_bufferGrid.min.x; pos_bufferGrid.x < thisBounds_bufferGrid.max.x; pos_bufferGrid.x++) {
+         for (pos_bufferGrid.y = thisBounds_bufferGrid.min.y; pos_bufferGrid.y < thisBounds_bufferGrid.max.y; pos_bufferGrid.y++) {
+            for (pos_bufferGrid.z = thisBounds_bufferGrid.min.z; pos_bufferGrid.z < thisBounds_bufferGrid.max.z; pos_bufferGrid.z++) {
                EntityBuffer sourceBuffer = source.getBuffer_fromBufferGrid(pos_bufferGrid);
                EntityBuffer destinationBuffer = this.getBuffer_fromBufferGrid(pos_bufferGrid);
                destinationBuffer.copyFrom(sourceBuffer);
-               pos_bufferGrid.setZ(pos_bufferGrid.z + 1);
             }
-
-            pos_bufferGrid.setY(pos_bufferGrid.y + 1);
          }
-
-         pos_bufferGrid.setX(pos_bufferGrid.x + 1);
       }
    }
 
    @Override
    public void addEntity(@Nonnull EntityPlacementData entityPlacementData) {
-      Vector3d entityPosition_voxelGrid = entityPlacementData.getOffset().toVector3d();
+      Vector3d entityPosition_voxelGrid = Vector3iUtil.toVector3d(entityPlacementData.getOffset());
       TransformComponent transform = entityPlacementData.getEntityHolder().getComponent(TransformComponent.getComponentType());
 
       assert transform != null;

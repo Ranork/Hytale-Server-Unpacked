@@ -6,8 +6,8 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.blocktick.BlockTickStrategy;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.FluidSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.ArrayList;
@@ -27,8 +28,11 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class FireFluidTicker extends FluidTicker {
+   public static final FireFluidTicker.FlammabilityConfig[] FLAMMABILITY_CONFIGS = new FireFluidTicker.FlammabilityConfig[0];
+   @Nonnull
    public static final BuilderCodec<FireFluidTicker> CODEC = BuilderCodec.builder(FireFluidTicker.class, FireFluidTicker::new, BASE_CODEC)
       .appendInherited(
          new KeyedCodec<>("SpreadFluid", Codec.STRING),
@@ -47,7 +51,7 @@ public class FireFluidTicker extends FluidTicker {
             }
 
             Collections.addAll(combined, o);
-            ticker.rawFlammabilityConfigs = combined.toArray(new FireFluidTicker.FlammabilityConfig[0]);
+            ticker.rawFlammabilityConfigs = combined.toArray(FLAMMABILITY_CONFIGS);
          },
          ticker -> ticker.rawFlammabilityConfigs,
          (ticker, parent) -> ticker.rawFlammabilityConfigs = parent.rawFlammabilityConfigs
@@ -55,15 +59,16 @@ public class FireFluidTicker extends FluidTicker {
       .documentation("Defines flammability configs per tag pattern")
       .add()
       .build();
+   @Nonnull
    public static final FireFluidTicker INSTANCE = new FireFluidTicker();
    private static final Vector3i[] OFFSETS = new Vector3i[]{
       new Vector3i(0, -1, 0), new Vector3i(0, 1, 0), new Vector3i(0, 0, -1), new Vector3i(0, 0, 1), new Vector3i(-1, 0, 0), new Vector3i(1, 0, 0)
    };
    private String spreadFluid;
    private int spreadFluidId;
-   private FireFluidTicker.FlammabilityConfig[] rawFlammabilityConfigs = new FireFluidTicker.FlammabilityConfig[0];
+   private FireFluidTicker.FlammabilityConfig[] rawFlammabilityConfigs = FLAMMABILITY_CONFIGS;
    @Nullable
-   private transient List<FireFluidTicker.FlammabilityConfig> sortedFlammabilityConfigs = null;
+   private transient List<FireFluidTicker.FlammabilityConfig> sortedFlammabilityConfigs;
 
    @Nonnull
    @Override
@@ -139,7 +144,7 @@ public class FireFluidTicker extends FluidTicker {
       } else {
          ThreadLocalRandom random = ThreadLocalRandom.current();
          if (fluidLevel >= currentFlammability.getBurnLevel() && random.nextFloat() < currentFlammability.getBurnChance()) {
-            this.tryBurn(world, accessor, fluidSection, blockSection, currentFlammability, worldX, worldY, worldZ);
+            tryBurn(world, accessor, fluidSection, blockSection, currentFlammability, worldX, worldY, worldZ);
             return BlockTickStrategy.SLEEP;
          } else {
             return BlockTickStrategy.CONTINUE;
@@ -172,7 +177,7 @@ public class FireFluidTicker extends FluidTicker {
       return true;
    }
 
-   private boolean tryBurn(
+   private static boolean tryBurn(
       @Nonnull World world,
       @Nonnull FluidTicker.Accessor accessor,
       @Nonnull FluidSection fluidSection,
@@ -185,32 +190,7 @@ public class FireFluidTicker extends FluidTicker {
       int resultingBlockIndex = config.getResultingBlockIndex();
       String resultingBlockState = config.getResultingState();
       if (resultingBlockIndex != Integer.MIN_VALUE || resultingBlockState != null) {
-         world.execute(() -> {
-            WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(blockX, blockZ));
-            if (chunk != null) {
-               int originalRotation = blockSection.getRotationIndex(blockX, blockY, blockZ);
-               int originalFiller = blockSection.getFiller(blockX, blockY, blockZ);
-               if (resultingBlockIndex != Integer.MIN_VALUE && (resultingBlockState == null || resultingBlockIndex != 0)) {
-                  BlockType resultingBlockType = BlockType.getAssetMap().getAsset(resultingBlockIndex);
-                  chunk.setBlock(blockX, blockY, blockZ, resultingBlockIndex, resultingBlockType, originalRotation, originalFiller, 0);
-               }
-
-               if (resultingBlockState != null) {
-                  BlockType existingBlock = chunk.getBlockType(blockX, blockY, blockZ);
-                  if (existingBlock == null) {
-                     return;
-                  }
-
-                  BlockType newBlockType = existingBlock.getBlockForState(resultingBlockState);
-                  if (newBlockType == null) {
-                     return;
-                  }
-
-                  int newBlockIndex = BlockType.getAssetMap().getIndex(newBlockType.getId());
-                  chunk.setBlock(blockX, blockY, blockZ, newBlockIndex, newBlockType, originalRotation, originalFiller, 0);
-               }
-            }
-         });
+         world.execute(() -> applyBurnResult(world, blockSection, blockX, blockY, blockZ, resultingBlockIndex, resultingBlockState));
          setTickingSurrounding(accessor, blockSection, blockX, blockY, blockZ);
       }
 
@@ -221,6 +201,46 @@ public class FireFluidTicker extends FluidTicker {
 
       fluidSection.setFluid(blockX, blockY, blockZ, 0, (byte)0);
       return true;
+   }
+
+   private static void applyBurnResult(
+      @Nonnull World world,
+      @Nonnull BlockSection blockSection,
+      int blockX,
+      int blockY,
+      int blockZ,
+      int resultingBlockIndex,
+      @Nullable String resultingBlockState
+   ) {
+      ChunkStore chunkStore = world.getChunkStore();
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(blockX, blockZ);
+      Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
+      if (chunkReference != null && chunkReference.isValid()) {
+         WorldChunk chunk = chunkStore.getStore().getComponent(chunkReference, WorldChunk.getComponentType());
+         if (chunk != null) {
+            int originalRotation = blockSection.getRotationIndex(blockX, blockY, blockZ);
+            int originalFiller = blockSection.getFiller(blockX, blockY, blockZ);
+            if (resultingBlockIndex != Integer.MIN_VALUE && (resultingBlockState == null || resultingBlockIndex != 0)) {
+               BlockType resultingBlockType = BlockType.getAssetMap().getAsset(resultingBlockIndex);
+               chunk.setBlock(blockX, blockY, blockZ, resultingBlockIndex, resultingBlockType, originalRotation, originalFiller, 0);
+            }
+
+            if (resultingBlockState != null) {
+               BlockType existingBlock = chunk.getBlockType(blockX, blockY, blockZ);
+               if (existingBlock == null) {
+                  return;
+               }
+
+               BlockType newBlockType = existingBlock.getBlockForState(resultingBlockState);
+               if (newBlockType == null) {
+                  return;
+               }
+
+               int newBlockIndex = BlockType.getAssetMap().getIndex(newBlockType.getId());
+               chunk.setBlock(blockX, blockY, blockZ, newBlockIndex, newBlockType, originalRotation, originalFiller, 0);
+            }
+         }
+      }
    }
 
    @Override
@@ -256,6 +276,7 @@ public class FireFluidTicker extends FluidTicker {
    }
 
    public static class FlammabilityConfig {
+      @Nonnull
       public static final BuilderCodec<FireFluidTicker.FlammabilityConfig> CODEC = BuilderCodec.builder(
             FireFluidTicker.FlammabilityConfig.class, FireFluidTicker.FlammabilityConfig::new
          )
@@ -303,7 +324,7 @@ public class FireFluidTicker extends FluidTicker {
          .build();
       private String tagPatternId;
       @Nullable
-      private transient TagPattern tagPattern = null;
+      private transient TagPattern tagPattern;
       private int priority;
       private byte burnLevel = 1;
       private float burnChance = 0.1F;

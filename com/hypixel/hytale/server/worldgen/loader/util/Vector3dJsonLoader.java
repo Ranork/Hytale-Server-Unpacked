@@ -3,12 +3,12 @@ package com.hypixel.hytale.server.worldgen.loader.util;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class Vector3dJsonLoader extends JsonLoader<SeedStringResource, Vector3d> {
    public Vector3dJsonLoader(SeedString<SeedStringResource> seed, Path dataFolder, JsonElement json) {

@@ -34,7 +34,7 @@ class BackupUtil {
          );
 
          try (Stream<Path> stream = Files.walk(sourceDir)) {
-            for (Path path : stream.filter(x$0 -> Files.isRegularFile(x$0)).toList()) {
+            for (Path path : stream.filter(x$0 -> Files.isRegularFile(x$0)).filter(p -> !p.endsWith("LOCK")).toList()) {
                long size = Files.size(path);
                CRC32 crc = new CRC32();
 

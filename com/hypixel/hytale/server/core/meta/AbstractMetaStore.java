@@ -5,6 +5,7 @@ import com.hypixel.hytale.codec.DirectDecodeCodec;
 import com.hypixel.hytale.codec.ExtraInfo;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.function.BiConsumer;
 import javax.annotation.Nonnull;
@@ -103,6 +104,10 @@ public abstract class AbstractMetaStore<K> implements IMetaStoreImpl<K> {
          final BsonDocument document = new BsonDocument();
          document.putAll(this.unknownValues);
          this.getRegistry().forEachMetaEntry(this, new IMetaRegistry.MetaEntryConsumer() {
+            {
+               Objects.requireNonNull(AbstractMetaStore.this);
+            }
+
             @Override
             public <T> void accept(MetaKey<T> key, T value) {
                if (key instanceof PersistentMetaKey<T> persistentKey) {

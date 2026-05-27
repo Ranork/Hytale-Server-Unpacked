@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.npc.corecomponents.lifecycle.builders.BuilderAc
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionDie extends ActionBase {
    public ActionDie(@Nonnull BuilderActionDie builder) {
@@ -18,7 +19,7 @@ public class ActionDie extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       DeathComponent.tryAddComponent(store, ref, new Damage(Damage.NULL_SOURCE, DamageCause.PHYSICAL, 0.0F));
       role.setReachedTerminalAction(true);

@@ -14,12 +14,20 @@ public class PluginClassLoader extends URLClassLoader {
    @Nonnull
    private final PluginManager pluginManager;
    private final boolean inServerClassPath;
+   private final boolean childFirst;
    @Nullable
    private JavaPlugin plugin;
 
    public PluginClassLoader(@Nonnull PluginManager pluginManager, @Nullable PluginIdentifier identifier, boolean inServerClassPath, @Nonnull URL... urls) {
+      this(pluginManager, identifier, inServerClassPath, false, urls);
+   }
+
+   public PluginClassLoader(
+      @Nonnull PluginManager pluginManager, @Nullable PluginIdentifier identifier, boolean inServerClassPath, boolean childFirst, @Nonnull URL... urls
+   ) {
       super((inServerClassPath ? "BuiltinPlugin" : "ThirdParty") + (identifier != null ? "(" + identifier + ")" : ""), urls, null);
       this.inServerClassPath = inServerClassPath;
+      this.childFirst = childFirst;
       this.pluginManager = pluginManager;
    }
 
@@ -39,6 +47,16 @@ public class PluginClassLoader extends URLClassLoader {
 
    @Nonnull
    private Class<?> loadClass0(@Nonnull String name, boolean useBridge) throws ClassNotFoundException {
+      if (this.childFirst) {
+         try {
+            Class<?> loadClass = super.loadClass(name, false);
+            if (loadClass != null) {
+               return loadClass;
+            }
+         } catch (ClassNotFoundException var8) {
+         }
+      }
+
       try {
          Class<?> loadClass = PluginManager.class.getClassLoader().loadClass(name);
          if (loadClass != null) {
@@ -47,12 +65,14 @@ public class PluginClassLoader extends URLClassLoader {
       } catch (ClassNotFoundException var7) {
       }
 
-      try {
-         Class<?> loadClass = super.loadClass(name, false);
-         if (loadClass != null) {
-            return loadClass;
+      if (!this.childFirst) {
+         try {
+            Class<?> loadClass = super.loadClass(name, false);
+            if (loadClass != null) {
+               return loadClass;
+            }
+         } catch (ClassNotFoundException var6) {
          }
-      } catch (ClassNotFoundException var6) {
       }
 
       if (useBridge) {
@@ -160,6 +180,10 @@ public class PluginClassLoader extends URLClassLoader {
             if (element.getClassLoaderName() != null && element.getClassLoaderName().startsWith("ThirdParty")) {
                return true;
             }
+         }
+
+         if (throwable.getClass().getClassLoader() instanceof PluginClassLoader pcl && !pcl.isInServerClassPath()) {
+            return true;
          }
 
          if (throwable.getCause() == throwable) {

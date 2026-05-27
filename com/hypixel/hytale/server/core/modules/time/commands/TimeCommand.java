@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.modules.time.commands;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -22,7 +21,7 @@ import javax.annotation.Nonnull;
 public class TimeCommand extends AbstractWorldCommand {
    public TimeCommand() {
       super("time", "server.commands.time.get.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addAliases("daytime");
       this.addUsageVariant(new TimeCommand.SetTimeHourCommand());
 
@@ -39,8 +38,8 @@ public class TimeCommand extends AbstractWorldCommand {
    public void execute(@Nonnull CommandContext context, @Nonnull World world, @Nonnull Store<EntityStore> store) {
       WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
       LocalDateTime gameDateTime = worldTimeResource.getGameDateTime();
-      Message pausedMessage = Message.translation(world.getWorldConfig().isGameTimePaused() ? "server.commands.time.paused" : "server.commands.time.unpaused");
-      Message message = Message.translation("server.commands.time.info").param("worldName", world.getName()).param("timePaused", pausedMessage);
+      String pausedMessageKey = world.getWorldConfig().isGameTimePaused() ? "server.commands.time.info" : "server.commands.time.infoUnpaused";
+      Message message = Message.translation(pausedMessageKey).param("worldName", world.getName());
       context.sendMessage(
          message.param("time", worldTimeResource.getGameTime().toString())
             .param("dayOfWeek", FormatUtil.addNumberSuffix(gameDateTime.get(ChronoField.DAY_OF_WEEK)))
@@ -58,7 +57,7 @@ public class TimeCommand extends AbstractWorldCommand {
 
       public SetTimeHourCommand() {
          super("server.commands.time.set.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override
@@ -78,7 +77,7 @@ public class TimeCommand extends AbstractWorldCommand {
 
       public SetTimePeriodCommand(@Nonnull TimeCommand.TimeOfDay timeOfDay) {
          super(timeOfDay.name(), "server.commands.time.period." + timeOfDay.name().toLowerCase() + ".desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:WorldEditor");
          this.timeOfDay = timeOfDay;
          this.addAliases(timeOfDay.aliases);
       }
@@ -90,9 +89,9 @@ public class TimeCommand extends AbstractWorldCommand {
          WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
          worldTimeResource.setDayTime(periodTime / WorldTimeResource.HOURS_PER_DAY, world, store);
          context.sendMessage(
-            Message.translation("server.commands.time.set")
+            Message.translation("server.commands.time.setPeriod." + this.timeOfDay.name().toLowerCase())
                .param("worldName", world.getName())
-               .param("time", String.format("%s (%s)", worldTimeResource.getGameTime().toString(), this.timeOfDay.name()))
+               .param("time", worldTimeResource.getGameTime().toString())
          );
       }
    }
@@ -107,7 +106,7 @@ public class TimeCommand extends AbstractWorldCommand {
 
       public TimeDilationCommand() {
          super("dilation", "server.commands.time.dilation.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Override
@@ -137,7 +136,7 @@ public class TimeCommand extends AbstractWorldCommand {
    private static class TimePauseCommand extends AbstractWorldCommand {
       public TimePauseCommand() {
          super("pause", "server.commands.pausetime.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:WorldEditor");
          this.addAliases("stop");
       }
 
@@ -150,7 +149,7 @@ public class TimeCommand extends AbstractWorldCommand {
    private static class TimeSetSubCommand extends AbstractCommandCollection {
       public TimeSetSubCommand() {
          super("set", "server.commands.time.set.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:WorldEditor");
          this.addUsageVariant(new TimeCommand.SetTimeHourCommand());
 
          for (TimeCommand.TimeOfDay value : TimeCommand.TimeOfDay.values()) {

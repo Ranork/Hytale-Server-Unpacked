@@ -3,22 +3,24 @@ package com.hypixel.hytale.server.core.entity.entities.player.data;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public final class PlayerRespawnPointData {
    @Nonnull
    public static final BuilderCodec<PlayerRespawnPointData> CODEC = BuilderCodec.builder(PlayerRespawnPointData.class, PlayerRespawnPointData::new)
       .append(
-         new KeyedCodec<>("BlockPosition", Vector3i.CODEC),
+         new KeyedCodec<>("BlockPosition", Vector3iUtil.CODEC),
          (respawnPointData, vector3i) -> respawnPointData.blockPosition = vector3i,
          respawnPointData -> respawnPointData.blockPosition
       )
       .documentation("The position of the respawn block.")
       .add()
       .<Vector3d>append(
-         new KeyedCodec<>("RespawnPosition", Vector3d.CODEC),
+         new KeyedCodec<>("RespawnPosition", Vector3dUtil.CODEC),
          (respawnPointData, vector3f) -> respawnPointData.respawnPosition = vector3f,
          respawnPointData -> respawnPointData.respawnPosition
       )

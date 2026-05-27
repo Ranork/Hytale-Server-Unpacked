@@ -10,7 +10,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.DrawType;
 import com.hypixel.hytale.server.core.asset.type.blocktick.config.RandomTickProcedure;
@@ -19,11 +19,12 @@ import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.joml.Vector3i;
 
 public class SpreadToProcedure implements RandomTickProcedure {
    public static final BuilderCodec<SpreadToProcedure> CODEC = BuilderCodec.builder(SpreadToProcedure.class, SpreadToProcedure::new)
       .appendInherited(
-         new KeyedCodec<>("SpreadDirections", new ArrayCodec<>(Vector3i.CODEC, Vector3i[]::new)),
+         new KeyedCodec<>("SpreadDirections", new ArrayCodec<>(Vector3iUtil.CODEC, Vector3i[]::new)),
          (o, i) -> o.spreadDirections = i,
          o -> o.spreadDirections,
          (o, p) -> o.spreadDirections = p.spreadDirections
@@ -104,7 +105,7 @@ public class SpreadToProcedure implements RandomTickProcedure {
       double sunlightFactor = worldTimeResource.getSunlightFactor();
       BlockSection aboveSection = blockSection;
       if (!ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, worldX, worldY + 1, worldZ)) {
-         Ref<ChunkStore> aboveChunk = store.getExternalData().getChunkSectionReferenceAtBlock(commandBuffer, worldX, worldY + 1, worldZ);
+         Ref<ChunkStore> aboveChunk = store.getExternalData().getChunkSectionReferenceAtBlock(worldX, worldY + 1, worldZ);
          if (aboveChunk == null) {
             return;
          }
@@ -141,7 +142,7 @@ public class SpreadToProcedure implements RandomTickProcedure {
                int targetZ = worldZ + direction.z;
                BlockSection targetBlockSection = blockSection;
                if (!ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, targetX, targetY, targetZ)) {
-                  Ref<ChunkStore> otherChunk = store.getExternalData().getChunkSectionReferenceAtBlock(commandBuffer, targetX, targetY, targetZ);
+                  Ref<ChunkStore> otherChunk = store.getExternalData().getChunkSectionReferenceAtBlock(targetX, targetY, targetZ);
                   if (otherChunk == null) {
                      continue;
                   }
@@ -160,7 +161,7 @@ public class SpreadToProcedure implements RandomTickProcedure {
                      if (ChunkUtil.isSameChunkSection(targetX, targetY, targetZ, targetX, targetY + 1, targetZ)) {
                         aboveTargetBlockId = targetBlockSection.get(ChunkUtil.indexBlock(targetX, targetY + 1, targetZ));
                      } else {
-                        Ref<ChunkStore> aboveChunkx = store.getExternalData().getChunkSectionReferenceAtBlock(commandBuffer, targetX, targetY + 1, targetZ);
+                        Ref<ChunkStore> aboveChunkx = store.getExternalData().getChunkSectionReferenceAtBlock(targetX, targetY + 1, targetZ);
                         if (aboveChunkx == null) {
                            continue;
                         }

@@ -4,8 +4,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
@@ -25,6 +24,7 @@ import java.util.List;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class NPCFlockCommand extends AbstractCommandCollection {
    private static final double ENTITY_IN_VIEW_DISTANCE = 8.0;
@@ -52,11 +52,11 @@ public class NPCFlockCommand extends AbstractCommandCollection {
 
       assert headRotationComponent != null;
 
-      Vector3f headRotation = headRotationComponent.getRotation();
-      float lookYaw = headRotation.getYaw();
-      double x = position.getX();
-      double y = position.getY();
-      double z = position.getZ();
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      float lookYaw = headRotation.yaw();
+      double x = position.x();
+      double y = position.y();
+      double z = position.z();
       SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(NPCPlugin.get().getNpcSpatialResource());
       List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       spatialResource.getSpatialStructure().collect(position, 8.0, results);
@@ -76,8 +76,8 @@ public class NPCFlockCommand extends AbstractCommandCollection {
          assert entityTransformComponent != null;
 
          Vector3d entityPosition = entityTransformComponent.getPosition();
-         if (Math.abs(entityPosition.getY() - y) < 2.0
-            && NPCPhysicsMath.inViewSector(x, z, lookYaw, (float) (Math.PI / 6), entityPosition.getX(), entityPosition.getZ())
+         if (Math.abs(entityPosition.y() - y) < 2.0
+            && NPCPhysicsMath.inViewSector(x, z, lookYaw, (float) (Math.PI / 6), entityPosition.x(), entityPosition.z())
             && predicate.test(targetRef, targetNpcComponent)) {
             count++;
          }
@@ -99,11 +99,11 @@ public class NPCFlockCommand extends AbstractCommandCollection {
 
       assert headRotationComponent != null;
 
-      Vector3f headRotation = headRotationComponent.getRotation();
-      float lookYaw = headRotation.getYaw();
-      double x = position.getX();
-      double y = position.getY();
-      double z = position.getZ();
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      float lookYaw = headRotation.yaw();
+      double x = position.x();
+      double y = position.y();
+      double z = position.z();
       SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(NPCPlugin.get().getNpcSpatialResource());
       List<Ref<EntityStore>> results = SpatialResource.getThreadLocalReferenceList();
       spatialResource.getSpatialStructure().ordered(position, 8.0, results);
@@ -114,8 +114,8 @@ public class NPCFlockCommand extends AbstractCommandCollection {
          assert entityTransformComponent != null;
 
          Vector3d entityPosition = entityTransformComponent.getPosition();
-         if (Math.abs(entityPosition.getY() - y) < 2.0
-            && NPCPhysicsMath.inViewSector(x, z, lookYaw, (float) (Math.PI / 6), entityPosition.getX(), entityPosition.getZ())
+         if (Math.abs(entityPosition.y() - y) < 2.0
+            && NPCPhysicsMath.inViewSector(x, z, lookYaw, (float) (Math.PI / 6), entityPosition.x(), entityPosition.z())
             && predicate.test(entityRef)) {
             return true;
          }

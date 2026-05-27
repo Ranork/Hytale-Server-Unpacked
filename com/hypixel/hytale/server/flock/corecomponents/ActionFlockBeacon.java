@@ -36,7 +36,7 @@ public class ActionFlockBeacon extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       return !super.canExecute(ref, role, sensorInfo, dt, store)
          ? false
          : store.getArchetype(ref).contains(FLOCK_MEMBERSHIP_COMPONENT_TYPE)
@@ -44,7 +44,7 @@ public class ActionFlockBeacon extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       FlockMembership flockMembership = store.getComponent(ref, FLOCK_MEMBERSHIP_COMPONENT_TYPE);
       Ref<EntityStore> flockReference = flockMembership != null ? flockMembership.getFlockRef() : null;

@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.command.commands.utility;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
@@ -20,7 +19,7 @@ public class UIGalleryCommand extends AbstractAsyncCommand {
 
    public UIGalleryCommand() {
       super("ui-gallery", "server.commands.uigallery.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Nonnull

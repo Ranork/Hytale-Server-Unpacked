@@ -7,11 +7,11 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class LocationRadiusProvider extends WorldLocationProvider {
    @Nonnull
@@ -52,7 +52,7 @@ public class LocationRadiusProvider extends WorldLocationProvider {
    public Vector3i runCondition(@Nonnull World world, @Nonnull Vector3i position) {
       double angle = Math.random() * (float) (Math.PI * 2);
       int radius = MathUtil.randomInt(this.minRadius, this.maxRadius);
-      Vector3i newPosition = position.clone();
+      Vector3i newPosition = new Vector3i(position);
       newPosition.add((int)(radius * TrigMathUtil.cos(angle)), 0, (int)(radius * TrigMathUtil.sin(angle)));
       long chunkIndex = ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z);
       WorldChunk worldChunkComponent = world.getChunk(chunkIndex);

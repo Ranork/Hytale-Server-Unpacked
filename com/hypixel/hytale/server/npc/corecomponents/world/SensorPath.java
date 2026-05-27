@@ -11,7 +11,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.WorldGenId;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -36,11 +36,12 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SensorPath extends SensorBase {
    protected final double range;
    protected final SensorPath.PathType pathType;
-   protected final Vector3d closestWaypoint = new Vector3d(Vector3d.MIN);
+   protected final Vector3d closestWaypoint = new Vector3d(Vector3dUtil.MIN);
    protected final HashSet<UUID> disallowedPaths = new HashSet<>();
    protected final PathProvider pathProvider = new PathProvider();
    protected final PositionProvider positionProvider = new PositionProvider(null, this.pathProvider);
@@ -118,7 +119,7 @@ public class SensorPath extends SensorBase {
                this.positionProvider.clear();
                return false;
             } else {
-               this.closestWaypoint.assign(Vector3d.MIN);
+               this.closestWaypoint.set(Vector3dUtil.MIN);
                this.findClosestWaypoint(path, position, this.closestWaypoint, store);
                if (!this.isInRange(this.distanceSquared)) {
                   this.pathProvider.clear();
@@ -229,7 +230,7 @@ public class SensorPath extends SensorBase {
 
                   assert eTransformComponent != null;
 
-                  double dist2 = position.distanceSquaredTo(eTransformComponent.getPosition());
+                  double dist2 = position.distanceSquared(eTransformComponent.getPosition());
                   if (dist2 < nearest2) {
                      nearest2 = dist2;
                      nearestWaypoint = ePatrolPathMarkerEntityComponent;
@@ -264,8 +265,8 @@ public class SensorPath extends SensorBase {
       @Nonnull IPath<?> path, @Nonnull Vector3d position, @Nonnull Vector3d cachedTarget, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       double prevDistanceSquared = this.distanceSquared;
-      if (!cachedTarget.equals(Vector3d.MIN)) {
-         double newDistance = position.distanceSquaredTo(cachedTarget);
+      if (!cachedTarget.equals(Vector3dUtil.MIN)) {
+         double newDistance = position.distanceSquared(cachedTarget);
          if (newDistance <= this.distanceSquared) {
             this.distanceSquared = newDistance;
             return;
@@ -278,10 +279,10 @@ public class SensorPath extends SensorBase {
          IPathWaypoint pathWaypoint = path.get(i);
          if (pathWaypoint != null) {
             Vector3d waypoint = pathWaypoint.getWaypointPosition(componentAccessor);
-            double distance = position.distanceSquaredTo(waypoint);
+            double distance = position.distanceSquared(waypoint);
             if (distance < this.distanceSquared) {
                this.distanceSquared = distance;
-               cachedTarget.assign(waypoint);
+               cachedTarget.set(waypoint);
             }
          }
       }

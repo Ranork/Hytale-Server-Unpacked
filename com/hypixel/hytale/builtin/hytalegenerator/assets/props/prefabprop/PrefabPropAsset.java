@@ -128,7 +128,9 @@ public class PrefabPropAsset extends PropAsset {
                this.loadEntities
             );
          } else {
-            return new com.hypixel.hytale.builtin.hytalegenerator.props.PrefabProp(prefabWeightedMap, argument.materialCache, argument.parentSeed);
+            return new com.hypixel.hytale.builtin.hytalegenerator.props.PrefabProp(
+               prefabWeightedMap, argument.materialCache, argument.parentSeed, this::loadPrefabBuffersFrom
+            );
          }
       } else {
          return EmptyProp.INSTANCE;

@@ -88,8 +88,8 @@ public class Cylinder implements Shape {
    public Box getBox(double x, double y, double z) {
       double biggestRadius = Math.max(this.radiusX, this.radiusZ);
       Box boundingBox = new Box();
-      boundingBox.min.assign(x - biggestRadius, y, z - biggestRadius);
-      boundingBox.max.assign(x + biggestRadius, y + this.height, z + biggestRadius);
+      boundingBox.min.set(x - biggestRadius, y, z - biggestRadius);
+      boundingBox.max.set(x + biggestRadius, y + this.height, z + biggestRadius);
       return boundingBox;
    }
 

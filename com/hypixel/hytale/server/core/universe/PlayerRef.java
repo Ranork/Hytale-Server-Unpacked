@@ -11,8 +11,8 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
 import com.hypixel.hytale.metrics.MetricsRegistry;
@@ -22,6 +22,7 @@ import com.hypixel.hytale.protocol.packets.connection.PongType;
 import com.hypixel.hytale.protocol.packets.interface_.ChatType;
 import com.hypixel.hytale.protocol.packets.interface_.ServerMessage;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
 import com.hypixel.hytale.server.core.entity.entities.player.HiddenPlayersManager;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
@@ -29,7 +30,8 @@ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.PacketStatsRecorderImpl;
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
-import com.hypixel.hytale.server.core.receiver.IMessageReceiver;
+import com.hypixel.hytale.server.core.permissions.PermissionHolder;
+import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Objects;
@@ -39,7 +41,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public class PlayerRef implements Component<EntityStore>, MetricProvider, IMessageReceiver {
+public class PlayerRef implements Component<EntityStore>, MetricProvider, CommandSender, PermissionHolder {
    @Nonnull
    public static final MetricsRegistry<PlayerRef> METRICS_REGISTRY = new MetricsRegistry<PlayerRef>()
       .register("Username", PlayerRef::getUsername, Codec.STRING)
@@ -108,8 +110,8 @@ public class PlayerRef implements Component<EntityStore>, MetricProvider, IMessa
    private Holder<EntityStore> holder;
    @Nullable
    private UUID worldUuid;
-   private Transform transform = new Transform(0.0, 0.0, 0.0, 0.0F, 0.0F, 0.0F);
-   private Vector3f headRotation = new Vector3f(0.0F, 0.0F, 0.0F);
+   private final Transform transform = new Transform(0.0, 0.0, 0.0, 0.0F, 0.0F, 0.0F);
+   private final Rotation3f headRotation = new Rotation3f(0.0F, 0.0F, 0.0F);
 
    @Nonnull
    public static ComponentType<EntityStore, PlayerRef> getComponentType() {
@@ -191,13 +193,25 @@ public class PlayerRef implements Component<EntityStore>, MetricProvider, IMessa
    }
 
    @Nonnull
+   @Override
    public UUID getUuid() {
       return this.uuid;
    }
 
    @Nonnull
+   @Override
    public String getUsername() {
       return this.username;
+   }
+
+   @Override
+   public boolean hasPermission(@Nonnull String id) {
+      return PermissionsModule.get().hasPermission(this.uuid, id);
+   }
+
+   @Override
+   public boolean hasPermission(@Nonnull String id, boolean def) {
+      return PermissionsModule.get().hasPermission(this.uuid, id, def);
    }
 
    @Nonnull
@@ -235,14 +249,14 @@ public class PlayerRef implements Component<EntityStore>, MetricProvider, IMessa
    }
 
    @Nonnull
-   public Vector3f getHeadRotation() {
+   public Rotation3f getHeadRotation() {
       return this.headRotation;
    }
 
-   public void updatePosition(@Nonnull World world, @Nonnull Transform transform, @Nonnull Vector3f headRotation) {
+   public void updatePosition(@Nonnull World world, @Nonnull Transform transform, @Nonnull Rotation3f headRotation) {
       this.worldUuid = world.getWorldConfig().getUuid();
-      this.transform.assign(transform);
-      this.headRotation.assign(headRotation);
+      this.transform.set(transform);
+      this.headRotation.set(headRotation);
    }
 
    @Deprecated

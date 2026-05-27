@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -15,6 +16,20 @@ public class BlockInteractionUtils {
       } else {
          Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
          return playerComponent != null ? playerComponent.getGameMode() == GameMode.Adventure : true;
+      }
+   }
+
+   public static boolean isNoPhysics(@Nullable Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      if (ref == null) {
+         return false;
+      } else {
+         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+         if (playerComponent != null && playerComponent.getGameMode() == GameMode.Creative) {
+            PlayerSettings settings = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
+            return settings != null && settings.creativeSettings().noPhysics();
+         } else {
+            return false;
+         }
       }
    }
 }

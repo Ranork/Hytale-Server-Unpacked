@@ -5,8 +5,11 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.SmartMoveType;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -48,12 +51,16 @@ public class SmartGiveCreativeItem implements Packet, ToServerPacket {
 
    @Nonnull
    public static SmartGiveCreativeItem deserialize(@Nonnull ByteBuf buf, int offset) {
-      SmartGiveCreativeItem obj = new SmartGiveCreativeItem();
-      obj.moveType = SmartMoveType.fromValue(buf.getByte(offset + 0));
-      int pos = offset + 1;
-      obj.item = ItemQuantity.deserialize(buf, pos);
-      pos += ItemQuantity.computeBytesConsumed(buf, pos);
-      return obj;
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("SmartGiveCreativeItem", 1, buf.readableBytes() - offset);
+      } else {
+         SmartGiveCreativeItem obj = new SmartGiveCreativeItem();
+         obj.moveType = SmartMoveType.fromValue(buf.getByte(offset + 0));
+         int pos = offset + 1;
+         obj.item = ItemQuantity.deserialize(buf, pos);
+         pos += ItemQuantity.computeBytesConsumed(buf, pos);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -62,10 +69,50 @@ public class SmartGiveCreativeItem implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static ItemQuantity getItem(MemorySegment mem) {
+      return getItem(mem, 0);
+   }
+
+   public static ItemQuantity getItem(MemorySegment mem, int offset) {
+      return ItemQuantity.toObject(mem, offset + 1);
+   }
+
+   public static SmartMoveType getMoveType(MemorySegment mem) {
+      return getMoveType(mem, 0);
+   }
+
+   public static SmartMoveType getMoveType(MemorySegment mem, int offset) {
+      return SmartMoveType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0)));
+   }
+
+   public static SmartGiveCreativeItem toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SmartGiveCreativeItem toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SmartGiveCreativeItem", offset + 1, (int)mem.byteSize());
+      } else {
+         return new SmartGiveCreativeItem(ItemQuantity.toObject(mem, offset + 1), SmartMoveType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0))));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.moveType.getValue());
       this.item.serialize(buf);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), (byte)this.moveType.getValue());
+      int varOffset = offset + 1;
+      varOffset += this.item.serialize(mem, varOffset);
+      return varOffset - offset;
    }
 
    @Override
@@ -78,13 +125,18 @@ public class SmartGiveCreativeItem implements Packet, ToServerPacket {
       if (buffer.readableBytes() - offset < 1) {
          return ValidationResult.error("Buffer too small: expected at least 1 bytes");
       } else {
-         int pos = offset + 1;
-         ValidationResult itemResult = ItemQuantity.validateStructure(buffer, pos);
-         if (!itemResult.isValid()) {
-            return ValidationResult.error("Invalid Item: " + itemResult.error());
+         int v = buffer.getByte(offset + 0) & 255;
+         if (v >= 3) {
+            return ValidationResult.error("Invalid SmartMoveType value for MoveType");
          } else {
-            pos += ItemQuantity.computeBytesConsumed(buffer, pos);
-            return ValidationResult.OK;
+            v = offset + 1;
+            ValidationResult itemResult = ItemQuantity.validateStructure(buffer, v);
+            if (!itemResult.isValid()) {
+               return ValidationResult.error("Invalid Item: " + itemResult.error());
+            } else {
+               v += ItemQuantity.computeBytesConsumed(buffer, v);
+               return ValidationResult.OK;
+            }
          }
       }
    }

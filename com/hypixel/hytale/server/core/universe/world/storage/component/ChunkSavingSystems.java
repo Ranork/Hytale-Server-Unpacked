@@ -146,7 +146,6 @@ public class ChunkSavingSystems {
       @Nonnull
       private final List<CompletableFuture<Void>> chunkSavingFutures = new ObjectArrayList();
       private float time;
-      public boolean isSaving = true;
       @Nonnull
       private final AtomicInteger savedCount = new AtomicInteger();
       @Nonnull
@@ -198,6 +197,10 @@ public class ChunkSavingSystems {
          }
       }
 
+      public void pushSavingFuture(@Nonnull CompletableFuture<Void> future) {
+         this.chunkSavingFutures.add(future);
+      }
+
       @Nonnull
       public CompletableFuture<Void> waitForSavingChunks() {
          return CompletableFuture.allOf(this.chunkSavingFutures.toArray(CompletableFuture[]::new));
@@ -214,7 +217,7 @@ public class ChunkSavingSystems {
       @Override
       public void tick(float dt, int systemIndex, @Nonnull Store<ChunkStore> store) {
          ChunkSavingSystems.Data data = store.getResource(ChunkStore.SAVE_RESOURCE);
-         if (data.isSaving && store.getExternalData().getWorld().getWorldConfig().canSaveChunks()) {
+         if (!store.getExternalData().getWorld().isSavingLocked() && store.getExternalData().getWorld().getWorldConfig().canSaveChunks()) {
             data.chunkSavingFutures.removeIf(CompletableFuture::isDone);
             if (data.checkTimer(dt)) {
                store.forEachChunk(ChunkSavingSystems.QUERY, ChunkSavingSystems::tryQueueSync);

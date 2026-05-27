@@ -55,18 +55,24 @@ public abstract class TickingThread implements Runnable {
 
          while (this.thread != null && !this.thread.isInterrupted()) {
             long delta;
-            if (!this.isIdle()) {
-               while ((delta = System.nanoTime() - beforeTick) < this.tickStepNanos) {
+            if (this.isIdle()) {
+               long now = System.nanoTime();
+               delta = now - beforeTick;
+               beforeTick = now;
+            } else {
+               long now;
+               while ((now = System.nanoTime()) - beforeTick < this.tickStepNanos) {
                   Thread.onSpinWait();
                }
-            } else {
-               delta = System.nanoTime() - beforeTick;
+
+               delta = now - beforeTick;
+               beforeTick = now;
             }
 
-            beforeTick = System.nanoTime();
             this.tick((float)delta / 1.0E9F);
-            long tickLength = System.nanoTime() - beforeTick;
-            this.bufferedTickLengthMetricSet.add(System.nanoTime(), tickLength);
+            long afterTick = System.nanoTime();
+            long tickLength = afterTick - beforeTick;
+            this.bufferedTickLengthMetricSet.add(afterTick, tickLength);
             long sleepLength = this.tickStepNanos - tickLength;
             if (!this.isIdle()) {
                sleepLength -= SLEEP_OFFSET;
@@ -76,15 +82,15 @@ public abstract class TickingThread implements Runnable {
                Thread.sleep(sleepLength / 1000000L);
             }
          }
-      } catch (InterruptedException var9) {
+      } catch (InterruptedException var11) {
          Thread.currentThread().interrupt();
-      } catch (Throwable var10) {
-         this.failureException = var10;
-         this.possibleFailureCause = PluginIdentifier.identifyThirdPartyPlugin(var10);
+      } catch (Throwable var12) {
+         this.failureException = var12;
+         this.possibleFailureCause = PluginIdentifier.identifyThirdPartyPlugin(var12);
          if (this.possibleFailureCause == null) {
-            ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var10)).log("Exception in thread %s:", this.thread);
+            ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var12)).log("Exception in thread %s:", this.thread);
          } else {
-            ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var10))
+            ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var12))
                .log("Exception in thread %s potentially caused by %s:", this.thread, this.possibleFailureCause);
          }
       }
@@ -144,8 +150,7 @@ public abstract class TickingThread implements Runnable {
                      sb.append("\tat ").append(traceElement).append('\n');
                   }
 
-                  HytaleLogger.getLogger().at(Level.SEVERE).log("Forcing TickingThread %s to stop:\n%s", thread, sb.toString());
-                  thread.stop();
+                  HytaleLogger.getLogger().at(Level.SEVERE).log("Abandoning TickingThread %s (stuck for >30s):\n%s", thread, sb.toString());
                   Thread var9 = null;
                   if (this.needsShutdown.getAndSet(false)) {
                      this.onShutdown();

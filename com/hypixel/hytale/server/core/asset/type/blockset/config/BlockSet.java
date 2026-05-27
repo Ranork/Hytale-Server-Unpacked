@@ -70,6 +70,7 @@ public class BlockSet
          blockSet -> blockSet.excludeCategories
       )
       .build();
+   private static final int[] EMPTY_SET = new int[0];
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(BlockSet::getAssetStore));
    private static AssetStore<String, BlockSet, IndexedLookupTableAssetMap<String, BlockSet>> ASSET_STORE;
    protected AssetExtraInfo.Data data;
@@ -208,7 +209,7 @@ public class BlockSet
       int index = getAssetMap().getIndex(this.id);
       IntSet allBlocks = (IntSet)BlockSetModule.getInstance().getBlockSets().get(index);
       packet.name = this.id;
-      packet.blocks = allBlocks.toIntArray();
+      packet.blocks = allBlocks != null ? allBlocks.toIntArray() : EMPTY_SET;
       return packet;
    }
 }

@@ -5,10 +5,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -25,6 +22,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class WhereAmICommand extends AbstractPlayerCommand {
    @Nonnull
@@ -32,7 +31,7 @@ public class WhereAmICommand extends AbstractPlayerCommand {
 
    public WhereAmICommand() {
       super("whereami", "server.commands.whereami.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:Adventurer");
       this.requirePermission(HytalePermissions.fromCommand("whereami.self"));
       this.addUsageVariant(new WhereAmICommand.WhereAmIOtherCommand());
    }
@@ -56,13 +55,13 @@ public class WhereAmICommand extends AbstractPlayerCommand {
       assert headRotationComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      Vector3f headRotation = headRotationComponent.getRotation();
+      Rotation3f headRotation = headRotationComponent.getRotation();
       Vector3i axisDirection = headRotationComponent.getAxisDirection();
       Axis axis = headRotationComponent.getAxis();
       Vector3d direction = headRotationComponent.getDirection();
-      int chunkX = MathUtil.floor(position.getX()) >> 5;
-      int chunkY = MathUtil.floor(position.getY()) >> 5;
-      int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+      int chunkX = MathUtil.floor(position.x()) >> 5;
+      int chunkY = MathUtil.floor(position.y()) >> 5;
+      int chunkZ = MathUtil.floor(position.z()) >> 5;
       long chunkIndex = ChunkUtil.indexChunk(chunkX, chunkZ);
       WorldChunk playerChunk = world.getChunkIfInMemory(chunkIndex);
       String headerKey = targetUsername != null ? "server.commands.whereami.header.other" : "server.commands.whereami.header";
@@ -72,12 +71,12 @@ public class WhereAmICommand extends AbstractPlayerCommand {
          .param("chunkX", chunkX)
          .param("chunkY", chunkY)
          .param("chunkZ", chunkZ)
-         .param("posX", position.getX())
-         .param("posY", position.getY())
-         .param("posZ", position.getZ())
-         .param("yaw", headRotation.getYaw())
-         .param("pitch", headRotation.getPitch())
-         .param("roll", headRotation.getRoll())
+         .param("posX", position.x())
+         .param("posY", position.y())
+         .param("posZ", position.z())
+         .param("yaw", headRotation.yaw())
+         .param("pitch", headRotation.pitch())
+         .param("roll", headRotation.roll())
          .param("direction", direction.toString())
          .param("axisDirection", axisDirection.toString())
          .param("axis", axis.toString());
@@ -97,7 +96,7 @@ public class WhereAmICommand extends AbstractPlayerCommand {
 
       WhereAmIOtherCommand() {
          super("server.commands.whereami.other.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:Adventurer");
          this.requirePermission(HytalePermissions.fromCommand("whereami.other"));
       }
 

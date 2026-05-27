@@ -9,7 +9,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.codec.Vector3iArrayCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolShowAnchor;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PrefabEditingMetadata {
    private static final float PREFAB_ANCHOR_ENTITY_SCALE = 2.1F;
@@ -105,7 +106,7 @@ public class PrefabEditingMetadata {
    }
 
    private void createAnchorEntityAt(@Nonnull Vector3i position, @Nonnull World world) {
-      this.anchorEntityPosition = position.clone();
+      this.anchorEntityPosition = new Vector3i(position);
       Store<EntityStore> store = world.getEntityStore().getStore();
       if (this.anchorEntityUuid != null) {
          Ref<EntityStore> entityReference = store.getExternalData().getRefFromUUID(this.anchorEntityUuid);
@@ -115,7 +116,9 @@ public class PrefabEditingMetadata {
       }
 
       TimeResource timeResource = store.getResource(TimeResource.getResourceType());
-      Holder<EntityStore> blockEntityHolder = BlockEntity.assembleDefaultBlockEntity(timeResource, "Editor_Anchor", position.toVector3d().add(0.5, 0.0, 0.5));
+      Holder<EntityStore> blockEntityHolder = BlockEntity.assembleDefaultBlockEntity(
+         timeResource, "Editor_Anchor", Vector3iUtil.toVector3d(position).add(0.5, 0.0, 0.5)
+      );
       blockEntityHolder.removeComponent(DespawnComponent.getComponentType());
       blockEntityHolder.addComponent(Intangible.getComponentType(), Intangible.INSTANCE);
       blockEntityHolder.addComponent(PrefabAnchor.getComponentType(), PrefabAnchor.INSTANCE);

@@ -39,7 +39,7 @@ public class ActionList {
       this.atomic = atomic;
    }
 
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       if (this.actions.length == 0) {
          return false;
       } else if (this.blocking) {
@@ -63,7 +63,7 @@ public class ActionList {
       }
    }
 
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       if (this.blocking) {
          Action action = this.actions[this.actionIndex];
          if (!action.canExecute(ref, role, sensorInfo, dt, store)) {

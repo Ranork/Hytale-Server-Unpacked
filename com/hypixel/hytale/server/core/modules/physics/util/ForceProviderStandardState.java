@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.core.modules.physics.util;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ForceProviderStandardState {
    public double displacedMass;
@@ -14,27 +14,27 @@ public class ForceProviderStandardState {
    public final Vector3d externalImpulse = new Vector3d();
 
    public ForceProviderStandardState() {
-      this.nextTickVelocity.assign(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
+      this.nextTickVelocity.set(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
    }
 
    public void convertToForces(double dt, double mass) {
-      this.externalForce.addScaled(this.externalAcceleration, 1.0 / mass);
-      this.externalForce.addScaled(this.externalImpulse, 1.0 / dt);
-      this.externalAcceleration.assign(Vector3d.ZERO);
-      this.externalImpulse.assign(Vector3d.ZERO);
+      this.externalForce.fma(1.0 / mass, this.externalAcceleration);
+      this.externalForce.fma(1.0 / dt, this.externalImpulse);
+      this.externalAcceleration.zero();
+      this.externalImpulse.zero();
    }
 
    public void updateVelocity(@Nonnull Vector3d velocity) {
       if (this.nextTickVelocity.x < Double.MAX_VALUE) {
-         velocity.assign(this.nextTickVelocity);
-         this.nextTickVelocity.assign(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
+         velocity.set(this.nextTickVelocity);
+         this.nextTickVelocity.set(Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
       }
 
       velocity.add(this.externalVelocity);
-      this.externalVelocity.assign(Vector3d.ZERO);
+      this.externalVelocity.zero();
    }
 
    public void clear() {
-      this.externalForce.assign(Vector3d.ZERO);
+      this.externalForce.zero();
    }
 }

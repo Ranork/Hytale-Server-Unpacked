@@ -1,13 +1,13 @@
 package com.hypixel.hytale.builtin.path.path;
 
 import com.hypixel.hytale.builtin.path.waypoint.RelativeWaypointDefinition;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.universe.world.path.IPath;
 import com.hypixel.hytale.server.core.universe.world.path.SimplePathWaypoint;
 import java.util.ArrayDeque;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TransientPathDefinition {
    protected final List<RelativeWaypointDefinition> waypointDefinitions;
@@ -19,7 +19,7 @@ public class TransientPathDefinition {
    }
 
    @Nonnull
-   public IPath<SimplePathWaypoint> buildPath(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public IPath<SimplePathWaypoint> buildPath(@Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
       ArrayDeque<RelativeWaypointDefinition> queue = new ArrayDeque<>(this.waypointDefinitions);
       return TransientPath.buildPath(position, rotation, queue, this.scale);
    }

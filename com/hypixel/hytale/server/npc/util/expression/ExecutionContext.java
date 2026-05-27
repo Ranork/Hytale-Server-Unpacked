@@ -13,6 +13,7 @@ import javax.annotation.Nullable;
 
 public class ExecutionContext {
    public static final int STACK_GROW_INCREMENT = 8;
+   @Nullable
    protected Scope scope;
    protected ExecutionContext.Operand[] operandStack;
    protected int stackTop;
@@ -43,8 +44,10 @@ public class ExecutionContext {
    public static final ExecutionContext.Instruction LOGICAL_AND = context -> context.popPush(context.getBoolean(1) && context.getBoolean(0), 2);
    public static final ExecutionContext.Instruction LOGICAL_OR = context -> context.popPush(context.getBoolean(1) || context.getBoolean(0), 2);
 
-   public ExecutionContext(Scope scope) {
+   public ExecutionContext(@Nullable Scope scope) {
       this.scope = scope;
+      this.stackTop = -1;
+      this.lastPushedType = ValueType.VOID;
       this.operandStack = new ExecutionContext.Operand[8];
 
       for (int i = 0; i < this.operandStack.length; i++) {
@@ -101,14 +104,20 @@ public class ExecutionContext {
       return this.get(0);
    }
 
-   public Scope setScope(Scope scope) {
-      Scope oldScope = this.getScope();
+   @Nullable
+   public Scope setScope(@Nullable Scope scope) {
+      Scope tempScope = this.scope;
       this.scope = scope;
-      return oldScope;
+      return tempScope;
    }
 
+   @Nullable
    public Scope getScope() {
       return this.scope;
+   }
+
+   public boolean hasScope() {
+      return this.scope != null;
    }
 
    public String getCombatConfig() {
@@ -174,6 +183,7 @@ public class ExecutionContext {
    }
 
    protected ExecutionContext.Operand popPush(int popCount) {
+      this.ensureCanPopCount("popPush", popCount);
       this.stackTop -= popCount - 1;
       return this.operandStack[this.stackTop];
    }
@@ -211,6 +221,7 @@ public class ExecutionContext {
    }
 
    protected ExecutionContext.Operand pop() {
+      this.ensureCanPop("pop");
       this.lastPushedType = ValueType.VOID;
       return this.operandStack[this.stackTop--];
    }
@@ -260,7 +271,32 @@ public class ExecutionContext {
    }
 
    protected ExecutionContext.Operand get(int index) {
+      this.ensureCanAccessRelativeIndex("get", index);
       return this.operandStack[this.stackTop - index];
+   }
+
+   private void ensureCanPop(String operation) {
+      if (this.stackTop < 0) {
+         throw new IllegalStateException("Expression stack underflow in " + operation + " (stackTop=" + this.stackTop + ")");
+      }
+   }
+
+   private void ensureCanPopCount(String operation, int popCount) {
+      if (popCount <= 0) {
+         throw new IllegalStateException(
+            "Expression stack pop count must be > 0 in " + operation + " (popCount=" + popCount + ", stackTop=" + this.stackTop + ")"
+         );
+      } else if (this.stackTop - (popCount - 1) < 0) {
+         throw new IllegalStateException("Expression stack underflow in " + operation + " (popCount=" + popCount + ", stackTop=" + this.stackTop + ")");
+      }
+   }
+
+   private void ensureCanAccessRelativeIndex(String operation, int index) {
+      if (index < 0) {
+         throw new IllegalStateException("Expression stack index must be >= 0 in " + operation + " (index=" + index + ", stackTop=" + this.stackTop + ")");
+      } else if (this.stackTop - index < 0) {
+         throw new IllegalStateException("Expression stack underflow in " + operation + " (index=" + index + ", stackTop=" + this.stackTop + ")");
+      }
    }
 
    public double getNumber(int index) {
@@ -386,7 +422,7 @@ public class ExecutionContext {
          double[] array = new double[size];
 
          for (int i = 0; i < size; i++) {
-            array[i] = context.getNumber(size - i);
+            array[i] = context.getNumber(size - 1 - i);
          }
 
          context.popPush(array, size);
@@ -399,7 +435,7 @@ public class ExecutionContext {
          String[] array = new String[size];
 
          for (int i = 0; i < size; i++) {
-            array[i] = context.getString(size - i);
+            array[i] = context.getString(size - 1 - i);
          }
 
          context.popPush(array, size);
@@ -412,7 +448,7 @@ public class ExecutionContext {
          boolean[] array = new boolean[size];
 
          for (int i = 0; i < size; i++) {
-            array[i] = context.getBoolean(size - i);
+            array[i] = context.getBoolean(size - 1 - i);
          }
 
          context.popPush(array, size);

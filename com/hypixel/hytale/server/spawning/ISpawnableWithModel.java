@@ -26,4 +26,12 @@ public interface ISpawnableWithModel extends ISpawnable {
 
    @Nonnull
    String getNameTranslationKey(ExecutionContext var1, @Nullable Scope var2);
+
+   default boolean breathesInAir(@Nonnull ExecutionContext context, @Nullable Scope modifierScope) {
+      return true;
+   }
+
+   default boolean breathesInWater(@Nonnull ExecutionContext context, @Nullable Scope modifierScope) {
+      return false;
+   }
 }

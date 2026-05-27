@@ -58,10 +58,10 @@ public class PrefabContainerJsonLoader extends JsonLoader<SeedStringResource, Pr
          ModifyEvent.dispatch(
             ModifyEvents.BiomePrefabs.class,
             new ModifyEvents.BiomePrefabs(
+               this.seed,
                this.biomeContext,
                entries,
-               content -> new PrefabContainerJsonLoader.PrefabContainerEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content), this.fileContext)
-                  .load()
+               path -> new PrefabContainerJsonLoader.PrefabContainerEntryJsonLoader(seed.next(), this.dataFolder, this.loadFile(path), this.fileContext).load()
             )
          );
          e = entries.toArray();

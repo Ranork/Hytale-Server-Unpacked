@@ -12,9 +12,9 @@ import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
 import com.hypixel.hytale.metrics.MetricsRegistry;
@@ -30,7 +30,6 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gamemode.GameModeType;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
-import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -48,9 +47,8 @@ import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowManag
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.event.events.ecs.ChangeGameModeEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
-import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
@@ -63,18 +61,17 @@ import com.hypixel.hytale.server.core.modules.entity.component.RespondToHit;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
 import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
-import com.hypixel.hytale.server.core.modules.entity.tracker.LegacyEntityTrackerSystems;
+import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
-import com.hypixel.hytale.server.core.permissions.PermissionHolder;
-import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.WorldMapTracker;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
@@ -92,8 +89,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
-public class Player extends LivingEntity implements CommandSender, PermissionHolder, MetricProvider {
+public class Player extends LivingEntity implements MetricProvider {
    @Nonnull
    public static final MetricsRegistry<Player> METRICS_REGISTRY = new MetricsRegistry<Player>()
       .register("Uuid", Entity::getUuid, Codec.UUID_STRING)
@@ -217,8 +216,12 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          }
 
          if (this.playerRef.getPacketHandler().getChannel().isActive()) {
+            PacketHandler.DisconnectReason reason = this.playerRef.getPacketHandler().getDisconnectReason();
+            if (reason.getServerDisconnectReason() == null && reason.getClientDisconnectType() == null) {
+               ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(this.removedBy)).log("Player removed from world! %s", this);
+            }
+
             this.playerRef.getPacketHandler().disconnect(Message.translation("server.general.disconnect.playerRemovedFromWorld"));
-            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(this.removedBy)).log("Player removed from world! %s", this);
          }
 
          ScheduledFuture<?> task;
@@ -237,7 +240,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      this.addLocationChange(ref, locX - position.getX(), locY - position.getY(), locZ - position.getZ(), componentAccessor);
+      addLocationChange(ref, locX - position.x(), locY - position.y(), locZ - position.z(), componentAccessor);
       super.moveTo(ref, locX, locY, locZ, componentAccessor);
       this.windowManager.validateWindows(ref, componentAccessor);
    }
@@ -252,12 +255,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       this.data.markChanged();
    }
 
-   @Override
-   public void unloadFromWorld() {
-      super.unloadFromWorld();
-   }
-
-   public void applyMovementStates(
+   public static void applyMovementStates(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull SavedMovementStates savedMovementStates,
       @Nonnull MovementStates movementStates,
@@ -304,7 +302,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
    }
 
    @Nonnull
-   public CompletableFuture<Void> saveConfig(@Nonnull World world, @Nonnull Holder<EntityStore> holder) {
+   public CompletableFuture<Void> saveConfig(@Nonnull World world, @Nonnull Holder<EntityStore> holder, boolean required) {
       MovementStatesComponent movementStatesComponent = holder.getComponent(MovementStatesComponent.getComponentType());
 
       assert movementStatesComponent != null;
@@ -314,7 +312,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       assert uuidComponent != null;
 
       this.data.getPerWorldData(world.getName()).setLastMovementStates(movementStatesComponent.getMovementStates(), false);
-      return Universe.get().getPlayerStorage().save(uuidComponent.getUuid(), holder);
+      return Universe.get().getPlayerStorage().save(uuidComponent.getUuid(), holder, required);
    }
 
    @Deprecated(forRemoval = true)
@@ -357,7 +355,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
 
    public void resetManagers(@Nonnull Holder<EntityStore> holder) {
       PlayerRef playerRef = this.playerRef;
-      LegacyEntityTrackerSystems.clear(this, holder);
+      EntityTrackerSystems.clear(holder);
       this.worldMapTracker.clear();
       this.hudManager.resetUserInterface(this.playerRef);
       this.hudManager.resetHud(this.playerRef);
@@ -374,7 +372,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       movementManagerComponent.update(playerRef.getPacketHandler());
    }
 
-   public void notifyPickupItem(
+   public static void notifyPickupItem(
       @Nonnull Ref<EntityStore> ref, @Nonnull ItemStack itemStack, @Nullable Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       World world = componentAccessor.getExternalData().getWorld();
@@ -383,10 +381,9 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
 
          assert playerRefComponent != null;
 
-         Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
          NotificationUtil.sendNotification(
             playerRefComponent.getPacketHandler(),
-            Message.translation("server.general.pickedUpItem").param("item", itemNameMessage),
+            Message.translation("server.general.pickedUpItem").param("item", itemStack.getDisplayName()),
             null,
             itemStack.toPacket()
          );
@@ -414,22 +411,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
       playerRefComponent.getPacketHandler().writeNoCache(new SetBlockPlacementOverride(overrideBlockPlacementRestrictions));
    }
 
-   @Override
-   public void sendMessage(@Nonnull Message message) {
-      this.playerRef.sendMessage(message);
-   }
-
-   @Override
-   public boolean hasPermission(@Nonnull String id) {
-      return PermissionsModule.get().hasPermission(this.getUuid(), id);
-   }
-
-   @Override
-   public boolean hasPermission(@Nonnull String id, boolean def) {
-      return PermissionsModule.get().hasPermission(this.getUuid(), id, def);
-   }
-
-   public void addLocationChange(
+   public static void addLocationChange(
       @Nonnull Ref<EntityStore> ref, double deltaX, double deltaY, double deltaZ, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       CollisionResultComponent collisionResultComponent = componentAccessor.getComponent(ref, CollisionResultComponent.getComponentType());
@@ -443,7 +425,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          assert transformComponent != null;
 
          Vector3d position = transformComponent.getPosition();
-         collisionResultComponent.getCollisionStartPosition().assign(position);
+         collisionResultComponent.getCollisionStartPosition().set(position);
          collisionResultComponent.markPendingCollisionCheck();
       }
    }
@@ -531,24 +513,39 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          List<PlayerRespawnPointData> sortedRespawnPoints = Arrays.stream(respawnPoints).sorted((a, b) -> {
             Vector3d posA = a.getRespawnPosition();
             Vector3d posB = b.getRespawnPosition();
-            double distA = playerPosition.distanceSquaredTo(posA.x, playerPosition.y, posA.z);
-            double distB = playerPosition.distanceSquaredTo(posB.x, playerPosition.y, posB.z);
+            double distA = playerPosition.distanceSquared(posA.x, playerPosition.y, posA.z);
+            double distB = playerPosition.distanceSquared(posB.x, playerPosition.y, posB.z);
             return Double.compare(distA, distB);
          }).toList();
          BoundingBox playerBoundingBoxComponent = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
-         return playerBoundingBoxComponent == null
-            ? CompletableFuture.completedFuture(new Transform(sortedRespawnPoints.getFirst().getRespawnPosition()))
-            : tryUseSpawnPoint(world, sortedRespawnPoints, 0, ref, playerComponent, playerBoundingBoxComponent.getBoundingBox());
+         if (playerBoundingBoxComponent == null) {
+            return CompletableFuture.completedFuture(new Transform(sortedRespawnPoints.getFirst().getRespawnPosition()));
+         } else {
+            PlayerRef playerRef = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
+
+            assert playerRef != null;
+
+            return tryUseSpawnPoint(world, sortedRespawnPoints, 0, ref, playerRef, playerBoundingBoxComponent.getBoundingBox());
+         }
       } else {
-         Transform worldSpawnPoint = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, componentAccessor);
-         worldSpawnPoint.setRotation(Vector3f.ZERO);
-         return CompletableFuture.completedFuture(worldSpawnPoint);
+         ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
+         if (spawnProvider == null) {
+            return CompletableFuture.completedFuture(new Transform());
+         } else {
+            Transform worldSpawnPoint = spawnProvider.getSpawnPoint(ref, componentAccessor);
+            return CompletableFuture.completedFuture(worldSpawnPoint);
+         }
       }
    }
 
    @Nonnull
    private static CompletableFuture<Transform> tryUseSpawnPoint(
-      World world, List<PlayerRespawnPointData> sortedRespawnPoints, int index, Ref<EntityStore> ref, Player playerComponent, Box boundingBox
+      @Nonnull World world,
+      @Nullable List<PlayerRespawnPointData> sortedRespawnPoints,
+      int index,
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull PlayerRef playerRef,
+      @Nonnull Box boundingBox
    ) {
       if (sortedRespawnPoints != null && index < sortedRespawnPoints.size()) {
          PlayerRespawnPointData respawnPoint = sortedRespawnPoints.get(index);
@@ -561,7 +558,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          }
 
          if (respawnPoint.getBlockPosition() != null) {
-            boundingBox.forEachBlock(respawnPoint.getBlockPosition().toVector3d(), 2.0, requiredChunks, (x, y, z, chunks) -> {
+            boundingBox.forEachBlock(Vector3iUtil.toVector3d(respawnPoint.getBlockPosition()), 2.0, requiredChunks, (x, y, z, chunks) -> {
                chunks.add(ChunkUtil.indexChunkFromBlock(x, z));
                return true;
             });
@@ -575,12 +572,12 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
             long chunkIndex = iterator.nextLong();
             chunkFutures[i++] = world.getChunkStore().getChunkReferenceAsync(chunkIndex).thenApplyAsync(v -> {
                if (v != null && v.isValid()) {
-                  WorldChunk wc = v.getStore().getComponent((Ref<ChunkStore>)v, WorldChunk.getComponentType());
+                  WorldChunk worldChunkComponent = v.getStore().getComponent((Ref<ChunkStore>)v, WorldChunk.getComponentType());
 
-                  assert wc != null;
+                  assert worldChunkComponent != null;
 
-                  wc.addKeepLoaded();
-                  return wc;
+                  worldChunkComponent.addKeepLoaded();
+                  return worldChunkComponent;
                } else {
                   return null;
                }
@@ -588,48 +585,54 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
          }
 
          return CompletableFuture.allOf(chunkFutures)
-            .thenApplyAsync(v -> {
+            .thenApplyAsync(var4x -> {
                Vector3d pos = ensureNoCollisionAtRespawnPosition(respawnPoint, boundingBox, world);
                if (pos != null) {
-                  return new Transform(pos, Vector3f.ZERO);
+                  return new Transform(pos, new Rotation3f(Rotation3f.IDENTITY));
                } else {
-                  playerComponent.sendMessage(Message.translation("server.general.respawnPointObstructed").param("respawnPointName", respawnPoint.getName()));
+                  playerRef.sendMessage(Message.translation("server.general.respawnPointObstructed").param("respawnPointName", respawnPoint.getName()));
                   return null;
                }
             }, world)
-            .whenComplete((unused, throwable) -> {
+            .whenComplete((var1x, var2x) -> {
                for (CompletableFuture<WorldChunk> future : chunkFutures) {
                   future.thenAccept(WorldChunk::removeKeepLoaded);
                }
             })
             .thenCompose(
-               v -> v != null
-                  ? CompletableFuture.completedFuture(v)
-                  : tryUseSpawnPoint(world, sortedRespawnPoints, index + 1, ref, playerComponent, boundingBox)
+               v -> v != null ? CompletableFuture.completedFuture(v) : tryUseSpawnPoint(world, sortedRespawnPoints, index + 1, ref, playerRef, boundingBox)
             );
       } else {
-         playerComponent.sendMessage(Message.translation("server.general.allRespawnPointsObstructed"));
+         playerRef.sendMessage(Message.translation("server.general.allRespawnPointsObstructed"));
          return CompletableFuture.supplyAsync(() -> {
             if (!ref.isValid()) {
                return new Transform();
             } else {
-               Transform worldSpawnPoint = world.getWorldConfig().getSpawnProvider().getSpawnPoint(ref, ref.getStore());
-               worldSpawnPoint.setRotation(Vector3f.ZERO);
-               return worldSpawnPoint;
+               ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
+               if (spawnProvider == null) {
+                  return new Transform();
+               } else {
+                  Transform worldSpawnPoint = spawnProvider.getSpawnPoint(ref, ref.getStore());
+                  worldSpawnPoint.setRotation(Rotation3f.IDENTITY);
+                  return worldSpawnPoint;
+               }
             }
          }, world);
       }
    }
 
    @Nullable
-   private static Vector3d ensureNoCollisionAtRespawnPosition(PlayerRespawnPointData playerRespawnPointData, Box playerHitbox, World world) {
+   private static Vector3d ensureNoCollisionAtRespawnPosition(
+      @Nonnull PlayerRespawnPointData playerRespawnPointData, @Nonnull Box playerHitbox, @Nonnull World world
+   ) {
       Vector3d respawnPosition = new Vector3d(playerRespawnPointData.getRespawnPosition());
       if (CollisionModule.get().validatePosition(world, playerHitbox, respawnPosition, new CollisionResult()) != -1) {
          return respawnPosition;
       } else {
-         respawnPosition.x = playerRespawnPointData.getBlockPosition().x + 0.5F;
-         respawnPosition.y = playerRespawnPointData.getBlockPosition().y;
-         respawnPosition.z = playerRespawnPointData.getBlockPosition().z + 0.5F;
+         Vector3i blockPosition = playerRespawnPointData.getBlockPosition();
+         respawnPosition.x = blockPosition.x + 0.5F;
+         respawnPosition.y = blockPosition.y;
+         respawnPosition.z = blockPosition.z + 0.5F;
 
          for (int distance = 1; distance <= 2; distance++) {
             for (int offset = -distance; offset <= distance; offset++) {
@@ -682,7 +685,7 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
    }
 
    public void setClientViewRadius(int clientViewRadius) {
-      this.clientViewRadius = clientViewRadius;
+      this.clientViewRadius = Math.max(0, clientViewRadius);
    }
 
    public int getClientViewRadius() {
@@ -691,31 +694,6 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
 
    public int getViewRadius() {
       return Math.min(this.clientViewRadius, HytaleServer.get().getConfig().getMaxViewRadius());
-   }
-
-   @Nullable
-   @Override
-   public ItemStackSlotTransaction updateItemStackDurability(
-      @Nonnull Ref<EntityStore> ref,
-      @Nonnull ItemStack itemStack,
-      ItemContainer container,
-      int slotId,
-      double durabilityChange,
-      @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      ItemStackSlotTransaction transaction = super.updateItemStackDurability(ref, itemStack, container, slotId, durabilityChange, componentAccessor);
-      if (transaction != null && transaction.getSlotAfter().isBroken() && !itemStack.isBroken()) {
-         Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
-         this.sendMessage(Message.translation("server.general.repair.itemBroken").param("itemName", itemNameMessage).color("#ff5555"));
-         PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
-
-         assert playerRefComponent != null;
-
-         int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
-         SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
-      }
-
-      return transaction;
    }
 
    @Nonnull
@@ -804,28 +782,12 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
 
       assert playerRefComponent != null;
 
-      GameMode oldGameMode = playerComponent.gameMode;
       playerComponent.gameMode = gameMode;
       playerRefComponent.getPacketHandler().writeNoCache(new SetGameMode(gameMode));
       if (movementManager.getDefaultSettings() != null) {
          movementManager.getDefaultSettings().canFly = gameMode == GameMode.Creative;
          movementManager.getSettings().canFly = gameMode == GameMode.Creative;
          movementManager.update(playerRefComponent.getPacketHandler());
-      }
-
-      PermissionsModule permissionsModule = PermissionsModule.get();
-      if (oldGameMode != null) {
-         GameModeType oldGameModeType = GameModeType.fromGameMode(oldGameMode);
-
-         for (String group : oldGameModeType.getPermissionGroups()) {
-            permissionsModule.removeUserFromGroup(playerRefComponent.getUuid(), group);
-         }
-      }
-
-      GameModeType gameModeType = GameModeType.fromGameMode(gameMode);
-
-      for (String group : gameModeType.getPermissionGroups()) {
-         permissionsModule.addUserToGroup(playerRefComponent.getUuid(), group);
       }
 
       if (gameMode == GameMode.Creative) {
@@ -871,13 +833,15 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
    }
 
    @Nonnull
-   public ItemStackTransaction giveItem(@Nonnull ItemStack stack, @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      PlayerSettings playerSettings = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
-      if (playerSettings == null) {
-         playerSettings = PlayerSettings.defaults();
+   public static ItemStackTransaction giveItem(
+      @Nonnull ItemStack stack, @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      PlayerSettings playerSettingsComponent = componentAccessor.getComponent(ref, PlayerSettings.getComponentType());
+      if (playerSettingsComponent == null) {
+         playerSettingsComponent = PlayerSettings.defaults();
       }
 
-      return this.getInventory().getContainerForItemPickup(stack.getItem(), playerSettings).addItemStack(stack);
+      return InventoryUtils.getContainerForItemPickup(ref, stack.getItem(), playerSettingsComponent, componentAccessor).addItemStack(stack);
    }
 
    @Override
@@ -904,10 +868,5 @@ public class Player extends LivingEntity implements CommandSender, PermissionHol
    @Override
    public String toString() {
       return "Player{uuid=" + this.getUuid() + ", clientViewRadius='" + this.clientViewRadius + "', " + super.toString() + "}";
-   }
-
-   @Override
-   public String getDisplayName() {
-      return this.playerRef.getUsername();
    }
 }

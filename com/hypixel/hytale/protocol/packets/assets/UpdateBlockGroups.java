@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -55,45 +56,54 @@ public class UpdateBlockGroups implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateBlockGroups deserialize(@Nonnull ByteBuf buf, int offset) {
-      UpdateBlockGroups obj = new UpdateBlockGroups();
-      byte nullBits = buf.getByte(offset);
-      obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
-      int pos = offset + 2;
-      if ((nullBits & 1) != 0) {
-         int groupsCount = VarInt.peek(buf, pos);
-         if (groupsCount < 0) {
-            throw ProtocolException.negativeLength("Groups", groupsCount);
-         }
-
-         if (groupsCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("Groups", groupsCount, 4096000);
-         }
-
-         pos += VarInt.size(groupsCount);
-         obj.groups = new HashMap<>(groupsCount);
-
-         for (int i = 0; i < groupsCount; i++) {
-            int keyLen = VarInt.peek(buf, pos);
-            if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockGroups", 2, buf.readableBytes() - offset);
+      } else {
+         UpdateBlockGroups obj = new UpdateBlockGroups();
+         byte nullBits = buf.getByte(offset);
+         obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
+         int pos = offset + 2;
+         if ((nullBits & 1) != 0) {
+            int groupsCount = VarInt.peek(buf, pos);
+            if (groupsCount < 0) {
+               throw ProtocolException.invalidVarInt("Groups");
             }
 
-            if (keyLen > 4096000) {
-               throw ProtocolException.stringTooLong("key", keyLen, 4096000);
+            int groupsVarLen = VarInt.size(groupsCount);
+            if (groupsCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Groups", groupsCount, 4096000);
             }
 
-            int keyVarLen = VarInt.length(buf, pos);
-            String key = PacketIO.readVarString(buf, pos);
-            pos += keyVarLen + keyLen;
-            BlockGroup val = BlockGroup.deserialize(buf, pos);
-            pos += BlockGroup.computeBytesConsumed(buf, pos);
-            if (obj.groups.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("groups", key);
+            pos += groupsVarLen;
+            obj.groups = new HashMap<>(groupsCount);
+
+            for (int i = 0; i < groupsCount; i++) {
+               int keyLen = VarInt.peek(buf, pos);
+               if (keyLen < 0) {
+                  throw ProtocolException.invalidVarInt("key");
+               }
+
+               int keyVarLen = VarInt.size(keyLen);
+               if (keyLen > 4096000) {
+                  throw ProtocolException.stringTooLong("key", keyLen, 4096000);
+               }
+
+               if (pos + keyVarLen + keyLen > buf.readableBytes()) {
+                  throw ProtocolException.bufferTooSmall("key", pos + keyVarLen + keyLen, buf.readableBytes());
+               }
+
+               String key = PacketIO.readVarString(buf, pos);
+               pos += keyVarLen + keyLen;
+               BlockGroup val = BlockGroup.deserialize(buf, pos);
+               pos += BlockGroup.computeBytesConsumed(buf, pos);
+               if (obj.groups.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("groups", key);
+               }
             }
          }
+
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -101,16 +111,112 @@ public class UpdateBlockGroups implements Packet, ToClientPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
             pos += BlockGroup.computeBytesConsumed(buf, pos);
          }
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   @Nullable
+   public static Map<String, BlockGroup> getGroups(MemorySegment mem) {
+      return getGroups(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, BlockGroup> getGroups(MemorySegment mem, int offset) {
+      if (!hasGroups(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 2;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Groups", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Groups", len, 4096000);
+         } else {
+            Map<String, BlockGroup> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               long keyPacked = VarInt.getWithLength(mem, off);
+               int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+               String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+               off += nkey;
+               BlockGroup value = BlockGroup.toObject(mem, off);
+               off += value.computeSize();
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Groups", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static boolean hasGroups(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static UpdateBlockGroups toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateBlockGroups toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockGroups", offset + 2, (int)mem.byteSize());
+      } else {
+         Map<String, BlockGroup> groups = null;
+         if (hasGroups(mem, offset)) {
+            int off = offset + 2;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("Groups", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Groups", len, 4096000);
+            }
+
+            groups = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               long keyPacked = VarInt.getWithLength(mem, off);
+               int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+               String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+               off += nkey;
+               BlockGroup value = BlockGroup.toObject(mem, off);
+               off += value.computeSize();
+               if (groups.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Groups", key);
+               }
+            }
+         }
+
+         return new UpdateBlockGroups(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1))), groups);
+      }
    }
 
    @Override
@@ -137,6 +243,32 @@ public class UpdateBlockGroups implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.groups != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.groups != null) {
+         if (this.groups.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Groups", this.groups.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.groups.size());
+
+         for (Entry<String, BlockGroup> e : this.groups.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 2;
       if (this.groups != null) {
@@ -157,40 +289,45 @@ public class UpdateBlockGroups implements Packet, ToClientPacket {
          return ValidationResult.error("Buffer too small: expected at least 2 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
-         int pos = offset + 2;
-         if ((nullBits & 1) != 0) {
-            int groupsCount = VarInt.peek(buffer, pos);
-            if (groupsCount < 0) {
-               return ValidationResult.error("Invalid dictionary count for Groups");
-            }
-
-            if (groupsCount > 4096000) {
-               return ValidationResult.error("Groups exceeds max length 4096000");
-            }
-
-            pos += VarInt.length(buffer, pos);
-
-            for (int i = 0; i < groupsCount; i++) {
-               int keyLen = VarInt.peek(buffer, pos);
-               if (keyLen < 0) {
-                  return ValidationResult.error("Invalid string length for key");
+         int v = buffer.getByte(offset + 1) & 255;
+         if (v >= 3) {
+            return ValidationResult.error("Invalid UpdateType value for Type");
+         } else {
+            v = offset + 2;
+            if ((nullBits & 1) != 0) {
+               int groupsCount = VarInt.peek(buffer, v);
+               if (groupsCount < 0) {
+                  return ValidationResult.error("Invalid dictionary count for Groups");
                }
 
-               if (keyLen > 4096000) {
-                  return ValidationResult.error("key exceeds max length 4096000");
+               if (groupsCount > 4096000) {
+                  return ValidationResult.error("Groups exceeds max length 4096000");
                }
 
-               pos += VarInt.length(buffer, pos);
-               pos += keyLen;
-               if (pos > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading key");
-               }
+               v += VarInt.size(groupsCount);
 
-               pos += BlockGroup.computeBytesConsumed(buffer, pos);
+               for (int i = 0; i < groupsCount; i++) {
+                  int keyLen = VarInt.peek(buffer, v);
+                  if (keyLen < 0) {
+                     return ValidationResult.error("Invalid string length for key");
+                  }
+
+                  if (keyLen > 4096000) {
+                     return ValidationResult.error("key exceeds max length 4096000");
+                  }
+
+                  v += VarInt.size(keyLen);
+                  v += keyLen;
+                  if (v > buffer.writerIndex()) {
+                     return ValidationResult.error("Buffer overflow reading key");
+                  }
+
+                  v += BlockGroup.computeBytesConsumed(buffer, v);
+               }
             }
+
+            return ValidationResult.OK;
          }
-
-         return ValidationResult.OK;
       }
    }
 

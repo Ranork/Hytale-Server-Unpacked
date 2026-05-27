@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.command.commands.world.chunk;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -20,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector2i;
 
 public class ChunkInfoCommand extends AbstractWorldCommand {
    @Nonnull
@@ -63,10 +63,7 @@ public class ChunkInfoCommand extends AbstractWorldCommand {
          for (int i = 0; i < 10; i++) {
             BlockSection section = blockChunkComponent.getSectionAtIndex(i);
             msg.insert(Message.translation("server.commands.chunkinfo.section").param("index", i));
-            if (section instanceof BlockSection) {
-               msg.insert(Message.translation("server.commands.chunkinfo.dataType").param("data", section.getChunkSection().getClass().getSimpleName()));
-            }
-
+            msg.insert(Message.translation("server.commands.chunkinfo.dataType").param("data", section.getChunkSection().getClass().getSimpleName()));
             msg.insert(
                Message.translation("server.commands.chunkinfo.sectionInfo")
                   .param("ticking", section.hasTicking())

@@ -6,24 +6,24 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class WeightedAssignments extends Assignments {
    @Nonnull
    private final WeightedMap<Assignments> weightedDistributions;
    @Nonnull
    private final RngField rngField;
-   private final double noneProbability;
+   private final double skipCHance;
    @Nonnull
    private final FastRandom rRandom;
 
-   public WeightedAssignments(@Nonnull WeightedMap<Assignments> props, int seed, double noneProbability) {
+   public WeightedAssignments(@Nonnull WeightedMap<Assignments> props, int seed, double skipCHance) {
       this.weightedDistributions = new WeightedMap<>(props);
       this.rngField = new RngField(seed);
-      this.noneProbability = noneProbability;
+      this.skipCHance = skipCHance;
       this.rRandom = new FastRandom();
    }
 
@@ -33,7 +33,7 @@ public class WeightedAssignments extends Assignments {
          return EmptyProp.INSTANCE;
       } else {
          this.rRandom.setSeed(this.rngField.get(position.x, position.y, position.z));
-         return (Prop)(this.rRandom.nextDouble() < this.noneProbability
+         return (Prop)(this.rRandom.nextDouble() < this.skipCHance
             ? EmptyProp.INSTANCE
             : this.weightedDistributions.pick(this.rRandom).propAt(position, id, distanceTOBiomeEdge));
       }

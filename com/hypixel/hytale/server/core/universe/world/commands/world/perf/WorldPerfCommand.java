@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractWorldCommand;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.concurrent.TimeUnit;
@@ -34,7 +34,7 @@ public class WorldPerfCommand extends AbstractWorldCommand {
       Message msg = Message.empty();
       boolean showDelta = this.deltaFlag.provided(context);
       boolean showAll = this.allFlag.provided(context);
-      if (context.sender() instanceof Player) {
+      if (context.sender() instanceof PlayerRef) {
          for (int i = 0; i < periods.length; i++) {
             String length = FormatUtil.timeUnitToString(periods[i], TimeUnit.NANOSECONDS, true);
             double average = historicMetric.getAverage(i);

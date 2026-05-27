@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.vectorproviders;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class CacheVectorProvider extends VectorProvider {
    @Nonnull
@@ -17,7 +17,7 @@ public class CacheVectorProvider extends VectorProvider {
    @Override
    public void process(@Nonnull VectorProvider.Context context, @Nonnull Vector3d vector_out) {
       if (this.cache.position != null && this.cache.position.equals(context.position)) {
-         vector_out.assign(this.cache.value);
+         vector_out.set(this.cache.value);
       }
 
       if (this.cache.position == null) {
@@ -25,9 +25,9 @@ public class CacheVectorProvider extends VectorProvider {
          this.cache.value = new Vector3d();
       }
 
-      this.cache.position.assign(context.position);
+      this.cache.position.set(context.position);
       this.vectorProvider.process(context, this.cache.value);
-      vector_out.assign(this.cache.value);
+      vector_out.set(this.cache.value);
    }
 
    public static class Cache {

@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers;
 
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.asset.type.gameplay.WorldMapConfig;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -11,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerBuilder;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class RespawnMarkerProvider implements WorldMapManager.MarkerProvider {
    public static final RespawnMarkerProvider INSTANCE = new RespawnMarkerProvider();

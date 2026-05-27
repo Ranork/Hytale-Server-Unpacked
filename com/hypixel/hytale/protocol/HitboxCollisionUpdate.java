@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -26,13 +29,41 @@ public class HitboxCollisionUpdate extends ComponentUpdate {
 
    @Nonnull
    public static HitboxCollisionUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
-      HitboxCollisionUpdate obj = new HitboxCollisionUpdate();
-      obj.hitboxCollisionConfigIndex = buf.getIntLE(offset + 0);
-      return obj;
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("HitboxCollisionUpdate", 4, buf.readableBytes() - offset);
+      } else {
+         HitboxCollisionUpdate obj = new HitboxCollisionUpdate();
+         obj.hitboxCollisionConfigIndex = buf.getIntLE(offset + 0);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 4;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 4L;
+   }
+
+   public static int getHitboxCollisionConfigIndex(MemorySegment mem) {
+      return getHitboxCollisionConfigIndex(mem, 0);
+   }
+
+   public static int getHitboxCollisionConfigIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static HitboxCollisionUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static HitboxCollisionUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 4 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("HitboxCollisionUpdate", offset + 4, (int)mem.byteSize());
+      } else {
+         return new HitboxCollisionUpdate(mem.get(PacketIO.PROTO_INT, (long)(offset + 0)));
+      }
    }
 
    @Override
@@ -40,6 +71,12 @@ public class HitboxCollisionUpdate extends ComponentUpdate {
       int startPos = buf.writerIndex();
       buf.writeIntLE(this.hitboxCollisionConfigIndex);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.hitboxCollisionConfigIndex);
+      return 4;
    }
 
    @Override

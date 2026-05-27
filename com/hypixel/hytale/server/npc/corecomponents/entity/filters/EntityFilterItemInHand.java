@@ -2,9 +2,8 @@ package com.hypixel.hytale.server.npc.corecomponents.entity.filters;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.EntityFilterBase;
@@ -30,13 +29,23 @@ public class EntityFilterItemInHand extends EntityFilterBase {
 
    @Override
    public boolean matchesEntity(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Role role, @Nonnull Store<EntityStore> store) {
-      LivingEntity entity = (LivingEntity)EntityUtils.getEntity(targetRef, store);
-      Inventory inventory = entity.getInventory();
-
       return switch (this.hand) {
-         case Main -> InventoryHelper.matchesItem(this.items, inventory.getItemInHand());
-         case OffHand -> InventoryHelper.matchesItem(this.items, inventory.getUtilityItem());
-         default -> InventoryHelper.matchesItem(this.items, inventory.getItemInHand()) || InventoryHelper.matchesItem(this.items, inventory.getUtilityItem());
+         case Main -> {
+            ItemStack itemInHand = InventoryComponent.getItemInHand(store, targetRef);
+            yield itemInHand != null && InventoryHelper.matchesItem(this.items, itemInHand);
+         }
+         case OffHand -> {
+            InventoryComponent.Utility utilityComponent = store.getComponent(targetRef, InventoryComponent.Utility.getComponentType());
+            ItemStack utilityItem = utilityComponent != null ? utilityComponent.getActiveItem() : null;
+            yield utilityItem != null && InventoryHelper.matchesItem(this.items, utilityItem);
+         }
+         default -> {
+            ItemStack itemInHand = InventoryComponent.getItemInHand(store, targetRef);
+            InventoryComponent.Utility utilityComponent = store.getComponent(targetRef, InventoryComponent.Utility.getComponentType());
+            ItemStack utilityItem = utilityComponent != null ? utilityComponent.getActiveItem() : null;
+            yield itemInHand != null && InventoryHelper.matchesItem(this.items, itemInHand)
+               || utilityItem != null && InventoryHelper.matchesItem(this.items, utilityItem);
+         }
       };
    }
 

@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.parameterproviders.MultipleParam
 import com.hypixel.hytale.server.npc.sensorinfo.parameterproviders.SingleDoubleParameterProvider;
 import com.hypixel.hytale.server.npc.valuestore.ValueStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SensorCombatActionEvaluator extends SensorBase {
    @Nonnull
@@ -92,7 +92,7 @@ public class SensorCombatActionEvaluator extends SensorBase {
             this.positioningAngleParameterProvider.overrideDouble(positioningAngle);
             Vector3d selfPosition = store.getComponent(ref, TRANSFORM_COMPONENT_TYPE).getPosition();
             Vector3d targetPosition = store.getComponent(target, TRANSFORM_COMPONENT_TYPE).getPosition();
-            double distance = targetPosition.distanceTo(selfPosition);
+            double distance = targetPosition.distance(selfPosition);
             return this.targetInRange == distance <= maxRange + this.allowableDeviation;
          }
       }

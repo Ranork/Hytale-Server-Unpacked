@@ -7,7 +7,6 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.util.message.MessageFormat;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.Comparator;
 import java.util.List;
 import javax.annotation.Nonnull;
 
@@ -33,10 +32,7 @@ public class PacksListCommand extends CommandBase {
             context.sendMessage(MESSAGE_PACKS_NONE_LOADED);
          } else {
             ObjectArrayList<Message> packs = new ObjectArrayList();
-            assetPacks.stream()
-               .sorted(Comparator.comparing(AssetPack::getName, String.CASE_INSENSITIVE_ORDER))
-               .map(PacksListCommand::formatPack)
-               .forEach(packs::add);
+            assetPacks.stream().map(PacksListCommand::formatPack).forEach(packs::add);
             context.sendMessage(MessageFormat.list(Message.translation("server.commands.packs.listHeader"), packs));
          }
       }

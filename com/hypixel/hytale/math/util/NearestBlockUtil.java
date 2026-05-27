@@ -1,11 +1,11 @@
 package com.hypixel.hytale.math.util;
 
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.function.BiPredicate;
 import java.util.function.DoubleUnaryOperator;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public final class NearestBlockUtil {
    public static final NearestBlockUtil.IterationElement[] DEFAULT_ELEMENTS = new NearestBlockUtil.IterationElement[]{
@@ -23,14 +23,14 @@ public final class NearestBlockUtil {
 
    @Nullable
    public static <T> Vector3i findNearestBlock(@Nonnull Vector3d position, @Nonnull BiPredicate<Vector3i, T> validBlock, T t) {
-      return findNearestBlock(DEFAULT_ELEMENTS, position.getX(), position.getY(), position.getZ(), validBlock, t);
+      return findNearestBlock(DEFAULT_ELEMENTS, position.x(), position.y(), position.z(), validBlock, t);
    }
 
    @Nullable
    public static <T> Vector3i findNearestBlock(
       @Nonnull NearestBlockUtil.IterationElement[] elements, @Nonnull Vector3d position, @Nonnull BiPredicate<Vector3i, T> validBlock, T t
    ) {
-      return findNearestBlock(elements, position.getX(), position.getY(), position.getZ(), validBlock, t);
+      return findNearestBlock(elements, position.x(), position.y(), position.z(), validBlock, t);
    }
 
    @Nullable
@@ -57,14 +57,14 @@ public final class NearestBlockUtil {
          double dy = ry - element.getY().applyAsDouble(ry);
          double dz = rz - element.getZ().applyAsDouble(rz);
          double dist = dx * dx + dy * dy + dz * dz;
-         tmp.assign(blockX + element.getOffsetX(), blockY + element.getOffsetY(), blockZ + element.getOffsetZ());
+         tmp.set(blockX + element.getOffsetX(), blockY + element.getOffsetY(), blockZ + element.getOffsetZ());
          if (dist < nearestDist && validBlock.test(tmp, t)) {
             nearestDist = dist;
             if (nearest == null) {
                nearest = new Vector3i();
             }
 
-            nearest.assign(tmp);
+            nearest.set(tmp);
          }
       }
 

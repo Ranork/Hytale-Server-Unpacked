@@ -1,8 +1,8 @@
 package com.hypixel.hytale.server.worldgen.cave.shape.distorted;
 
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public abstract class AbstractDistortedShape implements DistortedShape {
    private static final double PITCH_MIN = Math.toRadians(5.0);

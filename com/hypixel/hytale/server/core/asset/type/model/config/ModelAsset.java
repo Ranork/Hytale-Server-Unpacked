@@ -33,7 +33,7 @@ import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.common.util.MapUtil;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.protocol.ColorLight;
 import com.hypixel.hytale.protocol.EntityPart;
 import com.hypixel.hytale.protocol.ModelTrail;
@@ -59,6 +59,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class ModelAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, ModelAsset>> {
    public static final BuilderCodec<ModelTrail> MODEL_TRAIL_CODEC = BuilderCodec.builder(ModelTrail.class, ModelTrail::new)
@@ -69,7 +71,11 @@ public class ModelAsset implements JsonAssetWithMap<String, DefaultAssetMap<Stri
          new KeyedCodec<>("TargetEntityPart", new EnumCodec<>(EntityPart.class)), (trail, s) -> trail.targetEntityPart = s, trail -> trail.targetEntityPart
       )
       .addField(new KeyedCodec<>("TargetNodeName", Codec.STRING), (trail, s) -> trail.targetNodeName = s, trail -> trail.targetNodeName)
-      .addField(new KeyedCodec<>("PositionOffset", ProtocolCodecs.VECTOR3F), (trail, s) -> trail.positionOffset = s, trail -> trail.positionOffset)
+      .addField(
+         new KeyedCodec<>("PositionOffset", Vector3fUtil.CODEC),
+         (trail, s) -> trail.positionOffset = s,
+         trail -> trail.positionOffset != null ? new Vector3f(trail.positionOffset.x(), trail.positionOffset.y(), trail.positionOffset.z()) : null
+      )
       .addField(new KeyedCodec<>("RotationOffset", ProtocolCodecs.DIRECTION), (trail, s) -> trail.rotationOffset = s, trail -> trail.rotationOffset)
       .addField(new KeyedCodec<>("FixedRotation", Codec.BOOLEAN), (trail, s) -> trail.fixedRotation = s, trail -> trail.fixedRotation)
       .build();

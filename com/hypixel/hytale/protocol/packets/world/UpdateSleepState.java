@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -53,21 +56,25 @@ public class UpdateSleepState implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateSleepState deserialize(@Nonnull ByteBuf buf, int offset) {
-      UpdateSleepState obj = new UpdateSleepState();
-      byte nullBits = buf.getByte(offset);
-      obj.grayFade = buf.getByte(offset + 1) != 0;
-      obj.sleepUi = buf.getByte(offset + 2) != 0;
-      if ((nullBits & 1) != 0) {
-         obj.clock = SleepClock.deserialize(buf, offset + 3);
-      }
+      if (buf.readableBytes() - offset < 36) {
+         throw ProtocolException.bufferTooSmall("UpdateSleepState", 36, buf.readableBytes() - offset);
+      } else {
+         UpdateSleepState obj = new UpdateSleepState();
+         byte nullBits = buf.getByte(offset);
+         obj.grayFade = buf.getByte(offset + 1) != 0;
+         obj.sleepUi = buf.getByte(offset + 2) != 0;
+         if ((nullBits & 1) != 0) {
+            obj.clock = SleepClock.deserialize(buf, offset + 3);
+         }
 
-      int pos = offset + 36;
-      if ((nullBits & 2) != 0) {
-         obj.multiplayer = SleepMultiplayer.deserialize(buf, pos);
-         pos += SleepMultiplayer.computeBytesConsumed(buf, pos);
-      }
+         int pos = offset + 36;
+         if ((nullBits & 2) != 0) {
+            obj.multiplayer = SleepMultiplayer.deserialize(buf, pos);
+            pos += SleepMultiplayer.computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -78,6 +85,73 @@ public class UpdateSleepState implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 36L;
+   }
+
+   public static boolean getGrayFade(MemorySegment mem) {
+      return getGrayFade(mem, 0);
+   }
+
+   public static boolean getGrayFade(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1));
+   }
+
+   public static boolean getSleepUi(MemorySegment mem) {
+      return getSleepUi(mem, 0);
+   }
+
+   public static boolean getSleepUi(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 2));
+   }
+
+   @Nullable
+   public static SleepClock getClock(MemorySegment mem) {
+      return getClock(mem, 0);
+   }
+
+   @Nullable
+   public static SleepClock getClock(MemorySegment mem, int offset) {
+      return hasClock(mem, offset) ? SleepClock.toObject(mem, offset + 3) : null;
+   }
+
+   @Nullable
+   public static SleepMultiplayer getMultiplayer(MemorySegment mem) {
+      return getMultiplayer(mem, 0);
+   }
+
+   @Nullable
+   public static SleepMultiplayer getMultiplayer(MemorySegment mem, int offset) {
+      return hasMultiplayer(mem, offset) ? SleepMultiplayer.toObject(mem, offset + 36) : null;
+   }
+
+   public static boolean hasClock(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasMultiplayer(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static UpdateSleepState toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateSleepState toObject(MemorySegment mem, int offset) {
+      if (offset + 36 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateSleepState", offset + 36, (int)mem.byteSize());
+      } else {
+         return new UpdateSleepState(
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 2)),
+            hasClock(mem, offset) ? SleepClock.toObject(mem, offset + 3) : null,
+            hasMultiplayer(mem, offset) ? SleepMultiplayer.toObject(mem, offset + 36) : null
+         );
+      }
    }
 
    @Override
@@ -103,6 +177,34 @@ public class UpdateSleepState implements Packet, ToClientPacket {
       if (this.multiplayer != null) {
          this.multiplayer.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.clock != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.multiplayer != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.grayFade);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.sleepUi);
+      if (this.clock != null) {
+         this.clock.serialize(mem, offset + 3);
+      } else {
+         mem.asSlice(offset + 3, 33L).fill((byte)0);
+      }
+
+      int varOffset = offset + 36;
+      if (this.multiplayer != null) {
+         varOffset += this.multiplayer.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

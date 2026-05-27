@@ -3,7 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.world;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.corecomponents.ActionBase;
@@ -50,9 +50,9 @@ public class ActionSetLeashPosition extends ActionBase {
 
       assert entityTransformComponent != null;
 
-      Vector3f entityBodyRotation = entityTransformComponent.getRotation();
-      selfNpcComponent.getLeashPoint().assign(entityTransformComponent.getPosition());
-      selfNpcComponent.setLeashPitch(entityBodyRotation.getPitch());
-      selfNpcComponent.setLeashHeading(entityBodyRotation.getYaw());
+      Rotation3f entityBodyRotation = entityTransformComponent.getRotation();
+      selfNpcComponent.getLeashPoint().set(entityTransformComponent.getPosition());
+      selfNpcComponent.setLeashPitch(entityBodyRotation.pitch());
+      selfNpcComponent.setLeashHeading(entityBodyRotation.yaw());
    }
 }

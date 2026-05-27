@@ -5,9 +5,9 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.Interaction;
 import com.hypixel.hytale.protocol.InteractionSyncData;
@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ProjectileInteraction extends SimpleInstantInteraction implements BallisticDataProvider {
    @Nonnull
@@ -73,18 +74,18 @@ public class ProjectileInteraction extends SimpleInstantInteraction implements B
          assert commandBuffer != null;
 
          boolean hasClientState = clientState != null && clientState.attackerPos != null && clientState.attackerRot != null;
+         Vector3d direction = new Vector3d();
          Vector3d position;
-         Vector3d direction;
          UUID generatedUUID;
          if (hasClientState) {
             position = PositionUtil.toVector3d(clientState.attackerPos);
-            Vector3f lookVec = PositionUtil.toRotation(clientState.attackerRot);
-            direction = new Vector3d(lookVec.getYaw(), lookVec.getPitch());
+            Rotation3f lookVec = PositionUtil.toRotation(clientState.attackerRot);
+            Vector3dUtil.setYawPitch(lookVec.yaw(), lookVec.pitch(), direction);
             generatedUUID = clientState.generatedUUID;
          } else {
             Transform lookVec = TargetUtil.getLook(ref, commandBuffer);
             position = lookVec.getPosition();
-            direction = lookVec.getDirection();
+            direction.set(lookVec.getDirection());
             generatedUUID = null;
          }
 
@@ -102,8 +103,8 @@ public class ProjectileInteraction extends SimpleInstantInteraction implements B
       Transform lookVec = TargetUtil.getLook(ref, commandBuffer);
       InteractionSyncData state = context.getState();
       state.attackerPos = PositionUtil.toPositionPacket(lookVec.getPosition());
-      Vector3f rotation = lookVec.getRotation();
-      state.attackerRot = new Direction(rotation.getYaw(), rotation.getPitch(), rotation.getRoll());
+      Rotation3f rotation = lookVec.getRotation();
+      state.attackerRot = new Direction(rotation.yaw(), rotation.pitch(), rotation.roll());
    }
 
    @Nonnull

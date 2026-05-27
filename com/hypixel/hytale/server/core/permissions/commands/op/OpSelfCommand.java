@@ -42,9 +42,9 @@ public class OpSelfCommand extends AbstractPlayerCommand {
       } else {
          UUID uuid = playerRef.getUuid();
          PermissionsModule perms = PermissionsModule.get();
-         String opGroup = "OP";
+         String opGroup = "hytale:Admin";
          Set<String> groups = perms.getGroupsForUser(uuid);
-         boolean isOp = groups.contains("OP");
+         boolean isOp = groups.contains("hytale:Admin");
          if (!Constants.SINGLEPLAYER && !Constants.ALLOWS_SELF_OP_COMMAND) {
             playerRef.sendMessage(
                Message.translation("server.commands.op.self.multiplayerTip")
@@ -57,10 +57,10 @@ public class OpSelfCommand extends AbstractPlayerCommand {
             }
          } else {
             if (isOp) {
-               perms.removeUserFromGroup(uuid, "OP");
+               perms.removeUserFromGroup(uuid, "hytale:Admin");
                context.sendMessage(MESSAGE_COMMANDS_OP_REMOVED);
             } else {
-               perms.addUserToGroup(uuid, "OP");
+               perms.addUserToGroup(uuid, "hytale:Admin");
                context.sendMessage(MESSAGE_COMMANDS_OP_ADDED);
             }
          }

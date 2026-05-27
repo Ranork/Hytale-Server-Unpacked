@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.portals.utils.posqueries;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.Stack;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SpatialQueryDebug {
    @Nonnull

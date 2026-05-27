@@ -8,6 +8,7 @@ public class EntityCommand extends AbstractCommandCollection {
    public EntityCommand() {
       super("entity", "server.commands.entity.desc");
       this.addAliases("entities");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new EntityCloneCommand());
       this.addSubCommand(new EntityRemoveCommand());
       this.addSubCommand(new EntityDumpCommand());

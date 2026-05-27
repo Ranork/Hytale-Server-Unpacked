@@ -3,8 +3,9 @@ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.se
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PointKnockback extends Knockback {
    public static final BuilderCodec<PointKnockback> CODEC = BuilderCodec.builder(PointKnockback.class, PointKnockback::new, Knockback.BASE_CODEC)
@@ -48,13 +49,13 @@ public class PointKnockback extends Knockback {
          from.add(source);
       }
 
-      Vector3d vector = Vector3d.directionTo(from, target).normalize();
+      Vector3d vector = Vector3dUtil.directionTo(from, target).normalize();
       if (this.rotateY != 0) {
          vector.rotateY(this.rotateY);
       }
 
-      double x = vector.getX() * this.force;
-      double z = vector.getZ() * this.force;
+      double x = vector.x() * this.force;
+      double z = vector.z() * this.force;
       double y = this.velocityY;
       return new Vector3d(x, y, z);
    }

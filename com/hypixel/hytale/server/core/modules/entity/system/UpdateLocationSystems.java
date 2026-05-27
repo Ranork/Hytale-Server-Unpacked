@@ -15,8 +15,7 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -31,6 +30,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class UpdateLocationSystems {
    @Nonnull
@@ -43,14 +43,14 @@ public class UpdateLocationSystems {
    ) {
       if (world != null) {
          Vector3d position = transformComponent.getPosition();
-         if (position.getY() < -32.0 && !commandBuffer.getArchetype(ref).contains(Player.getComponentType())) {
+         if (position.y() < -32.0 && !commandBuffer.getArchetype(ref).contains(Player.getComponentType())) {
             LOGGER.at(Level.WARNING).log("Unable to move entity below the world! -32 < " + position);
             commandBuffer.removeEntity(ref, RemoveReason.REMOVE);
          } else {
             ChunkStore chunkStore = world.getChunkStore();
             Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
-            int chunkX = MathUtil.floor(position.getX()) >> 5;
-            int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+            int chunkX = MathUtil.floor(position.x()) >> 5;
+            int chunkZ = MathUtil.floor(position.z()) >> 5;
             Ref<ChunkStore> oldChunkRef = transformComponent.getChunkRef();
             boolean hasOldChunk = false;
             int oldChunkX = 0;
@@ -136,8 +136,8 @@ public class UpdateLocationSystems {
       } else {
          LOGGER.at(Level.SEVERE).log("Player is in a chunk that can't be loaded! Moving (-%d,0,0)! %s", 32, transformComponent);
          Vector3d position = transformComponent.getPosition();
-         Vector3d targetPosition = position.clone().subtract(32.0, 0.0, 0.0);
-         Vector3f bodyRotation = transformComponent.getRotation();
+         Vector3d targetPosition = new Vector3d(position).sub(32.0, 0.0, 0.0);
+         Rotation3f bodyRotation = transformComponent.getRotation();
          Teleport teleportComponent = Teleport.createForPlayer(targetPosition, bodyRotation);
          entityComponentAccessor.addComponent(ref, Teleport.getComponentType(), teleportComponent);
          PlayerRef playerRefComponent = entityComponentAccessor.getComponent(ref, PlayerRef.getComponentType());

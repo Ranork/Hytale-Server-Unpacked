@@ -4,10 +4,11 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class ConstantPropDistribution extends PropDistribution {
    @Nonnull
@@ -22,6 +23,10 @@ public class ConstantPropDistribution extends PropDistribution {
    private PropDistribution.Context rContext;
    @Nonnull
    private final Pipe.One<Vector3d> rPositionsPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(ConstantPropDistribution.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
          if (ConstantPropDistribution.this.rControl.stop) {
             control.stop = true;
@@ -43,8 +48,8 @@ public class ConstantPropDistribution extends PropDistribution {
    public void distribute(@NonNullDecl PropDistribution.Context context) {
       this.rContext = context;
       this.rControl.stop = false;
-      this.rPositionProviderContext.bounds.min.assign(context.bounds.min);
-      this.rPositionProviderContext.bounds.max.assign(context.bounds.max);
+      this.rPositionProviderContext.bounds.min.set(context.bounds.min);
+      this.rPositionProviderContext.bounds.max.set(context.bounds.max);
       this.rPositionProviderContext.pipe = this.rPositionsPipe;
       this.positionProvider.generate(this.rPositionProviderContext);
    }

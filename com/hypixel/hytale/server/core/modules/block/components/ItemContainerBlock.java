@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.modules.block.components;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
@@ -28,12 +29,14 @@ public class ItemContainerBlock implements Component<ChunkStore> {
          (o, p) -> o.itemContainer = p.itemContainer.clone()
       )
       .add()
-      .appendInherited(new KeyedCodec<>("Capacity", Codec.SHORT), (o, i) -> o.capacity = i, o -> o.capacity, (o, p) -> o.capacity = p.capacity)
+      .<Short>appendInherited(new KeyedCodec<>("Capacity", Codec.SHORT), (o, i) -> o.capacity = i, o -> o.capacity, (o, p) -> o.capacity = p.capacity)
+      .addValidator(Validators.greaterThan((short)0))
       .add()
       .build();
    private final transient Map<UUID, ContainerBlockWindow> windows = new ConcurrentHashMap<>();
    @Nullable
    protected String droplist;
+   @Nullable
    protected SimpleItemContainer itemContainer;
    protected short capacity = 20;
 
@@ -50,7 +53,7 @@ public class ItemContainerBlock implements Component<ChunkStore> {
       this.capacity = itemContainerBlock.capacity;
    }
 
-   public void setItemContainer(SimpleItemContainer itemContainer) {
+   public void setItemContainer(@Nonnull SimpleItemContainer itemContainer) {
       this.itemContainer = itemContainer;
    }
 
@@ -68,6 +71,7 @@ public class ItemContainerBlock implements Component<ChunkStore> {
       return this.windows;
    }
 
+   @Nonnull
    public SimpleItemContainer getItemContainer() {
       if (this.itemContainer == null) {
          this.itemContainer = new SimpleItemContainer(this.capacity);

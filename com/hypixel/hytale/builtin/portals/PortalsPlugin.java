@@ -8,6 +8,7 @@ import com.hypixel.hytale.builtin.portals.commands.voidevent.VoidEventCommands;
 import com.hypixel.hytale.builtin.portals.components.PortalDevice;
 import com.hypixel.hytale.builtin.portals.components.voidevent.VoidEvent;
 import com.hypixel.hytale.builtin.portals.components.voidevent.VoidSpawner;
+import com.hypixel.hytale.builtin.portals.integrations.FragmentOriginGameplayConfig;
 import com.hypixel.hytale.builtin.portals.integrations.PortalGameplayConfig;
 import com.hypixel.hytale.builtin.portals.integrations.PortalMarkerProvider;
 import com.hypixel.hytale.builtin.portals.integrations.PortalRemovalCondition;
@@ -21,6 +22,7 @@ import com.hypixel.hytale.builtin.portals.systems.curse.CurseItemDropsSystem;
 import com.hypixel.hytale.builtin.portals.systems.curse.DeleteCursedItemsOnSpawnSystem;
 import com.hypixel.hytale.builtin.portals.systems.curse.DiedInPortalSystem;
 import com.hypixel.hytale.builtin.portals.systems.voidevent.StartVoidEventInFragmentSystem;
+import com.hypixel.hytale.builtin.portals.systems.voidevent.VoidEventPlayerJoinSystem;
 import com.hypixel.hytale.builtin.portals.systems.voidevent.VoidEventRefSystem;
 import com.hypixel.hytale.builtin.portals.systems.voidevent.VoidEventStagesSystem;
 import com.hypixel.hytale.builtin.portals.systems.voidevent.VoidInvasionPortalsSpawnSystem;
@@ -33,6 +35,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.events.AddWorldEvent;
@@ -48,7 +51,6 @@ public class PortalsPlugin extends JavaPlugin {
    private ComponentType<ChunkStore, PortalDevice> portalDeviceComponentType;
    private ComponentType<EntityStore, VoidEvent> voidEventComponentType;
    private ComponentType<EntityStore, VoidSpawner> voidPortalComponentType;
-   public static final int MAX_CONCURRENT_FRAGMENTS = 4;
 
    public static PortalsPlugin getInstance() {
       return instance;
@@ -81,6 +83,7 @@ public class PortalsPlugin extends JavaPlugin {
       this.getEntityStoreRegistry().registerSystem(new CurseItemDropsSystem());
       this.getEntityStoreRegistry().registerSystem(new DeleteCursedItemsOnSpawnSystem());
       this.getEntityStoreRegistry().registerSystem(new VoidEventRefSystem());
+      this.getEntityStoreRegistry().registerSystem(new VoidEventPlayerJoinSystem(PlayerRef.getComponentType()));
       this.getEntityStoreRegistry().registerSystem(new VoidInvasionPortalsSpawnSystem());
       this.getEntityStoreRegistry().registerSystem(new VoidSpawnerSystems.Instantiate());
       this.getEntityStoreRegistry().registerSystem(new StartVoidEventInFragmentSystem());
@@ -90,7 +93,9 @@ public class PortalsPlugin extends JavaPlugin {
       this.getCommandRegistry().registerCommand(new VoidEventCommands());
       this.getCommandRegistry().registerCommand(new FragmentCommands());
       this.getCodecRegistry(RemovalCondition.CODEC).register("Portal", PortalRemovalCondition.class, PortalRemovalCondition.CODEC);
-      this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC).register(PortalGameplayConfig.class, "Portal", PortalGameplayConfig.CODEC);
+      this.getCodecRegistry(GameplayConfig.PLUGIN_CODEC)
+         .register(PortalGameplayConfig.class, "Portal", PortalGameplayConfig.CODEC)
+         .register(FragmentOriginGameplayConfig.class, "PortalOrigin", FragmentOriginGameplayConfig.CODEC);
    }
 
    private void turnOffPortalWhenWorldRemoved(@Nonnull RemoveWorldEvent event) {

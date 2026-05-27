@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -37,18 +40,22 @@ public class AngledDamage {
 
    @Nonnull
    public static AngledDamage deserialize(@Nonnull ByteBuf buf, int offset) {
-      AngledDamage obj = new AngledDamage();
-      byte nullBits = buf.getByte(offset);
-      obj.angle = buf.getDoubleLE(offset + 1);
-      obj.angleDistance = buf.getDoubleLE(offset + 9);
-      obj.next = buf.getIntLE(offset + 17);
-      int pos = offset + 21;
-      if ((nullBits & 1) != 0) {
-         obj.damageEffects = DamageEffects.deserialize(buf, pos);
-         pos += DamageEffects.computeBytesConsumed(buf, pos);
-      }
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("AngledDamage", 21, buf.readableBytes() - offset);
+      } else {
+         AngledDamage obj = new AngledDamage();
+         byte nullBits = buf.getByte(offset);
+         obj.angle = buf.getDoubleLE(offset + 1);
+         obj.angleDistance = buf.getDoubleLE(offset + 9);
+         obj.next = buf.getIntLE(offset + 17);
+         int pos = offset + 21;
+         if ((nullBits & 1) != 0) {
+            obj.damageEffects = DamageEffects.deserialize(buf, pos);
+            pos += DamageEffects.computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -59,6 +66,66 @@ public class AngledDamage {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   public static double getAngle(MemorySegment mem) {
+      return getAngle(mem, 0);
+   }
+
+   public static double getAngle(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 1));
+   }
+
+   public static double getAngleDistance(MemorySegment mem) {
+      return getAngleDistance(mem, 0);
+   }
+
+   public static double getAngleDistance(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 9));
+   }
+
+   @Nullable
+   public static DamageEffects getDamageEffects(MemorySegment mem) {
+      return getDamageEffects(mem, 0);
+   }
+
+   @Nullable
+   public static DamageEffects getDamageEffects(MemorySegment mem, int offset) {
+      return hasDamageEffects(mem, offset) ? DamageEffects.toObject(mem, offset + 21) : null;
+   }
+
+   public static int getNext(MemorySegment mem) {
+      return getNext(mem, 0);
+   }
+
+   public static int getNext(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 17));
+   }
+
+   public static boolean hasDamageEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static AngledDamage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AngledDamage toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AngledDamage", offset + 21, (int)mem.byteSize());
+      } else {
+         return new AngledDamage(
+            mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 9)),
+            hasDamageEffects(mem, offset) ? DamageEffects.toObject(mem, offset + 21) : null,
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 17))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -74,6 +141,24 @@ public class AngledDamage {
       if (this.damageEffects != null) {
          this.damageEffects.serialize(buf);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.damageEffects != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_DOUBLE, (long)(offset + 1), this.angle);
+      mem.set(PacketIO.PROTO_DOUBLE, (long)(offset + 9), this.angleDistance);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 17), this.next);
+      int varOffset = offset + 21;
+      if (this.damageEffects != null) {
+         varOffset += this.damageEffects.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

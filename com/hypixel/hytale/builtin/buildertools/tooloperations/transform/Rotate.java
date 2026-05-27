@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.buildertools.tooloperations.transform;
 
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Rotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushAxis;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class Rotate implements Transform {
    public static final Transform X_90 = new Rotate(Axis.X, 90);
@@ -45,6 +45,10 @@ public class Rotate implements Transform {
       }
    }
 
+   public Rotate inverse() {
+      return new Rotate(this.axis, (4 - this.rotations) * 90);
+   }
+
    @Nonnull
    @Override
    public String toString() {
@@ -52,14 +56,14 @@ public class Rotate implements Transform {
    }
 
    public static Transform forDirection(@Nonnull Vector3i direction, Rotation angle) {
-      if (direction.getX() < 0) {
+      if (direction.x() < 0) {
          return selectRotation(angle, FACING_WEST, FACING_NORTH, FACING_EAST, FACING_SOUTH);
-      } else if (direction.getX() > 0) {
+      } else if (direction.x() > 0) {
          return selectRotation(angle, FACING_EAST, FACING_SOUTH, FACING_WEST, FACING_NORTH);
-      } else if (direction.getZ() < 0) {
+      } else if (direction.z() < 0) {
          return selectRotation(angle, FACING_NORTH, FACING_EAST, FACING_SOUTH, FACING_WEST);
       } else {
-         return direction.getZ() > 0 ? selectRotation(angle, FACING_SOUTH, FACING_WEST, FACING_NORTH, FACING_EAST) : NONE;
+         return direction.z() > 0 ? selectRotation(angle, FACING_SOUTH, FACING_WEST, FACING_NORTH, FACING_EAST) : NONE;
       }
    }
 

@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -41,18 +44,93 @@ public class Hitbox {
 
    @Nonnull
    public static Hitbox deserialize(@Nonnull ByteBuf buf, int offset) {
-      Hitbox obj = new Hitbox();
-      obj.minX = buf.getFloatLE(offset + 0);
-      obj.minY = buf.getFloatLE(offset + 4);
-      obj.minZ = buf.getFloatLE(offset + 8);
-      obj.maxX = buf.getFloatLE(offset + 12);
-      obj.maxY = buf.getFloatLE(offset + 16);
-      obj.maxZ = buf.getFloatLE(offset + 20);
-      return obj;
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("Hitbox", 24, buf.readableBytes() - offset);
+      } else {
+         Hitbox obj = new Hitbox();
+         obj.minX = buf.getFloatLE(offset + 0);
+         obj.minY = buf.getFloatLE(offset + 4);
+         obj.minZ = buf.getFloatLE(offset + 8);
+         obj.maxX = buf.getFloatLE(offset + 12);
+         obj.maxY = buf.getFloatLE(offset + 16);
+         obj.maxZ = buf.getFloatLE(offset + 20);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 24;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 24L;
+   }
+
+   public static float getMinX(MemorySegment mem) {
+      return getMinX(mem, 0);
+   }
+
+   public static float getMinX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 0));
+   }
+
+   public static float getMinY(MemorySegment mem) {
+      return getMinY(mem, 0);
+   }
+
+   public static float getMinY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4));
+   }
+
+   public static float getMinZ(MemorySegment mem) {
+      return getMinZ(mem, 0);
+   }
+
+   public static float getMinZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 8));
+   }
+
+   public static float getMaxX(MemorySegment mem) {
+      return getMaxX(mem, 0);
+   }
+
+   public static float getMaxX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 12));
+   }
+
+   public static float getMaxY(MemorySegment mem) {
+      return getMaxY(mem, 0);
+   }
+
+   public static float getMaxY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 16));
+   }
+
+   public static float getMaxZ(MemorySegment mem) {
+      return getMaxZ(mem, 0);
+   }
+
+   public static float getMaxZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 20));
+   }
+
+   public static Hitbox toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Hitbox toObject(MemorySegment mem, int offset) {
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Hitbox", offset + 24, (int)mem.byteSize());
+      } else {
+         return new Hitbox(
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 12)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 16)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 20))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -62,6 +140,16 @@ public class Hitbox {
       buf.writeFloatLE(this.maxX);
       buf.writeFloatLE(this.maxY);
       buf.writeFloatLE(this.maxZ);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 0), this.minX);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 4), this.minY);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 8), this.minZ);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 12), this.maxX);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 16), this.maxY);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 20), this.maxZ);
+      return 24;
    }
 
    public int computeSize() {

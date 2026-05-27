@@ -24,6 +24,7 @@ public class BlockSetCommand extends CommandBase {
 
    public BlockSetCommand(@Nonnull BlockSetModule blockSetModule) {
       super("blockset", "server.commands.blockset.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.blockSetModule = blockSetModule;
    }
 

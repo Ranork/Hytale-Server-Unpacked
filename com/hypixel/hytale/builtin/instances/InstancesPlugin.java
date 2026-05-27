@@ -36,8 +36,8 @@ import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
@@ -88,6 +88,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -96,6 +97,7 @@ import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class InstancesPlugin extends JavaPlugin {
    private static InstancesPlugin instance;
@@ -238,7 +240,7 @@ public class InstancesPlugin extends JavaPlugin {
 
       assert transformComponent != null;
 
-      Transform originalPosition = transformComponent.getTransform().clone();
+      Transform originalPosition = new Transform(transformComponent.getTransform());
       InstanceEntityConfig instanceEntityConfigComponent = componentAccessor.getComponent(entityRef, InstanceEntityConfig.getComponentType());
       if (instanceEntityConfigComponent == null) {
          instanceEntityConfigComponent = componentAccessor.addComponent(entityRef, InstanceEntityConfig.getComponentType());
@@ -262,7 +264,7 @@ public class InstancesPlugin extends JavaPlugin {
       HeadRotation headRotation = componentAccessor.getComponent(entityRef, HeadRotation.getComponentType());
       if (headRotation != null) {
          componentAccessor.ensureAndGetComponent(entityRef, TeleportHistory.getComponentType())
-            .append(originalWorld, originalPosition.getPosition().clone(), headRotation.getRotation().clone(), "Instance");
+            .append(originalWorld, new Vector3d(originalPosition.getPosition()), headRotation.getRotation().clone(), "Instance");
       }
 
       InstanceEntityConfig finalPlayerConfig = instanceEntityConfigComponent;
@@ -323,7 +325,9 @@ public class InstancesPlugin extends JavaPlugin {
          HeadRotation headRotation = componentAccessor.getComponent(playerRef, HeadRotation.getComponentType());
          if (transformComponent != null && headRotation != null) {
             componentAccessor.ensureAndGetComponent(playerRef, TeleportHistory.getComponentType())
-               .append(originalWorld, transformComponent.getPosition().clone(), headRotation.getRotation().clone(), "Instance '" + targetWorld.getName() + "'");
+               .append(
+                  originalWorld, new Vector3d(transformComponent.getPosition()), headRotation.getRotation().clone(), "Instance '" + targetWorld.getName() + "'"
+               );
          }
 
          Transform spawnTransform = spawnProvider.getSpawnPoint(targetWorld, playerUUID);
@@ -354,7 +358,7 @@ public class InstancesPlugin extends JavaPlugin {
          HeadRotation headRotation = componentAccessor.getComponent(targetRef, HeadRotation.getComponentType());
          if (transformComponent != null && headRotation != null) {
             componentAccessor.ensureAndGetComponent(targetRef, TeleportHistory.getComponentType())
-               .append(world, transformComponent.getPosition().clone(), headRotation.getRotation().clone(), "Instance '" + world.getName() + "'");
+               .append(world, new Vector3d(transformComponent.getPosition()), headRotation.getRotation().clone(), "Instance '" + world.getName() + "'");
          }
 
          Teleport teleportComponent = Teleport.createForPlayer(targetWorld, returnPoint.getReturnPoint());
@@ -389,8 +393,10 @@ public class InstancesPlugin extends JavaPlugin {
 
    @Nonnull
    public static Path getInstanceAssetPath(@Nonnull String name) {
-      for (AssetPack pack : AssetModule.get().getAssetPacks()) {
-         Path instancesDir = pack.getRoot().resolve("Server").resolve("Instances");
+      List<AssetPack> packs = AssetModule.get().getAssetPacks();
+
+      for (int i = packs.size() - 1; i >= 0; i--) {
+         Path instancesDir = packs.get(i).getRoot().resolve("Server").resolve("Instances");
          Path path = PathUtil.resolvePathWithinDir(instancesDir, name);
          if (path == null) {
             throw new IllegalArgumentException("Invalid instance name");
@@ -441,6 +447,10 @@ public class InstancesPlugin extends JavaPlugin {
          if (Files.isDirectory(path)) {
             try {
                Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+                  {
+                     Objects.requireNonNull(InstancesPlugin.this);
+                  }
+
                   @Nonnull
                   public FileVisitResult preVisitDirectory(@Nonnull Path dir, @Nonnull BasicFileAttributes attrs) {
                      if (Files.exists(dir.resolve("instance.bson"))) {
@@ -479,8 +489,8 @@ public class InstancesPlugin extends JavaPlugin {
             Transform transform = fallbackWorld.getReturnPoint();
             TransformComponent transformComponent = holder.ensureAndGetComponent(TransformComponent.getComponentType());
             transformComponent.setPosition(transform.getPosition());
-            Vector3f rotationClone = transformComponent.getRotation().clone();
-            rotationClone.setYaw(transform.getRotation().getYaw());
+            Rotation3f rotationClone = new Rotation3f(transformComponent.getRotation());
+            rotationClone.setYaw(transform.getRotation().yaw());
             transformComponent.setRotation(rotationClone);
             HeadRotation headRotationComponent = holder.ensureAndGetComponent(HeadRotation.getComponentType());
             headRotationComponent.teleportRotation(transform.getRotation());
@@ -512,15 +522,15 @@ public class InstancesPlugin extends JavaPlugin {
    }
 
    private static void onPlayerReady(@Nonnull PlayerReadyEvent event) {
-      Player player = event.getPlayer();
-      World world = player.getWorld();
+      Player playerComponent = event.getPlayer();
+      World world = playerComponent.getWorld();
       if (world != null) {
          WorldConfig worldConfig = world.getWorldConfig();
          InstanceWorldConfig instanceWorldConfig = InstanceWorldConfig.get(worldConfig);
          if (instanceWorldConfig != null) {
             InstanceDiscoveryConfig discoveryConfig = instanceWorldConfig.getDiscovery();
             if (discoveryConfig != null) {
-               PlayerConfigData playerConfigData = player.getPlayerConfigData();
+               PlayerConfigData playerConfigData = playerComponent.getPlayerConfigData();
                UUID instanceUuid = worldConfig.getUuid();
                if (discoveryConfig.alwaysDisplay() || !playerConfigData.getDiscoveredInstances().contains(instanceUuid)) {
                   Set<UUID> discoveredInstances = new HashSet<>(playerConfigData.getDiscoveredInstances());

@@ -2,10 +2,10 @@ package com.hypixel.hytale.builtin.adventure.objectives.config.worldlocationprov
 
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.lookup.CodecMapCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.universe.world.World;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public abstract class WorldLocationProvider {
    @Nonnull

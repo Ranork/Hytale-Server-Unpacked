@@ -1,8 +1,8 @@
 package com.hypixel.hytale.server.core.universe.world;
 
 import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
@@ -21,7 +21,7 @@ public final class SpawnUtil {
          return null;
       } else {
          Transform spawnPoint = spawnProvider.getSpawnPoint(world, playerUuid);
-         Vector3f bodyRotation = new Vector3f(0.0F, spawnPoint.getRotation().getYaw(), 0.0F);
+         Rotation3f bodyRotation = new Rotation3f(0.0F, spawnPoint.getRotation().yaw(), 0.0F);
          TransformComponent transformComponent = new TransformComponent(spawnPoint.getPosition(), bodyRotation);
          holder.addComponent(TransformComponent.getComponentType(), transformComponent);
          HeadRotation headRotationComponent = holder.ensureAndGetComponent(HeadRotation.getComponentType());
@@ -36,7 +36,7 @@ public final class SpawnUtil {
       assert transformComponent != null;
 
       transformComponent.setPosition(transform.getPosition());
-      transformComponent.getRotation().setYaw(transform.getRotation().getYaw());
+      transformComponent.getRotation().setYaw(transform.getRotation().yaw());
       HeadRotation headRotationComponent = holder.ensureAndGetComponent(HeadRotation.getComponentType());
       headRotationComponent.teleportRotation(transform.getRotation());
    }

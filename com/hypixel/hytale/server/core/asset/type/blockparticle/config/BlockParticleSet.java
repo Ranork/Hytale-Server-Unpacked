@@ -13,16 +13,17 @@ import com.hypixel.hytale.codec.codecs.map.EnumMapCodec;
 import com.hypixel.hytale.codec.schema.metadata.ui.UIDefaultCollapsedState;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.protocol.BlockParticleEvent;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.Direction;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.lang.ref.SoftReference;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
 
 public class BlockParticleSet
    implements JsonAssetWithMap<String, DefaultAssetMap<String, BlockParticleSet>>,
@@ -54,7 +55,7 @@ public class BlockParticleSet
       .documentation("The scale of the particle system.")
       .add()
       .<Vector3f>appendInherited(
-         new KeyedCodec<>("PositionOffset", ProtocolCodecs.VECTOR3F),
+         new KeyedCodec<>("PositionOffset", Vector3fUtil.CODEC),
          (blockParticleSet, s) -> blockParticleSet.positionOffset = s,
          blockParticleSet -> blockParticleSet.positionOffset,
          (blockParticleSet, parent) -> blockParticleSet.positionOffset = parent.positionOffset

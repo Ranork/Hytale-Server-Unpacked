@@ -5,11 +5,11 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.lookup.CodecMapCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.modules.splitvelocity.VelocityConfig;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public abstract class Knockback {
    public static final CodecMapCodec<Knockback> CODEC = new CodecMapCodec<>("Type", true);

@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -28,6 +27,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PlaceFluidInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -81,7 +81,7 @@ public class PlaceFluidInteraction extends SimpleBlockInteraction {
       BlockType targetBlockType = world.getBlockType(targetBlock);
       FluidTicker ticker = fluid.getTicker();
       if (!ticker.canOccupySolidBlocks() && FluidTicker.isSolid(targetBlockType)) {
-         target = targetBlock.clone();
+         target = new Vector3i(targetBlock);
          BlockFace face = BlockFace.fromProtocolFace(context.getClientState().blockFace);
          target.add(face.getDirection());
       }

@@ -5,8 +5,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
@@ -112,12 +112,14 @@ public class HardwareUtil {
    private static String runCommand(String... command) {
       try {
          Process process = new ProcessBuilder(command).start();
-         if (process.waitFor(2L, TimeUnit.SECONDS)) {
+         if (process.waitFor(Duration.ofSeconds(2L))) {
             return new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
          }
 
          process.destroyForcibly();
-      } catch (Exception var2) {
+      } catch (InterruptedException var2) {
+         Thread.currentThread().interrupt();
+      } catch (Exception var3) {
       }
 
       return null;

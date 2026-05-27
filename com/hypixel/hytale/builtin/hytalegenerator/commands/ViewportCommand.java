@@ -8,8 +8,8 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.common.util.ExceptionUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -24,6 +24,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class ViewportCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -37,6 +39,7 @@ public class ViewportCommand extends AbstractPlayerCommand {
 
    public ViewportCommand(@Nonnull AssetManager assetManager) {
       super("Viewport", "server.commands.viewport.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.assetManager = assetManager;
    }
 
@@ -56,12 +59,18 @@ public class ViewportCommand extends AbstractPlayerCommand {
       if (context.get(this.deleteFlag)) {
          playerRef.sendMessage(Message.translation("server.commands.viewport.removed"));
       } else {
-         Integer radius = context.get(this.radiusArg) << 5;
+         Integer radius = context.get(this.radiusArg);
          Bounds3i viewportBounds_voxelGrid;
          if (radius != null) {
+            radius = radius << 5;
             Vector3d playerPosition_voxelGrid = store.getComponent(ref, TransformComponent.getComponentType()).getPosition();
-            Vector3i min_voxelGrid = playerPosition_voxelGrid.clone().subtract(radius.intValue()).toVector3i();
-            Vector3i max_voxelGrid = playerPosition_voxelGrid.clone().add(radius.intValue()).toVector3i().add(Vector3i.ALL_ONES);
+            Vector3i min_voxelGrid = Vector3dUtil.toVector3i(
+               new Vector3d(playerPosition_voxelGrid).sub(radius.intValue(), radius.intValue(), radius.intValue())
+            );
+            Vector3i max_voxelGrid = Vector3dUtil.toVector3i(
+                  new Vector3d(playerPosition_voxelGrid).add(radius.intValue(), radius.intValue(), radius.intValue())
+               )
+               .add(Vector3iUtil.ALL_ONES);
             viewportBounds_voxelGrid = new Bounds3i(min_voxelGrid, max_voxelGrid);
          } else {
             BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
@@ -73,7 +82,7 @@ public class ViewportCommand extends AbstractPlayerCommand {
             viewportBounds_voxelGrid = new Bounds3i(selection.getSelectionMin(), selection.getSelectionMax());
          }
 
-         Viewport viewport = new Viewport(viewportBounds_voxelGrid, world, context.sender());
+         Viewport viewport = new Viewport(viewportBounds_voxelGrid, world);
          this.activeTask = () -> world.execute(() -> {
             try {
                viewport.refresh();

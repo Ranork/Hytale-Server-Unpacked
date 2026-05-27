@@ -3,8 +3,8 @@ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.se
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class DirectionalKnockback extends Knockback {
    public static final BuilderCodec<DirectionalKnockback> CODEC = BuilderCodec.builder(
@@ -36,11 +36,11 @@ public class DirectionalKnockback extends Knockback {
    @Nonnull
    @Override
    public Vector3d calculateVector(@Nonnull Vector3d source, float yaw, @Nonnull Vector3d target) {
-      Vector3d vector = source.clone().subtract(target);
-      if (vector.squaredLength() <= 1.0E-8) {
+      Vector3d vector = new Vector3d(source).sub(target);
+      if (vector.lengthSquared() <= 1.0E-8) {
          Vector3d lookVector = new Vector3d(0.0, 0.0, -1.0);
          lookVector.rotateY(yaw);
-         vector.assign(lookVector);
+         vector.set(lookVector);
       } else {
          vector.normalize();
       }
@@ -51,8 +51,8 @@ public class DirectionalKnockback extends Knockback {
          vector.add(rotation);
       }
 
-      double x = vector.getX() * this.force;
-      double z = vector.getZ() * this.force;
+      double x = vector.x() * this.force;
+      double z = vector.z() * this.force;
       double y = this.velocityY;
       return new Vector3d(x, y, z);
    }

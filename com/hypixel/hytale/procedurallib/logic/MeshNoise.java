@@ -1,9 +1,9 @@
 package com.hypixel.hytale.procedurallib.logic;
 
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.procedurallib.NoiseFunction;
 import com.hypixel.hytale.procedurallib.condition.IIntCondition;
 import com.hypixel.hytale.procedurallib.logic.cell.GridCellDistanceFunction;
+import org.joml.Vector2i;
 
 public class MeshNoise implements NoiseFunction {
    public static final Vector2i[] ADJACENT_CELLS = new Vector2i[]{new Vector2i(-1, 0), new Vector2i(0, -1), new Vector2i(1, 0), new Vector2i(0, 1)};

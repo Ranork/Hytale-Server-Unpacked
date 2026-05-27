@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -54,35 +56,40 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateCameraShake deserialize(@Nonnull ByteBuf buf, int offset) {
-      UpdateCameraShake obj = new UpdateCameraShake();
-      byte nullBits = buf.getByte(offset);
-      obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
-      int pos = offset + 2;
-      if ((nullBits & 1) != 0) {
-         int profilesCount = VarInt.peek(buf, pos);
-         if (profilesCount < 0) {
-            throw ProtocolException.negativeLength("Profiles", profilesCount);
-         }
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("UpdateCameraShake", 2, buf.readableBytes() - offset);
+      } else {
+         UpdateCameraShake obj = new UpdateCameraShake();
+         byte nullBits = buf.getByte(offset);
+         obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
+         int pos = offset + 2;
+         if ((nullBits & 1) != 0) {
+            int profilesCount = VarInt.peek(buf, pos);
+            if (profilesCount < 0) {
+               throw ProtocolException.invalidVarInt("Profiles");
+            }
 
-         if (profilesCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("Profiles", profilesCount, 4096000);
-         }
+            int profilesVarLen = VarInt.size(profilesCount);
+            if (profilesCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Profiles", profilesCount, 4096000);
+            }
 
-         pos += VarInt.size(profilesCount);
-         obj.profiles = new HashMap<>(profilesCount);
+            pos += profilesVarLen;
+            obj.profiles = new HashMap<>(profilesCount);
 
-         for (int i = 0; i < profilesCount; i++) {
-            int key = buf.getIntLE(pos);
-            pos += 4;
-            CameraShake val = CameraShake.deserialize(buf, pos);
-            pos += CameraShake.computeBytesConsumed(buf, pos);
-            if (obj.profiles.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("profiles", key);
+            for (int i = 0; i < profilesCount; i++) {
+               int key = buf.getIntLE(pos);
+               pos += 4;
+               CameraShake val = CameraShake.deserialize(buf, pos);
+               pos += CameraShake.computeBytesConsumed(buf, pos);
+               if (obj.profiles.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("profiles", key);
+               }
             }
          }
-      }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -90,7 +97,7 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -99,6 +106,98 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   @Nullable
+   public static Map<Integer, CameraShake> getProfiles(MemorySegment mem) {
+      return getProfiles(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, CameraShake> getProfiles(MemorySegment mem, int offset) {
+      if (!hasProfiles(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 2;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Profiles", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Profiles", len, 4096000);
+         } else {
+            Map<Integer, CameraShake> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               CameraShake value = CameraShake.toObject(mem, off);
+               off += value.computeSize();
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Profiles", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static boolean hasProfiles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static UpdateCameraShake toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateCameraShake toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateCameraShake", offset + 2, (int)mem.byteSize());
+      } else {
+         Map<Integer, CameraShake> profiles = null;
+         if (hasProfiles(mem, offset)) {
+            int off = offset + 2;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("Profiles", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Profiles", len, 4096000);
+            }
+
+            profiles = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               CameraShake value = CameraShake.toObject(mem, off);
+               off += value.computeSize();
+               if (profiles.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Profiles", key);
+               }
+            }
+         }
+
+         return new UpdateCameraShake(UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1))), profiles);
+      }
    }
 
    @Override
@@ -125,6 +224,33 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.profiles != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.profiles != null) {
+         if (this.profiles.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Profiles", this.profiles.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.profiles.size());
+
+         for (Entry<Integer, CameraShake> e : this.profiles.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, (long)varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 2;
       if (this.profiles != null) {
@@ -145,30 +271,35 @@ public class UpdateCameraShake implements Packet, ToClientPacket {
          return ValidationResult.error("Buffer too small: expected at least 2 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
-         int pos = offset + 2;
-         if ((nullBits & 1) != 0) {
-            int profilesCount = VarInt.peek(buffer, pos);
-            if (profilesCount < 0) {
-               return ValidationResult.error("Invalid dictionary count for Profiles");
-            }
-
-            if (profilesCount > 4096000) {
-               return ValidationResult.error("Profiles exceeds max length 4096000");
-            }
-
-            pos += VarInt.length(buffer, pos);
-
-            for (int i = 0; i < profilesCount; i++) {
-               pos += 4;
-               if (pos > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading key");
+         int v = buffer.getByte(offset + 1) & 255;
+         if (v >= 3) {
+            return ValidationResult.error("Invalid UpdateType value for Type");
+         } else {
+            v = offset + 2;
+            if ((nullBits & 1) != 0) {
+               int profilesCount = VarInt.peek(buffer, v);
+               if (profilesCount < 0) {
+                  return ValidationResult.error("Invalid dictionary count for Profiles");
                }
 
-               pos += CameraShake.computeBytesConsumed(buffer, pos);
-            }
-         }
+               if (profilesCount > 4096000) {
+                  return ValidationResult.error("Profiles exceeds max length 4096000");
+               }
 
-         return ValidationResult.OK;
+               v += VarInt.size(profilesCount);
+
+               for (int i = 0; i < profilesCount; i++) {
+                  v += 4;
+                  if (v > buffer.writerIndex()) {
+                     return ValidationResult.error("Buffer overflow reading key");
+                  }
+
+                  v += CameraShake.computeBytesConsumed(buffer, v);
+               }
+            }
+
+            return ValidationResult.OK;
+         }
       }
    }
 

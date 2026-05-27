@@ -8,11 +8,12 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 @Deprecated
 public class BoxProp extends Prop {
@@ -33,12 +34,12 @@ public class BoxProp extends Prop {
       if (VectorUtil.isAnySmaller(range, new Vector3i())) {
          throw new IllegalArgumentException("negative range");
       } else {
-         this.range = range.clone();
+         this.range = new Vector3i(range);
          this.material = material;
          this.scanner = scanner;
          this.pattern = pattern;
          this.readBounds_voxelGrid = scanner.getBoundsWithPattern_voxelGrid(pattern);
-         this.writeBounds_voxelGrid = new Bounds3i(this.range.clone().scale(-1), this.range.clone().add(Vector3i.ALL_ONES));
+         this.writeBounds_voxelGrid = new Bounds3i(new Vector3i(this.range).negate(), new Vector3i(this.range).add(Vector3iUtil.ALL_ONES));
          this.writeBounds_voxelGrid.stack(pattern.getBounds_voxelGrid());
       }
    }
@@ -73,8 +74,8 @@ public class BoxProp extends Prop {
    }
 
    private void place(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace) {
-      Vector3i min = position.clone().add(-this.range.x, 0, -this.range.z);
-      Vector3i max = position.clone().add(this.range.x, this.range.y + this.range.y, this.range.z);
+      Vector3i min = new Vector3i(position).add(-this.range.x, 0, -this.range.z);
+      Vector3i max = new Vector3i(position).add(this.range.x, this.range.y + this.range.y, this.range.z);
 
       for (int x = min.x; x <= max.x; x++) {
          for (int y = min.y; y <= max.y; y++) {

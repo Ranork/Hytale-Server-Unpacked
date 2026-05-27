@@ -5,7 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class InternationalizationCommands extends AbstractCommandCollection {
    public InternationalizationCommands() {
       super("lang", "server.commands.i18n.desc");
-      this.addAliases("internationalization", "il8n", "translation");
+      this.addAliases("internationalization", "i18n", "translation");
       this.addSubCommand(new GenerateI18nCommand());
    }
 }

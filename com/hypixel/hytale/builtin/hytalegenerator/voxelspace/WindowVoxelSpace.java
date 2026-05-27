@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.voxelspace;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class WindowVoxelSpace<T> implements VoxelSpace<T> {
    @Nonnull
@@ -24,8 +24,8 @@ public class WindowVoxelSpace<T> implements VoxelSpace<T> {
    }
 
    public void setBounds(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
-      this.bounds.min.assign(minX, minY, minZ);
-      this.bounds.max.assign(maxX, maxY, maxZ);
+      this.bounds.min.set(minX, minY, minZ);
+      this.bounds.max.set(maxX, maxY, maxZ);
    }
 
    @Nonnull

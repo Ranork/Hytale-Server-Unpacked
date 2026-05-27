@@ -2,14 +2,15 @@ package com.hypixel.hytale.math.shape;
 
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector2d;
+import com.hypixel.hytale.math.vector.Vector2dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class Box2D implements Shape2D {
    public static final BuilderCodec<Box2D> CODEC = BuilderCodec.builder(Box2D.class, Box2D::new)
-      .append(new KeyedCodec<>("Min", Vector2d.CODEC), (shape, min) -> shape.min.assign(min), shape -> shape.min)
+      .append(new KeyedCodec<>("Min", Vector2dUtil.CODEC), (shape, min) -> shape.min.set(min), shape -> shape.min)
       .add()
-      .append(new KeyedCodec<>("Max", Vector2d.CODEC), (shape, max) -> shape.max.assign(max), shape -> shape.max)
+      .append(new KeyedCodec<>("Max", Vector2dUtil.CODEC), (shape, max) -> shape.max.set(max), shape -> shape.max)
       .add()
       .build();
    @Nonnull
@@ -22,40 +23,40 @@ public class Box2D implements Shape2D {
 
    public Box2D(@Nonnull Box2D box) {
       this();
-      this.min.assign(box.min);
-      this.max.assign(box.max);
+      this.min.set(box.min);
+      this.max.set(box.max);
    }
 
    public Box2D(@Nonnull Vector2d min, @Nonnull Vector2d max) {
       this();
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
    }
 
    public Box2D(double xMin, double yMin, double xMax, double yMax) {
       this();
-      this.min.assign(xMin, yMin);
-      this.max.assign(xMax, yMax);
+      this.min.set(xMin, yMin);
+      this.max.set(xMax, yMax);
    }
 
    @Nonnull
    public Box2D setMinMax(@Nonnull Vector2d min, @Nonnull Vector2d max) {
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
       return this;
    }
 
    @Nonnull
    public Box2D setMinMax(@Nonnull double[] min, @Nonnull double[] max) {
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
       return this;
    }
 
    @Nonnull
    public Box2D setMinMax(@Nonnull float[] min, @Nonnull float[] max) {
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
       return this;
    }
 
@@ -67,8 +68,8 @@ public class Box2D implements Shape2D {
 
    @Nonnull
    public Box2D setMinMax(double min, double max) {
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
       return this;
    }
 
@@ -95,15 +96,15 @@ public class Box2D implements Shape2D {
 
    @Nonnull
    public Box2D assign(@Nonnull Box2D other) {
-      this.min.assign(other.min);
-      this.max.assign(other.max);
+      this.min.set(other.min);
+      this.max.set(other.max);
       return this;
    }
 
    @Nonnull
    public Box2D minkowskiSum(@Nonnull Box2D bb) {
-      this.min.subtract(bb.max);
-      this.max.subtract(bb.min);
+      this.min.sub(bb.max);
+      this.max.sub(bb.min);
       return this;
    }
 
@@ -157,7 +158,7 @@ public class Box2D implements Shape2D {
 
    @Nonnull
    public Box2D extend(double extentX, double extentY) {
-      this.min.subtract(extentX, extentY);
+      this.min.sub(extentX, extentY);
       this.max.add(extentX, extentY);
       return this;
    }
@@ -177,21 +178,21 @@ public class Box2D implements Shape2D {
    @Nonnull
    @Override
    public Box2D getBox(double x, double y) {
-      return new Box2D(this.min.getX() + x, this.min.getY() + y, this.max.getX() + x, this.max.getY() + y);
+      return new Box2D(this.min.x() + x, this.min.y() + y, this.max.x() + x, this.max.y() + y);
    }
 
    @Override
    public boolean containsPosition(@Nonnull Vector2d origin, @Nonnull Vector2d position) {
-      double x = position.getX() - origin.getX();
-      double y = position.getY() - origin.getY();
-      return x >= this.min.getX() && x <= this.max.getX() && y >= this.min.getY() && y <= this.max.getY();
+      double x = position.x() - origin.x();
+      double y = position.y() - origin.y();
+      return x >= this.min.x() && x <= this.max.x() && y >= this.min.y() && y <= this.max.y();
    }
 
    @Override
    public boolean containsPosition(@Nonnull Vector2d origin, double xx, double yy) {
-      double x = xx - origin.getX();
-      double y = yy - origin.getY();
-      return x >= this.min.getX() && x <= this.max.getX() && y >= this.min.getY() && y <= this.max.getY();
+      double x = xx - origin.x();
+      double y = yy - origin.y();
+      return x >= this.min.x() && x <= this.max.x() && y >= this.min.y() && y <= this.max.y();
    }
 
    @Nonnull

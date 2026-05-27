@@ -23,6 +23,7 @@ public class TagPatternCommand extends CommandBase {
 
    public TagPatternCommand() {
       super("tagpattern", "server.commands.tagpattern.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

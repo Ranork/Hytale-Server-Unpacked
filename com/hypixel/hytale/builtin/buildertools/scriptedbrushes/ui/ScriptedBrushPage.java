@@ -11,9 +11,8 @@ import com.hypixel.hytale.protocol.packets.interface_.Page;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.ui.browser.FileBrowserConfig;
 import com.hypixel.hytale.server.core.ui.browser.FileBrowserEventData;
 import com.hypixel.hytale.server.core.ui.browser.ServerFileBrowser;
@@ -94,32 +93,36 @@ public class ScriptedBrushPage extends InteractiveCustomUIPage<FileBrowserEventD
             playerRefComponent.sendMessage(Message.translation("server.commands.brushConfig.load.error.notFound").param("name", brushId));
             this.sendUpdate();
          } else {
-            UUID playerUUID = playerRefComponent.getUuid();
-            PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(playerUUID);
-            BrushConfigCommandExecutor brushConfigCommandExecutor = prototypeSettings.getBrushConfigCommandExecutor();
-
-            try {
-               scriptedBrushAsset.loadIntoExecutor(brushConfigCommandExecutor);
-               Inventory inventory = playerComponent.getInventory();
-               ItemContainer hotbar = inventory.getHotbar();
-               String editorToolItemId = ScriptedBrushAsset.getEditorToolItemId(brushId);
-               if (editorToolItemId == null) {
-                  editorToolItemId = "EditorTool_ScriptedBrushTemplate";
-               }
-
-               hotbar.setItemStackForSlot(inventory.getActiveHotbarSlot(), new ItemStack(editorToolItemId));
-               prototypeSettings.setPrototypeItemId(editorToolItemId);
-               prototypeSettings.setCurrentlyLoadedBrushConfigName(scriptedBrushAsset.getId());
-               prototypeSettings.setUsePrototypeBrushConfigurations(true);
-               playerComponent.getPageManager().setPage(ref, store, Page.None);
-               playerRefComponent.sendMessage(Message.translation("server.commands.brushConfig.loaded").param("name", scriptedBrushAsset.getId()));
-            } catch (Exception var18) {
-               playerRefComponent.sendMessage(
-                  Message.translation("server.commands.brushConfig.load.error.loadFailed")
-                     .param("name", brushId)
-                     .param("error", var18.getMessage() != null ? var18.getMessage() : "Unknown error")
-               );
+            InventoryComponent.Hotbar hotbarComponent = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+            if (hotbarComponent == null) {
+               playerRefComponent.sendMessage(Message.translation("server.commands.brushConfig.load.error.noHotbar"));
                this.sendUpdate();
+            } else {
+               UUID playerUUID = playerRefComponent.getUuid();
+               PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(playerUUID);
+               BrushConfigCommandExecutor brushConfigCommandExecutor = prototypeSettings.getBrushConfigCommandExecutor();
+
+               try {
+                  scriptedBrushAsset.loadIntoExecutor(brushConfigCommandExecutor);
+                  String editorToolItemId = ScriptedBrushAsset.getEditorToolItemId(brushId);
+                  if (editorToolItemId == null) {
+                     editorToolItemId = "EditorTool_ScriptedBrushTemplate";
+                  }
+
+                  hotbarComponent.getInventory().setItemStackForSlot(hotbarComponent.getActiveSlot(), new ItemStack(editorToolItemId));
+                  prototypeSettings.setPrototypeItemId(editorToolItemId);
+                  prototypeSettings.setCurrentlyLoadedBrushConfigName(scriptedBrushAsset.getId());
+                  prototypeSettings.setUsePrototypeBrushConfigurations(true);
+                  playerComponent.getPageManager().setPage(ref, store, Page.None);
+                  playerRefComponent.sendMessage(Message.translation("server.commands.brushConfig.loaded").param("name", scriptedBrushAsset.getId()));
+               } catch (Exception var17) {
+                  playerRefComponent.sendMessage(
+                     Message.translation("server.commands.brushConfig.load.error.loadFailed")
+                        .param("name", brushId)
+                        .param("error", var17.getMessage() != null ? var17.getMessage() : "Unknown error")
+                  );
+                  this.sendUpdate();
+               }
             }
          }
       } else {

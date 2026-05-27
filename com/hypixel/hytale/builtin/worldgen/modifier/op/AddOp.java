@@ -21,16 +21,16 @@ public class AddOp implements Op {
    protected Content content = null;
 
    @Override
+   public Content.Type type() {
+      return this.content == null ? Content.Type.NONE : this.content.type();
+   }
+
+   @Override
    public <T> void apply(@Nonnull ModifyEvent<T> event) throws Error {
       if (this.content != null) {
          try {
-            T content = event.loader().load(this.content.get());
-            if (content == null) {
-               throw new NullPointerException("Failed to load content " + this.content);
-            } else {
-               event.entries().add(content);
-               LogUtil.getLogger().at(Level.FINE).log("[%s] Added content %s to %s", event.type(), this.content, event.file().getContentPath());
-            }
+            this.content.applyTo(event);
+            LogUtil.getLogger().at(Level.FINE).log("[%s] Added content %s to %s", event.type(), this.content, event.file().getContentPath());
          } catch (Throwable var3) {
             throw new Error("Failed to load content " + this.content, var3);
          }

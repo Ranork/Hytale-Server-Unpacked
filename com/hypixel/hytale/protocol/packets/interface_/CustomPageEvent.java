@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,26 +51,34 @@ public class CustomPageEvent implements Packet, ToServerPacket {
 
    @Nonnull
    public static CustomPageEvent deserialize(@Nonnull ByteBuf buf, int offset) {
-      CustomPageEvent obj = new CustomPageEvent();
-      byte nullBits = buf.getByte(offset);
-      obj.type = CustomPageEventType.fromValue(buf.getByte(offset + 1));
-      int pos = offset + 2;
-      if ((nullBits & 1) != 0) {
-         int dataLen = VarInt.peek(buf, pos);
-         if (dataLen < 0) {
-            throw ProtocolException.negativeLength("Data", dataLen);
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("CustomPageEvent", 2, buf.readableBytes() - offset);
+      } else {
+         CustomPageEvent obj = new CustomPageEvent();
+         byte nullBits = buf.getByte(offset);
+         obj.type = CustomPageEventType.fromValue(buf.getByte(offset + 1));
+         int pos = offset + 2;
+         if ((nullBits & 1) != 0) {
+            int dataLen = VarInt.peek(buf, pos);
+            if (dataLen < 0) {
+               throw ProtocolException.invalidVarInt("Data");
+            }
+
+            int dataVarLen = VarInt.size(dataLen);
+            if (dataLen > 4096000) {
+               throw ProtocolException.stringTooLong("Data", dataLen, 4096000);
+            }
+
+            if (pos + dataVarLen + dataLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Data", pos + dataVarLen + dataLen, buf.readableBytes());
+            }
+
+            obj.data = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+            pos += dataVarLen + dataLen;
          }
 
-         if (dataLen > 4096000) {
-            throw ProtocolException.stringTooLong("Data", dataLen, 4096000);
-         }
-
-         int dataVarLen = VarInt.length(buf, pos);
-         obj.data = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += dataVarLen + dataLen;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -77,10 +86,52 @@ public class CustomPageEvent implements Packet, ToServerPacket {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static CustomPageEventType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static CustomPageEventType getType(MemorySegment mem, int offset) {
+      return CustomPageEventType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   @Nullable
+   public static String getData(MemorySegment mem) {
+      return getData(mem, 0);
+   }
+
+   @Nullable
+   public static String getData(MemorySegment mem, int offset) {
+      return hasData(mem, offset) ? PacketIO.readVarString("Data", mem, offset + 2, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasData(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static CustomPageEvent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CustomPageEvent toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CustomPageEvent", offset + 2, (int)mem.byteSize());
+      } else {
+         return new CustomPageEvent(
+            CustomPageEventType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1))),
+            hasData(mem, offset) ? PacketIO.readVarString("Data", mem, offset + 2, 4096000, PacketIO.UTF8) : null
+         );
+      }
    }
 
    @Override
@@ -98,6 +149,23 @@ public class CustomPageEvent implements Packet, ToServerPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.data != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.data != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.data, 4096000);
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 2;
       if (this.data != null) {
@@ -112,25 +180,30 @@ public class CustomPageEvent implements Packet, ToServerPacket {
          return ValidationResult.error("Buffer too small: expected at least 2 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
-         int pos = offset + 2;
-         if ((nullBits & 1) != 0) {
-            int dataLen = VarInt.peek(buffer, pos);
-            if (dataLen < 0) {
-               return ValidationResult.error("Invalid string length for Data");
+         int v = buffer.getByte(offset + 1) & 255;
+         if (v >= 3) {
+            return ValidationResult.error("Invalid CustomPageEventType value for Type");
+         } else {
+            v = offset + 2;
+            if ((nullBits & 1) != 0) {
+               int dataLen = VarInt.peek(buffer, v);
+               if (dataLen < 0) {
+                  return ValidationResult.error("Invalid string length for Data");
+               }
+
+               if (dataLen > 4096000) {
+                  return ValidationResult.error("Data exceeds max length 4096000");
+               }
+
+               v += VarInt.size(dataLen);
+               v += dataLen;
+               if (v > buffer.writerIndex()) {
+                  return ValidationResult.error("Buffer overflow reading Data");
+               }
             }
 
-            if (dataLen > 4096000) {
-               return ValidationResult.error("Data exceeds max length 4096000");
-            }
-
-            pos += VarInt.length(buffer, pos);
-            pos += dataLen;
-            if (pos > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading Data");
-            }
+            return ValidationResult.OK;
          }
-
-         return ValidationResult.OK;
       }
    }
 

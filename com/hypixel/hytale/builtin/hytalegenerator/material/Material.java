@@ -45,8 +45,7 @@ public final class Material {
    }
 
    public static int hashCode(@Nonnull SolidMaterial solid, @Nonnull FluidMaterial fluid) {
-      int result = solid.hashCode();
-      return 31 * result + fluid.hashCode();
+      return Objects.hash(solid.hashCode(), fluid.hashCode());
    }
 
    public static int hashMaterialIds(@Nonnull SolidMaterial solid, @Nonnull FluidMaterial fluid) {
@@ -69,7 +68,7 @@ public final class Material {
       return "Material[solid=" + this.solid + ", fluid=" + this.fluid + "]";
    }
 
-   private class Hash {
+   private static class Hash {
       int value = 0;
       boolean isCalculated = false;
    }

@@ -16,6 +16,8 @@ public enum RoleDebugFlags implements Supplier<String> {
    Collisions("Trace collision information of motion controllers"),
    BlockCollisions("Trace collisions down to block level"),
    ProbeBlockCollisions("Trace collisions down to block level when probing"),
+   ChargeState("Trace BodyMotionCharge state transitions"),
+   ChargePath("Trace BodyMotionCharge probe path data"),
    MotionControllerMove("Trace movement activity of motion controllers"),
    ValidatePositions("Validate computed movement positions are not intersecting blocks"),
    SteeringRole("Debug blended steering behaviour from role like avoidance/separation"),
@@ -49,6 +51,9 @@ public enum RoleDebugFlags implements Supplier<String> {
    VisTranslation("Visualize current translation vector"),
    VisFlock("Visualize flock member connections"),
    VisPath("Visualize pathfinding waypoints"),
+   VisChargePath("Visualize BodyMotionCharge rail step targets"),
+   VisChargeCollisions("Visualize BodyMotionCharge collision hits"),
+   VisChargeEntityHits("Visualize BodyMotionCharge entity hits (overrides VisChargeCollisions entity coloring)"),
    BeaconMessages("Enable debugging of beacon message sending and receiving");
 
    private static final RoleDebugFlags.RoleDebugPreset[] presets = new RoleDebugFlags.RoleDebugPreset[]{

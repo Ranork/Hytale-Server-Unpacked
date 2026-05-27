@@ -4,8 +4,8 @@ import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector2iUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.metrics.metric.AverageCollector;
 import com.hypixel.hytale.protocol.ColorLight;
 import com.hypixel.hytale.protocol.Opacity;
@@ -31,6 +31,9 @@ import java.util.function.IntBinaryOperator;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2ic;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class FloodLightCalculation implements LightCalculation {
    protected final ChunkLightingManager chunkLightingManager;
@@ -39,7 +42,7 @@ public class FloodLightCalculation implements LightCalculation {
    protected final AverageCollector borderAvg = new AverageCollector();
    protected final AverageCollector avgChunk = new AverageCollector();
    protected final BlockSection[][] fromSections = new BlockSection[][]{
-      new BlockSection[Vector3i.BLOCK_SIDES.length], new BlockSection[Vector3i.BLOCK_EDGES.length], new BlockSection[Vector3i.BLOCK_CORNERS.length]
+      new BlockSection[Vector3iUtil.BLOCK_SIDES.length], new BlockSection[Vector3iUtil.BLOCK_EDGES.length], new BlockSection[Vector3iUtil.BLOCK_CORNERS.length]
    };
 
    public FloodLightCalculation(ChunkLightingManager chunkLightingManager) {
@@ -452,9 +455,9 @@ public class FloodLightCalculation implements LightCalculation {
                byte skyLight = light.getLight(column, 3);
                byte propagatedValue = (byte)(skyLight - 1);
                if (propagatedValue >= 1) {
-                  for (Vector2i side : Vector2i.DIRECTIONS) {
-                     int nx = x + side.x;
-                     int nz = zx + side.y;
+                  for (Vector2ic side : Vector2iUtil.DIRECTIONS) {
+                     int nx = x + side.x();
+                     int nz = zx + side.y();
                      if (nx >= 0 && nx < 32 && nz >= 0 && nz < 32) {
                         int neighbourColumn = ChunkUtil.indexColumn(nx, nz);
                         byte neighbourSkyLight = light.getLight(neighbourColumn, 3);
@@ -568,12 +571,12 @@ public class FloodLightCalculation implements LightCalculation {
                      int y = ChunkUtil.yFromIndex(blockIndex);
                      int z = ChunkUtil.zFromIndex(blockIndex);
 
-                     for (Vector3i side : Vector3i.BLOCK_SIDES) {
-                        int nx = x + side.x;
+                     for (Vector3ic side : Vector3iUtil.BLOCK_SIDES) {
+                        int nx = x + side.x();
                         if (nx >= 0 && nx < 32) {
-                           int ny = y + side.y;
+                           int ny = y + side.y();
                            if (ny >= 0 && ny < 32) {
-                              int nz = z + side.z;
+                              int nz = z + side.z();
                               if (nz >= 0 && nz < 32) {
                                  int neighbourBlock = ChunkUtil.indexBlock(nx, ny, nz);
                                  this.propagateLight(
@@ -598,18 +601,18 @@ public class FloodLightCalculation implements LightCalculation {
    }
 
    public boolean testNeighboursForLocalLight(@Nonnull LocalCachedChunkAccessor accessor, @Nonnull WorldChunk worldChunk, int chunkX, int chunkY, int chunkZ) {
-      Vector3i[][] blockParts = Vector3i.BLOCK_PARTS;
+      Vector3ic[][] blockParts = Vector3iUtil.BLOCK_PARTS;
 
       for (int partType = 0; partType < this.fromSections.length; partType++) {
          BlockSection[] partSections = this.fromSections[partType];
          Arrays.fill(partSections, null);
-         Vector3i[] directions = blockParts[partType];
+         Vector3ic[] directions = blockParts[partType];
 
          for (int i = 0; i < directions.length; i++) {
-            Vector3i side = directions[i];
-            int nx = chunkX + side.x;
-            int ny = chunkY + side.y;
-            int nz = chunkZ + side.z;
+            Vector3ic side = directions[i];
+            int nx = chunkX + side.x();
+            int ny = chunkY + side.y();
+            int nz = chunkZ + side.z();
             if (ny >= 0 && ny < 10) {
                if (nx == chunkX && nz == chunkZ) {
                   BlockSection fromSection = worldChunk.getBlockChunk().getSectionAtIndex(ny);

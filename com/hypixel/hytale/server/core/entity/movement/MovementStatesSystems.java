@@ -93,7 +93,7 @@ public class MovementStatesSystems {
 
          PlayerWorldData perWorldData = playerComponent.getPlayerConfigData().getPerWorldData(world.getName());
          SavedMovementStates movementStates = perWorldData.getLastMovementStates();
-         playerComponent.applyMovementStates(
+         Player.applyMovementStates(
             ref, movementStates != null ? movementStates : new SavedMovementStates(), movementStatesComponent.getMovementStates(), store
          );
       }

@@ -10,10 +10,9 @@ import com.hypixel.hytale.protocol.InteractionCooldown;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.meta.DynamicMetaStore;
 import com.hypixel.hytale.server.core.meta.MetaKey;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
@@ -78,23 +77,24 @@ public class ChangeActiveSlotInteraction extends Interaction {
          assert commandBuffer != null;
 
          Ref<EntityStore> ref = context.getEntity();
-         if (EntityUtils.getEntity(ref, commandBuffer) instanceof LivingEntity livingEntity) {
-            DynamicMetaStore var15 = context.getMetaStore();
+         InventoryComponent.Hotbar hotbarComponent = commandBuffer.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent != null) {
+            DynamicMetaStore<InteractionContext> metaStore = context.getMetaStore();
             byte slot;
             if (this.targetSlot == Integer.MIN_VALUE) {
-               slot = var15.getMetaObject(TARGET_SLOT).byteValue();
+               slot = metaStore.getMetaObject(TARGET_SLOT).byteValue();
             } else {
-               if (livingEntity.getInventory().getActiveHotbarSlot() == this.targetSlot) {
+               if (hotbarComponent.getActiveSlot() == this.targetSlot) {
                   context.getState().state = InteractionState.Finished;
                   return;
                }
 
                slot = (byte)this.targetSlot;
-               var15.putMetaObject(TARGET_SLOT, Integer.valueOf(slot));
+               metaStore.putMetaObject(TARGET_SLOT, Integer.valueOf(slot));
             }
 
-            livingEntity.getInventory().setActiveHotbarSlot(ref, slot, commandBuffer);
-            Runnable action = var15.removeMetaObject(PLACE_MOVED_ITEM);
+            hotbarComponent.setActiveSlot(slot, ref, commandBuffer);
+            Runnable action = metaStore.removeMetaObject(PLACE_MOVED_ITEM);
             if (action != null) {
                action.run();
             }

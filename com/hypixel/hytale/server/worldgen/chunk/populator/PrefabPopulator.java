@@ -1,11 +1,11 @@
 package com.hypixel.hytale.server.worldgen.chunk.populator;
 
 import com.hypixel.hytale.common.map.IWeightedMap;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.procedurallib.condition.ConstantIntCondition;
 import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateRndCondition;
 import com.hypixel.hytale.procedurallib.condition.IBlockFluidCondition;
@@ -25,10 +25,12 @@ import com.hypixel.hytale.server.worldgen.container.PrefabContainer;
 import com.hypixel.hytale.server.worldgen.container.UniquePrefabContainer;
 import com.hypixel.hytale.server.worldgen.container.WaterContainer;
 import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabSupplier;
+import com.hypixel.hytale.server.worldgen.prefab.PrefabBaseCheck;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabCategory;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabPasteUtil;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabPatternGenerator;
 import com.hypixel.hytale.server.worldgen.util.BlockFluidEntry;
+import com.hypixel.hytale.server.worldgen.util.LogUtil;
 import com.hypixel.hytale.server.worldgen.util.bounds.IChunkBounds;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
 import com.hypixel.hytale.server.worldgen.zone.Zone;
@@ -38,12 +40,15 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.BitSet;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PrefabPopulator {
    private static final UniquePrefabContainer.UniquePrefabEntry[] EMPTY_UNIQUE_PREFABS = new UniquePrefabContainer.UniquePrefabEntry[0];
    private static final int BIOME_SAMPLE_STEP_SIZE = 8;
+   private static final int BASE_CHECK_MIN_RADIUS = 3;
    private int worldSeed;
    private long prefabSeed;
    private int minPriority = Integer.MAX_VALUE;
@@ -58,7 +63,7 @@ public class PrefabPopulator {
    private final FastRandom random = new FastRandom(0L);
    private final ObjectArrayList<Biome> biomes = new ObjectArrayList();
    private final ObjectArrayList<PrefabPopulator.Candidate> prefabs = new ObjectArrayList();
-   private final BitSet conflicts = new BitSet();
+   private final BitSet invalidated = new BitSet();
 
    public static void populate(int seed, @Nonnull ChunkGeneratorExecution execution) {
       ChunkGenerator.getResource().prefabPopulator.run(seed, execution);
@@ -70,7 +75,7 @@ public class PrefabPopulator {
       this.uniquePrefabs = Objects.requireNonNullElse(execution.getChunkGenerator().getUniquePrefabs(seed), EMPTY_UNIQUE_PREFABS);
       this.collectBiomes(seed, execution);
       this.collectPrefabs(seed, execution);
-      this.collectConflicts();
+      this.invalidatePrefabs();
       this.generatePrefabs(seed, execution);
       this.generateUniquePrefabs(seed, execution);
       this.biome = null;
@@ -79,7 +84,7 @@ public class PrefabPopulator {
       this.uniquePrefabs = EMPTY_UNIQUE_PREFABS;
       this.biomes.clear();
       this.prefabs.clear();
-      this.conflicts.clear();
+      this.invalidated.clear();
    }
 
    private void collectBiomes(int seed, ChunkGeneratorExecution execution) {
@@ -161,7 +166,7 @@ public class PrefabPopulator {
 
    private void generatePrefabs(int seed, @Nonnull ChunkGeneratorExecution execution) {
       for (int i = 0; i < this.prefabs.size(); i++) {
-         if (!this.conflicts.get(i)) {
+         if (!this.invalidated.get(i)) {
             PrefabPopulator.Candidate prefab = (PrefabPopulator.Candidate)this.prefabs.get(i);
             int x = prefab.x;
             int y = prefab.y;
@@ -186,9 +191,9 @@ public class PrefabPopulator {
             Vector3i v = entry.getPosition();
             generatePrefabAt(
                seed,
-               v.getX(),
-               v.getZ(),
-               v.getY(),
+               v.x(),
+               v.z(),
+               v.y(),
                execution,
                entry.getPrefabSupplier(),
                entry.getConfiguration(),
@@ -240,10 +245,15 @@ public class PrefabPopulator {
                      int y = getHeight(this.worldSeed, x, z, this.execution, result.getBiome(), patternGenerator, this.random);
                      if (isMatchingHeight(this.worldSeed, x, z, y, this.random, patternGenerator)) {
                         if (isMatchingParentBlock(this.worldSeed, x, z, y, this.random, result, this.entry)) {
-                           PrefabCategory category = patternGenerator.getCategory();
-                           this.prefabs
-                              .add(new PrefabPopulator.Candidate(x, y, z, category.priority(), rotation, prefab, supplier, this.entry, patternGenerator));
-                           this.minPriority = Math.min(this.minPriority, category.priority());
+                           if (!isBaseValid(this.worldSeed, x, z, y, rotation, prefab, patternGenerator, this.execution)) {
+                              ((HytaleLogger.Api)((HytaleLogger.Api)LogUtil.getLogger().atFine()).atMostEvery(1, TimeUnit.SECONDS))
+                                 .log("Prefab failed base-check at: /tp %d %d %d [%s]", x, y, z, supplier.getPrefabName());
+                           } else {
+                              PrefabCategory category = patternGenerator.getCategory();
+                              this.prefabs
+                                 .add(new PrefabPopulator.Candidate(x, y, z, category.priority(), rotation, prefab, supplier, this.entry, patternGenerator));
+                              this.minPriority = Math.min(this.minPriority, category.priority());
+                           }
                         }
                      }
                   }
@@ -253,16 +263,17 @@ public class PrefabPopulator {
       }
    }
 
-   private void collectConflicts() {
+   private void invalidatePrefabs() {
       for (int i = 0; i < this.prefabs.size(); i++) {
          PrefabPopulator.Candidate candidate = (PrefabPopulator.Candidate)this.prefabs.get(i);
-         int minY = candidate.y + candidate.buffer.getMinY();
-         int maxY = candidate.y + candidate.buffer.getMaxY();
-         int minX = candidate.x + candidate.buffer.getMinX(candidate.rotation);
-         int minZ = candidate.z + candidate.buffer.getMinZ(candidate.rotation);
-         int maxX = candidate.x + candidate.buffer.getMaxX(candidate.rotation);
-         int maxZ = candidate.z + candidate.buffer.getMaxZ(candidate.rotation);
-         if (candidate.priority > this.minPriority && !this.conflicts.get(i)) {
+         if (candidate.priority > this.minPriority && !this.invalidated.get(i)) {
+            int minY = candidate.y + candidate.buffer.getMinY();
+            int maxY = candidate.y + candidate.buffer.getMaxY();
+            int minX = candidate.x + candidate.buffer.getMinX(candidate.rotation);
+            int minZ = candidate.z + candidate.buffer.getMinZ(candidate.rotation);
+            int maxX = candidate.x + candidate.buffer.getMaxX(candidate.rotation);
+            int maxZ = candidate.z + candidate.buffer.getMaxZ(candidate.rotation);
+
             for (int j = 0; j < this.prefabs.size(); j++) {
                PrefabPopulator.Candidate other = (PrefabPopulator.Candidate)this.prefabs.get(j);
                if (candidate.priority > other.priority
@@ -280,10 +291,50 @@ public class PrefabPopulator {
                      other.y + other.buffer.getMaxY(),
                      other.z + other.buffer.getMaxZ(other.rotation)
                   )) {
-                  this.conflicts.set(j);
+                  this.invalidated.set(j);
                }
             }
          }
+      }
+   }
+
+   private static boolean isBaseValid(
+      int seed,
+      int x,
+      int z,
+      int y,
+      @Nonnull PrefabRotation rotation,
+      @Nonnull IPrefabBuffer buffer,
+      @Nonnull PrefabPatternGenerator pattern,
+      @Nonnull ChunkGeneratorExecution execution
+   ) {
+      if (pattern.getBaseChecks().length == 0) {
+         return true;
+      } else {
+         int minX = x + buffer.getMinX(rotation);
+         int minZ = z + buffer.getMinZ(rotation);
+         int maxX = x + buffer.getMaxX(rotation);
+         int maxZ = z + buffer.getMaxZ(rotation);
+         int sizeX = maxX - minX;
+         int sizeZ = maxZ - minZ;
+         int size = Math.max(sizeX, sizeZ);
+
+         for (PrefabBaseCheck check : pattern.getBaseChecks()) {
+            if (size >= check.getPrefabSize()) {
+               int midX = minX + maxX >> 1;
+               int midZ = minZ + maxZ >> 1;
+               int minY = y + buffer.getMinY();
+               int threshold = minY - check.getHeightTolerance();
+               int radX = MathUtil.fastFloor((sizeX >> 1) * check.getBaseScale());
+               int radZ = MathUtil.fastFloor((sizeZ >> 1) * check.getBaseScale());
+               return (radX <= 3 || execution.getHeight(seed, midX - radX, midZ) >= threshold)
+                  && (radX <= 3 || execution.getHeight(seed, midX + radX, midZ) >= threshold)
+                  && (radZ <= 3 || execution.getHeight(seed, midX, midZ - radZ) >= threshold)
+                  && (radZ <= 3 || execution.getHeight(seed, midX, midZ + radZ) >= threshold);
+            }
+         }
+
+         return true;
       }
    }
 
@@ -305,8 +356,8 @@ public class PrefabPopulator {
 
          for (UniquePrefabContainer.UniquePrefabEntry unique : uniquePrefabs) {
             if (priority < unique.getCategory().priority()) {
-               long dx = x - unique.getPosition().getX();
-               long dz = z - unique.getPosition().getZ();
+               long dx = x - unique.getPosition().x();
+               long dz = z - unique.getPosition().z();
                if (dx * dx + dz * dz <= radius2) {
                   return true;
                }

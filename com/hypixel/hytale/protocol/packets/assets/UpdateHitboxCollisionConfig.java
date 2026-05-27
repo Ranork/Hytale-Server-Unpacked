@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -57,36 +59,41 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateHitboxCollisionConfig deserialize(@Nonnull ByteBuf buf, int offset) {
-      UpdateHitboxCollisionConfig obj = new UpdateHitboxCollisionConfig();
-      byte nullBits = buf.getByte(offset);
-      obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
-      obj.maxId = buf.getIntLE(offset + 2);
-      int pos = offset + 6;
-      if ((nullBits & 1) != 0) {
-         int hitboxCollisionConfigsCount = VarInt.peek(buf, pos);
-         if (hitboxCollisionConfigsCount < 0) {
-            throw ProtocolException.negativeLength("HitboxCollisionConfigs", hitboxCollisionConfigsCount);
-         }
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateHitboxCollisionConfig", 6, buf.readableBytes() - offset);
+      } else {
+         UpdateHitboxCollisionConfig obj = new UpdateHitboxCollisionConfig();
+         byte nullBits = buf.getByte(offset);
+         obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
+         obj.maxId = buf.getIntLE(offset + 2);
+         int pos = offset + 6;
+         if ((nullBits & 1) != 0) {
+            int hitboxCollisionConfigsCount = VarInt.peek(buf, pos);
+            if (hitboxCollisionConfigsCount < 0) {
+               throw ProtocolException.invalidVarInt("HitboxCollisionConfigs");
+            }
 
-         if (hitboxCollisionConfigsCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("HitboxCollisionConfigs", hitboxCollisionConfigsCount, 4096000);
-         }
+            int hitboxCollisionConfigsVarLen = VarInt.size(hitboxCollisionConfigsCount);
+            if (hitboxCollisionConfigsCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("HitboxCollisionConfigs", hitboxCollisionConfigsCount, 4096000);
+            }
 
-         pos += VarInt.size(hitboxCollisionConfigsCount);
-         obj.hitboxCollisionConfigs = new HashMap<>(hitboxCollisionConfigsCount);
+            pos += hitboxCollisionConfigsVarLen;
+            obj.hitboxCollisionConfigs = new HashMap<>(hitboxCollisionConfigsCount);
 
-         for (int i = 0; i < hitboxCollisionConfigsCount; i++) {
-            int key = buf.getIntLE(pos);
-            pos += 4;
-            HitboxCollisionConfig val = HitboxCollisionConfig.deserialize(buf, pos);
-            pos += HitboxCollisionConfig.computeBytesConsumed(buf, pos);
-            if (obj.hitboxCollisionConfigs.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("hitboxCollisionConfigs", key);
+            for (int i = 0; i < hitboxCollisionConfigsCount; i++) {
+               int key = buf.getIntLE(pos);
+               pos += 4;
+               HitboxCollisionConfig val = HitboxCollisionConfig.deserialize(buf, pos);
+               pos += HitboxCollisionConfig.computeBytesConsumed(buf, pos);
+               if (obj.hitboxCollisionConfigs.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("hitboxCollisionConfigs", key);
+               }
             }
          }
-      }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -94,7 +101,7 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -103,6 +110,108 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   public static int getMaxId(MemorySegment mem) {
+      return getMaxId(mem, 0);
+   }
+
+   public static int getMaxId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 2));
+   }
+
+   @Nullable
+   public static Map<Integer, HitboxCollisionConfig> getHitboxCollisionConfigs(MemorySegment mem) {
+      return getHitboxCollisionConfigs(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, HitboxCollisionConfig> getHitboxCollisionConfigs(MemorySegment mem, int offset) {
+      if (!hasHitboxCollisionConfigs(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 6;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("HitboxCollisionConfigs", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("HitboxCollisionConfigs", len, 4096000);
+         } else {
+            Map<Integer, HitboxCollisionConfig> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               HitboxCollisionConfig value = HitboxCollisionConfig.toObject(mem, off);
+               off += value.computeSize();
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("HitboxCollisionConfigs", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static boolean hasHitboxCollisionConfigs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static UpdateHitboxCollisionConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateHitboxCollisionConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateHitboxCollisionConfig", offset + 6, (int)mem.byteSize());
+      } else {
+         Map<Integer, HitboxCollisionConfig> hitboxCollisionConfigs = null;
+         if (hasHitboxCollisionConfigs(mem, offset)) {
+            int off = offset + 6;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("HitboxCollisionConfigs", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("HitboxCollisionConfigs", len, 4096000);
+            }
+
+            hitboxCollisionConfigs = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               HitboxCollisionConfig value = HitboxCollisionConfig.toObject(mem, off);
+               off += value.computeSize();
+               if (hitboxCollisionConfigs.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("HitboxCollisionConfigs", key);
+               }
+            }
+         }
+
+         return new UpdateHitboxCollisionConfig(
+            UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1))), mem.get(PacketIO.PROTO_INT, (long)(offset + 2)), hitboxCollisionConfigs
+         );
+      }
    }
 
    @Override
@@ -130,6 +239,34 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.hitboxCollisionConfigs != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 2), this.maxId);
+      int varOffset = offset + 6;
+      if (this.hitboxCollisionConfigs != null) {
+         if (this.hitboxCollisionConfigs.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("HitboxCollisionConfigs", this.hitboxCollisionConfigs.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.hitboxCollisionConfigs.size());
+
+         for (Entry<Integer, HitboxCollisionConfig> e : this.hitboxCollisionConfigs.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, (long)varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 6;
       if (this.hitboxCollisionConfigs != null) {
@@ -144,30 +281,35 @@ public class UpdateHitboxCollisionConfig implements Packet, ToClientPacket {
          return ValidationResult.error("Buffer too small: expected at least 6 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
-         int pos = offset + 6;
-         if ((nullBits & 1) != 0) {
-            int hitboxCollisionConfigsCount = VarInt.peek(buffer, pos);
-            if (hitboxCollisionConfigsCount < 0) {
-               return ValidationResult.error("Invalid dictionary count for HitboxCollisionConfigs");
-            }
-
-            if (hitboxCollisionConfigsCount > 4096000) {
-               return ValidationResult.error("HitboxCollisionConfigs exceeds max length 4096000");
-            }
-
-            pos += VarInt.length(buffer, pos);
-
-            for (int i = 0; i < hitboxCollisionConfigsCount; i++) {
-               pos += 4;
-               if (pos > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading key");
+         int v = buffer.getByte(offset + 1) & 255;
+         if (v >= 3) {
+            return ValidationResult.error("Invalid UpdateType value for Type");
+         } else {
+            v = offset + 6;
+            if ((nullBits & 1) != 0) {
+               int hitboxCollisionConfigsCount = VarInt.peek(buffer, v);
+               if (hitboxCollisionConfigsCount < 0) {
+                  return ValidationResult.error("Invalid dictionary count for HitboxCollisionConfigs");
                }
 
-               pos += 5;
-            }
-         }
+               if (hitboxCollisionConfigsCount > 4096000) {
+                  return ValidationResult.error("HitboxCollisionConfigs exceeds max length 4096000");
+               }
 
-         return ValidationResult.OK;
+               v += VarInt.size(hitboxCollisionConfigsCount);
+
+               for (int i = 0; i < hitboxCollisionConfigsCount; i++) {
+                  v += 4;
+                  if (v > buffer.writerIndex()) {
+                     return ValidationResult.error("Buffer overflow reading key");
+                  }
+
+                  v += 5;
+               }
+            }
+
+            return ValidationResult.OK;
+         }
       }
    }
 

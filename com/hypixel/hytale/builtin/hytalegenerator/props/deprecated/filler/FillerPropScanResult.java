@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.filler;
 
 import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.ScanResult;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class FillerPropScanResult implements ScanResult {
    private List<Vector3i> positions;
@@ -15,11 +15,6 @@ public class FillerPropScanResult implements ScanResult {
       }
    }
 
-   @Nullable
-   public List<Vector3i> getFluidBlocks() {
-      return this.positions;
-   }
-
    @Nonnull
    public static FillerPropScanResult cast(ScanResult scanResult) {
       if (!(scanResult instanceof FillerPropScanResult)) {
@@ -27,6 +22,11 @@ public class FillerPropScanResult implements ScanResult {
       } else {
          return (FillerPropScanResult)scanResult;
       }
+   }
+
+   @Nullable
+   public List<Vector3i> getFluidBlocks() {
+      return this.positions;
    }
 
    @Override

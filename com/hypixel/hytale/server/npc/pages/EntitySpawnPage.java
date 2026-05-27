@@ -10,10 +10,9 @@ import com.hypixel.hytale.component.NonSerialized;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -23,6 +22,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
+import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -45,14 +45,17 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.npc.INonPlayerCharacter;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
+import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawningContext;
+import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import java.util.Comparator;
@@ -64,6 +67,8 @@ import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.EntitySpawnPageEventData> {
    private static final String COMMON_TEXT_BUTTON_DOCUMENT = "Common/TextButton.ui";
@@ -98,11 +103,12 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
    @Nullable
    private Ref<EntityStore> modelPreview;
    private Vector3d position;
-   private Vector3f rotation;
+   private Rotation3f rotation;
    private float currentRotationOffset = 0.0F;
    private float currentScale = 1.0F;
    private float lastPreviewScale = 1.0F;
    private long lastScaleUpdateTime = 0L;
+   private boolean freezeOnSpawn = false;
 
    public EntitySpawnPage(@Nonnull PlayerRef playerRef) {
       super(playerRef, CustomPageLifetime.CanDismiss, EntitySpawnPage.EntitySpawnPageEventData.CODEC);
@@ -121,12 +127,24 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
          false
       );
       eventBuilder.addEventBinding(
+         CustomUIEventBindingType.MouseButtonReleased,
+         "#RotationOffset",
+         new EventData().append("Type", "RotationReleased").append("@RotationOffset", "#RotationOffset.Value"),
+         false
+      );
+      eventBuilder.addEventBinding(
          CustomUIEventBindingType.ValueChanged, "#ScaleSlider", new EventData().append("Type", "UpdateScale").append("@Scale", "#ScaleSlider.Value"), false
       );
       eventBuilder.addEventBinding(
          CustomUIEventBindingType.MouseButtonReleased,
          "#ScaleSlider",
          new EventData().append("Type", "ScaleReleased").append("@Scale", "#ScaleSlider.Value"),
+         false
+      );
+      eventBuilder.addEventBinding(
+         CustomUIEventBindingType.ValueChanged,
+         "#FreezeOnSpawn #CheckBox",
+         new EventData().append("Type", "FreezeOnSpawn").append("@FreezeOnSpawn", "#FreezeOnSpawn #CheckBox.Value"),
          false
       );
       eventBuilder.addEventBinding(
@@ -150,20 +168,20 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
          UIEventBuilder eventBuilder = new UIEventBuilder();
          this.buildList(ref, store, commandBuilder, eventBuilder);
          this.sendUpdate(commandBuilder, eventBuilder, false);
-      } else {
-         String var9 = data.type;
-         switch (var9) {
+      } else if (data.type != null) {
+         String var10 = data.type;
+         switch (var10) {
             case "TabSwitch":
                if (data.tab != null && !data.tab.equals(this.activeTab)) {
                   this.activeTab = data.tab;
                   this.searchQuery = "";
                   this.clearPreview(store);
-                  UICommandBuilder commandBuilder = new UICommandBuilder();
+                  UICommandBuilder commandBuilderx = new UICommandBuilder();
                   UIEventBuilder eventBuilder = new UIEventBuilder();
-                  this.updateTabVisibility(commandBuilder);
-                  commandBuilder.set("#SearchInput.Value", "");
-                  this.buildList(ref, store, commandBuilder, eventBuilder);
-                  this.sendUpdate(commandBuilder, eventBuilder, false);
+                  this.updateTabVisibility(commandBuilderx);
+                  commandBuilderx.set("#SearchInput.Value", "");
+                  this.buildList(ref, store, commandBuilderx, eventBuilder);
+                  this.sendUpdate(commandBuilderx, eventBuilder, false);
                }
                break;
             case "Select":
@@ -176,20 +194,49 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
                this.clearSelectedItem(ref, store);
                break;
             case "UpdateRotationOffset":
+               float rawRotation = data.rotationOffset;
+               data.rotationOffset = Math.clamp((long)Math.round(data.rotationOffset), -180, 180);
                this.currentRotationOffset = (float)Math.toRadians(data.rotationOffset);
+               UICommandBuilder rotCommandBuilder = new UICommandBuilder();
+               if (rawRotation != data.rotationOffset) {
+                  rotCommandBuilder.set("#RotationOffset.Value", (int)data.rotationOffset);
+               }
+
+               rotCommandBuilder.set("#RotationValue.Text", String.format("%d°", (int)data.rotationOffset));
+               this.sendUpdate(rotCommandBuilder, null, false);
                if (this.modelPreview != null && this.modelPreview.isValid()) {
                   TransformComponent transform = store.getComponent(this.modelPreview, TransformComponent.getComponentType());
-                  transform.getRotation().setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+                  transform.getRotation().setYaw(this.rotation.yaw() + this.currentRotationOffset);
                   HeadRotation headRotation = store.getComponent(this.modelPreview, HeadRotation.getComponentType());
                   if (headRotation != null) {
-                     headRotation.getRotation().setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+                     headRotation.getRotation().setYaw(this.rotation.yaw() + this.currentRotationOffset);
+                  }
+               }
+               break;
+            case "RotationReleased":
+               data.rotationOffset = Math.clamp((long)Math.round(data.rotationOffset), -180, 180);
+               this.currentRotationOffset = (float)Math.toRadians(data.rotationOffset);
+               UICommandBuilder rotReleasedCmd = new UICommandBuilder();
+               rotReleasedCmd.set("#RotationValue.Text", String.format("%d°", (int)data.rotationOffset));
+               this.sendUpdate(rotReleasedCmd, null, false);
+               if (this.modelPreview != null && this.modelPreview.isValid()) {
+                  TransformComponent transform = store.getComponent(this.modelPreview, TransformComponent.getComponentType());
+                  transform.getRotation().setYaw(this.rotation.yaw() + this.currentRotationOffset);
+                  HeadRotation headRotation = store.getComponent(this.modelPreview, HeadRotation.getComponentType());
+                  if (headRotation != null) {
+                     headRotation.getRotation().setYaw(this.rotation.yaw() + this.currentRotationOffset);
                   }
                }
                break;
             case "UpdateScale":
                if (data.scale != null && data.scale >= 0.1F) {
-                  this.currentScale = data.scale;
+                  float rawScale = data.scale;
+                  this.currentScale = Math.clamp(Math.round(data.scale * 10.0F) / 10.0F, 0.1F, 5.0F);
                   UICommandBuilder commandBuilder = new UICommandBuilder();
+                  if (rawScale != this.currentScale) {
+                     commandBuilder.set("#ScaleSlider.Value", this.currentScale);
+                  }
+
                   commandBuilder.set("#ScaleValue.Text", String.format("%.1f", this.currentScale));
                   this.sendUpdate(commandBuilder, null, false);
                   long now = System.currentTimeMillis();
@@ -205,28 +252,36 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
                break;
             case "ScaleReleased":
                if (data.scale != null && data.scale >= 0.1F) {
-                  this.currentScale = data.scale;
+                  this.currentScale = Math.clamp(Math.round(data.scale * 10.0F) / 10.0F, 0.1F, 5.0F);
+                  UICommandBuilder scaleReleasedCmd = new UICommandBuilder();
+                  scaleReleasedCmd.set("#ScaleValue.Text", String.format("%.1f", this.currentScale));
+                  this.sendUpdate(scaleReleasedCmd, null, false);
                   if ("Model".equals(this.activeTab) && this.selectedModelId != null) {
                      ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset(this.selectedModelId);
                      if (modelAsset != null) {
-                        UICommandBuilder commandBuilder = new UICommandBuilder();
-                        this.createOrUpdatePreview(ref, store, commandBuilder, Model.createStaticScaledModel(modelAsset, this.currentScale));
+                        UICommandBuilder commandBuilderx = new UICommandBuilder();
+                        this.createOrUpdatePreview(ref, store, commandBuilderx, Model.createStaticScaledModel(modelAsset, this.currentScale));
                      }
                   } else if ("Items".equals(this.activeTab) && this.selectedItemId != null) {
                      Item item = Item.getAssetMap().getAsset(this.selectedItemId);
                      if (item != null) {
                         Model model = this.getItemModel(item);
                         if (model != null) {
-                           UICommandBuilder commandBuilder = new UICommandBuilder();
-                           this.createOrUpdatePreview(ref, store, commandBuilder, model);
+                           UICommandBuilder commandBuilderx = new UICommandBuilder();
+                           this.createOrUpdatePreview(ref, store, commandBuilderx, model);
                         } else if (item.hasBlockType()) {
                            this.createOrUpdateBlockPreview(ref, store, this.selectedItemId);
                         } else {
                            this.createOrUpdateItemPreview(ref, store, this.selectedItemId);
                         }
                      }
+                  } else if ("NPC".equals(this.activeTab) && this.selectedNpcRole != null) {
+                     this.updatePreviewScale(ref, store);
                   }
                }
+               break;
+            case "FreezeOnSpawn":
+               this.freezeOnSpawn = data.freezeOnSpawn;
                break;
             case "Spawn":
                this.handleSpawn(ref, store, data);
@@ -288,17 +343,31 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
          case "Model":
             this.spawnModel(ref, store, data.count);
       }
+
+      this.currentScale = 1.0F;
+      this.lastPreviewScale = 1.0F;
+      this.currentRotationOffset = 0.0F;
    }
 
    private void spawnNPC(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, int count) {
       if (this.selectedNpcRole != null && this.position != null && this.rotation != null) {
          if (count >= 1 && count <= 100) {
             this.clearPreview(store);
-            Vector3f spawnRotation = this.rotation.clone();
-            spawnRotation.setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+            Rotation3f spawnRotation = new Rotation3f(this.rotation);
+            spawnRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
 
             for (int i = 0; i < count; i++) {
-               NPCPlugin.get().spawnNPC(store, this.selectedNpcRole, null, this.position, spawnRotation);
+               Pair<Ref<EntityStore>, INonPlayerCharacter> result = NPCPlugin.get().spawnNPC(store, this.selectedNpcRole, null, this.position, spawnRotation);
+               if (result != null) {
+                  store.putComponent((Ref<EntityStore>)result.first(), EntityScaleComponent.getComponentType(), new EntityScaleComponent(this.currentScale));
+                  if (this.freezeOnSpawn) {
+                     store.ensureComponent((Ref<EntityStore>)result.first(), Frozen.getComponentType());
+                     NPCEntity npcComponent = store.getComponent((Ref<EntityStore>)result.first(), NPCEntity.getComponentType());
+                     if (npcComponent != null) {
+                        npcComponent.playAnimation((Ref<EntityStore>)result.first(), AnimationSlot.Movement, "Idle", store);
+                     }
+                  }
+               }
             }
 
             store.getComponent(ref, Player.getComponentType()).getPageManager().setPage(ref, store, Page.None);
@@ -319,8 +388,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
             ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset(this.selectedModelId);
             if (modelAsset != null) {
                Model model = Model.createStaticScaledModel(modelAsset, this.currentScale);
-               Vector3f spawnRotation = this.rotation.clone();
-               spawnRotation.setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+               Rotation3f spawnRotation = new Rotation3f(this.rotation);
+               spawnRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
 
                for (int i = 0; i < count; i++) {
                   Holder<EntityStore> holder = store.getRegistry().newHolder();
@@ -367,8 +436,12 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       commandBuilder.set("#TabItems.Style", this.activeTab.equals("Items") ? TAB_STYLE_ACTIVE : TAB_STYLE_INACTIVE);
       commandBuilder.set("#TabModel.Style", this.activeTab.equals("Model") ? TAB_STYLE_ACTIVE : TAB_STYLE_INACTIVE);
       commandBuilder.set("#RotationGroup.Visible", this.activeTab.equals("Model") || this.activeTab.equals("NPC") || this.activeTab.equals("Items"));
-      commandBuilder.set("#ScaleGroup.Visible", this.activeTab.equals("Model") || this.activeTab.equals("Items"));
-      if (this.activeTab.equals("Model") || this.activeTab.equals("Items")) {
+      commandBuilder.set("#ScaleGroup.Visible", this.activeTab.equals("Model") || this.activeTab.equals("Items") || this.activeTab.equals("NPC"));
+      commandBuilder.set("#FreezeOnSpawnGroup.Visible", this.activeTab.equals("NPC"));
+      if (this.activeTab.equals("Model") || this.activeTab.equals("Items") || this.activeTab.equals("NPC")) {
+         int rotationDegrees = (int)Math.toDegrees(this.currentRotationOffset);
+         commandBuilder.set("#RotationOffset.Value", rotationDegrees);
+         commandBuilder.set("#RotationValue.Text", String.format("%d°", rotationDegrees));
          commandBuilder.set("#ScaleSlider.Value", this.currentScale);
          commandBuilder.set("#ScaleValue.Text", String.format("%.1f", this.currentScale));
       }
@@ -546,8 +619,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
             Item item = Item.getAssetMap().getAsset(this.selectedItemId);
             if (item != null) {
                this.clearPreview(store);
-               Vector3f spawnRotation = this.rotation.clone();
-               spawnRotation.setYaw(this.rotation.getYaw() + this.currentRotationOffset);
+               Rotation3f spawnRotation = new Rotation3f(this.rotation);
+               spawnRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
                Model model = this.getItemModel(item);
                if (model != null) {
                   String modelId = this.getItemModelId(item);
@@ -581,7 +654,6 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
                      holder.addComponent(ItemComponent.getComponentType(), new ItemComponent(itemStack));
                      holder.addComponent(PreventPickup.getComponentType(), PreventPickup.INSTANCE);
                      holder.addComponent(PreventItemMerging.getComponentType(), PreventItemMerging.INSTANCE);
-                     holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(spawnRotation));
                      holder.addComponent(PropComponent.getComponentType(), PropComponent.get());
                      holder.ensureComponent(UUIDComponent.getComponentType());
                      store.addEntity(holder, AddReason.SPAWN);
@@ -672,14 +744,14 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       assert headRotationComponent != null;
 
       Vector3d playerPosition = transformComponent.getPosition();
-      Vector3f headRotation = headRotationComponent.getRotation();
-      Vector3d direction = Transform.getDirection(headRotation.getPitch(), headRotation.getYaw());
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      Vector3d direction = Transform.getDirection(headRotation.pitch(), headRotation.yaw());
       Vector3d lookTarget = TargetUtil.getTargetLocation(ref, 4.0, store);
       Vector3d previewPosition;
       if (lookTarget != null) {
          previewPosition = lookTarget;
       } else {
-         Vector3d aheadPosition = playerPosition.clone().add(direction.clone().scale(4.0));
+         Vector3d aheadPosition = new Vector3d(playerPosition).add(new Vector3d(direction).mul(4.0));
          World world = store.getExternalData().getWorld();
          Vector3i groundTarget = TargetUtil.getTargetBlock(
             world, (blockId, fluidId) -> blockId != 0, aheadPosition.x, aheadPosition.y + 0.5, aheadPosition.z, 0.0, -1.0, 0.0, 3.0
@@ -691,12 +763,11 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
          }
       }
 
-      Vector3d relativePos = playerPosition.clone().subtract(previewPosition);
-      relativePos.setY(0.0);
-      Vector3f previewRotation = Vector3f.lookAt(relativePos);
+      Vector3d relativePos = new Vector3d(playerPosition).sub(previewPosition);
+      relativePos.y = 0.0;
+      Rotation3f previewRotation = Rotation3f.lookAt(relativePos);
       this.position = previewPosition;
       this.rotation = previewRotation;
-      this.currentRotationOffset = 0.0F;
    }
 
    private void createOrUpdatePreview(
@@ -710,9 +781,11 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
             Holder<EntityStore> holder = store.getRegistry().newHolder();
             holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
             holder.addComponent(EntityStore.REGISTRY.getNonSerializedComponentType(), NonSerialized.get());
-            holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(this.position, this.rotation));
+            Rotation3f previewRotation = new Rotation3f(this.rotation);
+            previewRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
+            holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(this.position, previewRotation));
             holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
-            holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(this.rotation));
+            holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(previewRotation));
             this.modelPreview = store.addEntity(holder, AddReason.SPAWN);
             this.lastPreviewScale = this.currentScale;
          }
@@ -732,6 +805,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
                   this.modelPreview, ModelComponent.getComponentType(), new ModelComponent(Model.createStaticScaledModel(modelAsset, this.currentScale))
                );
             }
+         } else if ("NPC".equals(this.activeTab)) {
+            store.putComponent(this.modelPreview, EntityScaleComponent.getComponentType(), new EntityScaleComponent(this.currentScale));
          }
       }
    }
@@ -742,10 +817,11 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       Holder<EntityStore> holder = store.getRegistry().newHolder();
       holder.addComponent(NetworkId.getComponentType(), new NetworkId(store.getExternalData().takeNextNetworkId()));
       holder.addComponent(EntityStore.REGISTRY.getNonSerializedComponentType(), NonSerialized.get());
+      Rotation3f previewRotation = new Rotation3f(this.rotation);
+      previewRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
       holder.addComponent(BlockEntity.getComponentType(), new BlockEntity(blockTypeKey));
-      holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(this.position, this.rotation));
+      holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(this.position, previewRotation));
       holder.addComponent(EntityScaleComponent.getComponentType(), new EntityScaleComponent(this.currentScale * 2.0F));
-      holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(this.rotation));
       this.modelPreview = store.addEntity(holder, AddReason.SPAWN);
       this.lastPreviewScale = this.currentScale;
    }
@@ -760,9 +836,11 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       itemStack.setOverrideDroppedItemAnimation(true);
       holder.addComponent(ItemComponent.getComponentType(), new ItemComponent(itemStack));
       holder.addComponent(EntityScaleComponent.getComponentType(), new EntityScaleComponent(this.currentScale));
+      Rotation3f previewRotation = new Rotation3f(this.rotation);
+      previewRotation.setYaw(this.rotation.yaw() + this.currentRotationOffset);
       holder.addComponent(PreventPickup.getComponentType(), PreventPickup.INSTANCE);
-      holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(this.position, this.rotation));
-      holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(this.rotation));
+      holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(this.position, previewRotation));
+      holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(previewRotation));
       this.modelPreview = store.addEntity(holder, AddReason.SPAWN);
       this.lastPreviewScale = this.currentScale;
    }
@@ -809,6 +887,7 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       static final String KEY_COUNT = "@Count";
       static final String KEY_ROTATION_OFFSET = "@RotationOffset";
       static final String KEY_SCALE = "@Scale";
+      static final String KEY_FREEZE_ON_SPAWN = "@FreezeOnSpawn";
       public static final BuilderCodec<EntitySpawnPage.EntitySpawnPageEventData> CODEC = BuilderCodec.builder(
             EntitySpawnPage.EntitySpawnPageEventData.class, EntitySpawnPage.EntitySpawnPageEventData::new
          )
@@ -832,6 +911,8 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
          .add()
          .append(new KeyedCodec<>("@Scale", Codec.FLOAT), (entry, s) -> entry.scale = s, entry -> entry.scale)
          .add()
+         .append(new KeyedCodec<>("@FreezeOnSpawn", Codec.BOOLEAN), (entry, s) -> entry.freezeOnSpawn = s, entry -> entry.freezeOnSpawn)
+         .add()
          .build();
       private String npcRole;
       private String modelId;
@@ -843,5 +924,6 @@ public class EntitySpawnPage extends InteractiveCustomUIPage<EntitySpawnPage.Ent
       private int count;
       private float rotationOffset;
       private Float scale;
+      private boolean freezeOnSpawn;
    }
 }

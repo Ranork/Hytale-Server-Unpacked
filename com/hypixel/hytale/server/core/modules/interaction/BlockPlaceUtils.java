@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.GameMode;
@@ -26,7 +25,7 @@ import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.PlaceBlockEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
@@ -55,6 +54,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
 import org.bson.BsonValue;
+import org.joml.Vector3i;
 
 public class BlockPlaceUtils {
    @Nonnull
@@ -82,15 +82,16 @@ public class BlockPlaceUtils {
       @Nonnull Vector3i placementNormal,
       @Nonnull Vector3i blockPosition,
       @Nonnull BlockRotation blockRotation,
-      @Nullable Inventory inventory,
       byte activeSlot,
       boolean removeItemInHand,
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
       @Nonnull ComponentAccessor<EntityStore> entityStore,
-      boolean quickReplace
+      boolean quickReplace,
+      boolean quickRetype,
+      boolean noPhysics
    ) {
-      if (blockPosition.getY() >= 0 && blockPosition.getY() < 320) {
+      if (blockPosition.y() >= 0 && blockPosition.y() < 320) {
          Ref<ChunkStore> targetChunkReference = chunkReference;
          RotationTuple targetRotation = RotationTuple.of(
             Rotation.valueOf(blockRotation.rotationYaw), Rotation.valueOf(blockRotation.rotationPitch), Rotation.valueOf(blockRotation.rotationRoll)
@@ -99,11 +100,11 @@ public class BlockPlaceUtils {
 
          assert targetBlockChunkComponent != null;
 
-         BlockSection targetBlockSection = targetBlockChunkComponent.getSectionAtBlockY(blockPosition.getY());
+         BlockSection targetBlockSection = targetBlockChunkComponent.getSectionAtBlockY(blockPosition.y());
          PlaceBlockEvent event = new PlaceBlockEvent(itemStack, blockPosition, targetRotation);
          entityStore.invoke(ref, event);
          if (event.isCancelled()) {
-            targetBlockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+            targetBlockSection.invalidateBlock(blockPosition.x(), blockPosition.y(), blockPosition.z());
          } else {
             Vector3i targetBlockPosition = event.getTargetBlock();
             targetRotation = event.getRotation();
@@ -117,7 +118,7 @@ public class BlockPlaceUtils {
             }
 
             if (positionIsDifferent) {
-               targetBlockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+               targetBlockSection.invalidateBlock(blockPosition.x(), blockPosition.y(), blockPosition.z());
             }
 
             if (!targetChunkReference.equals(chunkReference) || targetBlockPosition.y != blockPosition.y) {
@@ -125,7 +126,7 @@ public class BlockPlaceUtils {
 
                assert targetBlockChunkComponent != null;
 
-               targetBlockSection = targetBlockChunkComponent.getSectionAtBlockY(targetBlockPosition.getY());
+               targetBlockSection = targetBlockChunkComponent.getSectionAtBlockY(targetBlockPosition.y());
             }
 
             PlayerRef playerRefComponent = entityStore.getComponent(ref, PlayerRef.getComponentType());
@@ -148,7 +149,7 @@ public class BlockPlaceUtils {
                blockTypeKey = itemStack.getBlockKey();
             }
 
-            if (validateBlockToPlace(blockTypeKey, playerRefComponent)) {
+            if (quickReplace || validateBlockToPlace(blockTypeKey, playerRefComponent)) {
                assert blockTypeKey != null;
 
                BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeKey);
@@ -172,12 +173,14 @@ public class BlockPlaceUtils {
                      chunkReference,
                      chunkStore,
                      entityStore,
-                     quickReplace
+                     quickReplace,
+                     quickRetype,
+                     noPhysics
                   );
                   if (success) {
                      onPlaceBlockSuccess(itemStack, worldChunkComponent, targetBlockPosition, blockTypeAsset, targetRotation);
                   } else {
-                     onPlaceBlockFailure(itemStack, inventory, activeSlot, playerComponent, targetBlockSection, targetBlockPosition);
+                     onPlaceBlockFailure(ref, itemStack, activeSlot, playerComponent, playerRefComponent, targetBlockSection, targetBlockPosition, entityStore);
                   }
                }
             }
@@ -186,28 +189,31 @@ public class BlockPlaceUtils {
    }
 
    private static void onPlaceBlockFailure(
+      @Nonnull Ref<EntityStore> ref,
       @Nullable ItemStack itemStack,
-      @Nullable Inventory inventory,
       byte activeSlot,
       @Nullable Player playerComponent,
+      @Nullable PlayerRef playerRefComponent,
       @Nonnull BlockSection blockSection,
-      @Nonnull Vector3i blockPosition
+      @Nonnull Vector3i blockPosition,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       boolean isAdventure = playerComponent == null || playerComponent.getGameMode() == GameMode.Adventure;
-      if (inventory != null && itemStack != null && isAdventure) {
-         ItemContainer hotbar = inventory.getHotbar();
-         ItemStackSlotTransaction transaction = hotbar.addItemStackToSlot(activeSlot, itemStack);
+      InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent != null && itemStack != null && isAdventure) {
+         ItemContainer hotbarInventory = hotbarComponent.getInventory();
+         ItemStackSlotTransaction transaction = hotbarInventory.addItemStackToSlot(activeSlot, itemStack);
          if (!transaction.succeeded()) {
-            ItemStackTransaction itemStackTransaction = hotbar.addItemStack(itemStack);
-            if (!itemStackTransaction.succeeded() && playerComponent != null) {
-               playerComponent.sendMessage(MESSAGE_MODULES_INTERACTION_FAILED_ADD_BACK_AFTER_FAILED_PLACE);
+            ItemStackTransaction itemStackTransaction = hotbarInventory.addItemStack(itemStack);
+            if (!itemStackTransaction.succeeded() && playerRefComponent != null) {
+               playerRefComponent.sendMessage(MESSAGE_MODULES_INTERACTION_FAILED_ADD_BACK_AFTER_FAILED_PLACE);
             }
 
             return;
          }
       }
 
-      blockSection.invalidateBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ());
+      blockSection.invalidateBlock(blockPosition.x(), blockPosition.y(), blockPosition.z());
    }
 
    private static void onPlaceBlockSuccess(
@@ -226,9 +232,7 @@ public class BlockPlaceUtils {
                   BsonDocument document = bsonValue.asDocument();
                   Holder<ChunkStore> blockEntity = ChunkStore.REGISTRY.getEntityCodec().decode(document, EmptyExtraInfo.EMPTY);
                   if (blockEntity != null) {
-                     worldChunkComponent.setState(
-                        blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockTypeAsset, targetRotation.index(), blockEntity
-                     );
+                     worldChunkComponent.setState(blockPosition.x(), blockPosition.y(), blockPosition.z(), blockTypeAsset, targetRotation.index(), blockEntity);
                   } else {
                      LOGGER.at(Level.WARNING).log("Failed to set Block Entity from item metadata: %s, %s", itemStack.getItemId(), document);
                   }
@@ -298,7 +302,6 @@ public class BlockPlaceUtils {
                Store<EntityStore> store = world.getEntityStore().getStore();
                PrefabBuffer.PrefabBufferAccessor prefabBufferAccessor = prefabBuffer.newAccess();
                PrefabUtil.paste(prefabBufferAccessor, world, blockPosition, Rotation.None, true, new Random(), store);
-               prefabBufferAccessor.release();
             });
             return true;
          }
@@ -316,7 +319,9 @@ public class BlockPlaceUtils {
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
       @Nonnull ComponentAccessor<EntityStore> entityStore,
-      boolean quickReplace
+      boolean quickReplace,
+      boolean quickRetype,
+      boolean noPhysics
    ) {
       WorldConfig worldConfig = entityStore.getExternalData().getWorld().getGameplayConfig().getWorldConfig();
       if (!worldConfig.isBlockPlacementAllowed()) {
@@ -340,25 +345,30 @@ public class BlockPlaceUtils {
          BlockType blockType = BlockType.getAssetMap().getAsset(blockTypeKey);
          int rotationIndex = rotation.index();
          if (quickReplace
-            || blockType != null
-               && worldChunkComponent.testPlaceBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockType, rotationIndex)) {
+            || quickRetype
+            || noPhysics
+            || blockType != null && worldChunkComponent.testPlaceBlock(blockPosition.x(), blockPosition.y(), blockPosition.z(), blockType, rotationIndex)) {
             BlockBoundingBoxes hitBoxType = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
             if (hitBoxType != null) {
                FillerBlockUtil.forEachFillerBlock(
                   hitBoxType.get(rotationIndex),
                   (x1, y1, z1) -> breakAndDropReplacedBlock(
-                     blockPosition.clone().add(x1, y1, z1), worldChunkComponent, chunkReference, ref, chunkStore, entityStore
+                     new Vector3i(blockPosition).add(x1, y1, z1), worldChunkComponent, chunkReference, ref, chunkStore, entityStore, noPhysics
                   )
                );
             } else {
-               breakAndDropReplacedBlock(blockPosition, worldChunkComponent, chunkReference, ref, chunkStore, entityStore);
+               breakAndDropReplacedBlock(blockPosition, worldChunkComponent, chunkReference, ref, chunkStore, entityStore, noPhysics);
             }
 
-            int placeBlockSettings = 10;
-            if (!worldChunkComponent.placeBlock(blockPosition.getX(), blockPosition.getY(), blockPosition.getZ(), blockTypeKey, rotation, 10, false)) {
+            int placeBlockSettings = 8;
+            if (!noPhysics) {
+               placeBlockSettings |= 2;
+            }
+
+            if (!worldChunkComponent.placeBlock(blockPosition.x(), blockPosition.y(), blockPosition.z(), blockTypeKey, rotation, placeBlockSettings, false)) {
                return false;
             } else {
-               if (playerComponent != null && !playerComponent.isOverrideBlockPlacementRestrictions() && blockType.canBePlacedAsDeco()) {
+               if (playerComponent != null && (noPhysics || !playerComponent.isOverrideBlockPlacementRestrictions() && blockType.canBePlacedAsDeco())) {
                   ChunkColumn chunkColumnComponent = chunkStore.getComponent(chunkReference, ChunkColumn.getComponentType());
 
                   assert chunkColumnComponent != null;
@@ -382,7 +392,13 @@ public class BlockPlaceUtils {
                }
 
                ConnectedBlocksUtil.setConnectedBlockAndNotifyNeighbors(
-                  BlockType.getAssetMap().getIndex(blockTypeKey), rotation, placementNormal, blockPosition, worldChunkComponent, blockChunkComponent
+                  chunkStore.getExternalData(),
+                  BlockType.getAssetMap().getIndex(blockTypeKey),
+                  rotation,
+                  placementNormal,
+                  blockPosition,
+                  worldChunkComponent,
+                  blockChunkComponent
                );
                return true;
             }
@@ -398,7 +414,8 @@ public class BlockPlaceUtils {
       @Nonnull Ref<ChunkStore> chunkReference,
       @Nonnull Ref<EntityStore> ref,
       @Nonnull ComponentAccessor<ChunkStore> chunkStore,
-      @Nonnull ComponentAccessor<EntityStore> entityStore
+      @Nonnull ComponentAccessor<EntityStore> entityStore,
+      boolean noPhysics
    ) {
       int targetBlockId = worldChunkComponent.getBlock(blockPosition);
       if (targetBlockId != 0) {
@@ -420,7 +437,11 @@ public class BlockPlaceUtils {
                }
             }
 
-            int setBlockSettings = 288;
+            int setBlockSettings = 32;
+            if (!noPhysics) {
+               setBlockSettings |= 256;
+            }
+
             BlockHarvestUtils.performBlockBreak(
                chunkStore.getExternalData().getWorld(),
                blockPosition,
@@ -429,7 +450,7 @@ public class BlockPlaceUtils {
                dropQuantity,
                itemId,
                dropListId,
-               288,
+               setBlockSettings,
                ref,
                chunkReference,
                entityStore,

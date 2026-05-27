@@ -10,8 +10,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.InventoryChangeEvent;
+import com.hypixel.hytale.server.core.event.events.ecs.InventoryChangeEvent;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
@@ -81,12 +81,8 @@ public class GatherObjectiveTask extends CountObjectiveTask implements Inventory
          if (playerRefComponent != null) {
             Ref<EntityStore> playerRef = playerRefComponent.getReference();
             if (playerRef != null && playerRef.isValid()) {
-               Player playerComponent = componentAccessor.getComponent(playerRef, Player.getComponentType());
-
-               assert playerComponent != null;
-
-               CombinedItemContainer inventory = playerComponent.getInventory().getCombinedHotbarFirst();
-               count += inventory.countItemStacks(itemStack -> blockTypeOrSet.isBlockTypeIncluded(itemStack.getItemId()));
+               CombinedItemContainer combinedInventory = InventoryComponent.getCombined(componentAccessor, playerRef, InventoryComponent.HOTBAR_FIRST);
+               count += combinedInventory.countItemStacks(itemStack -> blockTypeOrSet.isBlockTypeIncluded(itemStack.getItemId()));
             }
          }
       }

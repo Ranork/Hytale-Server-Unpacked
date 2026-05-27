@@ -6,7 +6,6 @@ import com.hypixel.hytale.builtin.buildertools.utils.Material;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
@@ -21,6 +20,7 @@ import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BrushConfigEditStore {
    @Nonnull
@@ -88,6 +88,7 @@ public class BrushConfigEditStore {
             if (hasHistory) {
                return false;
             }
+         case None:
       }
 
       if (this.brushConfig.getRandom().nextInt(100) >= this.brushConfig.getDensity()) {
@@ -138,6 +139,7 @@ public class BrushConfigEditStore {
             if (hasHistory) {
                return false;
             }
+         case None:
       }
 
       if (this.brushConfig.getRandom().nextInt(100) >= this.brushConfig.getDensity()) {
@@ -188,6 +190,7 @@ public class BrushConfigEditStore {
             if (hasHistory) {
                return false;
             }
+         case None:
       }
 
       if (this.brushConfig.getRandom().nextInt(100) >= this.brushConfig.getDensity()) {

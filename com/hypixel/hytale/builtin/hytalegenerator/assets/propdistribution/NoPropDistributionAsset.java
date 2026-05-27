@@ -2,10 +2,12 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution;
 
 import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.NoPropDistribution;
 import com.hypixel.hytale.builtin.hytalegenerator.propdistributions.PropDistribution;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
 import javax.annotation.Nonnull;
 
 public class NoPropDistributionAsset extends PropDistributionAsset {
    public static final NoPropDistributionAsset INSTANCE = new NoPropDistributionAsset();
+   public static final BuilderCodec<NoPropDistributionAsset> CODEC = BuilderCodec.builder(NoPropDistributionAsset.class, () -> INSTANCE).build();
 
    private NoPropDistributionAsset() {
    }

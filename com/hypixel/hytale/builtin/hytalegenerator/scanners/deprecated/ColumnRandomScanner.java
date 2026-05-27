@@ -6,11 +6,12 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3i;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class ColumnRandomScanner extends Scanner {
    private final int minY;
@@ -83,14 +84,14 @@ public class ColumnRandomScanner extends Scanner {
          }
 
          int numberOfPossiblePositions = Math.max(0, scanMaxY - scanMinY);
-         Vector3i patternPosition = context.position.clone();
+         Vector3i patternPosition = new Vector3i(context.position);
          Pattern.Context patternContext = new Pattern.Context(patternPosition, context.materialSpace);
 
          for (int y = scanMinY; y < scanMaxY; y++) {
             patternPosition.y = y;
             if (context.pattern.matches(patternContext)) {
-               Vector3i position = context.position.clone();
-               position.setY(y);
+               Vector3i position = new Vector3i(context.position);
+               position.y = y;
                this.rPositions.add(position);
             }
          }
@@ -122,15 +123,15 @@ public class ColumnRandomScanner extends Scanner {
             int TRY_MULTIPLIER = 1;
             int numberOfTries = range * 1;
             FastRandom random = new FastRandom(this.rngField.get(context.position.x, context.position.y, context.position.z));
-            ArrayList<Integer> usedYs = new ArrayList<>(this.resultsCap);
-            Vector3i patternPosition = context.position.clone();
+            IntArrayList usedYs = new IntArrayList(this.resultsCap);
+            Vector3i patternPosition = new Vector3i(context.position);
             Pattern.Context patternContext = new Pattern.Context(patternPosition, context.materialSpace);
 
             for (int i = 0; i < numberOfTries; i++) {
                patternPosition.y = random.nextInt(range) + scanMinY;
                if (context.pattern.matches(patternContext) && !usedYs.contains(patternPosition.y)) {
                   usedYs.add(patternPosition.y);
-                  Vector3i position = patternPosition.clone();
+                  Vector3i position = new Vector3i(patternPosition);
                   context.validPositions_out.add(position);
                   if (context.validPositions_out.size() == this.resultsCap) {
                      break;

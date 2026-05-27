@@ -16,8 +16,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Bench;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.ProcessingBench;
@@ -42,6 +41,7 @@ import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BenchSystems {
    private static void dropUpgradeItems(
@@ -55,11 +55,11 @@ public class BenchSystems {
          if (type != null) {
             type.getBlockCenter(rotation, dropPosition);
          } else {
-            dropPosition.assign(0.5, 0.5, 0.5);
+            dropPosition.set(0.5, 0.5, 0.5);
          }
 
          dropPosition.add(x, y, z);
-         Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(entityStore, List.of(upgradeItems), dropPosition, Vector3f.ZERO);
+         Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(entityStore, List.of(upgradeItems), dropPosition, Rotation3f.IDENTITY);
          if (itemEntityHolders.length > 0) {
             world.execute(() -> entityStore.addEntities(itemEntityHolders, AddReason.SPAWN));
          }
@@ -248,7 +248,7 @@ public class BenchSystems {
                            World world = commandBuffer.getExternalData().getWorld();
                            Store<EntityStore> entityStore = world.getEntityStore().getStore();
                            Vector3d dropPosition = new Vector3d(blockX + 0.5, localY, blockZ + 0.5);
-                           Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(entityStore, itemStacks, dropPosition, Vector3f.ZERO);
+                           Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(entityStore, itemStacks, dropPosition, Rotation3f.IDENTITY);
                            if (itemEntityHolders.length > 0) {
                               world.execute(() -> entityStore.addEntities(itemEntityHolders, AddReason.SPAWN));
                            }

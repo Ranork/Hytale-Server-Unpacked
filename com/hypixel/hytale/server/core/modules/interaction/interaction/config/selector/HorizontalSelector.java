@@ -13,13 +13,9 @@ import com.hypixel.hytale.math.hitdetection.LineOfSightProvider;
 import com.hypixel.hytale.math.hitdetection.projection.FrustumProjectionProvider;
 import com.hypixel.hytale.math.hitdetection.view.DirectionViewProvider;
 import com.hypixel.hytale.math.iterator.BlockIterator;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.HorizontalSelectorDirection;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
@@ -34,9 +30,14 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.accessor.LocalCachedChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector4d;
 
 public class HorizontalSelector extends SelectorType {
    @Nonnull
@@ -177,15 +178,24 @@ public class HorizontalSelector extends SelectorType {
 
    private class RuntimeSelector implements Selector {
       @Nonnull
-      protected HitDetectionExecutor executor = new HitDetectionExecutor();
+      protected HitDetectionExecutor executor;
       @Nonnull
-      protected Matrix4d modelMatrix = new Matrix4d();
+      protected Matrix4d modelMatrix;
       @Nonnull
-      protected FrustumProjectionProvider projectionProvider = new FrustumProjectionProvider();
+      protected FrustumProjectionProvider projectionProvider;
       @Nonnull
-      protected DirectionViewProvider viewProvider = new DirectionViewProvider();
+      protected DirectionViewProvider viewProvider;
       protected float lastTime;
       protected double runTimeDeltaPercentageSum;
+
+      private RuntimeSelector() {
+         Objects.requireNonNull(HorizontalSelector.this);
+         super();
+         this.executor = new HitDetectionExecutor();
+         this.modelMatrix = new Matrix4d();
+         this.projectionProvider = new FrustumProjectionProvider();
+         this.viewProvider = new DirectionViewProvider();
+      }
 
       @Override
       public void tick(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Ref<EntityStore> attacker, float time, float runTime) {
@@ -203,9 +213,9 @@ public class HorizontalSelector extends SelectorType {
 
          assert headRotationComponent != null;
 
-         double posX = position.getX();
-         double posY = position.getY() + yOffset;
-         double posZ = position.getZ();
+         double posX = position.x();
+         double posY = position.y() + yOffset;
+         double posZ = position.z();
          float delta = time - this.lastTime;
          this.lastTime = time;
          float runTimeDeltaPercentage = delta / runTime;
@@ -223,9 +233,7 @@ public class HorizontalSelector extends SelectorType {
             .setBottom(HorizontalSelector.this.extendBottom * stretchFactor)
             .setRotation(yawOffset, HorizontalSelector.this.pitchOffset, HorizontalSelector.this.rollOffset)
             .setTop(HorizontalSelector.this.extendTop * stretchFactor);
-         this.viewProvider
-            .setPosition(posX, posY, posZ)
-            .setDirection(headRotationComponent.getRotation().getYaw(), headRotationComponent.getRotation().getPitch());
+         this.viewProvider.setPosition(posX, posY, posZ).setDirection(headRotationComponent.getRotation().yaw(), headRotationComponent.getRotation().pitch());
          this.executor.setOrigin(posX, posY, posZ).setProjectionProvider(this.projectionProvider).setViewProvider(this.viewProvider);
          if (HorizontalSelector.this.testLineOfSight) {
             World world = commandBuffer.getStore().getExternalData().getWorld();
@@ -273,12 +281,11 @@ public class HorizontalSelector extends SelectorType {
          }
 
          if (SelectInteraction.SHOW_VISUAL_DEBUG) {
-            Matrix4d tmp = new Matrix4d();
             Matrix4d matrix = new Matrix4d();
             matrix.identity()
                .translate(posX, posY, posZ)
-               .rotateAxis(-headRotationComponent.getRotation().getYaw(), 0.0, 1.0, 0.0, tmp)
-               .rotateAxis(-headRotationComponent.getRotation().getPitch(), 1.0, 0.0, 0.0, tmp);
+               .rotate(headRotationComponent.getRotation().yaw(), 0.0, 1.0, 0.0)
+               .rotate(headRotationComponent.getRotation().pitch(), 1.0, 0.0, 0.0);
             Vector3f color = new Vector3f(
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 10L),
                (float)HashUtil.random(attacker.getIndex(), this.hashCode(), 11L),

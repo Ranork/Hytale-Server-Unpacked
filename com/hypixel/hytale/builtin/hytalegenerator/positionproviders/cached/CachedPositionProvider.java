@@ -5,10 +5,12 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.ArrayList;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class CachedPositionProvider extends PositionProvider {
    @Nonnull
@@ -34,7 +36,7 @@ public class CachedPositionProvider extends PositionProvider {
    public void get(@Nonnull PositionProvider.Context context) {
       Vector3i minSection = this.sectionAddress(context.bounds.min);
       Vector3i maxSection = this.sectionAddress(context.bounds.max);
-      Vector3i sectionAddress = minSection.clone();
+      Vector3i sectionAddress = new Vector3i(minSection);
 
       for (sectionAddress.x = minSection.x; sectionAddress.x <= maxSection.x; sectionAddress.x++) {
          for (sectionAddress.z = minSection.z; sectionAddress.z <= maxSection.z; sectionAddress.z++) {
@@ -43,7 +45,7 @@ public class CachedPositionProvider extends PositionProvider {
                Vector3d[] section = this.cache.sections.get(key);
                if (section == null) {
                   Vector3d sectionMin = this.sectionMin(sectionAddress);
-                  Bounds3d sectionBounds = new Bounds3d(sectionMin, sectionMin.clone().add(this.sectionSize, this.sectionSize, this.sectionSize));
+                  Bounds3d sectionBounds = new Bounds3d(sectionMin, new Vector3d(sectionMin).add(this.sectionSize, this.sectionSize, this.sectionSize));
                   ArrayList<Vector3d> generatedPositions = new ArrayList<>();
                   Pipe.One<Vector3d> pipe = (positionx, controlx) -> generatedPositions.add(positionx);
                   PositionProvider.Context childContext = new PositionProvider.Context(sectionBounds, pipe, null);
@@ -66,7 +68,7 @@ public class CachedPositionProvider extends PositionProvider {
                         return;
                      }
 
-                     context.pipe.accept(position.clone(), control);
+                     context.pipe.accept(new Vector3d(position), control);
                   }
                }
             }
@@ -76,7 +78,7 @@ public class CachedPositionProvider extends PositionProvider {
 
    @Nonnull
    private Vector3i sectionAddress(@Nonnull Vector3d pointer) {
-      Vector3i address = pointer.toVector3i();
+      Vector3i address = Vector3dUtil.toVector3i(pointer);
       address.x = this.sectionFloor(address.x) / this.sectionSize;
       address.y = this.sectionFloor(address.y) / this.sectionSize;
       address.z = this.sectionFloor(address.z) / this.sectionSize;
@@ -85,7 +87,7 @@ public class CachedPositionProvider extends PositionProvider {
 
    @Nonnull
    private Vector3d sectionMin(@Nonnull Vector3i sectionAddress) {
-      Vector3d min = sectionAddress.toVector3d();
+      Vector3d min = Vector3iUtil.toVector3d(sectionAddress);
       min.x = min.x * this.sectionSize;
       min.y = min.y * this.sectionSize;
       min.z = min.z * this.sectionSize;

@@ -3,17 +3,18 @@ package com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers;
 import com.hypixel.hytale.builtin.hytalegenerator.ArrayUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.MemInstrument;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class VoxelBuffer<T> extends Buffer {
    public static final int BUFFER_SIZE_BITS = 3;
    @Nonnull
    public static final Vector3i SIZE = new Vector3i(8, 8, 8);
    @Nonnull
-   private static final Bounds3i bounds = new Bounds3i(Vector3i.ZERO, SIZE);
+   private static final Bounds3i bounds = new Bounds3i(Vector3iUtil.ZERO, SIZE);
    @Nonnull
    private final Class<T> voxelType;
    @Nonnull

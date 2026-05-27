@@ -42,6 +42,9 @@ public class EmoteAsset implements JsonAssetWithMap<String, IndexedLookupTableAs
       .add()
       .append(new KeyedCodec<>("IsLooping", Codec.BOOLEAN), (asset, b) -> asset.isLooping = b, asset -> asset.isLooping)
       .add()
+      .<Boolean>append(new KeyedCodec<>("HideItemInHand", Codec.BOOLEAN), (asset, b) -> asset.hideItemInHand = b, asset -> asset.hideItemInHand)
+      .documentation("If set to true, the player's held item is hidden while this emote plays.")
+      .add()
       .build();
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(EmoteAsset::getAssetStore));
    private static AssetStore<String, EmoteAsset, IndexedLookupTableAssetMap<String, EmoteAsset>> ASSET_STORE;
@@ -51,6 +54,7 @@ public class EmoteAsset implements JsonAssetWithMap<String, IndexedLookupTableAs
    protected String animationPath;
    protected String iconPath;
    protected boolean isLooping;
+   protected boolean hideItemInHand;
 
    public static AssetStore<String, EmoteAsset, IndexedLookupTableAssetMap<String, EmoteAsset>> getAssetStore() {
       if (ASSET_STORE == null) {
@@ -82,6 +86,7 @@ public class EmoteAsset implements JsonAssetWithMap<String, IndexedLookupTableAs
       packet.animation = this.animationPath;
       packet.icon = this.iconPath;
       packet.isLooping = this.isLooping;
+      packet.hideItemInHand = this.hideItemInHand;
       return packet;
    }
 }

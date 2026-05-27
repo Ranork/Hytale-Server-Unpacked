@@ -2,7 +2,7 @@ package com.hypixel.hytale.server.npc.corecomponents.world;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SensorReadPosition extends SensorBase {
    protected final int slot;
@@ -51,7 +52,7 @@ public class SensorReadPosition extends SensorBase {
             position = role.getMarkedEntitySupport().getStoredPosition(this.slot);
          }
 
-         if (position.equals(Vector3d.MIN)) {
+         if (position.equals(Vector3dUtil.MIN)) {
             this.positionProvider.clear();
             return false;
          } else {
@@ -59,7 +60,7 @@ public class SensorReadPosition extends SensorBase {
 
             assert transformComponent != null;
 
-            double dist2 = transformComponent.getPosition().distanceSquaredTo(position);
+            double dist2 = transformComponent.getPosition().distanceSquared(position);
             if (!(dist2 > this.range * this.range) && !(dist2 < this.minRange * this.minRange)) {
                this.positionProvider.setTarget(position);
                return true;

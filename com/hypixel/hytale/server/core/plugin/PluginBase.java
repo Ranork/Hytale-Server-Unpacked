@@ -237,7 +237,7 @@ public abstract class PluginBase implements CommandOwner {
       return !this.isDisabled();
    }
 
-   protected void setup0() {
+   protected final void setup0() {
       if (this.state != PluginState.NONE && this.state != PluginState.DISABLED) {
          throw new IllegalArgumentException(String.valueOf(this.state));
       } else {
@@ -256,7 +256,7 @@ public abstract class PluginBase implements CommandOwner {
    protected void setup() {
    }
 
-   protected void start0() {
+   protected final void start0() {
       if (this.state != PluginState.SETUP) {
          throw new IllegalArgumentException(String.valueOf(this.state));
       } else {
@@ -276,7 +276,7 @@ public abstract class PluginBase implements CommandOwner {
    protected void start() {
    }
 
-   protected void shutdown0(boolean shutdown) {
+   protected final void shutdown0(boolean shutdown) {
       this.state = PluginState.SHUTDOWN;
 
       try {

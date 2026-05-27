@@ -47,14 +47,11 @@ public class SettingsAsset implements JsonAssetWithMap<String, DefaultAssetMap<S
       .build();
    private String id;
    private AssetExtraInfo.Data data;
-   private Integer[] checkpoints = new Integer[0];
+   private Integer[] checkpoints = new Integer[]{1, 100, 500, 1000};
    private int customConcurrency = -1;
-   private double bufferCapacityFactor = 0.3;
+   private double bufferCapacityFactor = 0.1;
    private double targetViewDistance = 512.0;
    private double targetPlayerCount = 3.0;
-
-   private SettingsAsset() {
-   }
 
    @Nonnull
    public List<Integer> getStatsCheckpoints() {

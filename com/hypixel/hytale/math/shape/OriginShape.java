@@ -2,8 +2,8 @@ package com.hypixel.hytale.math.shape;
 
 import com.hypixel.hytale.function.predicate.TriIntObjPredicate;
 import com.hypixel.hytale.function.predicate.TriIntPredicate;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class OriginShape<S extends Shape> implements Shape {
    public final Vector3d origin;
@@ -28,12 +28,12 @@ public class OriginShape<S extends Shape> implements Shape {
 
    @Override
    public Box getBox(double x, double y, double z) {
-      return this.shape.getBox(x + this.origin.getX(), y + this.origin.getY(), z + this.origin.getZ());
+      return this.shape.getBox(x + this.origin.x(), y + this.origin.y(), z + this.origin.z());
    }
 
    @Override
    public boolean containsPosition(double x, double y, double z) {
-      return this.shape.containsPosition(x - this.origin.getX(), y - this.origin.getY(), z - this.origin.getZ());
+      return this.shape.containsPosition(x - this.origin.x(), y - this.origin.y(), z - this.origin.z());
    }
 
    @Override
@@ -43,12 +43,12 @@ public class OriginShape<S extends Shape> implements Shape {
 
    @Override
    public boolean forEachBlock(double x, double y, double z, double epsilon, TriIntPredicate consumer) {
-      return this.shape.forEachBlock(x + this.origin.getX(), y + this.origin.getY(), z + this.origin.getZ(), epsilon, consumer);
+      return this.shape.forEachBlock(x + this.origin.x(), y + this.origin.y(), z + this.origin.z(), epsilon, consumer);
    }
 
    @Override
    public <T> boolean forEachBlock(double x, double y, double z, double epsilon, T t, TriIntObjPredicate<T> consumer) {
-      return this.shape.forEachBlock(x + this.origin.getX(), y + this.origin.getY(), z + this.origin.getZ(), epsilon, t, consumer);
+      return this.shape.forEachBlock(x + this.origin.x(), y + this.origin.y(), z + this.origin.z(), epsilon, t, consumer);
    }
 
    @Nonnull

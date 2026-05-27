@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,25 +47,33 @@ public class ChatMessage implements Packet, ToServerPacket {
 
    @Nonnull
    public static ChatMessage deserialize(@Nonnull ByteBuf buf, int offset) {
-      ChatMessage obj = new ChatMessage();
-      byte nullBits = buf.getByte(offset);
-      int pos = offset + 1;
-      if ((nullBits & 1) != 0) {
-         int messageLen = VarInt.peek(buf, pos);
-         if (messageLen < 0) {
-            throw ProtocolException.negativeLength("Message", messageLen);
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("ChatMessage", 1, buf.readableBytes() - offset);
+      } else {
+         ChatMessage obj = new ChatMessage();
+         byte nullBits = buf.getByte(offset);
+         int pos = offset + 1;
+         if ((nullBits & 1) != 0) {
+            int messageLen = VarInt.peek(buf, pos);
+            if (messageLen < 0) {
+               throw ProtocolException.invalidVarInt("Message");
+            }
+
+            int messageVarLen = VarInt.size(messageLen);
+            if (messageLen > 255) {
+               throw ProtocolException.stringTooLong("Message", messageLen, 255);
+            }
+
+            if (pos + messageVarLen + messageLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Message", pos + messageVarLen + messageLen, buf.readableBytes());
+            }
+
+            obj.message = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+            pos += messageVarLen + messageLen;
          }
 
-         if (messageLen > 255) {
-            throw ProtocolException.stringTooLong("Message", messageLen, 255);
-         }
-
-         int messageVarLen = VarInt.length(buf, pos);
-         obj.message = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += messageVarLen + messageLen;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -72,10 +81,41 @@ public class ChatMessage implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static String getMessage(MemorySegment mem) {
+      return getMessage(mem, 0);
+   }
+
+   @Nullable
+   public static String getMessage(MemorySegment mem, int offset) {
+      return hasMessage(mem, offset) ? PacketIO.readVarString("Message", mem, offset + 1, 255, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasMessage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static ChatMessage toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ChatMessage toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ChatMessage", offset + 1, (int)mem.byteSize());
+      } else {
+         return new ChatMessage(hasMessage(mem, offset) ? PacketIO.readVarString("Message", mem, offset + 1, 255, PacketIO.UTF8) : null);
+      }
    }
 
    @Override
@@ -89,6 +129,22 @@ public class ChatMessage implements Packet, ToServerPacket {
       if (this.message != null) {
          PacketIO.writeVarString(buf, this.message, 255);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.message != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 1;
+      if (this.message != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.message, 255);
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -117,7 +173,7 @@ public class ChatMessage implements Packet, ToServerPacket {
                return ValidationResult.error("Message exceeds max length 255");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(messageLen);
             pos += messageLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Message");

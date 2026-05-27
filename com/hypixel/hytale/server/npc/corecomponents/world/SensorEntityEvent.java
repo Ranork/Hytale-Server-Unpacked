@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.corecomponents.world;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
@@ -11,6 +10,7 @@ import com.hypixel.hytale.server.npc.components.messaging.PlayerEntityEventSuppo
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderSensorEntityEvent;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SensorEntityEvent extends SensorEvent {
    private final boolean flockOnly;
@@ -33,10 +33,6 @@ public class SensorEntityEvent extends SensorEvent {
          case NpcOnly:
             this.playerEventMessageSlot = -1;
             this.npcEventMessageSlot = support.getEntityEventSlot(type, npcGroup, this.range, false);
-            break;
-         default:
-            this.playerEventMessageSlot = -1;
-            this.npcEventMessageSlot = -1;
       }
    }
 

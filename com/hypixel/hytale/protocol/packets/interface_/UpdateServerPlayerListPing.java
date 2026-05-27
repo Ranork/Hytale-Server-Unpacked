@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -50,34 +51,39 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateServerPlayerListPing deserialize(@Nonnull ByteBuf buf, int offset) {
-      UpdateServerPlayerListPing obj = new UpdateServerPlayerListPing();
-      byte nullBits = buf.getByte(offset);
-      int pos = offset + 1;
-      if ((nullBits & 1) != 0) {
-         int playersCount = VarInt.peek(buf, pos);
-         if (playersCount < 0) {
-            throw ProtocolException.negativeLength("Players", playersCount);
-         }
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("UpdateServerPlayerListPing", 1, buf.readableBytes() - offset);
+      } else {
+         UpdateServerPlayerListPing obj = new UpdateServerPlayerListPing();
+         byte nullBits = buf.getByte(offset);
+         int pos = offset + 1;
+         if ((nullBits & 1) != 0) {
+            int playersCount = VarInt.peek(buf, pos);
+            if (playersCount < 0) {
+               throw ProtocolException.invalidVarInt("Players");
+            }
 
-         if (playersCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("Players", playersCount, 4096000);
-         }
+            int playersVarLen = VarInt.size(playersCount);
+            if (playersCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Players", playersCount, 4096000);
+            }
 
-         pos += VarInt.size(playersCount);
-         obj.players = new HashMap<>(playersCount);
+            pos += playersVarLen;
+            obj.players = new HashMap<>(playersCount);
 
-         for (int i = 0; i < playersCount; i++) {
-            UUID key = PacketIO.readUUID(buf, pos);
-            pos += 16;
-            int val = buf.getIntLE(pos);
-            pos += 4;
-            if (obj.players.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("players", key);
+            for (int i = 0; i < playersCount; i++) {
+               UUID key = PacketIO.readUUID(buf, pos);
+               pos += 16;
+               int val = buf.getIntLE(pos);
+               pos += 4;
+               if (obj.players.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("players", key);
+               }
             }
          }
-      }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -85,7 +91,7 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 16;
@@ -94,6 +100,90 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static Map<UUID, Integer> getPlayers(MemorySegment mem) {
+      return getPlayers(mem, 0);
+   }
+
+   @Nullable
+   public static Map<UUID, Integer> getPlayers(MemorySegment mem, int offset) {
+      if (!hasPlayers(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Players", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Players", len, 4096000);
+         } else {
+            Map<UUID, Integer> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               UUID key = PacketIO.readUUID(mem, off);
+               off += 16;
+               int value = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Players", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static boolean hasPlayers(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static UpdateServerPlayerListPing toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateServerPlayerListPing toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateServerPlayerListPing", offset + 1, (int)mem.byteSize());
+      } else {
+         Map<UUID, Integer> players = null;
+         if (hasPlayers(mem, offset)) {
+            int off = offset + 1;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("Players", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Players", len, 4096000);
+            }
+
+            players = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               UUID key = PacketIO.readUUID(mem, off);
+               off += 16;
+               int value = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               if (players.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Players", key);
+               }
+            }
+         }
+
+         return new UpdateServerPlayerListPing(players);
+      }
    }
 
    @Override
@@ -116,6 +206,33 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
             buf.writeIntLE(e.getValue());
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.players != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 1;
+      if (this.players != null) {
+         if (this.players.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Players", this.players.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.players.size());
+
+         for (Entry<UUID, Integer> e : this.players.entrySet()) {
+            PacketIO.writeUUID(mem, varOffset, e.getKey());
+            varOffset += 16;
+            mem.set(PacketIO.PROTO_INT, (long)varOffset, e.getValue());
+            varOffset += 4;
+         }
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -144,7 +261,7 @@ public class UpdateServerPlayerListPing implements Packet, ToClientPacket {
                return ValidationResult.error("Players exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(playersCount);
 
             for (int i = 0; i < playersCount; i++) {
                pos += 16;

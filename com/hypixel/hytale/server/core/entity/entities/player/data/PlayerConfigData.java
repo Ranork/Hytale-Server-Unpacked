@@ -6,8 +6,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.codec.codecs.map.Object2IntMapCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockMigration;
 import com.hypixel.hytale.server.core.universe.Universe;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -23,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public final class PlayerConfigData {
    @Nonnull
@@ -122,7 +122,7 @@ public final class PlayerConfigData {
    @Nonnull
    private Set<UUID> unmodifiableActiveObjectiveUUIDs = Collections.unmodifiableSet(this.activeObjectiveUUIDs);
    public final Vector3d lastSavedPosition = new Vector3d();
-   public final Vector3f lastSavedRotation = new Vector3f();
+   public final Rotation3f lastSavedRotation = new Rotation3f();
 
    public int getBlockIdVersion() {
       return this.blockIdVersion;

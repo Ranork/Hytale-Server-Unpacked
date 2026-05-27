@@ -25,7 +25,7 @@ public class SmootherOperation extends ToolOperation {
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       int currentBlock = this.edit.getBlock(x, y, z);
       BuilderToolsPlugin.BuilderState.SmoothSampleData data = this.builderState.getBlocksSmoothData(this.edit.getAccessor(), x, y, z);
       if (data.solidStrength > this.strength) {

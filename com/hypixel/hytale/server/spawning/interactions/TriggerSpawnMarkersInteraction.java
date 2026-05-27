@@ -8,7 +8,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -20,6 +19,7 @@ import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import com.hypixel.hytale.server.spawning.spawnmarkers.SpawnMarkerEntity;
 import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TriggerSpawnMarkersInteraction extends SimpleInstantInteraction {
    public static final BuilderCodec<TriggerSpawnMarkersInteraction> CODEC = BuilderCodec.builder(
@@ -97,7 +97,7 @@ public class TriggerSpawnMarkersInteraction extends SimpleInstantInteraction {
          SpawnMarkerEntity targetMarkerEntityComponent = commandBuffer.getComponent(targetRef, SpawnMarkerEntity.getComponentType());
          return targetMarkerEntityComponent == null
                || !targetMarkerEntityComponent.isManualTrigger()
-               || !(position.distanceSquaredTo(targetPosition) <= this.rangeSquared)
+               || !(position.distanceSquared(targetPosition) <= this.rangeSquared)
                || this.markerType != null && !this.markerType.equals(targetMarkerEntityComponent.getSpawnMarkerId())
             ? null
             : targetRef;

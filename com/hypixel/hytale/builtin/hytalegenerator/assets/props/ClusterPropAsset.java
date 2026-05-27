@@ -25,9 +25,9 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class ClusterPropAsset extends PropAsset {
    @Nonnull

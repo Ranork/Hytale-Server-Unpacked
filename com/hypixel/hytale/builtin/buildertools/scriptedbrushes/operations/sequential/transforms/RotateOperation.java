@@ -11,13 +11,13 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Rotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushAxis;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class RotateOperation extends SequenceBrushOperation {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -64,7 +64,7 @@ public class RotateOperation extends SequenceBrushOperation {
          }
 
          Vector3d position = transformComponent.getPosition();
-         brushConfig.setTransformOrigin(new Vector3i(MathUtil.floor(position.getX()), MathUtil.floor(position.getY()), MathUtil.floor(position.getZ())));
+         brushConfig.setTransformOrigin(new Vector3i(MathUtil.floor(position.x()), MathUtil.floor(position.y()), MathUtil.floor(position.z())));
       }
 
       brushConfig.setTransform(Rotate.forAxisAndAngle(this.rotationAxisArg, this.rotationAngleArg));

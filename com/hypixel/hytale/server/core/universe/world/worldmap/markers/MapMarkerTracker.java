@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.core.universe.world.worldmap.markers;
 
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.google.common.flogger.StackSize;
+import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
@@ -16,10 +17,13 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class MapMarkerTracker {
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private final WorldMapTracker worldMapTracker;
    private final Player player;
    private final Map<String, MapMarker> sentToClientById = new ConcurrentHashMap<>();
@@ -98,11 +102,16 @@ public class MapMarkerTracker {
    }
 
    public void sendMapMarker(MapMarker marker) {
-      this.tempTestedMarkers.add(marker.id);
-      MapMarker oldMarker = this.sentToClientById.get(marker.id);
-      if (this.doesMarkerNeedNetworkUpdate(oldMarker, marker)) {
-         this.sentToClientById.put(marker.id, marker);
-         this.tempToAdd.add(marker);
+      if (marker.transform != null && marker.transform.position != null) {
+         this.tempTestedMarkers.add(marker.id);
+         MapMarker oldMarker = this.sentToClientById.get(marker.id);
+         if (this.doesMarkerNeedNetworkUpdate(oldMarker, marker)) {
+            this.sentToClientById.put(marker.id, marker);
+            this.tempToAdd.add(marker);
+         }
+      } else {
+         ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withStackTrace(StackSize.SMALL))
+            .log("Refusing to send map marker '%s' with no Transform.position", marker.id);
       }
    }
 

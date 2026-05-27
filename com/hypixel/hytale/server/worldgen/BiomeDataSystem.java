@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -21,6 +20,7 @@ import com.hypixel.hytale.server.worldgen.zone.Zone;
 import com.hypixel.hytale.server.worldgen.zone.ZoneDiscoveryConfig;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BiomeDataSystem extends DelayedEntitySystem<EntityStore> {
    public BiomeDataSystem() {
@@ -50,8 +50,8 @@ public class BiomeDataSystem extends DelayedEntitySystem<EntityStore> {
 
          Vector3d position = transformComponent.getPosition();
          int seed = (int)world.getWorldConfig().getSeed();
-         int x = (int)position.getX();
-         int z = (int)position.getZ();
+         int x = (int)position.x();
+         int z = (int)position.z();
          ZoneBiomeResult result = generator.getZoneBiomeResultAt(seed, x, z);
          Biome biome = result.getBiome();
          Zone zone = result.getZoneResult().getZone();

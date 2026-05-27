@@ -413,6 +413,7 @@ public abstract class ACodecMapCodec<K, T, C extends Codec<? extends T>> impleme
       if (options.isEmpty()) {
          ObjectSchema s = new ObjectSchema();
          s.setAdditionalProperties(false);
+         s.setHytaleSchemaTypeField(new Schema.SchemaTypeField(this.key, null));
          return s;
       } else {
          Schema s = Schema.anyOf(options.toArray(Schema[]::new));

@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SliderDensity extends Density {
    private final double slideX;
@@ -30,7 +30,7 @@ public class SliderDensity extends Density {
       if (this.input == null) {
          return 0.0;
       } else {
-         this.rChildPosition.assign(context.position.x - this.slideX, context.position.y - this.slideY, context.position.z - this.slideZ);
+         this.rChildPosition.set(context.position.x - this.slideX, context.position.y - this.slideY, context.position.z - this.slideZ);
          this.rChildContext.assign(context);
          this.rChildContext.position = this.rChildPosition;
          return this.input.process(this.rChildContext);

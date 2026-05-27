@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.core.modules.collision;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class BoxCollisionData extends BasicCollisionData {
    public double collisionEnd;
@@ -9,6 +9,6 @@ public class BoxCollisionData extends BasicCollisionData {
 
    public void setEnd(double collisionEnd, @Nonnull Vector3d collisionNormal) {
       this.collisionEnd = collisionEnd;
-      this.collisionNormal.assign(collisionNormal);
+      this.collisionNormal.set(collisionNormal);
    }
 }

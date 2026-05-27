@@ -6,6 +6,7 @@ public class ObjectiveCommand extends AbstractCommandCollection {
    public ObjectiveCommand() {
       super("objective", "server.commands.objective");
       this.addAliases("obj");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new ObjectiveStartCommand());
       this.addSubCommand(new ObjectiveCompleteCommand());
       this.addSubCommand(new ObjectivePanelCommand());

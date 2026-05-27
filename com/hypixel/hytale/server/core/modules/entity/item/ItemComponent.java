@@ -12,8 +12,9 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.iterator.CircleIterator;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.ColorLight;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
@@ -39,6 +40,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ItemComponent implements Component<EntityStore> {
    @Nonnull
@@ -204,17 +206,17 @@ public class ItemComponent implements Component<EntityStore> {
 
    @Nonnull
    public static Holder<EntityStore>[] generateItemDrops(
-      @Nonnull ComponentAccessor<EntityStore> accessor, @Nonnull List<ItemStack> itemStacks, @Nonnull Vector3d position, @Nonnull Vector3f rotation
+      @Nonnull ComponentAccessor<EntityStore> accessor, @Nonnull List<ItemStack> itemStacks, @Nonnull Vector3d position, @Nonnull Rotation3fc rotation
    ) {
       if (itemStacks.size() == 1) {
          Holder<EntityStore> itemEntityHolder = generateItemDrop(accessor, itemStacks.getFirst(), position, rotation, 0.0F, 3.25F, 0.0F);
          return itemEntityHolder == null ? Holder.emptyArray() : new Holder[]{itemEntityHolder};
       } else {
          float randomAngleOffset = ThreadLocalRandom.current().nextFloat() * (float) (Math.PI * 2);
-         CircleIterator iterator = new CircleIterator(Vector3d.ZERO, 3.0, itemStacks.size(), randomAngleOffset);
+         CircleIterator iterator = new CircleIterator(Vector3dUtil.ZERO, 3.0, itemStacks.size(), randomAngleOffset);
          return itemStacks.stream().map(item -> {
             Vector3d circlePos = iterator.next();
-            return generateItemDrop(accessor, item, position, rotation, (float)circlePos.getX(), 3.25F, (float)circlePos.getZ());
+            return generateItemDrop(accessor, item, position, rotation, (float)circlePos.x(), 3.25F, (float)circlePos.z());
          }).filter(Objects::nonNull).toArray(Holder[]::new);
       }
    }
@@ -224,7 +226,7 @@ public class ItemComponent implements Component<EntityStore> {
       @Nonnull ComponentAccessor<EntityStore> accessor,
       @Nullable ItemStack itemStack,
       @Nonnull Vector3d position,
-      @Nonnull Vector3f rotation,
+      @Nonnull Rotation3fc rotation,
       float velocityX,
       float velocityY,
       float velocityZ
@@ -270,7 +272,7 @@ public class ItemComponent implements Component<EntityStore> {
                return null;
             } else {
                Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
-               PickupItemComponent pickupItemComponent = new PickupItemComponent(targetRef, targetPosition.clone());
+               PickupItemComponent pickupItemComponent = new PickupItemComponent(targetRef, new Vector3d(targetPosition));
                holder.addComponent(PickupItemComponent.getComponentType(), pickupItemComponent);
                holder.addComponent(getComponentType(), itemItemComponent.clone());
                holder.addComponent(TransformComponent.getComponentType(), itemTransformComponent.clone());
@@ -289,10 +291,10 @@ public class ItemComponent implements Component<EntityStore> {
       @Nonnull ItemStack itemStack, @Nonnull Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> targetRef
    ) {
       Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
-      PickupItemComponent pickupItemComponent = new PickupItemComponent(targetRef, position.clone());
+      PickupItemComponent pickupItemComponent = new PickupItemComponent(targetRef, new Vector3d(position));
       holder.addComponent(PickupItemComponent.getComponentType(), pickupItemComponent);
       holder.addComponent(getComponentType(), new ItemComponent(new ItemStack(itemStack.getItemId())));
-      holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(position.clone(), Vector3f.ZERO.clone()));
+      holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(new Vector3d(position), new Rotation3f(Rotation3f.IDENTITY)));
       holder.ensureComponent(PreventItemMerging.getComponentType());
       holder.ensureComponent(Intangible.getComponentType());
       holder.addComponent(NetworkId.getComponentType(), new NetworkId(componentAccessor.getExternalData().takeNextNetworkId()));

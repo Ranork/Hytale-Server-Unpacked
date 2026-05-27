@@ -12,7 +12,6 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.component.data.unknown.UnknownComponents;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
@@ -36,7 +35,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 public class BlockSpawnerPlugin extends JavaPlugin {
    @Nonnull
@@ -68,7 +66,6 @@ public class BlockSpawnerPlugin extends JavaPlugin {
       );
       this.blockSpawnerComponentType = this.getChunkStoreRegistry().registerComponent(BlockSpawner.class, "BlockSpawner", BlockSpawner.CODEC);
       this.getChunkStoreRegistry().registerSystem(new BlockSpawnerPlugin.BlockSpawnerSystem());
-      this.getChunkStoreRegistry().registerSystem(new BlockSpawnerPlugin.MigrateBlockSpawner());
       this.getEventRegistry().registerGlobal(PrefabBufferValidator.ValidateBlockEvent.class, BlockSpawnerPlugin::validatePrefabBlock);
    }
 
@@ -218,31 +215,6 @@ public class BlockSpawnerPlugin extends JavaPlugin {
       public void onEntityRemove(
          @Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-      }
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class MigrateBlockSpawner extends BlockModule.MigrationSystem {
-      @Override
-      public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
-         UnknownComponents<ChunkStore> unknown = holder.getComponent(ChunkStore.REGISTRY.getUnknownComponentType());
-
-         assert unknown != null;
-
-         BlockSpawner blockSpawner = unknown.removeComponent("blockspawner", BlockSpawner.CODEC);
-         if (blockSpawner != null) {
-            holder.putComponent(BlockSpawner.getComponentType(), blockSpawner);
-         }
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<ChunkStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
-      }
-
-      @Nullable
-      @Override
-      public Query<ChunkStore> getQuery() {
-         return ChunkStore.REGISTRY.getUnknownComponentType();
       }
    }
 }

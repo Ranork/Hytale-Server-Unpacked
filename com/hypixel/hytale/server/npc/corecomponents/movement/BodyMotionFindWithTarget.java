@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.LivingEntity;
@@ -27,6 +26,7 @@ import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarWithTarget> {
    protected final double minMoveDistanceWait;
@@ -74,7 +74,7 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
       this.haveAccessibleTargetPosition = false;
       this.waitForTargetMovement = false;
       this.targetBoundingBox = null;
-      this.lastPathedPosition.assign(Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE);
+      this.lastPathedPosition.set(Double.MIN_VALUE, Double.MIN_VALUE, Double.MIN_VALUE);
       this.self = role.getRoleName();
       this.lastDesiredTargetEntity = null;
    }
@@ -115,7 +115,7 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
                );
                Entity entity = EntityUtils.getEntity(targetEntityReference, targetEntityReference.getStore());
                if (entity instanceof LivingEntity && movementStatesComponent != null && movementStatesComponent.getMovementStates().onGround) {
-                  this.lastAccessibleTargetPosition.assign(this.lastTargetPosition);
+                  this.lastAccessibleTargetPosition.set(this.lastTargetPosition);
                   this.haveAccessibleTargetPosition = true;
                   this.lastAccessibleTargetPositionIsCurrent = true;
                   this.lastDesiredTargetEntity = targetEntityReference;
@@ -182,14 +182,14 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
       @Nonnull MotionController motionController, Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (this.throttleCount > this.throttleIgnoreCount) {
-         double distanceSquared = this.getLastTargetPosition().distanceSquaredTo(this.lastPathedPosition);
+         double distanceSquared = this.getLastTargetPosition().distanceSquared(this.lastPathedPosition);
          if (distanceSquared < 1.0000000000000002E-10 || this.waitForTargetMovement && distanceSquared < this.minMoveDistanceWaitSquared) {
             return true;
          }
       }
 
       this.waitForTargetMovement = false;
-      this.lastPathedPosition.assign(this.getLastAccessibleTargetPosition(motionController, false, componentAccessor));
+      this.lastPathedPosition.set(this.getLastAccessibleTargetPosition(motionController, false, componentAccessor));
       return false;
    }
 
@@ -224,8 +224,8 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (this.cosHalfRecomputeConeAngle < 1.0F) {
-         this.conePosition.assign(position);
-         this.coneDirection.assign(this.lastPathedPosition).subtract(position);
+         this.conePosition.set(position);
+         this.coneDirection.set(this.lastPathedPosition).sub(position);
       }
 
       return this.aStar
@@ -251,7 +251,7 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
 
       assert transformComponent != null;
 
-      this.lastPathedPosition.assign(transformComponent.getPosition());
+      this.lastPathedPosition.set(transformComponent.getPosition());
    }
 
    @Override
@@ -284,7 +284,7 @@ public abstract class BodyMotionFindWithTarget extends BodyMotionFindBase<AStarW
             NPCPlugin.get().getLogger().at(Level.INFO).log("MotionFindWithTarget: Reprojecting %s -> %s", this.self, this.other);
          }
 
-         this.lastAccessibleTargetPosition.assign(this.lastTargetPosition);
+         this.lastAccessibleTargetPosition.set(this.lastTargetPosition);
          motionController.translateToAccessiblePosition(this.lastAccessibleTargetPosition, this.targetBoundingBox, 0.0, 320.0, componentAccessor);
          this.haveAccessibleTargetPosition = true;
          this.lastAccessibleTargetPositionIsCurrent = true;

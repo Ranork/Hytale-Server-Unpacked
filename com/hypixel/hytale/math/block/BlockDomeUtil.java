@@ -8,6 +8,21 @@ public class BlockDomeUtil {
    public static <T> boolean forEachBlock(
       int originX, int originY, int originZ, int radiusX, int radiusY, int radiusZ, @Nullable T t, @Nonnull TriIntObjPredicate<T> consumer
    ) {
+      return forEachBlock(originX, originY, originZ, radiusX, radiusY, radiusZ, false, false, t, consumer);
+   }
+
+   public static <T> boolean forEachBlock(
+      int originX,
+      int originY,
+      int originZ,
+      int radiusX,
+      int radiusY,
+      int radiusZ,
+      boolean evenXZ,
+      boolean evenH,
+      @Nullable T t,
+      @Nonnull TriIntObjPredicate<T> consumer
+   ) {
       if (radiusX <= 0) {
          throw new IllegalArgumentException(String.valueOf(radiusX));
       } else if (radiusY <= 0) {
@@ -15,24 +30,41 @@ public class BlockDomeUtil {
       } else if (radiusZ <= 0) {
          throw new IllegalArgumentException(String.valueOf(radiusZ));
       } else {
+         float offsetXZ = evenXZ ? 0.5F : 0.0F;
+         float offsetH = evenH ? 0.5F : 0.0F;
+         int maxXi = evenXZ ? radiusX - 1 : radiusX;
+         int maxZi = evenXZ ? radiusZ - 1 : radiusZ;
+         int maxHi = radiusY - 1;
          float radiusXAdjusted = radiusX + 0.41F;
          float radiusYAdjusted = radiusY + 0.41F;
          float radiusZAdjusted = radiusZ + 0.41F;
          float invRadiusXSqr = 1.0F / (radiusXAdjusted * radiusXAdjusted);
          float invRadiusYSqr = 1.0F / (radiusYAdjusted * radiusYAdjusted);
 
-         for (int x = 0; x <= radiusX; x++) {
-            float qx = 1.0F - x * x * invRadiusXSqr;
-            double dy = Math.sqrt(qx) * radiusYAdjusted;
-            int maxY = (int)dy;
+         for (int x = -radiusX; x <= maxXi; x++) {
+            float sx = x + offsetXZ;
+            float qx = 1.0F - sx * sx * invRadiusXSqr;
+            if (!(qx < 0.0F)) {
+               double dy = Math.sqrt(qx) * radiusYAdjusted;
+               int maxYi = Math.min(maxHi, (int)(dy - offsetH));
 
-            for (int y = 0; y <= maxY; y++) {
-               double dz = Math.sqrt(qx - y * y * invRadiusYSqr) * radiusZAdjusted;
-               int maxZ = (int)dz;
+               for (int y = 0; y <= maxYi; y++) {
+                  float sy = y + offsetH;
+                  double dz = Math.sqrt(qx - sy * sy * invRadiusYSqr) * radiusZAdjusted;
+                  int minZi = (int)Math.ceil(-dz - offsetXZ);
+                  int maxZc = (int)(dz - offsetXZ);
+                  if (minZi < -radiusZ) {
+                     minZi = -radiusZ;
+                  }
 
-               for (int z = 0; z <= maxZ; z++) {
-                  if (!test(originX, originY, originZ, x, y, z, t, consumer)) {
-                     return false;
+                  if (maxZc > maxZi) {
+                     maxZc = maxZi;
+                  }
+
+                  for (int z = minZi; z <= maxZc; z++) {
+                     if (!consumer.test(originX + x, originY + y, originZ + z, t)) {
+                        return false;
+                     }
                   }
                }
             }
@@ -77,7 +109,7 @@ public class BlockDomeUtil {
          float invInnerRadiusZ2 = 1.0F / (innerRadiusZAdjusted * innerRadiusZAdjusted);
          int y = 0;
 
-         for (int y1 = 1; y <= radiusY; y1++) {
+         for (int y1 = 1; y < radiusY; y1++) {
             float qy = y * y * invRadiusY2;
             double dx = Math.sqrt(1.0F - qy) * radiusXAdjusted;
             int maxX = (int)dx;
@@ -126,6 +158,25 @@ public class BlockDomeUtil {
 
          return true;
       }
+   }
+
+   public static <T> boolean forEachBlock(
+      int originX,
+      int originY,
+      int originZ,
+      int radiusX,
+      int radiusY,
+      int radiusZ,
+      int thickness,
+      boolean capped,
+      boolean evenXZ,
+      boolean evenH,
+      @Nullable T t,
+      @Nonnull TriIntObjPredicate<T> consumer
+   ) {
+      return !evenXZ && !evenH
+         ? forEachBlock(originX, originY, originZ, radiusX, radiusY, radiusZ, thickness, capped, t, consumer)
+         : forEachBlock(originX, originY, originZ, radiusX, radiusY, radiusZ, evenXZ, evenH, t, consumer);
    }
 
    private static <T> boolean test(int originX, int originY, int originZ, int x, int y, int z, T context, @Nonnull TriIntObjPredicate<T> consumer) {

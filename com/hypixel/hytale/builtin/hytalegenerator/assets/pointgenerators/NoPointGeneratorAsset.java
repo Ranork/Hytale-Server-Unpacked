@@ -3,13 +3,14 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.pointgenerators;
 import com.hypixel.hytale.builtin.hytalegenerator.noise.pointprovider.PointProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector2i;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class NoPointGeneratorAsset extends PointGeneratorAsset {
    @Nonnull
@@ -22,6 +23,10 @@ public class NoPointGeneratorAsset extends PointGeneratorAsset {
    @Override
    public PointProvider build(@Nonnull SeedBox parentSeed) {
       return new PointProvider() {
+         {
+            Objects.requireNonNull(NoPointGeneratorAsset.this);
+         }
+
          @Nonnull
          @Override
          public List<Vector3i> points3i(@Nonnull Vector3i min, @Nonnull Vector3i max) {

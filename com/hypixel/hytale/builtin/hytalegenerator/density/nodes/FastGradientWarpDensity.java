@@ -2,9 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.noise.FastNoiseLite;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class FastGradientWarpDensity extends Density {
    private static final double HALF_PI = Math.PI / 2;
@@ -51,10 +51,10 @@ public class FastGradientWarpDensity extends Density {
          this.rWarpedPosition.y = context.position.y;
          this.rWarpedPosition.z = context.position.z;
          this.warper.DomainWarpFractalProgressive(this.rWarpedPosition);
-         this.rPosition.assign(context.position);
+         this.rPosition.set(context.position);
          this.rChildContext.assign(context);
          this.rChildContext.position = this.rPosition;
-         this.rChildContext.position.assign(this.rWarpedPosition.x, this.rWarpedPosition.y, this.rWarpedPosition.z);
+         this.rChildContext.position.set(this.rWarpedPosition.x, this.rWarpedPosition.y, this.rWarpedPosition.z);
          return this.input.process(this.rChildContext);
       }
    }

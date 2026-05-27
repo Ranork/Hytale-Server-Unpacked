@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.npc.corecomponents.utility.builders.BuilderActi
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionResetInstructions extends ActionBase {
    protected final int[] instructions;
@@ -19,7 +20,7 @@ public class ActionResetInstructions extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       role.addDeferredAction((_ref, _role, _dt, _store) -> this.resetInstructions(_role, _dt));
       return true;

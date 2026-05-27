@@ -5,10 +5,11 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.common.util.ArrayUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BlockFaceSupport implements NetworkSerializable<com.hypixel.hytale.protocol.BlockFaceSupport> {
    public static final BuilderCodec<BlockFaceSupport> CODEC = BuilderCodec.builder(BlockFaceSupport.class, BlockFaceSupport::new)
@@ -16,7 +17,7 @@ public class BlockFaceSupport implements NetworkSerializable<com.hypixel.hytale.
       .add()
       .documentation("Can be any string. Compared with FaceType in \"Support\". A LOT of blocks use 'Full'.")
       .append(
-         new KeyedCodec<>("Filler", new ArrayCodec<>(Vector3i.CODEC, Vector3i[]::new)),
+         new KeyedCodec<>("Filler", new ArrayCodec<>(Vector3iUtil.CODEC, Vector3i[]::new)),
          (blockFaceSupport, o) -> blockFaceSupport.filler = o,
          blockFaceSupport -> blockFaceSupport.filler
       )

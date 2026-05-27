@@ -4,7 +4,6 @@ import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.logic.GeneralNoise;
 import com.hypixel.hytale.procedurallib.supplier.IDoubleRange;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.worldgen.util.bounds.IWorldBounds;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class DistortedCaveNodeShape implements CaveNodeShape {
    private final CaveType caveType;
@@ -314,11 +314,11 @@ public class DistortedCaveNodeShape implements CaveNodeShape {
       @Nonnull
       private static Vector3d getDirection(double yaw, double pitch, double length) {
          if (length == 0.0) {
-            return Vector3d.ZERO;
+            return new Vector3d();
          } else {
             pitch = AbstractDistortedShape.clampPitch(pitch);
             return new Vector3d(TrigMathUtil.sin(pitch) * TrigMathUtil.cos(yaw), TrigMathUtil.cos(pitch), TrigMathUtil.sin(pitch) * TrigMathUtil.sin(yaw))
-               .scale(length);
+               .mul(length);
          }
       }
 

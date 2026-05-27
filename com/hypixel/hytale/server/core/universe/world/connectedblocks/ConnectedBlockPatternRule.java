@@ -6,7 +6,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.set.SetCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BlockTypeListAsset;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import java.util.Collections;
@@ -14,10 +14,16 @@ import java.util.HashSet;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class ConnectedBlockPatternRule {
    public static final BuilderCodec<ConnectedBlockPatternRule> CODEC = BuilderCodec.builder(ConnectedBlockPatternRule.class, ConnectedBlockPatternRule::new)
-      .append(new KeyedCodec<>("Position", Vector3i.CODEC, false), (o, relativePosition) -> o.relativePosition = relativePosition, o -> o.relativePosition)
+      .append(
+         new KeyedCodec<>("Position", Vector3iUtil.CODEC, false),
+         (o, relativePosition) -> o.relativePosition = relativePosition,
+         o -> new Vector3i(o.relativePosition)
+      )
       .add()
       .append(
          new KeyedCodec<>("IncludeOrExclude", new EnumCodec<>(ConnectedBlockPatternRule.IncludeOrExclude.class), true),
@@ -77,7 +83,7 @@ public class ConnectedBlockPatternRule {
       .add()
       .build();
    private ConnectedBlockPatternRule.IncludeOrExclude includeOrExclude;
-   private Vector3i relativePosition = Vector3i.ZERO;
+   private Vector3ic relativePosition = Vector3iUtil.ZERO;
    private final HashSet<String> blockTypes = new HashSet<>();
    @Nullable
    private BlockTypeListAsset[] blockTypeListAssets;
@@ -85,7 +91,7 @@ public class ConnectedBlockPatternRule {
    private ConnectedBlockFaceTags faceTags = ConnectedBlockFaceTags.EMPTY;
    private ConnectedBlockPatternRule.AdjacentSide[] placementNormals;
 
-   public Vector3i getRelativePosition() {
+   public Vector3ic getRelativePosition() {
       return this.relativePosition;
    }
 
@@ -117,16 +123,16 @@ public class ConnectedBlockPatternRule {
    }
 
    public static enum AdjacentSide {
-      Up(Vector3i.UP),
-      Down(Vector3i.DOWN),
-      North(Vector3i.NORTH),
-      East(Vector3i.EAST),
-      South(Vector3i.SOUTH),
-      West(Vector3i.WEST);
+      Up(Vector3iUtil.UP),
+      Down(Vector3iUtil.DOWN),
+      North(Vector3iUtil.NORTH),
+      East(Vector3iUtil.EAST),
+      South(Vector3iUtil.SOUTH),
+      West(Vector3iUtil.WEST);
 
-      public final Vector3i relativePosition;
+      public final Vector3ic relativePosition;
 
-      private AdjacentSide(Vector3i side) {
+      private AdjacentSide(Vector3ic side) {
          this.relativePosition = side;
       }
    }

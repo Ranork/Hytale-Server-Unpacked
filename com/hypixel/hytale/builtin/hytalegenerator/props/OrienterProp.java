@@ -9,12 +9,13 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class OrienterProp extends Prop {
    @Nonnull
@@ -45,6 +46,10 @@ public class OrienterProp extends Prop {
    private Prop.Context rContext;
    @Nonnull
    private final Pipe.One<Vector3i> rFirstAllValidPipe = new Pipe.One<Vector3i>() {
+      {
+         Objects.requireNonNull(OrienterProp.this);
+      }
+
       public void accept(@NonNullDecl Vector3i position, @NonNullDecl Control control) {
          OrienterProp.this.rPatternContext.position = position;
 
@@ -65,6 +70,10 @@ public class OrienterProp extends Prop {
    };
    @Nonnull
    private final Pipe.One<Vector3i> rRandomValidPipe = new Pipe.One<Vector3i>() {
+      {
+         Objects.requireNonNull(OrienterProp.this);
+      }
+
       public void accept(@NonNullDecl Vector3i position, @NonNullDecl Control control) {
          OrienterProp.this.rPatternContext.position = position;
          OrienterProp.this.rValidPatternIndices.clear();

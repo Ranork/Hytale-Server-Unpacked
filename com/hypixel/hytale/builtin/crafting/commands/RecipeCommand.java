@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 public class RecipeCommand extends AbstractCommandCollection {
    public RecipeCommand() {
       super("recipe", "server.commands.recipe.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new RecipeCommand.Learn());
       this.addSubCommand(new RecipeCommand.Forget());
       this.addSubCommand(new RecipeCommand.List());
@@ -33,6 +34,7 @@ public class RecipeCommand extends AbstractCommandCollection {
 
       Forget() {
          super("forget", "server.commands.recipe.forget.desc");
+         this.setPermissionGroups("hytale:Builder");
          this.addUsageVariant(new RecipeCommand.Forget.ForgetOther());
       }
 
@@ -105,6 +107,7 @@ public class RecipeCommand extends AbstractCommandCollection {
 
       Learn() {
          super("learn", "server.commands.recipe.learn.desc");
+         this.setPermissionGroups("hytale:Builder");
          this.addUsageVariant(new RecipeCommand.Learn.LearnOther());
       }
 
@@ -114,7 +117,7 @@ public class RecipeCommand extends AbstractCommandCollection {
       ) {
          Item item = this.itemArg.get(context);
          String itemId = item.getId();
-         Message itemMessage = Message.translation(item.getTranslationKey());
+         Message itemMessage = item.getTranslationMessage();
          if (CraftingPlugin.learnRecipe(ref, itemId, store)) {
             context.sendMessage(Message.translation("server.modules.learnrecipe.success").param("name", itemMessage).color(Color.GREEN));
          } else {
@@ -147,7 +150,7 @@ public class RecipeCommand extends AbstractCommandCollection {
                      } else {
                         Item item = this.itemArg.get(context);
                         String itemId = item.getId();
-                        Message itemMessage = Message.translation(item.getTranslationKey());
+                        Message itemMessage = item.getTranslationMessage();
                         if (CraftingPlugin.learnRecipe(ref, itemId, store)) {
                            context.sendMessage(
                               Message.translation("server.commands.recipe.learn.success.other")
@@ -176,6 +179,7 @@ public class RecipeCommand extends AbstractCommandCollection {
    static class List extends AbstractPlayerCommand {
       List() {
          super("list", "server.commands.recipe.list.desc");
+         this.setPermissionGroups("hytale:Adventurer");
          this.addUsageVariant(new RecipeCommand.List.ListOther());
       }
 

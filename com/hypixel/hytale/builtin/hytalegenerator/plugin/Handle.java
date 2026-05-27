@@ -2,7 +2,6 @@ package com.hypixel.hytale.builtin.hytalegenerator.plugin;
 
 import com.hypixel.hytale.builtin.hytalegenerator.engine.chunkgenerator.ChunkRequest;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.worldgen.GeneratedChunk;
 import com.hypixel.hytale.server.core.universe.world.worldgen.IWorldGen;
@@ -12,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.LongPredicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class Handle implements IWorldGen {
    @Nonnull

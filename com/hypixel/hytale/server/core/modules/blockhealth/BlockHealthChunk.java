@@ -4,17 +4,16 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Component;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.UpdateBlockDamage;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -22,6 +21,7 @@ import java.util.Objects;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BlockHealthChunk implements Component<ChunkStore> {
    private static final byte SERIALIZATION_VERSION = 2;
@@ -68,7 +68,7 @@ public class BlockHealthChunk implements Component<ChunkStore> {
       });
       if (blockHealth != null && !blockHealth.isDestroyed()) {
          Predicate<PlayerRef> filter = player -> true;
-         world.getNotificationHandler().updateBlockDamage(block.getX(), block.getY(), block.getZ(), blockHealth.getHealth(), -health, filter);
+         world.getNotificationHandler().updateBlockDamage(block.x(), block.y(), block.z(), blockHealth.getHealth(), -health, filter);
       }
 
       return Objects.requireNonNullElse(blockHealth, BlockHealth.NO_DAMAGE_INSTANCE);
@@ -80,13 +80,13 @@ public class BlockHealthChunk implements Component<ChunkStore> {
          value.setHealth(value.getHealth() + progress);
          return (BlockHealth)(value.getHealth() > 1.0 ? value : null);
       }), BlockHealth.NO_DAMAGE_INSTANCE);
-      world.getNotificationHandler().updateBlockDamage(block.getX(), block.getY(), block.getZ(), blockHealth.getHealth(), progress);
+      world.getNotificationHandler().updateBlockDamage(block.x(), block.y(), block.z(), blockHealth.getHealth(), progress);
       return blockHealth;
    }
 
    public void removeBlock(@Nonnull World world, @Nonnull Vector3i block) {
       if (this.blockHealthMap.remove(block) != null) {
-         world.getNotificationHandler().updateBlockDamage(block.getX(), block.getY(), block.getZ(), BlockHealth.NO_DAMAGE_INSTANCE.getHealth(), 0.0F);
+         world.getNotificationHandler().updateBlockDamage(block.x(), block.y(), block.z(), BlockHealth.NO_DAMAGE_INSTANCE.getHealth(), 0.0F);
       }
    }
 
@@ -112,7 +112,7 @@ public class BlockHealthChunk implements Component<ChunkStore> {
    public void createBlockDamagePackets(@Nonnull List<ToClientPacket> list) {
       for (Entry<Vector3i, BlockHealth> entry : this.blockHealthMap.entrySet()) {
          Vector3i block = entry.getKey();
-         BlockPosition blockPosition = new BlockPosition(block.getX(), block.getY(), block.getZ());
+         BlockPosition blockPosition = new BlockPosition(block.x(), block.y(), block.z());
          list.add(new UpdateBlockDamage(blockPosition, entry.getValue().getHealth(), 0.0F));
       }
    }
@@ -135,57 +135,68 @@ public class BlockHealthChunk implements Component<ChunkStore> {
 
    public void deserialize(@Nonnull byte[] data) {
       this.blockHealthMap.clear();
-      ByteBuf buf = Unpooled.wrappedBuffer(data);
-      byte version = buf.readByte();
-      int healthEntries = buf.readInt();
+      this.blockFragilityMap.clear();
+      MemorySegment mem = MemorySegment.ofArray(data);
+      byte version = mem.get(ValueLayout.JAVA_BYTE, 0L);
+      int healthEntries = mem.get(MemorySegmentUtil.INT_BE, 1L);
+      int offset = 5;
 
       for (int i = 0; i < healthEntries; i++) {
-         int x = buf.readInt();
-         int y = buf.readInt();
-         int z = buf.readInt();
+         int x = mem.get(MemorySegmentUtil.INT_BE, (long)offset);
+         int y = mem.get(MemorySegmentUtil.INT_BE, (long)(offset + 4));
+         int z = mem.get(MemorySegmentUtil.INT_BE, (long)(offset + 8));
          BlockHealth bh = new BlockHealth();
-         bh.deserialize(buf, version);
+         bh.deserialize(mem, offset + 12, version);
          this.blockHealthMap.put(new Vector3i(x, y, z), bh);
+         offset += 24;
       }
 
       if (version > 1) {
-         int fragilityEntries = buf.readInt();
+         int fragilityEntries = mem.get(MemorySegmentUtil.INT_BE, (long)offset);
+         offset += 4;
 
          for (int i = 0; i < fragilityEntries; i++) {
-            int x = buf.readInt();
-            int y = buf.readInt();
-            int z = buf.readInt();
+            int x = mem.get(MemorySegmentUtil.INT_BE, (long)offset);
+            int y = mem.get(MemorySegmentUtil.INT_BE, (long)(offset + 4));
+            int z = mem.get(MemorySegmentUtil.INT_BE, (long)(offset + 8));
             FragileBlock fragileBlock = new FragileBlock();
-            fragileBlock.deserialize(buf, version);
+            fragileBlock.deserialize(mem, offset + 12, version);
             this.blockFragilityMap.put(new Vector3i(x, y, z), fragileBlock);
+            offset += 16;
          }
       }
    }
 
    public byte[] serialize() {
-      ByteBuf buf = Unpooled.buffer();
-      buf.writeByte(2);
-      buf.writeInt(this.blockHealthMap.size());
+      byte[] result = new byte[5 + this.blockHealthMap.size() * 24 + 4 + this.blockFragilityMap.size() * 16];
+      MemorySegment data = MemorySegment.ofArray(result);
+      data.set(ValueLayout.JAVA_BYTE, 0L, (byte)2);
+      data.set(MemorySegmentUtil.INT_BE, 1L, this.blockHealthMap.size());
+      int offset = 5;
 
       for (Entry<Vector3i, BlockHealth> entry : this.blockHealthMap.entrySet()) {
          Vector3i vec = entry.getKey();
-         buf.writeInt(vec.x);
-         buf.writeInt(vec.y);
-         buf.writeInt(vec.z);
+         data.set(MemorySegmentUtil.INT_BE, (long)offset, vec.x);
+         data.set(MemorySegmentUtil.INT_BE, (long)(offset + 4), vec.y);
+         data.set(MemorySegmentUtil.INT_BE, (long)(offset + 8), vec.z);
          BlockHealth bh = entry.getValue();
-         bh.serialize(buf);
+         bh.serialize(data, offset + 12);
+         offset += 24;
       }
 
-      buf.writeInt(this.blockFragilityMap.size());
+      data.set(MemorySegmentUtil.INT_BE, (long)offset, this.blockFragilityMap.size());
+      offset += 4;
 
       for (Entry<Vector3i, FragileBlock> entry : this.blockFragilityMap.entrySet()) {
          Vector3i vec = entry.getKey();
-         buf.writeInt(vec.x);
-         buf.writeInt(vec.y);
-         buf.writeInt(vec.z);
-         entry.getValue().serialize(buf);
+         data.set(MemorySegmentUtil.INT_BE, (long)offset, vec.x);
+         data.set(MemorySegmentUtil.INT_BE, (long)(offset + 4), vec.y);
+         data.set(MemorySegmentUtil.INT_BE, (long)(offset + 8), vec.z);
+         FragileBlock fragileBlock = entry.getValue();
+         fragileBlock.serialize(data, offset + 12);
+         offset += 16;
       }
 
-      return ByteBufUtil.getBytesRelease(buf);
+      return result;
    }
 }

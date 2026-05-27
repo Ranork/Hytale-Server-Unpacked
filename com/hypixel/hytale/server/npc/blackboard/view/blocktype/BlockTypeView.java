@@ -7,7 +7,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.blockset.BlockSetModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -38,6 +37,7 @@ import java.util.function.BiPredicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BlockTypeView extends BlockRegionView<BlockTypeView> {
    private final long index;
@@ -317,7 +317,7 @@ public class BlockTypeView extends BlockRegionView<BlockTypeView> {
 
             for (int i = 0; i < this.foundBlocks.size(); i++) {
                IBlockPositionData block = this.foundBlocks.get(i);
-               double dist2 = entityPos.distanceSquaredTo(block.getXCentre(), block.getYCentre(), block.getZCentre());
+               double dist2 = entityPos.distanceSquared(block.getXCentre(), block.getYCentre(), block.getZCentre());
                if (dist2 < minDist2) {
                   minDist2 = dist2;
                   data = block;

@@ -19,10 +19,7 @@ public class PrefabLoadingCache {
    }
 
    public void clear() {
-      this.cache.values().removeIf(buffer -> {
-         buffer.release();
-         return true;
-      });
+      this.cache.clear();
    }
 
    @Nonnull

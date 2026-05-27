@@ -60,6 +60,7 @@ import com.hypixel.hytale.protocol.packets.assets.TrackOrUpdateObjective;
 import com.hypixel.hytale.protocol.packets.assets.UntrackObjective;
 import com.hypixel.hytale.protocol.packets.assets.UpdateAmbienceFX;
 import com.hypixel.hytale.protocol.packets.assets.UpdateAudioCategories;
+import com.hypixel.hytale.protocol.packets.assets.UpdateAudioStates;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockBreakingDecals;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockGroups;
 import com.hypixel.hytale.protocol.packets.assets.UpdateBlockHitboxes;
@@ -86,9 +87,11 @@ import com.hypixel.hytale.protocol.packets.assets.UpdateItemReticles;
 import com.hypixel.hytale.protocol.packets.assets.UpdateItemSoundSets;
 import com.hypixel.hytale.protocol.packets.assets.UpdateItems;
 import com.hypixel.hytale.protocol.packets.assets.UpdateModelvfxs;
+import com.hypixel.hytale.protocol.packets.assets.UpdateMusicContainers;
 import com.hypixel.hytale.protocol.packets.assets.UpdateObjectiveTask;
 import com.hypixel.hytale.protocol.packets.assets.UpdateParticleSpawners;
 import com.hypixel.hytale.protocol.packets.assets.UpdateParticleSystems;
+import com.hypixel.hytale.protocol.packets.assets.UpdatePhysicalMaterials;
 import com.hypixel.hytale.protocol.packets.assets.UpdateProjectileConfigs;
 import com.hypixel.hytale.protocol.packets.assets.UpdateRecipes;
 import com.hypixel.hytale.protocol.packets.assets.UpdateRepulsionConfig;
@@ -114,12 +117,16 @@ import com.hypixel.hytale.protocol.packets.auth.ServerAuthToken;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArgUpdate;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolEntityAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolExtrudeAction;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGMaskPreset;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGMaskPresetLoadResponse;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolGeneralAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolHideAnchors;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLaserPointer;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLineAction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPasteClipboard;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolPrefabPreview;
+import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolRandomizeClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolResetClipboardRotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolRotateClipboard;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolSelectionToolAskForClipboard;
@@ -144,8 +151,10 @@ import com.hypixel.hytale.protocol.packets.camera.SetFlyCameraMode;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
 import com.hypixel.hytale.protocol.packets.connection.ClientDisconnect;
 import com.hypixel.hytale.protocol.packets.connection.Connect;
+import com.hypixel.hytale.protocol.packets.connection.InsecurePlayerOptions;
 import com.hypixel.hytale.protocol.packets.connection.Ping;
 import com.hypixel.hytale.protocol.packets.connection.Pong;
+import com.hypixel.hytale.protocol.packets.connection.RequestInsecurePlayerOptions;
 import com.hypixel.hytale.protocol.packets.connection.ServerDisconnect;
 import com.hypixel.hytale.protocol.packets.entities.ApplyKnockback;
 import com.hypixel.hytale.protocol.packets.entities.ChangeVelocity;
@@ -161,11 +170,18 @@ import com.hypixel.hytale.protocol.packets.interaction.MountNPC;
 import com.hypixel.hytale.protocol.packets.interaction.PlayInteractionFor;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChains;
 import com.hypixel.hytale.protocol.packets.interface_.AddToServerPlayerList;
+import com.hypixel.hytale.protocol.packets.interface_.ArgCacheInvalidation;
+import com.hypixel.hytale.protocol.packets.interface_.ArgValuesRequest;
+import com.hypixel.hytale.protocol.packets.interface_.ArgValuesResponse;
 import com.hypixel.hytale.protocol.packets.interface_.ChatMessage;
+import com.hypixel.hytale.protocol.packets.interface_.CommandSuggestionsRequest;
+import com.hypixel.hytale.protocol.packets.interface_.CommandSuggestionsResponse;
+import com.hypixel.hytale.protocol.packets.interface_.CommandTreeSync;
 import com.hypixel.hytale.protocol.packets.interface_.CustomHud;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPage;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageEvent;
 import com.hypixel.hytale.protocol.packets.interface_.EditorBlocksChange;
+import com.hypixel.hytale.protocol.packets.interface_.ExecuteServersidePageCommand;
 import com.hypixel.hytale.protocol.packets.interface_.HideEventTitle;
 import com.hypixel.hytale.protocol.packets.interface_.KillFeedMessage;
 import com.hypixel.hytale.protocol.packets.interface_.Notification;
@@ -182,6 +198,7 @@ import com.hypixel.hytale.protocol.packets.interface_.UpdateLanguage;
 import com.hypixel.hytale.protocol.packets.interface_.UpdatePortal;
 import com.hypixel.hytale.protocol.packets.interface_.UpdateServerPlayerList;
 import com.hypixel.hytale.protocol.packets.interface_.UpdateServerPlayerListPing;
+import com.hypixel.hytale.protocol.packets.interface_.UpdateServersideUIPage;
 import com.hypixel.hytale.protocol.packets.interface_.UpdateVisibleHudComponents;
 import com.hypixel.hytale.protocol.packets.interface_.WorldSavingStatus;
 import com.hypixel.hytale.protocol.packets.inventory.DropCreativeItem;
@@ -197,6 +214,7 @@ import com.hypixel.hytale.protocol.packets.inventory.UpdatePlayerInventory;
 import com.hypixel.hytale.protocol.packets.machinima.RequestMachinimaActorModel;
 import com.hypixel.hytale.protocol.packets.machinima.SetMachinimaActorModel;
 import com.hypixel.hytale.protocol.packets.machinima.UpdateMachinimaScene;
+import com.hypixel.hytale.protocol.packets.player.AddOrUpdateTriggerVolumeDisplay;
 import com.hypixel.hytale.protocol.packets.player.ClearDebugShapes;
 import com.hypixel.hytale.protocol.packets.player.ClientMovement;
 import com.hypixel.hytale.protocol.packets.player.ClientPlaceBlock;
@@ -204,32 +222,59 @@ import com.hypixel.hytale.protocol.packets.player.ClientReady;
 import com.hypixel.hytale.protocol.packets.player.ClientTeleport;
 import com.hypixel.hytale.protocol.packets.player.DamageInfo;
 import com.hypixel.hytale.protocol.packets.player.DisplayDebug;
+import com.hypixel.hytale.protocol.packets.player.HideTriggerVolumePastePrefabPreview;
 import com.hypixel.hytale.protocol.packets.player.JoinWorld;
 import com.hypixel.hytale.protocol.packets.player.LoadHotbar;
 import com.hypixel.hytale.protocol.packets.player.MouseInteraction;
 import com.hypixel.hytale.protocol.packets.player.RemoveMapMarker;
+import com.hypixel.hytale.protocol.packets.player.RemoveTriggerVolumeDisplay;
 import com.hypixel.hytale.protocol.packets.player.ReticleEvent;
 import com.hypixel.hytale.protocol.packets.player.SaveHotbar;
+import com.hypixel.hytale.protocol.packets.player.SelectionToolShowTriggerVolumes;
 import com.hypixel.hytale.protocol.packets.player.SetBlockPlacementOverride;
 import com.hypixel.hytale.protocol.packets.player.SetClientId;
 import com.hypixel.hytale.protocol.packets.player.SetGameMode;
 import com.hypixel.hytale.protocol.packets.player.SetMovementStates;
+import com.hypixel.hytale.protocol.packets.player.ShowTriggerVolumePastePrefabPreview;
 import com.hypixel.hytale.protocol.packets.player.SyncPlayerPreferences;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreate;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolCreateResponse;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolDelete;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolDuplicate;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolEquip;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolGroupCreate;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolGroupCreateResponse;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolGroupMove;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolMove;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolMultiMove;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolResize;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSelect;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSelection;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetActivationDelay;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetCancelDelayedOnExit;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetColor;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetConditionTiming;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetCooldown;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetKeepLoaded;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolSetTargetTypes;
+import com.hypixel.hytale.protocol.packets.player.TriggerVolumeToolUngroup;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesCount;
 import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesFeatureStatus;
 import com.hypixel.hytale.protocol.packets.player.UpdateMovementSettings;
+import com.hypixel.hytale.protocol.packets.player.UpdateTriggerVolumeDisplay;
 import com.hypixel.hytale.protocol.packets.serveraccess.RequestServerAccess;
 import com.hypixel.hytale.protocol.packets.serveraccess.SetServerAccess;
 import com.hypixel.hytale.protocol.packets.serveraccess.UpdateServerAccess;
 import com.hypixel.hytale.protocol.packets.setup.AssetFinalize;
 import com.hypixel.hytale.protocol.packets.setup.AssetInitialize;
 import com.hypixel.hytale.protocol.packets.setup.AssetPart;
-import com.hypixel.hytale.protocol.packets.setup.PlayerOptions;
 import com.hypixel.hytale.protocol.packets.setup.RemoveAssets;
 import com.hypixel.hytale.protocol.packets.setup.RequestAssets;
 import com.hypixel.hytale.protocol.packets.setup.RequestCommonAssetsRebuild;
 import com.hypixel.hytale.protocol.packets.setup.ServerTags;
 import com.hypixel.hytale.protocol.packets.setup.SetTimeDilation;
 import com.hypixel.hytale.protocol.packets.setup.SetUpdateRate;
+import com.hypixel.hytale.protocol.packets.setup.SetupFinalize;
 import com.hypixel.hytale.protocol.packets.setup.UpdateFeatures;
 import com.hypixel.hytale.protocol.packets.setup.ViewRadius;
 import com.hypixel.hytale.protocol.packets.setup.WorldLoadFinished;
@@ -255,6 +300,7 @@ import com.hypixel.hytale.protocol.packets.world.ServerSetBlocks;
 import com.hypixel.hytale.protocol.packets.world.ServerSetFluid;
 import com.hypixel.hytale.protocol.packets.world.ServerSetFluids;
 import com.hypixel.hytale.protocol.packets.world.ServerSetPaused;
+import com.hypixel.hytale.protocol.packets.world.SetAudioState;
 import com.hypixel.hytale.protocol.packets.world.SetChunk;
 import com.hypixel.hytale.protocol.packets.world.SetChunkEnvironments;
 import com.hypixel.hytale.protocol.packets.world.SetChunkHeightmap;
@@ -267,7 +313,7 @@ import com.hypixel.hytale.protocol.packets.world.UnloadChunk;
 import com.hypixel.hytale.protocol.packets.world.UpdateBlockDamage;
 import com.hypixel.hytale.protocol.packets.world.UpdateEditorTimeOverride;
 import com.hypixel.hytale.protocol.packets.world.UpdateEditorWeatherOverride;
-import com.hypixel.hytale.protocol.packets.world.UpdateEnvironmentMusic;
+import com.hypixel.hytale.protocol.packets.world.UpdateForcedMusic;
 import com.hypixel.hytale.protocol.packets.world.UpdatePostFxSettings;
 import com.hypixel.hytale.protocol.packets.world.UpdateSleepState;
 import com.hypixel.hytale.protocol.packets.world.UpdateSunSettings;
@@ -282,6 +328,7 @@ import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMap;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapSettings;
 import com.hypixel.hytale.protocol.packets.worldmap.UpdateWorldMapVisible;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -309,13 +356,16 @@ public final class PacketRegistry {
       int maxSize,
       boolean compressed,
       BiFunction<ByteBuf, Integer, ValidationResult> validate,
-      BiFunction<ByteBuf, Integer, Packet> deserialize
+      PacketRegistry.DeserializeFunc<ByteBuf> deserialize,
+      PacketRegistry.DeserializeFunc<MemorySegment> toObject
    ) {
       PacketRegistry.PacketInfo existing = BY_ID.get(id);
       if (existing != null) {
          throw new IllegalStateException("Duplicate packet ID " + id + ": '" + name + "' conflicts with '" + existing.name() + "'");
       } else {
-         PacketRegistry.PacketInfo info = new PacketRegistry.PacketInfo(id, name, channel, type, fixedBlockSize, maxSize, compressed, validate, deserialize);
+         PacketRegistry.PacketInfo info = new PacketRegistry.PacketInfo(
+            id, name, channel, type, fixedBlockSize, maxSize, compressed, validate, deserialize, toObject
+         );
          switch (direction) {
             case ToServer:
                TO_SERVER_BY_ID.put(id, info);
@@ -360,11 +410,12 @@ public final class PacketRegistry {
          0,
          "Connect",
          Connect.class,
-         46,
-         38013,
+         30,
+         37972,
          false,
          Connect::validateStructure,
-         Connect::deserialize
+         Connect::deserialize,
+         Connect::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -376,7 +427,8 @@ public final class PacketRegistry {
          2,
          false,
          ClientDisconnect::validateStructure,
-         ClientDisconnect::deserialize
+         ClientDisconnect::deserialize,
+         ClientDisconnect::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -388,13 +440,34 @@ public final class PacketRegistry {
          1677721600,
          false,
          ServerDisconnect::validateStructure,
-         ServerDisconnect::deserialize
+         ServerDisconnect::deserialize,
+         ServerDisconnect::toObject
       );
       register(
-         PacketRegistry.PacketDirection.ToClient, NetworkChannel.Default, 3, "Ping", Ping.class, 29, 29, false, Ping::validateStructure, Ping::deserialize
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         3,
+         "Ping",
+         Ping.class,
+         29,
+         29,
+         false,
+         Ping::validateStructure,
+         Ping::deserialize,
+         Ping::toObject
       );
       register(
-         PacketRegistry.PacketDirection.ToServer, NetworkChannel.Default, 4, "Pong", Pong.class, 20, 20, false, Pong::validateStructure, Pong::deserialize
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         4,
+         "Pong",
+         Pong.class,
+         20,
+         20,
+         false,
+         Pong::validateStructure,
+         Pong::deserialize,
+         Pong::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -406,7 +479,8 @@ public final class PacketRegistry {
          49171,
          false,
          AuthGrant::validateStructure,
-         AuthGrant::deserialize
+         AuthGrant::deserialize,
+         AuthGrant::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -418,7 +492,8 @@ public final class PacketRegistry {
          49171,
          false,
          AuthToken::validateStructure,
-         AuthToken::deserialize
+         AuthToken::deserialize,
+         AuthToken::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -430,7 +505,8 @@ public final class PacketRegistry {
          32851,
          false,
          ServerAuthToken::validateStructure,
-         ServerAuthToken::deserialize
+         ServerAuthToken::deserialize,
+         ServerAuthToken::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -442,7 +518,8 @@ public final class PacketRegistry {
          70,
          false,
          ConnectAccept::validateStructure,
-         ConnectAccept::deserialize
+         ConnectAccept::deserialize,
+         ConnectAccept::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -454,7 +531,8 @@ public final class PacketRegistry {
          70,
          false,
          PasswordResponse::validateStructure,
-         PasswordResponse::deserialize
+         PasswordResponse::deserialize,
+         PasswordResponse::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -466,7 +544,8 @@ public final class PacketRegistry {
          0,
          false,
          PasswordAccepted::validateStructure,
-         PasswordAccepted::deserialize
+         PasswordAccepted::deserialize,
+         PasswordAccepted::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -478,7 +557,8 @@ public final class PacketRegistry {
          74,
          false,
          PasswordRejected::validateStructure,
-         PasswordRejected::deserialize
+         PasswordRejected::deserialize,
+         PasswordRejected::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -490,7 +570,8 @@ public final class PacketRegistry {
          5141,
          false,
          ClientReferral::validateStructure,
-         ClientReferral::deserialize
+         ClientReferral::deserialize,
+         ClientReferral::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -502,7 +583,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          WorldSettings::validateStructure,
-         WorldSettings::deserialize
+         WorldSettings::deserialize,
+         WorldSettings::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -514,7 +596,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          WorldLoadProgress::validateStructure,
-         WorldLoadProgress::deserialize
+         WorldLoadProgress::deserialize,
+         WorldLoadProgress::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -526,7 +609,8 @@ public final class PacketRegistry {
          0,
          false,
          WorldLoadFinished::validateStructure,
-         WorldLoadFinished::deserialize
+         WorldLoadFinished::deserialize,
+         WorldLoadFinished::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -538,7 +622,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          RequestAssets::validateStructure,
-         RequestAssets::deserialize
+         RequestAssets::deserialize,
+         RequestAssets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -550,7 +635,8 @@ public final class PacketRegistry {
          2121,
          false,
          AssetInitialize::validateStructure,
-         AssetInitialize::deserialize
+         AssetInitialize::deserialize,
+         AssetInitialize::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -562,7 +648,8 @@ public final class PacketRegistry {
          4096006,
          true,
          AssetPart::validateStructure,
-         AssetPart::deserialize
+         AssetPart::deserialize,
+         AssetPart::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -574,7 +661,8 @@ public final class PacketRegistry {
          0,
          false,
          AssetFinalize::validateStructure,
-         AssetFinalize::deserialize
+         AssetFinalize::deserialize,
+         AssetFinalize::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -586,7 +674,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          RemoveAssets::validateStructure,
-         RemoveAssets::deserialize
+         RemoveAssets::deserialize,
+         RemoveAssets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -598,7 +687,8 @@ public final class PacketRegistry {
          0,
          false,
          RequestCommonAssetsRebuild::validateStructure,
-         RequestCommonAssetsRebuild::deserialize
+         RequestCommonAssetsRebuild::deserialize,
+         RequestCommonAssetsRebuild::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -610,7 +700,8 @@ public final class PacketRegistry {
          4,
          false,
          SetUpdateRate::validateStructure,
-         SetUpdateRate::deserialize
+         SetUpdateRate::deserialize,
+         SetUpdateRate::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -622,7 +713,8 @@ public final class PacketRegistry {
          4,
          false,
          SetTimeDilation::validateStructure,
-         SetTimeDilation::deserialize
+         SetTimeDilation::deserialize,
+         SetTimeDilation::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -634,7 +726,8 @@ public final class PacketRegistry {
          8192006,
          false,
          UpdateFeatures::validateStructure,
-         UpdateFeatures::deserialize
+         UpdateFeatures::deserialize,
+         UpdateFeatures::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -646,19 +739,21 @@ public final class PacketRegistry {
          4,
          false,
          ViewRadius::validateStructure,
-         ViewRadius::deserialize
+         ViewRadius::deserialize,
+         ViewRadius::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
          NetworkChannel.Default,
          33,
-         "PlayerOptions",
-         PlayerOptions.class,
-         1,
-         327680184,
+         "SetupFinalize",
+         SetupFinalize.class,
+         0,
+         0,
          false,
-         PlayerOptions::validateStructure,
-         PlayerOptions::deserialize
+         SetupFinalize::validateStructure,
+         SetupFinalize::deserialize,
+         SetupFinalize::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -670,7 +765,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          ServerTags::validateStructure,
-         ServerTags::deserialize
+         ServerTags::deserialize,
+         ServerTags::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -682,7 +778,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateBlockTypes::validateStructure,
-         UpdateBlockTypes::deserialize
+         UpdateBlockTypes::deserialize,
+         UpdateBlockTypes::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -694,7 +791,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateBlockHitboxes::validateStructure,
-         UpdateBlockHitboxes::deserialize
+         UpdateBlockHitboxes::deserialize,
+         UpdateBlockHitboxes::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -706,7 +804,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateBlockSoundSets::validateStructure,
-         UpdateBlockSoundSets::deserialize
+         UpdateBlockSoundSets::deserialize,
+         UpdateBlockSoundSets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -718,7 +817,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateItemSoundSets::validateStructure,
-         UpdateItemSoundSets::deserialize
+         UpdateItemSoundSets::deserialize,
+         UpdateItemSoundSets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -730,7 +830,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateBlockParticleSets::validateStructure,
-         UpdateBlockParticleSets::deserialize
+         UpdateBlockParticleSets::deserialize,
+         UpdateBlockParticleSets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -742,7 +843,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateBlockBreakingDecals::validateStructure,
-         UpdateBlockBreakingDecals::deserialize
+         UpdateBlockBreakingDecals::deserialize,
+         UpdateBlockBreakingDecals::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -754,7 +856,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateBlockSets::validateStructure,
-         UpdateBlockSets::deserialize
+         UpdateBlockSets::deserialize,
+         UpdateBlockSets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -766,7 +869,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateWeathers::validateStructure,
-         UpdateWeathers::deserialize
+         UpdateWeathers::deserialize,
+         UpdateWeathers::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -778,7 +882,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateTrails::validateStructure,
-         UpdateTrails::deserialize
+         UpdateTrails::deserialize,
+         UpdateTrails::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -790,7 +895,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateParticleSystems::validateStructure,
-         UpdateParticleSystems::deserialize
+         UpdateParticleSystems::deserialize,
+         UpdateParticleSystems::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -802,7 +908,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateParticleSpawners::validateStructure,
-         UpdateParticleSpawners::deserialize
+         UpdateParticleSpawners::deserialize,
+         UpdateParticleSpawners::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -814,7 +921,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateEntityEffects::validateStructure,
-         UpdateEntityEffects::deserialize
+         UpdateEntityEffects::deserialize,
+         UpdateEntityEffects::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -826,7 +934,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateItemPlayerAnimations::validateStructure,
-         UpdateItemPlayerAnimations::deserialize
+         UpdateItemPlayerAnimations::deserialize,
+         UpdateItemPlayerAnimations::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -838,7 +947,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateModelvfxs::validateStructure,
-         UpdateModelvfxs::deserialize
+         UpdateModelvfxs::deserialize,
+         UpdateModelvfxs::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -850,7 +960,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateItems::validateStructure,
-         UpdateItems::deserialize
+         UpdateItems::deserialize,
+         UpdateItems::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -862,7 +973,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateItemQualities::validateStructure,
-         UpdateItemQualities::deserialize
+         UpdateItemQualities::deserialize,
+         UpdateItemQualities::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -874,7 +986,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateItemCategories::validateStructure,
-         UpdateItemCategories::deserialize
+         UpdateItemCategories::deserialize,
+         UpdateItemCategories::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -886,7 +999,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateItemReticles::validateStructure,
-         UpdateItemReticles::deserialize
+         UpdateItemReticles::deserialize,
+         UpdateItemReticles::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -898,7 +1012,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateFieldcraftCategories::validateStructure,
-         UpdateFieldcraftCategories::deserialize
+         UpdateFieldcraftCategories::deserialize,
+         UpdateFieldcraftCategories::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -910,7 +1025,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateResourceTypes::validateStructure,
-         UpdateResourceTypes::deserialize
+         UpdateResourceTypes::deserialize,
+         UpdateResourceTypes::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -922,7 +1038,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateRecipes::validateStructure,
-         UpdateRecipes::deserialize
+         UpdateRecipes::deserialize,
+         UpdateRecipes::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -934,7 +1051,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateEnvironments::validateStructure,
-         UpdateEnvironments::deserialize
+         UpdateEnvironments::deserialize,
+         UpdateEnvironments::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -946,7 +1064,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateAmbienceFX::validateStructure,
-         UpdateAmbienceFX::deserialize
+         UpdateAmbienceFX::deserialize,
+         UpdateAmbienceFX::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -958,7 +1077,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateFluidFX::validateStructure,
-         UpdateFluidFX::deserialize
+         UpdateFluidFX::deserialize,
+         UpdateFluidFX::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -970,7 +1090,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateTranslations::validateStructure,
-         UpdateTranslations::deserialize
+         UpdateTranslations::deserialize,
+         UpdateTranslations::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -982,7 +1103,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateSoundEvents::validateStructure,
-         UpdateSoundEvents::deserialize
+         UpdateSoundEvents::deserialize,
+         UpdateSoundEvents::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -994,7 +1116,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateInteractions::validateStructure,
-         UpdateInteractions::deserialize
+         UpdateInteractions::deserialize,
+         UpdateInteractions::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1006,7 +1129,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateRootInteractions::validateStructure,
-         UpdateRootInteractions::deserialize
+         UpdateRootInteractions::deserialize,
+         UpdateRootInteractions::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1018,7 +1142,8 @@ public final class PacketRegistry {
          20480007,
          true,
          UpdateUnarmedInteractions::validateStructure,
-         UpdateUnarmedInteractions::deserialize
+         UpdateUnarmedInteractions::deserialize,
+         UpdateUnarmedInteractions::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1030,7 +1155,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          TrackOrUpdateObjective::validateStructure,
-         TrackOrUpdateObjective::deserialize
+         TrackOrUpdateObjective::deserialize,
+         TrackOrUpdateObjective::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1042,7 +1168,8 @@ public final class PacketRegistry {
          16,
          false,
          UntrackObjective::validateStructure,
-         UntrackObjective::deserialize
+         UntrackObjective::deserialize,
+         UntrackObjective::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1054,7 +1181,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          UpdateObjectiveTask::validateStructure,
-         UpdateObjectiveTask::deserialize
+         UpdateObjectiveTask::deserialize,
+         UpdateObjectiveTask::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1066,7 +1194,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateEntityStatTypes::validateStructure,
-         UpdateEntityStatTypes::deserialize
+         UpdateEntityStatTypes::deserialize,
+         UpdateEntityStatTypes::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1078,7 +1207,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateEntityUIComponents::validateStructure,
-         UpdateEntityUIComponents::deserialize
+         UpdateEntityUIComponents::deserialize,
+         UpdateEntityUIComponents::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1090,7 +1220,8 @@ public final class PacketRegistry {
          36864011,
          true,
          UpdateHitboxCollisionConfig::validateStructure,
-         UpdateHitboxCollisionConfig::deserialize
+         UpdateHitboxCollisionConfig::deserialize,
+         UpdateHitboxCollisionConfig::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1102,7 +1233,8 @@ public final class PacketRegistry {
          65536011,
          true,
          UpdateRepulsionConfig::validateStructure,
-         UpdateRepulsionConfig::deserialize
+         UpdateRepulsionConfig::deserialize,
+         UpdateRepulsionConfig::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1114,7 +1246,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateViewBobbing::validateStructure,
-         UpdateViewBobbing::deserialize
+         UpdateViewBobbing::deserialize,
+         UpdateViewBobbing::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1126,7 +1259,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateCameraShake::validateStructure,
-         UpdateCameraShake::deserialize
+         UpdateCameraShake::deserialize,
+         UpdateCameraShake::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1138,7 +1272,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateBlockGroups::validateStructure,
-         UpdateBlockGroups::deserialize
+         UpdateBlockGroups::deserialize,
+         UpdateBlockGroups::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1150,7 +1285,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateSoundSets::validateStructure,
-         UpdateSoundSets::deserialize
+         UpdateSoundSets::deserialize,
+         UpdateSoundSets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1162,7 +1298,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateAudioCategories::validateStructure,
-         UpdateAudioCategories::deserialize
+         UpdateAudioCategories::deserialize,
+         UpdateAudioCategories::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1174,7 +1311,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateReverbEffects::validateStructure,
-         UpdateReverbEffects::deserialize
+         UpdateReverbEffects::deserialize,
+         UpdateReverbEffects::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1186,7 +1324,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateEqualizerEffects::validateStructure,
-         UpdateEqualizerEffects::deserialize
+         UpdateEqualizerEffects::deserialize,
+         UpdateEqualizerEffects::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1198,7 +1337,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateFluids::validateStructure,
-         UpdateFluids::deserialize
+         UpdateFluids::deserialize,
+         UpdateFluids::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1210,7 +1350,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateTagPatterns::validateStructure,
-         UpdateTagPatterns::deserialize
+         UpdateTagPatterns::deserialize,
+         UpdateTagPatterns::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1222,7 +1363,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateProjectileConfigs::validateStructure,
-         UpdateProjectileConfigs::deserialize
+         UpdateProjectileConfigs::deserialize,
+         UpdateProjectileConfigs::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1234,7 +1376,47 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateEmotes::validateStructure,
-         UpdateEmotes::deserialize
+         UpdateEmotes::deserialize,
+         UpdateEmotes::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         87,
+         "UpdatePhysicalMaterials",
+         UpdatePhysicalMaterials.class,
+         6,
+         1677721600,
+         true,
+         UpdatePhysicalMaterials::validateStructure,
+         UpdatePhysicalMaterials::deserialize,
+         UpdatePhysicalMaterials::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         88,
+         "UpdateMusicContainers",
+         UpdateMusicContainers.class,
+         6,
+         1677721600,
+         true,
+         UpdateMusicContainers::validateStructure,
+         UpdateMusicContainers::deserialize,
+         UpdateMusicContainers::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         89,
+         "UpdateAudioStates",
+         UpdateAudioStates.class,
+         6,
+         1677721600,
+         true,
+         UpdateAudioStates::validateStructure,
+         UpdateAudioStates::deserialize,
+         UpdateAudioStates::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1246,7 +1428,8 @@ public final class PacketRegistry {
          4,
          false,
          SetClientId::validateStructure,
-         SetClientId::deserialize
+         SetClientId::deserialize,
+         SetClientId::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1258,7 +1441,8 @@ public final class PacketRegistry {
          1,
          false,
          SetGameMode::validateStructure,
-         SetGameMode::deserialize
+         SetGameMode::deserialize,
+         SetGameMode::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1270,7 +1454,8 @@ public final class PacketRegistry {
          2,
          false,
          SetMovementStates::validateStructure,
-         SetMovementStates::deserialize
+         SetMovementStates::deserialize,
+         SetMovementStates::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1282,7 +1467,8 @@ public final class PacketRegistry {
          1,
          false,
          SetBlockPlacementOverride::validateStructure,
-         SetBlockPlacementOverride::deserialize
+         SetBlockPlacementOverride::deserialize,
+         SetBlockPlacementOverride::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1294,7 +1480,8 @@ public final class PacketRegistry {
          18,
          false,
          JoinWorld::validateStructure,
-         JoinWorld::deserialize
+         JoinWorld::deserialize,
+         JoinWorld::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1306,7 +1493,8 @@ public final class PacketRegistry {
          2,
          false,
          ClientReady::validateStructure,
-         ClientReady::deserialize
+         ClientReady::deserialize,
+         ClientReady::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1318,7 +1506,8 @@ public final class PacketRegistry {
          1,
          false,
          LoadHotbar::validateStructure,
-         LoadHotbar::deserialize
+         LoadHotbar::deserialize,
+         LoadHotbar::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1330,7 +1519,8 @@ public final class PacketRegistry {
          1,
          false,
          SaveHotbar::validateStructure,
-         SaveHotbar::deserialize
+         SaveHotbar::deserialize,
+         SaveHotbar::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1342,7 +1532,8 @@ public final class PacketRegistry {
          155,
          false,
          ClientMovement::validateStructure,
-         ClientMovement::deserialize
+         ClientMovement::deserialize,
+         ClientMovement::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1354,7 +1545,8 @@ public final class PacketRegistry {
          52,
          false,
          ClientTeleport::validateStructure,
-         ClientTeleport::deserialize
+         ClientTeleport::deserialize,
+         ClientTeleport::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1366,7 +1558,8 @@ public final class PacketRegistry {
          252,
          false,
          UpdateMovementSettings::validateStructure,
-         UpdateMovementSettings::deserialize
+         UpdateMovementSettings::deserialize,
+         UpdateMovementSettings::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1378,7 +1571,8 @@ public final class PacketRegistry {
          20480071,
          false,
          MouseInteraction::validateStructure,
-         MouseInteraction::deserialize
+         MouseInteraction::deserialize,
+         MouseInteraction::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1390,7 +1584,8 @@ public final class PacketRegistry {
          32768048,
          false,
          DamageInfo::validateStructure,
-         DamageInfo::deserialize
+         DamageInfo::deserialize,
+         DamageInfo::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1402,7 +1597,8 @@ public final class PacketRegistry {
          4,
          false,
          ReticleEvent::validateStructure,
-         ReticleEvent::deserialize
+         ReticleEvent::deserialize,
+         ReticleEvent::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1414,7 +1610,8 @@ public final class PacketRegistry {
          32768041,
          false,
          DisplayDebug::validateStructure,
-         DisplayDebug::deserialize
+         DisplayDebug::deserialize,
+         DisplayDebug::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1426,7 +1623,8 @@ public final class PacketRegistry {
          0,
          false,
          ClearDebugShapes::validateStructure,
-         ClearDebugShapes::deserialize
+         ClearDebugShapes::deserialize,
+         ClearDebugShapes::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1434,11 +1632,12 @@ public final class PacketRegistry {
          116,
          "SyncPlayerPreferences",
          SyncPlayerPreferences.class,
-         12,
-         12,
+         19,
+         16384024,
          false,
          SyncPlayerPreferences::validateStructure,
-         SyncPlayerPreferences::deserialize
+         SyncPlayerPreferences::deserialize,
+         SyncPlayerPreferences::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1446,11 +1645,12 @@ public final class PacketRegistry {
          117,
          "ClientPlaceBlock",
          ClientPlaceBlock.class,
-         21,
-         21,
+         23,
+         23,
          false,
          ClientPlaceBlock::validateStructure,
-         ClientPlaceBlock::deserialize
+         ClientPlaceBlock::deserialize,
+         ClientPlaceBlock::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1462,7 +1662,8 @@ public final class PacketRegistry {
          1,
          false,
          UpdateMemoriesFeatureStatus::validateStructure,
-         UpdateMemoriesFeatureStatus::deserialize
+         UpdateMemoriesFeatureStatus::deserialize,
+         UpdateMemoriesFeatureStatus::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1474,7 +1675,21 @@ public final class PacketRegistry {
          16384006,
          false,
          RemoveMapMarker::validateStructure,
-         RemoveMapMarker::deserialize
+         RemoveMapMarker::deserialize,
+         RemoveMapMarker::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         120,
+         "UpdateMemoriesCount",
+         UpdateMemoriesCount.class,
+         4,
+         4,
+         false,
+         UpdateMemoriesCount::validateStructure,
+         UpdateMemoriesCount::deserialize,
+         UpdateMemoriesCount::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1486,7 +1701,8 @@ public final class PacketRegistry {
          12288040,
          true,
          SetChunk::validateStructure,
-         SetChunk::deserialize
+         SetChunk::deserialize,
+         SetChunk::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1498,7 +1714,8 @@ public final class PacketRegistry {
          4096014,
          true,
          SetChunkHeightmap::validateStructure,
-         SetChunkHeightmap::deserialize
+         SetChunkHeightmap::deserialize,
+         SetChunkHeightmap::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1510,7 +1727,8 @@ public final class PacketRegistry {
          4096014,
          true,
          SetChunkTintmap::validateStructure,
-         SetChunkTintmap::deserialize
+         SetChunkTintmap::deserialize,
+         SetChunkTintmap::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1522,7 +1740,8 @@ public final class PacketRegistry {
          4096014,
          true,
          SetChunkEnvironments::validateStructure,
-         SetChunkEnvironments::deserialize
+         SetChunkEnvironments::deserialize,
+         SetChunkEnvironments::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1534,7 +1753,8 @@ public final class PacketRegistry {
          8,
          false,
          UnloadChunk::validateStructure,
-         UnloadChunk::deserialize
+         UnloadChunk::deserialize,
+         UnloadChunk::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1546,7 +1766,8 @@ public final class PacketRegistry {
          4096018,
          true,
          SetFluids::validateStructure,
-         SetFluids::deserialize
+         SetFluids::deserialize,
+         SetFluids::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1558,7 +1779,8 @@ public final class PacketRegistry {
          19,
          false,
          ServerSetBlock::validateStructure,
-         ServerSetBlock::deserialize
+         ServerSetBlock::deserialize,
+         ServerSetBlock::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1570,7 +1792,8 @@ public final class PacketRegistry {
          36864017,
          false,
          ServerSetBlocks::validateStructure,
-         ServerSetBlocks::deserialize
+         ServerSetBlocks::deserialize,
+         ServerSetBlocks::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1582,7 +1805,8 @@ public final class PacketRegistry {
          17,
          false,
          ServerSetFluid::validateStructure,
-         ServerSetFluid::deserialize
+         ServerSetFluid::deserialize,
+         ServerSetFluid::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1594,7 +1818,8 @@ public final class PacketRegistry {
          28672017,
          false,
          ServerSetFluids::validateStructure,
-         ServerSetFluids::deserialize
+         ServerSetFluids::deserialize,
+         ServerSetFluids::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1606,7 +1831,8 @@ public final class PacketRegistry {
          21,
          false,
          UpdateBlockDamage::validateStructure,
-         UpdateBlockDamage::deserialize
+         UpdateBlockDamage::deserialize,
+         UpdateBlockDamage::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1618,7 +1844,8 @@ public final class PacketRegistry {
          10,
          false,
          UpdateTimeSettings::validateStructure,
-         UpdateTimeSettings::deserialize
+         UpdateTimeSettings::deserialize,
+         UpdateTimeSettings::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1630,7 +1857,8 @@ public final class PacketRegistry {
          13,
          false,
          UpdateTime::validateStructure,
-         UpdateTime::deserialize
+         UpdateTime::deserialize,
+         UpdateTime::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1642,7 +1870,8 @@ public final class PacketRegistry {
          14,
          false,
          UpdateEditorTimeOverride::validateStructure,
-         UpdateEditorTimeOverride::deserialize
+         UpdateEditorTimeOverride::deserialize,
+         UpdateEditorTimeOverride::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1654,7 +1883,8 @@ public final class PacketRegistry {
          0,
          false,
          ClearEditorTimeOverride::validateStructure,
-         ClearEditorTimeOverride::deserialize
+         ClearEditorTimeOverride::deserialize,
+         ClearEditorTimeOverride::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1666,7 +1896,8 @@ public final class PacketRegistry {
          8,
          false,
          UpdateWeather::validateStructure,
-         UpdateWeather::deserialize
+         UpdateWeather::deserialize,
+         UpdateWeather::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1678,19 +1909,21 @@ public final class PacketRegistry {
          4,
          false,
          UpdateEditorWeatherOverride::validateStructure,
-         UpdateEditorWeatherOverride::deserialize
+         UpdateEditorWeatherOverride::deserialize,
+         UpdateEditorWeatherOverride::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
          NetworkChannel.Default,
          151,
-         "UpdateEnvironmentMusic",
-         UpdateEnvironmentMusic.class,
+         "UpdateForcedMusic",
+         UpdateForcedMusic.class,
          4,
          4,
          false,
-         UpdateEnvironmentMusic::validateStructure,
-         UpdateEnvironmentMusic::deserialize
+         UpdateForcedMusic::validateStructure,
+         UpdateForcedMusic::deserialize,
+         UpdateForcedMusic::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1698,11 +1931,12 @@ public final class PacketRegistry {
          152,
          "SpawnParticleSystem",
          SpawnParticleSystem.class,
-         44,
-         16384049,
+         48,
+         16384053,
          false,
          SpawnParticleSystem::validateStructure,
-         SpawnParticleSystem::deserialize
+         SpawnParticleSystem::deserialize,
+         SpawnParticleSystem::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1714,7 +1948,8 @@ public final class PacketRegistry {
          30,
          false,
          SpawnBlockParticleSystem::validateStructure,
-         SpawnBlockParticleSystem::deserialize
+         SpawnBlockParticleSystem::deserialize,
+         SpawnBlockParticleSystem::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1726,7 +1961,8 @@ public final class PacketRegistry {
          13,
          false,
          PlaySoundEvent2D::validateStructure,
-         PlaySoundEvent2D::deserialize
+         PlaySoundEvent2D::deserialize,
+         PlaySoundEvent2D::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1738,7 +1974,8 @@ public final class PacketRegistry {
          38,
          false,
          PlaySoundEvent3D::validateStructure,
-         PlaySoundEvent3D::deserialize
+         PlaySoundEvent3D::deserialize,
+         PlaySoundEvent3D::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1750,7 +1987,8 @@ public final class PacketRegistry {
          16,
          false,
          PlaySoundEventEntity::validateStructure,
-         PlaySoundEventEntity::deserialize
+         PlaySoundEventEntity::deserialize,
+         PlaySoundEventEntity::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1762,7 +2000,8 @@ public final class PacketRegistry {
          65536050,
          false,
          UpdateSleepState::validateStructure,
-         UpdateSleepState::deserialize
+         UpdateSleepState::deserialize,
+         UpdateSleepState::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1774,7 +2013,8 @@ public final class PacketRegistry {
          1,
          false,
          SetPaused::validateStructure,
-         SetPaused::deserialize
+         SetPaused::deserialize,
+         SetPaused::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1786,7 +2026,8 @@ public final class PacketRegistry {
          1,
          false,
          ServerSetPaused::validateStructure,
-         ServerSetPaused::deserialize
+         ServerSetPaused::deserialize,
+         ServerSetPaused::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1798,7 +2039,8 @@ public final class PacketRegistry {
          4,
          false,
          SetEntitySeed::validateStructure,
-         SetEntitySeed::deserialize
+         SetEntitySeed::deserialize,
+         SetEntitySeed::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1810,7 +2052,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          EntityUpdates::validateStructure,
-         EntityUpdates::deserialize
+         EntityUpdates::deserialize,
+         EntityUpdates::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1822,7 +2065,8 @@ public final class PacketRegistry {
          32768024,
          false,
          PlayAnimation::validateStructure,
-         PlayAnimation::deserialize
+         PlayAnimation::deserialize,
+         PlayAnimation::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1834,7 +2078,8 @@ public final class PacketRegistry {
          35,
          false,
          ChangeVelocity::validateStructure,
-         ChangeVelocity::deserialize
+         ChangeVelocity::deserialize,
+         ChangeVelocity::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1846,7 +2091,8 @@ public final class PacketRegistry {
          38,
          false,
          ApplyKnockback::validateStructure,
-         ApplyKnockback::deserialize
+         ApplyKnockback::deserialize,
+         ApplyKnockback::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1858,7 +2104,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          SpawnModelParticles::validateStructure,
-         SpawnModelParticles::deserialize
+         SpawnModelParticles::deserialize,
+         SpawnModelParticles::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1870,7 +2117,8 @@ public final class PacketRegistry {
          60,
          false,
          MountMovement::validateStructure,
-         MountMovement::deserialize
+         MountMovement::deserialize,
+         MountMovement::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1882,7 +2130,21 @@ public final class PacketRegistry {
          16384006,
          false,
          PlayEmote::validateStructure,
-         PlayEmote::deserialize
+         PlayEmote::deserialize,
+         PlayEmote::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         168,
+         "SetAudioState",
+         SetAudioState.class,
+         24,
+         24,
+         false,
+         SetAudioState::validateStructure,
+         SetAudioState::deserialize,
+         SetAudioState::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -1894,7 +2156,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdatePlayerInventory::validateStructure,
-         UpdatePlayerInventory::deserialize
+         UpdatePlayerInventory::deserialize,
+         UpdatePlayerInventory::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1906,7 +2169,8 @@ public final class PacketRegistry {
          16384019,
          false,
          SetCreativeItem::validateStructure,
-         SetCreativeItem::deserialize
+         SetCreativeItem::deserialize,
+         SetCreativeItem::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1918,7 +2182,8 @@ public final class PacketRegistry {
          16384010,
          false,
          DropCreativeItem::validateStructure,
-         DropCreativeItem::deserialize
+         DropCreativeItem::deserialize,
+         DropCreativeItem::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1930,7 +2195,8 @@ public final class PacketRegistry {
          16384011,
          false,
          SmartGiveCreativeItem::validateStructure,
-         SmartGiveCreativeItem::deserialize
+         SmartGiveCreativeItem::deserialize,
+         SmartGiveCreativeItem::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1942,7 +2208,8 @@ public final class PacketRegistry {
          12,
          false,
          DropItemStack::validateStructure,
-         DropItemStack::deserialize
+         DropItemStack::deserialize,
+         DropItemStack::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1954,7 +2221,8 @@ public final class PacketRegistry {
          20,
          false,
          MoveItemStack::validateStructure,
-         MoveItemStack::deserialize
+         MoveItemStack::deserialize,
+         MoveItemStack::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -1966,7 +2234,8 @@ public final class PacketRegistry {
          13,
          false,
          SmartMoveItemStack::validateStructure,
-         SmartMoveItemStack::deserialize
+         SmartMoveItemStack::deserialize,
+         SmartMoveItemStack::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -1978,7 +2247,8 @@ public final class PacketRegistry {
          8,
          false,
          SetActiveSlot::validateStructure,
-         SetActiveSlot::deserialize
+         SetActiveSlot::deserialize,
+         SetActiveSlot::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -1990,7 +2260,8 @@ public final class PacketRegistry {
          16384006,
          false,
          SwitchHotbarBlockSet::validateStructure,
-         SwitchHotbarBlockSet::deserialize
+         SwitchHotbarBlockSet::deserialize,
+         SwitchHotbarBlockSet::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2002,7 +2273,8 @@ public final class PacketRegistry {
          6,
          false,
          InventoryAction::validateStructure,
-         InventoryAction::deserialize
+         InventoryAction::deserialize,
+         InventoryAction::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2014,7 +2286,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          OpenWindow::validateStructure,
-         OpenWindow::deserialize
+         OpenWindow::deserialize,
+         OpenWindow::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2026,7 +2299,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateWindow::validateStructure,
-         UpdateWindow::deserialize
+         UpdateWindow::deserialize,
+         UpdateWindow::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -2038,7 +2312,8 @@ public final class PacketRegistry {
          4,
          false,
          CloseWindow::validateStructure,
-         CloseWindow::deserialize
+         CloseWindow::deserialize,
+         CloseWindow::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2050,7 +2325,8 @@ public final class PacketRegistry {
          32768027,
          false,
          SendWindowAction::validateStructure,
-         SendWindowAction::deserialize
+         SendWindowAction::deserialize,
+         SendWindowAction::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2062,7 +2338,8 @@ public final class PacketRegistry {
          1,
          false,
          ClientOpenWindow::validateStructure,
-         ClientOpenWindow::deserialize
+         ClientOpenWindow::deserialize,
+         ClientOpenWindow::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2074,7 +2351,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          ServerMessage::validateStructure,
-         ServerMessage::deserialize
+         ServerMessage::deserialize,
+         ServerMessage::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2086,7 +2364,8 @@ public final class PacketRegistry {
          1026,
          false,
          ChatMessage::validateStructure,
-         ChatMessage::deserialize
+         ChatMessage::deserialize,
+         ChatMessage::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2098,7 +2377,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          Notification::validateStructure,
-         Notification::deserialize
+         Notification::deserialize,
+         Notification::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2110,7 +2390,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          KillFeedMessage::validateStructure,
-         KillFeedMessage::deserialize
+         KillFeedMessage::deserialize,
+         KillFeedMessage::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2122,7 +2403,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          ShowEventTitle::validateStructure,
-         ShowEventTitle::deserialize
+         ShowEventTitle::deserialize,
+         ShowEventTitle::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2134,7 +2416,8 @@ public final class PacketRegistry {
          4,
          false,
          HideEventTitle::validateStructure,
-         HideEventTitle::deserialize
+         HideEventTitle::deserialize,
+         HideEventTitle::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2146,7 +2429,8 @@ public final class PacketRegistry {
          2,
          false,
          SetPage::validateStructure,
-         SetPage::deserialize
+         SetPage::deserialize,
+         SetPage::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2154,11 +2438,12 @@ public final class PacketRegistry {
          217,
          "CustomHud",
          CustomHud.class,
-         2,
+         6,
          1677721600,
          true,
          CustomHud::validateStructure,
-         CustomHud::deserialize
+         CustomHud::deserialize,
+         CustomHud::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2170,7 +2455,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          CustomPage::validateStructure,
-         CustomPage::deserialize
+         CustomPage::deserialize,
+         CustomPage::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2182,7 +2468,8 @@ public final class PacketRegistry {
          16384007,
          false,
          CustomPageEvent::validateStructure,
-         CustomPageEvent::deserialize
+         CustomPageEvent::deserialize,
+         CustomPageEvent::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2190,11 +2477,12 @@ public final class PacketRegistry {
          222,
          "EditorBlocksChange",
          EditorBlocksChange.class,
-         31,
+         43,
          1677721600,
          true,
          EditorBlocksChange::validateStructure,
-         EditorBlocksChange::deserialize
+         EditorBlocksChange::deserialize,
+         EditorBlocksChange::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2206,7 +2494,8 @@ public final class PacketRegistry {
          32769058,
          false,
          ServerInfo::validateStructure,
-         ServerInfo::deserialize
+         ServerInfo::deserialize,
+         ServerInfo::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2218,7 +2507,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AddToServerPlayerList::validateStructure,
-         AddToServerPlayerList::deserialize
+         AddToServerPlayerList::deserialize,
+         AddToServerPlayerList::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2230,7 +2520,8 @@ public final class PacketRegistry {
          65536006,
          false,
          RemoveFromServerPlayerList::validateStructure,
-         RemoveFromServerPlayerList::deserialize
+         RemoveFromServerPlayerList::deserialize,
+         RemoveFromServerPlayerList::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2242,7 +2533,8 @@ public final class PacketRegistry {
          131072006,
          false,
          UpdateServerPlayerList::validateStructure,
-         UpdateServerPlayerList::deserialize
+         UpdateServerPlayerList::deserialize,
+         UpdateServerPlayerList::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2254,7 +2546,8 @@ public final class PacketRegistry {
          81920006,
          false,
          UpdateServerPlayerListPing::validateStructure,
-         UpdateServerPlayerListPing::deserialize
+         UpdateServerPlayerListPing::deserialize,
+         UpdateServerPlayerListPing::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2266,7 +2559,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          UpdateKnownRecipes::validateStructure,
-         UpdateKnownRecipes::deserialize
+         UpdateKnownRecipes::deserialize,
+         UpdateKnownRecipes::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2278,7 +2572,8 @@ public final class PacketRegistry {
          16384020,
          false,
          UpdatePortal::validateStructure,
-         UpdatePortal::deserialize
+         UpdatePortal::deserialize,
+         UpdatePortal::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2290,7 +2585,8 @@ public final class PacketRegistry {
          4096006,
          false,
          UpdateVisibleHudComponents::validateStructure,
-         UpdateVisibleHudComponents::deserialize
+         UpdateVisibleHudComponents::deserialize,
+         UpdateVisibleHudComponents::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2302,7 +2598,8 @@ public final class PacketRegistry {
          0,
          false,
          ResetUserInterfaceState::validateStructure,
-         ResetUserInterfaceState::deserialize
+         ResetUserInterfaceState::deserialize,
+         ResetUserInterfaceState::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2314,7 +2611,8 @@ public final class PacketRegistry {
          16384006,
          false,
          UpdateLanguage::validateStructure,
-         UpdateLanguage::deserialize
+         UpdateLanguage::deserialize,
+         UpdateLanguage::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2326,7 +2624,8 @@ public final class PacketRegistry {
          1,
          false,
          WorldSavingStatus::validateStructure,
-         WorldSavingStatus::deserialize
+         WorldSavingStatus::deserialize,
+         WorldSavingStatus::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2338,7 +2637,8 @@ public final class PacketRegistry {
          16384006,
          false,
          OpenChatWithCommand::validateStructure,
-         OpenChatWithCommand::deserialize
+         OpenChatWithCommand::deserialize,
+         OpenChatWithCommand::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2350,7 +2650,60 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateAnchorUI::validateStructure,
-         UpdateAnchorUI::deserialize
+         UpdateAnchorUI::deserialize,
+         UpdateAnchorUI::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         236,
+         "CommandSuggestionsRequest",
+         CommandSuggestionsRequest.class,
+         9,
+         16384014,
+         false,
+         CommandSuggestionsRequest::validateStructure,
+         CommandSuggestionsRequest::deserialize,
+         CommandSuggestionsRequest::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         237,
+         "CommandSuggestionsResponse",
+         CommandSuggestionsResponse.class,
+         17,
+         1677721600,
+         false,
+         CommandSuggestionsResponse::validateStructure,
+         CommandSuggestionsResponse::deserialize,
+         CommandSuggestionsResponse::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         238,
+         "CommandTreeSync",
+         CommandTreeSync.class,
+         1,
+         1677721600,
+         true,
+         CommandTreeSync::validateStructure,
+         CommandTreeSync::deserialize,
+         CommandTreeSync::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         239,
+         "ArgValuesRequest",
+         ArgValuesRequest.class,
+         1,
+         32768019,
+         false,
+         ArgValuesRequest::validateStructure,
+         ArgValuesRequest::deserialize,
+         ArgValuesRequest::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2358,11 +2711,12 @@ public final class PacketRegistry {
          240,
          "UpdateWorldMapSettings",
          UpdateWorldMapSettings.class,
-         20,
-         1677721600,
+         19,
+         19,
          false,
          UpdateWorldMapSettings::validateStructure,
-         UpdateWorldMapSettings::deserialize
+         UpdateWorldMapSettings::deserialize,
+         UpdateWorldMapSettings::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2374,7 +2728,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          UpdateWorldMap::validateStructure,
-         UpdateWorldMap::deserialize
+         UpdateWorldMap::deserialize,
+         UpdateWorldMap::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2386,7 +2741,8 @@ public final class PacketRegistry {
          0,
          false,
          ClearWorldMap::validateStructure,
-         ClearWorldMap::deserialize
+         ClearWorldMap::deserialize,
+         ClearWorldMap::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2398,7 +2754,8 @@ public final class PacketRegistry {
          1,
          false,
          UpdateWorldMapVisible::validateStructure,
-         UpdateWorldMapVisible::deserialize
+         UpdateWorldMapVisible::deserialize,
+         UpdateWorldMapVisible::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2410,7 +2767,8 @@ public final class PacketRegistry {
          16384006,
          false,
          TeleportToWorldMapMarker::validateStructure,
-         TeleportToWorldMapMarker::deserialize
+         TeleportToWorldMapMarker::deserialize,
+         TeleportToWorldMapMarker::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2422,7 +2780,8 @@ public final class PacketRegistry {
          8,
          false,
          TeleportToWorldMapPosition::validateStructure,
-         TeleportToWorldMapPosition::deserialize
+         TeleportToWorldMapPosition::deserialize,
+         TeleportToWorldMapPosition::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2434,7 +2793,34 @@ public final class PacketRegistry {
          32768031,
          false,
          CreateUserMarker::validateStructure,
-         CreateUserMarker::deserialize
+         CreateUserMarker::deserialize,
+         CreateUserMarker::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         247,
+         "ArgValuesResponse",
+         ArgValuesResponse.class,
+         2,
+         1677721600,
+         false,
+         ArgValuesResponse::validateStructure,
+         ArgValuesResponse::deserialize,
+         ArgValuesResponse::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         248,
+         "ArgCacheInvalidation",
+         ArgCacheInvalidation.class,
+         1,
+         1677721600,
+         false,
+         ArgCacheInvalidation::validateStructure,
+         ArgCacheInvalidation::deserialize,
+         ArgCacheInvalidation::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2446,7 +2832,8 @@ public final class PacketRegistry {
          3,
          false,
          RequestServerAccess::validateStructure,
-         RequestServerAccess::deserialize
+         RequestServerAccess::deserialize,
+         RequestServerAccess::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2458,7 +2845,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          UpdateServerAccess::validateStructure,
-         UpdateServerAccess::deserialize
+         UpdateServerAccess::deserialize,
+         UpdateServerAccess::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2470,7 +2858,8 @@ public final class PacketRegistry {
          16384007,
          false,
          SetServerAccess::validateStructure,
-         SetServerAccess::deserialize
+         SetServerAccess::deserialize,
+         SetServerAccess::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2482,7 +2871,8 @@ public final class PacketRegistry {
          49152028,
          false,
          RequestMachinimaActorModel::validateStructure,
-         RequestMachinimaActorModel::deserialize
+         RequestMachinimaActorModel::deserialize,
+         RequestMachinimaActorModel::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2494,7 +2884,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          SetMachinimaActorModel::validateStructure,
-         SetMachinimaActorModel::deserialize
+         SetMachinimaActorModel::deserialize,
+         SetMachinimaActorModel::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -2506,7 +2897,8 @@ public final class PacketRegistry {
          36864033,
          true,
          UpdateMachinimaScene::validateStructure,
-         UpdateMachinimaScene::deserialize
+         UpdateMachinimaScene::deserialize,
+         UpdateMachinimaScene::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2518,7 +2910,8 @@ public final class PacketRegistry {
          157,
          false,
          SetServerCamera::validateStructure,
-         SetServerCamera::deserialize
+         SetServerCamera::deserialize,
+         SetServerCamera::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2530,7 +2923,8 @@ public final class PacketRegistry {
          9,
          false,
          CameraShakeEffect::validateStructure,
-         CameraShakeEffect::deserialize
+         CameraShakeEffect::deserialize,
+         CameraShakeEffect::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2542,7 +2936,8 @@ public final class PacketRegistry {
          1,
          false,
          RequestFlyCameraMode::validateStructure,
-         RequestFlyCameraMode::deserialize
+         RequestFlyCameraMode::deserialize,
+         RequestFlyCameraMode::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2554,7 +2949,8 @@ public final class PacketRegistry {
          1,
          false,
          SetFlyCameraMode::validateStructure,
-         SetFlyCameraMode::deserialize
+         SetFlyCameraMode::deserialize,
+         SetFlyCameraMode::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -2566,7 +2962,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          SyncInteractionChains::validateStructure,
-         SyncInteractionChains::deserialize
+         SyncInteractionChains::deserialize,
+         SyncInteractionChains::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2578,7 +2975,8 @@ public final class PacketRegistry {
          1038,
          false,
          CancelInteractionChain::validateStructure,
-         CancelInteractionChain::deserialize
+         CancelInteractionChain::deserialize,
+         CancelInteractionChain::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2590,7 +2988,8 @@ public final class PacketRegistry {
          16385065,
          false,
          PlayInteractionFor::validateStructure,
-         PlayInteractionFor::deserialize
+         PlayInteractionFor::deserialize,
+         PlayInteractionFor::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2602,7 +3001,8 @@ public final class PacketRegistry {
          16,
          false,
          MountNPC::validateStructure,
-         MountNPC::deserialize
+         MountNPC::deserialize,
+         MountNPC::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -2614,7 +3014,8 @@ public final class PacketRegistry {
          0,
          false,
          DismountNPC::validateStructure,
-         DismountNPC::deserialize
+         DismountNPC::deserialize,
+         DismountNPC::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -2626,7 +3027,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          FailureReply::validateStructure,
-         FailureReply::deserialize
+         FailureReply::deserialize,
+         FailureReply::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -2638,7 +3040,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          SuccessReply::validateStructure,
-         SuccessReply::deserialize
+         SuccessReply::deserialize,
+         SuccessReply::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2650,7 +3053,8 @@ public final class PacketRegistry {
          0,
          false,
          AssetEditorInitialize::validateStructure,
-         AssetEditorInitialize::deserialize
+         AssetEditorInitialize::deserialize,
+         AssetEditorInitialize::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2662,7 +3066,8 @@ public final class PacketRegistry {
          1,
          false,
          AssetEditorAuthorization::validateStructure,
-         AssetEditorAuthorization::deserialize
+         AssetEditorAuthorization::deserialize,
+         AssetEditorAuthorization::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2674,7 +3079,8 @@ public final class PacketRegistry {
          5,
          false,
          AssetEditorCapabilities::validateStructure,
-         AssetEditorCapabilities::deserialize
+         AssetEditorCapabilities::deserialize,
+         AssetEditorCapabilities::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2686,7 +3092,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          AssetEditorSetupSchemas::validateStructure,
-         AssetEditorSetupSchemas::deserialize
+         AssetEditorSetupSchemas::deserialize,
+         AssetEditorSetupSchemas::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2698,7 +3105,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorSetupAssetTypes::validateStructure,
-         AssetEditorSetupAssetTypes::deserialize
+         AssetEditorSetupAssetTypes::deserialize,
+         AssetEditorSetupAssetTypes::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2710,7 +3118,8 @@ public final class PacketRegistry {
          32768024,
          false,
          AssetEditorCreateDirectory::validateStructure,
-         AssetEditorCreateDirectory::deserialize
+         AssetEditorCreateDirectory::deserialize,
+         AssetEditorCreateDirectory::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2722,7 +3131,8 @@ public final class PacketRegistry {
          32768024,
          false,
          AssetEditorDeleteDirectory::validateStructure,
-         AssetEditorDeleteDirectory::deserialize
+         AssetEditorDeleteDirectory::deserialize,
+         AssetEditorDeleteDirectory::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2734,7 +3144,8 @@ public final class PacketRegistry {
          65536051,
          false,
          AssetEditorRenameDirectory::validateStructure,
-         AssetEditorRenameDirectory::deserialize
+         AssetEditorRenameDirectory::deserialize,
+         AssetEditorRenameDirectory::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2746,7 +3157,8 @@ public final class PacketRegistry {
          32768025,
          false,
          AssetEditorFetchAsset::validateStructure,
-         AssetEditorFetchAsset::deserialize
+         AssetEditorFetchAsset::deserialize,
+         AssetEditorFetchAsset::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2758,7 +3170,8 @@ public final class PacketRegistry {
          32768025,
          false,
          AssetEditorFetchJsonAssetWithParents::validateStructure,
-         AssetEditorFetchJsonAssetWithParents::deserialize
+         AssetEditorFetchJsonAssetWithParents::deserialize,
+         AssetEditorFetchJsonAssetWithParents::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2770,7 +3183,8 @@ public final class PacketRegistry {
          4096010,
          false,
          AssetEditorFetchAssetReply::validateStructure,
-         AssetEditorFetchAssetReply::deserialize
+         AssetEditorFetchAssetReply::deserialize,
+         AssetEditorFetchAssetReply::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2782,7 +3196,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          AssetEditorFetchJsonAssetWithParentsReply::validateStructure,
-         AssetEditorFetchJsonAssetWithParentsReply::deserialize
+         AssetEditorFetchJsonAssetWithParentsReply::deserialize,
+         AssetEditorFetchJsonAssetWithParentsReply::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2794,7 +3209,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorAssetPackSetup::validateStructure,
-         AssetEditorAssetPackSetup::deserialize
+         AssetEditorAssetPackSetup::deserialize,
+         AssetEditorAssetPackSetup::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -2806,7 +3222,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorUpdateAssetPack::validateStructure,
-         AssetEditorUpdateAssetPack::deserialize
+         AssetEditorUpdateAssetPack::deserialize,
+         AssetEditorUpdateAssetPack::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2818,7 +3235,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorCreateAssetPack::validateStructure,
-         AssetEditorCreateAssetPack::deserialize
+         AssetEditorCreateAssetPack::deserialize,
+         AssetEditorCreateAssetPack::toObject
       );
       register(
          PacketRegistry.PacketDirection.Both,
@@ -2830,7 +3248,8 @@ public final class PacketRegistry {
          16384006,
          false,
          AssetEditorDeleteAssetPack::validateStructure,
-         AssetEditorDeleteAssetPack::deserialize
+         AssetEditorDeleteAssetPack::deserialize,
+         AssetEditorDeleteAssetPack::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2842,7 +3261,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          AssetEditorAssetListSetup::validateStructure,
-         AssetEditorAssetListSetup::deserialize
+         AssetEditorAssetListSetup::deserialize,
+         AssetEditorAssetListSetup::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2854,7 +3274,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          AssetEditorAssetListUpdate::validateStructure,
-         AssetEditorAssetListUpdate::deserialize
+         AssetEditorAssetListUpdate::deserialize,
+         AssetEditorAssetListUpdate::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2866,7 +3287,8 @@ public final class PacketRegistry {
          32768020,
          false,
          AssetEditorRequestChildrenList::validateStructure,
-         AssetEditorRequestChildrenList::deserialize
+         AssetEditorRequestChildrenList::deserialize,
+         AssetEditorRequestChildrenList::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2878,7 +3300,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorRequestChildrenListReply::validateStructure,
-         AssetEditorRequestChildrenListReply::deserialize
+         AssetEditorRequestChildrenListReply::deserialize,
+         AssetEditorRequestChildrenListReply::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2890,7 +3313,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          AssetEditorUpdateJsonAsset::validateStructure,
-         AssetEditorUpdateJsonAsset::deserialize
+         AssetEditorUpdateJsonAsset::deserialize,
+         AssetEditorUpdateJsonAsset::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2902,7 +3326,8 @@ public final class PacketRegistry {
          53248050,
          false,
          AssetEditorUpdateAsset::validateStructure,
-         AssetEditorUpdateAsset::deserialize
+         AssetEditorUpdateAsset::deserialize,
+         AssetEditorUpdateAsset::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2914,7 +3339,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorJsonAssetUpdated::validateStructure,
-         AssetEditorJsonAssetUpdated::deserialize
+         AssetEditorJsonAssetUpdated::deserialize,
+         AssetEditorJsonAssetUpdated::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2926,7 +3352,8 @@ public final class PacketRegistry {
          36864033,
          false,
          AssetEditorAssetUpdated::validateStructure,
-         AssetEditorAssetUpdated::deserialize
+         AssetEditorAssetUpdated::deserialize,
+         AssetEditorAssetUpdated::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2938,7 +3365,8 @@ public final class PacketRegistry {
          53248051,
          false,
          AssetEditorCreateAsset::validateStructure,
-         AssetEditorCreateAsset::deserialize
+         AssetEditorCreateAsset::deserialize,
+         AssetEditorCreateAsset::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2950,7 +3378,8 @@ public final class PacketRegistry {
          65536051,
          false,
          AssetEditorRenameAsset::validateStructure,
-         AssetEditorRenameAsset::deserialize
+         AssetEditorRenameAsset::deserialize,
+         AssetEditorRenameAsset::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2962,7 +3391,8 @@ public final class PacketRegistry {
          32768024,
          false,
          AssetEditorDeleteAsset::validateStructure,
-         AssetEditorDeleteAsset::deserialize
+         AssetEditorDeleteAsset::deserialize,
+         AssetEditorDeleteAsset::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2974,7 +3404,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorDiscardChanges::validateStructure,
-         AssetEditorDiscardChanges::deserialize
+         AssetEditorDiscardChanges::deserialize,
+         AssetEditorDiscardChanges::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -2986,7 +3417,8 @@ public final class PacketRegistry {
          32768023,
          false,
          AssetEditorFetchAutoCompleteData::validateStructure,
-         AssetEditorFetchAutoCompleteData::deserialize
+         AssetEditorFetchAutoCompleteData::deserialize,
+         AssetEditorFetchAutoCompleteData::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -2998,7 +3430,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorFetchAutoCompleteDataReply::validateStructure,
-         AssetEditorFetchAutoCompleteDataReply::deserialize
+         AssetEditorFetchAutoCompleteDataReply::deserialize,
+         AssetEditorFetchAutoCompleteDataReply::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3010,7 +3443,8 @@ public final class PacketRegistry {
          16384006,
          false,
          AssetEditorRequestDataset::validateStructure,
-         AssetEditorRequestDataset::deserialize
+         AssetEditorRequestDataset::deserialize,
+         AssetEditorRequestDataset::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3022,7 +3456,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorRequestDatasetReply::validateStructure,
-         AssetEditorRequestDatasetReply::deserialize
+         AssetEditorRequestDatasetReply::deserialize,
+         AssetEditorRequestDatasetReply::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3034,7 +3469,8 @@ public final class PacketRegistry {
          16384006,
          false,
          AssetEditorActivateButton::validateStructure,
-         AssetEditorActivateButton::deserialize
+         AssetEditorActivateButton::deserialize,
+         AssetEditorActivateButton::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3046,7 +3482,8 @@ public final class PacketRegistry {
          32768020,
          false,
          AssetEditorSelectAsset::validateStructure,
-         AssetEditorSelectAsset::deserialize
+         AssetEditorSelectAsset::deserialize,
+         AssetEditorSelectAsset::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3058,7 +3495,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorPopupNotification::validateStructure,
-         AssetEditorPopupNotification::deserialize
+         AssetEditorPopupNotification::deserialize,
+         AssetEditorPopupNotification::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3070,7 +3508,8 @@ public final class PacketRegistry {
          0,
          false,
          AssetEditorFetchLastModifiedAssets::validateStructure,
-         AssetEditorFetchLastModifiedAssets::deserialize
+         AssetEditorFetchLastModifiedAssets::deserialize,
+         AssetEditorFetchLastModifiedAssets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3082,7 +3521,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorLastModifiedAssets::validateStructure,
-         AssetEditorLastModifiedAssets::deserialize
+         AssetEditorLastModifiedAssets::deserialize,
+         AssetEditorLastModifiedAssets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3094,7 +3534,8 @@ public final class PacketRegistry {
          4,
          false,
          AssetEditorModifiedAssetsCount::validateStructure,
-         AssetEditorModifiedAssetsCount::deserialize
+         AssetEditorModifiedAssetsCount::deserialize,
+         AssetEditorModifiedAssetsCount::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3106,7 +3547,8 @@ public final class PacketRegistry {
          1,
          false,
          AssetEditorSubscribeModifiedAssetsChanges::validateStructure,
-         AssetEditorSubscribeModifiedAssetsChanges::deserialize
+         AssetEditorSubscribeModifiedAssetsChanges::deserialize,
+         AssetEditorSubscribeModifiedAssetsChanges::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3118,7 +3560,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorExportAssets::validateStructure,
-         AssetEditorExportAssets::deserialize
+         AssetEditorExportAssets::deserialize,
+         AssetEditorExportAssets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3130,7 +3573,8 @@ public final class PacketRegistry {
          81920066,
          false,
          AssetEditorExportAssetInitialize::validateStructure,
-         AssetEditorExportAssetInitialize::deserialize
+         AssetEditorExportAssetInitialize::deserialize,
+         AssetEditorExportAssetInitialize::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3142,7 +3586,8 @@ public final class PacketRegistry {
          4096006,
          true,
          AssetEditorExportAssetPart::validateStructure,
-         AssetEditorExportAssetPart::deserialize
+         AssetEditorExportAssetPart::deserialize,
+         AssetEditorExportAssetPart::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3154,7 +3599,8 @@ public final class PacketRegistry {
          0,
          false,
          AssetEditorExportAssetFinalize::validateStructure,
-         AssetEditorExportAssetFinalize::deserialize
+         AssetEditorExportAssetFinalize::deserialize,
+         AssetEditorExportAssetFinalize::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3166,7 +3612,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorExportDeleteAssets::validateStructure,
-         AssetEditorExportDeleteAssets::deserialize
+         AssetEditorExportDeleteAssets::deserialize,
+         AssetEditorExportDeleteAssets::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3178,7 +3625,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorExportComplete::validateStructure,
-         AssetEditorExportComplete::deserialize
+         AssetEditorExportComplete::deserialize,
+         AssetEditorExportComplete::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3190,7 +3638,8 @@ public final class PacketRegistry {
          32768024,
          false,
          AssetEditorUndoChanges::validateStructure,
-         AssetEditorUndoChanges::deserialize
+         AssetEditorUndoChanges::deserialize,
+         AssetEditorUndoChanges::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3202,7 +3651,8 @@ public final class PacketRegistry {
          32768024,
          false,
          AssetEditorRedoChanges::validateStructure,
-         AssetEditorRedoChanges::deserialize
+         AssetEditorRedoChanges::deserialize,
+         AssetEditorRedoChanges::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3214,7 +3664,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorUndoRedoReply::validateStructure,
-         AssetEditorUndoRedoReply::deserialize
+         AssetEditorUndoRedoReply::deserialize,
+         AssetEditorUndoRedoReply::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3226,7 +3677,8 @@ public final class PacketRegistry {
          14,
          false,
          AssetEditorSetGameTime::validateStructure,
-         AssetEditorSetGameTime::deserialize
+         AssetEditorSetGameTime::deserialize,
+         AssetEditorSetGameTime::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3238,7 +3690,8 @@ public final class PacketRegistry {
          8,
          false,
          AssetEditorUpdateSecondsPerGameDay::validateStructure,
-         AssetEditorUpdateSecondsPerGameDay::deserialize
+         AssetEditorUpdateSecondsPerGameDay::deserialize,
+         AssetEditorUpdateSecondsPerGameDay::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3250,7 +3703,8 @@ public final class PacketRegistry {
          1,
          false,
          AssetEditorUpdateWeatherPreviewLock::validateStructure,
-         AssetEditorUpdateWeatherPreviewLock::deserialize
+         AssetEditorUpdateWeatherPreviewLock::deserialize,
+         AssetEditorUpdateWeatherPreviewLock::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3258,11 +3712,12 @@ public final class PacketRegistry {
          355,
          "AssetEditorUpdateModelPreview",
          AssetEditorUpdateModelPreview.class,
-         30,
+         29,
          1677721600,
          false,
          AssetEditorUpdateModelPreview::validateStructure,
-         AssetEditorUpdateModelPreview::deserialize
+         AssetEditorUpdateModelPreview::deserialize,
+         AssetEditorUpdateModelPreview::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3274,7 +3729,8 @@ public final class PacketRegistry {
          1677721600,
          false,
          AssetEditorModsDirectories::validateStructure,
-         AssetEditorModsDirectories::deserialize
+         AssetEditorModsDirectories::deserialize,
+         AssetEditorModsDirectories::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3286,7 +3742,8 @@ public final class PacketRegistry {
          8,
          false,
          UpdateSunSettings::validateStructure,
-         UpdateSunSettings::deserialize
+         UpdateSunSettings::deserialize,
+         UpdateSunSettings::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3298,7 +3755,8 @@ public final class PacketRegistry {
          20,
          false,
          UpdatePostFxSettings::validateStructure,
-         UpdatePostFxSettings::deserialize
+         UpdatePostFxSettings::deserialize,
+         UpdatePostFxSettings::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3310,7 +3768,34 @@ public final class PacketRegistry {
          17,
          false,
          PlaySoundEventLocalPlayer::validateStructure,
-         PlaySoundEventLocalPlayer::deserialize
+         PlaySoundEventLocalPlayer::deserialize,
+         PlaySoundEventLocalPlayer::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         363,
+         "InsecurePlayerOptions",
+         InsecurePlayerOptions.class,
+         17,
+         2149,
+         false,
+         InsecurePlayerOptions::validateStructure,
+         InsecurePlayerOptions::deserialize,
+         InsecurePlayerOptions::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         364,
+         "RequestInsecurePlayerOptions",
+         RequestInsecurePlayerOptions.class,
+         0,
+         0,
+         false,
+         RequestInsecurePlayerOptions::validateStructure,
+         RequestInsecurePlayerOptions::deserialize,
+         RequestInsecurePlayerOptions::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3322,7 +3807,8 @@ public final class PacketRegistry {
          32768031,
          false,
          BuilderToolArgUpdate::validateStructure,
-         BuilderToolArgUpdate::deserialize
+         BuilderToolArgUpdate::deserialize,
+         BuilderToolArgUpdate::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3334,7 +3820,8 @@ public final class PacketRegistry {
          5,
          false,
          BuilderToolEntityAction::validateStructure,
-         BuilderToolEntityAction::deserialize
+         BuilderToolEntityAction::deserialize,
+         BuilderToolEntityAction::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3342,11 +3829,12 @@ public final class PacketRegistry {
          402,
          "BuilderToolSetEntityTransform",
          BuilderToolSetEntityTransform.class,
-         54,
-         54,
+         55,
+         55,
          false,
          BuilderToolSetEntityTransform::validateStructure,
-         BuilderToolSetEntityTransform::deserialize
+         BuilderToolSetEntityTransform::deserialize,
+         BuilderToolSetEntityTransform::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3354,11 +3842,12 @@ public final class PacketRegistry {
          403,
          "BuilderToolExtrudeAction",
          BuilderToolExtrudeAction.class,
-         24,
-         24,
+         30,
+         30,
          false,
          BuilderToolExtrudeAction::validateStructure,
-         BuilderToolExtrudeAction::deserialize
+         BuilderToolExtrudeAction::deserialize,
+         BuilderToolExtrudeAction::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3370,7 +3859,8 @@ public final class PacketRegistry {
          41,
          false,
          BuilderToolStackArea::validateStructure,
-         BuilderToolStackArea::deserialize
+         BuilderToolStackArea::deserialize,
+         BuilderToolStackArea::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3382,7 +3872,8 @@ public final class PacketRegistry {
          80,
          false,
          BuilderToolSelectionTransform::validateStructure,
-         BuilderToolSelectionTransform::deserialize
+         BuilderToolSelectionTransform::deserialize,
+         BuilderToolSelectionTransform::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3394,7 +3885,8 @@ public final class PacketRegistry {
          5,
          false,
          BuilderToolRotateClipboard::validateStructure,
-         BuilderToolRotateClipboard::deserialize
+         BuilderToolRotateClipboard::deserialize,
+         BuilderToolRotateClipboard::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3406,7 +3898,8 @@ public final class PacketRegistry {
          12,
          false,
          BuilderToolPasteClipboard::validateStructure,
-         BuilderToolPasteClipboard::deserialize
+         BuilderToolPasteClipboard::deserialize,
+         BuilderToolPasteClipboard::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3418,7 +3911,8 @@ public final class PacketRegistry {
          1,
          false,
          BuilderToolSetTransformationModeState::validateStructure,
-         BuilderToolSetTransformationModeState::deserialize
+         BuilderToolSetTransformationModeState::deserialize,
+         BuilderToolSetTransformationModeState::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3430,7 +3924,8 @@ public final class PacketRegistry {
          24,
          false,
          BuilderToolSelectionUpdate::validateStructure,
-         BuilderToolSelectionUpdate::deserialize
+         BuilderToolSelectionUpdate::deserialize,
+         BuilderToolSelectionUpdate::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3442,7 +3937,8 @@ public final class PacketRegistry {
          0,
          false,
          BuilderToolSelectionToolAskForClipboard::validateStructure,
-         BuilderToolSelectionToolAskForClipboard::deserialize
+         BuilderToolSelectionToolAskForClipboard::deserialize,
+         BuilderToolSelectionToolAskForClipboard::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3454,7 +3950,8 @@ public final class PacketRegistry {
          1677721600,
          true,
          BuilderToolSelectionToolReplyWithClipboard::validateStructure,
-         BuilderToolSelectionToolReplyWithClipboard::deserialize
+         BuilderToolSelectionToolReplyWithClipboard::deserialize,
+         BuilderToolSelectionToolReplyWithClipboard::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3466,7 +3963,8 @@ public final class PacketRegistry {
          1,
          false,
          BuilderToolGeneralAction::validateStructure,
-         BuilderToolGeneralAction::deserialize
+         BuilderToolGeneralAction::deserialize,
+         BuilderToolGeneralAction::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3474,11 +3972,12 @@ public final class PacketRegistry {
          413,
          "BuilderToolOnUseInteraction",
          BuilderToolOnUseInteraction.class,
-         61,
-         61,
+         60,
+         60,
          false,
          BuilderToolOnUseInteraction::validateStructure,
-         BuilderToolOnUseInteraction::deserialize
+         BuilderToolOnUseInteraction::deserialize,
+         BuilderToolOnUseInteraction::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3490,7 +3989,8 @@ public final class PacketRegistry {
          24,
          false,
          BuilderToolLineAction::validateStructure,
-         BuilderToolLineAction::deserialize
+         BuilderToolLineAction::deserialize,
+         BuilderToolLineAction::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3502,7 +4002,8 @@ public final class PacketRegistry {
          12,
          false,
          BuilderToolShowAnchor::validateStructure,
-         BuilderToolShowAnchor::deserialize
+         BuilderToolShowAnchor::deserialize,
+         BuilderToolShowAnchor::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3514,7 +4015,8 @@ public final class PacketRegistry {
          0,
          false,
          BuilderToolHideAnchors::validateStructure,
-         BuilderToolHideAnchors::deserialize
+         BuilderToolHideAnchors::deserialize,
+         BuilderToolHideAnchors::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3526,7 +4028,8 @@ public final class PacketRegistry {
          0,
          false,
          PrefabUnselectPrefab::validateStructure,
-         PrefabUnselectPrefab::deserialize
+         PrefabUnselectPrefab::deserialize,
+         PrefabUnselectPrefab::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3538,7 +4041,8 @@ public final class PacketRegistry {
          4,
          false,
          BuilderToolsSetSoundSet::validateStructure,
-         BuilderToolsSetSoundSet::deserialize
+         BuilderToolsSetSoundSet::deserialize,
+         BuilderToolsSetSoundSet::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3550,7 +4054,8 @@ public final class PacketRegistry {
          36,
          false,
          BuilderToolLaserPointer::validateStructure,
-         BuilderToolLaserPointer::deserialize
+         BuilderToolLaserPointer::deserialize,
+         BuilderToolLaserPointer::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3562,7 +4067,8 @@ public final class PacketRegistry {
          8,
          false,
          BuilderToolSetEntityScale::validateStructure,
-         BuilderToolSetEntityScale::deserialize
+         BuilderToolSetEntityScale::deserialize,
+         BuilderToolSetEntityScale::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3574,7 +4080,8 @@ public final class PacketRegistry {
          5,
          false,
          BuilderToolSetEntityPickupEnabled::validateStructure,
-         BuilderToolSetEntityPickupEnabled::deserialize
+         BuilderToolSetEntityPickupEnabled::deserialize,
+         BuilderToolSetEntityPickupEnabled::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3586,7 +4093,8 @@ public final class PacketRegistry {
          9,
          false,
          BuilderToolSetEntityLight::validateStructure,
-         BuilderToolSetEntityLight::deserialize
+         BuilderToolSetEntityLight::deserialize,
+         BuilderToolSetEntityLight::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3598,7 +4106,8 @@ public final class PacketRegistry {
          5,
          false,
          BuilderToolSetNPCDebug::validateStructure,
-         BuilderToolSetNPCDebug::deserialize
+         BuilderToolSetNPCDebug::deserialize,
+         BuilderToolSetNPCDebug::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3610,7 +4119,8 @@ public final class PacketRegistry {
          16384010,
          false,
          BuilderToolSetEntityCollision::validateStructure,
-         BuilderToolSetEntityCollision::deserialize
+         BuilderToolSetEntityCollision::deserialize,
+         BuilderToolSetEntityCollision::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3622,7 +4132,8 @@ public final class PacketRegistry {
          12,
          false,
          PrefabSetAnchor::validateStructure,
-         PrefabSetAnchor::deserialize
+         PrefabSetAnchor::deserialize,
+         PrefabSetAnchor::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3634,7 +4145,60 @@ public final class PacketRegistry {
          0,
          false,
          BuilderToolResetClipboardRotation::validateStructure,
-         BuilderToolResetClipboardRotation::deserialize
+         BuilderToolResetClipboardRotation::deserialize,
+         BuilderToolResetClipboardRotation::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         428,
+         "BuilderToolRandomizeClipboard",
+         BuilderToolRandomizeClipboard.class,
+         15,
+         15,
+         false,
+         BuilderToolRandomizeClipboard::validateStructure,
+         BuilderToolRandomizeClipboard::deserialize,
+         BuilderToolRandomizeClipboard::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         429,
+         "BuilderToolPrefabPreview",
+         BuilderToolPrefabPreview.class,
+         21,
+         1677721600,
+         true,
+         BuilderToolPrefabPreview::validateStructure,
+         BuilderToolPrefabPreview::deserialize,
+         BuilderToolPrefabPreview::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         430,
+         "BuilderToolGMaskPreset",
+         BuilderToolGMaskPreset.class,
+         2,
+         32768020,
+         false,
+         BuilderToolGMaskPreset::validateStructure,
+         BuilderToolGMaskPreset::deserialize,
+         BuilderToolGMaskPreset::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         431,
+         "BuilderToolGMaskPresetLoadResponse",
+         BuilderToolGMaskPresetLoadResponse.class,
+         1,
+         16384006,
+         false,
+         BuilderToolGMaskPresetLoadResponse::validateStructure,
+         BuilderToolGMaskPresetLoadResponse::deserialize,
+         BuilderToolGMaskPresetLoadResponse::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3646,7 +4210,8 @@ public final class PacketRegistry {
          523,
          false,
          VoiceData::validateStructure,
-         VoiceData::deserialize
+         VoiceData::deserialize,
+         VoiceData::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3658,7 +4223,8 @@ public final class PacketRegistry {
          569,
          false,
          RelayedVoiceData::validateStructure,
-         RelayedVoiceData::deserialize
+         RelayedVoiceData::deserialize,
+         RelayedVoiceData::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3670,7 +4236,8 @@ public final class PacketRegistry {
          17,
          false,
          VoiceConfig::validateStructure,
-         VoiceConfig::deserialize
+         VoiceConfig::deserialize,
+         VoiceConfig::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToServer,
@@ -3682,7 +4249,8 @@ public final class PacketRegistry {
          1,
          false,
          StreamOpen::validateStructure,
-         StreamOpen::deserialize
+         StreamOpen::deserialize,
+         StreamOpen::toObject
       );
       register(
          PacketRegistry.PacketDirection.ToClient,
@@ -3694,8 +4262,391 @@ public final class PacketRegistry {
          16384008,
          false,
          StreamOpenResponse::validateStructure,
-         StreamOpenResponse::deserialize
+         StreamOpenResponse::deserialize,
+         StreamOpenResponse::toObject
       );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         470,
+         "UpdateTriggerVolumeDisplay",
+         UpdateTriggerVolumeDisplay.class,
+         1,
+         1677721600,
+         false,
+         UpdateTriggerVolumeDisplay::validateStructure,
+         UpdateTriggerVolumeDisplay::deserialize,
+         UpdateTriggerVolumeDisplay::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         471,
+         "AddOrUpdateTriggerVolumeDisplay",
+         AddOrUpdateTriggerVolumeDisplay.class,
+         0,
+         65536099,
+         false,
+         AddOrUpdateTriggerVolumeDisplay::validateStructure,
+         AddOrUpdateTriggerVolumeDisplay::deserialize,
+         AddOrUpdateTriggerVolumeDisplay::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         472,
+         "RemoveTriggerVolumeDisplay",
+         RemoveTriggerVolumeDisplay.class,
+         0,
+         16384005,
+         false,
+         RemoveTriggerVolumeDisplay::validateStructure,
+         RemoveTriggerVolumeDisplay::deserialize,
+         RemoveTriggerVolumeDisplay::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         480,
+         "TriggerVolumeToolCreate",
+         TriggerVolumeToolCreate.class,
+         38,
+         16384043,
+         false,
+         TriggerVolumeToolCreate::validateStructure,
+         TriggerVolumeToolCreate::deserialize,
+         TriggerVolumeToolCreate::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         481,
+         "TriggerVolumeToolMove",
+         TriggerVolumeToolMove.class,
+         12,
+         16384017,
+         false,
+         TriggerVolumeToolMove::validateStructure,
+         TriggerVolumeToolMove::deserialize,
+         TriggerVolumeToolMove::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         482,
+         "TriggerVolumeToolResize",
+         TriggerVolumeToolResize.class,
+         38,
+         16384043,
+         false,
+         TriggerVolumeToolResize::validateStructure,
+         TriggerVolumeToolResize::deserialize,
+         TriggerVolumeToolResize::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         483,
+         "TriggerVolumeToolDelete",
+         TriggerVolumeToolDelete.class,
+         0,
+         16384005,
+         false,
+         TriggerVolumeToolDelete::validateStructure,
+         TriggerVolumeToolDelete::deserialize,
+         TriggerVolumeToolDelete::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         484,
+         "TriggerVolumeToolEquip",
+         TriggerVolumeToolEquip.class,
+         1,
+         1,
+         false,
+         TriggerVolumeToolEquip::validateStructure,
+         TriggerVolumeToolEquip::deserialize,
+         TriggerVolumeToolEquip::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         485,
+         "TriggerVolumeToolCreateResponse",
+         TriggerVolumeToolCreateResponse.class,
+         1,
+         1677721600,
+         false,
+         TriggerVolumeToolCreateResponse::validateStructure,
+         TriggerVolumeToolCreateResponse::deserialize,
+         TriggerVolumeToolCreateResponse::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         486,
+         "TriggerVolumeToolGroupCreate",
+         TriggerVolumeToolGroupCreate.class,
+         0,
+         1677721600,
+         false,
+         TriggerVolumeToolGroupCreate::validateStructure,
+         TriggerVolumeToolGroupCreate::deserialize,
+         TriggerVolumeToolGroupCreate::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         487,
+         "TriggerVolumeToolGroupCreateResponse",
+         TriggerVolumeToolGroupCreateResponse.class,
+         9,
+         16384014,
+         false,
+         TriggerVolumeToolGroupCreateResponse::validateStructure,
+         TriggerVolumeToolGroupCreateResponse::deserialize,
+         TriggerVolumeToolGroupCreateResponse::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         488,
+         "TriggerVolumeToolUngroup",
+         TriggerVolumeToolUngroup.class,
+         0,
+         16384005,
+         false,
+         TriggerVolumeToolUngroup::validateStructure,
+         TriggerVolumeToolUngroup::deserialize,
+         TriggerVolumeToolUngroup::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         489,
+         "TriggerVolumeToolGroupMove",
+         TriggerVolumeToolGroupMove.class,
+         12,
+         16384017,
+         false,
+         TriggerVolumeToolGroupMove::validateStructure,
+         TriggerVolumeToolGroupMove::deserialize,
+         TriggerVolumeToolGroupMove::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         490,
+         "TriggerVolumeToolSelect",
+         TriggerVolumeToolSelect.class,
+         1,
+         16384006,
+         false,
+         TriggerVolumeToolSelect::validateStructure,
+         TriggerVolumeToolSelect::deserialize,
+         TriggerVolumeToolSelect::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         491,
+         "TriggerVolumeToolMultiMove",
+         TriggerVolumeToolMultiMove.class,
+         12,
+         1677721600,
+         false,
+         TriggerVolumeToolMultiMove::validateStructure,
+         TriggerVolumeToolMultiMove::deserialize,
+         TriggerVolumeToolMultiMove::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         492,
+         "TriggerVolumeToolSetColor",
+         TriggerVolumeToolSetColor.class,
+         12,
+         16384017,
+         false,
+         TriggerVolumeToolSetColor::validateStructure,
+         TriggerVolumeToolSetColor::deserialize,
+         TriggerVolumeToolSetColor::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         493,
+         "TriggerVolumeToolSetTargetTypes",
+         TriggerVolumeToolSetTargetTypes.class,
+         1,
+         16384006,
+         false,
+         TriggerVolumeToolSetTargetTypes::validateStructure,
+         TriggerVolumeToolSetTargetTypes::deserialize,
+         TriggerVolumeToolSetTargetTypes::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         500,
+         "TriggerVolumeToolSetKeepLoaded",
+         TriggerVolumeToolSetKeepLoaded.class,
+         1,
+         16384006,
+         false,
+         TriggerVolumeToolSetKeepLoaded::validateStructure,
+         TriggerVolumeToolSetKeepLoaded::deserialize,
+         TriggerVolumeToolSetKeepLoaded::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         501,
+         "TriggerVolumeToolSetCooldown",
+         TriggerVolumeToolSetCooldown.class,
+         5,
+         16384010,
+         false,
+         TriggerVolumeToolSetCooldown::validateStructure,
+         TriggerVolumeToolSetCooldown::deserialize,
+         TriggerVolumeToolSetCooldown::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         502,
+         "TriggerVolumeToolSetActivationDelay",
+         TriggerVolumeToolSetActivationDelay.class,
+         4,
+         16384009,
+         false,
+         TriggerVolumeToolSetActivationDelay::validateStructure,
+         TriggerVolumeToolSetActivationDelay::deserialize,
+         TriggerVolumeToolSetActivationDelay::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         503,
+         "SelectionToolShowTriggerVolumes",
+         SelectionToolShowTriggerVolumes.class,
+         1,
+         1,
+         false,
+         SelectionToolShowTriggerVolumes::validateStructure,
+         SelectionToolShowTriggerVolumes::deserialize,
+         SelectionToolShowTriggerVolumes::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         504,
+         "TriggerVolumeToolSetCancelDelayedOnExit",
+         TriggerVolumeToolSetCancelDelayedOnExit.class,
+         1,
+         16384006,
+         false,
+         TriggerVolumeToolSetCancelDelayedOnExit::validateStructure,
+         TriggerVolumeToolSetCancelDelayedOnExit::deserialize,
+         TriggerVolumeToolSetCancelDelayedOnExit::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         505,
+         "TriggerVolumeToolDuplicate",
+         TriggerVolumeToolDuplicate.class,
+         0,
+         1677721600,
+         false,
+         TriggerVolumeToolDuplicate::validateStructure,
+         TriggerVolumeToolDuplicate::deserialize,
+         TriggerVolumeToolDuplicate::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         506,
+         "TriggerVolumeToolSetConditionTiming",
+         TriggerVolumeToolSetConditionTiming.class,
+         1,
+         16384006,
+         false,
+         TriggerVolumeToolSetConditionTiming::validateStructure,
+         TriggerVolumeToolSetConditionTiming::deserialize,
+         TriggerVolumeToolSetConditionTiming::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         507,
+         "TriggerVolumeToolSelection",
+         TriggerVolumeToolSelection.class,
+         1,
+         1677721600,
+         false,
+         TriggerVolumeToolSelection::validateStructure,
+         TriggerVolumeToolSelection::deserialize,
+         TriggerVolumeToolSelection::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         508,
+         "ShowTriggerVolumePastePrefabPreview",
+         ShowTriggerVolumePastePrefabPreview.class,
+         21,
+         1677721600,
+         true,
+         ShowTriggerVolumePastePrefabPreview::validateStructure,
+         ShowTriggerVolumePastePrefabPreview::deserialize,
+         ShowTriggerVolumePastePrefabPreview::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         509,
+         "HideTriggerVolumePastePrefabPreview",
+         HideTriggerVolumePastePrefabPreview.class,
+         0,
+         0,
+         false,
+         HideTriggerVolumePastePrefabPreview::validateStructure,
+         HideTriggerVolumePastePrefabPreview::deserialize,
+         HideTriggerVolumePastePrefabPreview::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToClient,
+         NetworkChannel.Default,
+         1200,
+         "UpdateServersideUIPage",
+         UpdateServersideUIPage.class,
+         0,
+         1677721600,
+         false,
+         UpdateServersideUIPage::validateStructure,
+         UpdateServersideUIPage::deserialize,
+         UpdateServersideUIPage::toObject
+      );
+      register(
+         PacketRegistry.PacketDirection.ToServer,
+         NetworkChannel.Default,
+         1202,
+         "ExecuteServersidePageCommand",
+         ExecuteServersidePageCommand.class,
+         1,
+         1677721600,
+         false,
+         ExecuteServersidePageCommand::validateStructure,
+         ExecuteServersidePageCommand::deserialize,
+         ExecuteServersidePageCommand::toObject
+      );
+   }
+
+   @FunctionalInterface
+   public interface DeserializeFunc<T> {
+      Packet deserialize(T var1, int var2);
    }
 
    public static enum PacketDirection {
@@ -3713,7 +4664,8 @@ public final class PacketRegistry {
       int maxSize,
       boolean compressed,
       @Nonnull BiFunction<ByteBuf, Integer, ValidationResult> validate,
-      @Nonnull BiFunction<ByteBuf, Integer, Packet> deserialize
+      @Nonnull PacketRegistry.DeserializeFunc<ByteBuf> deserialize,
+      PacketRegistry.DeserializeFunc<MemorySegment> toObject
    ) {
    }
 }

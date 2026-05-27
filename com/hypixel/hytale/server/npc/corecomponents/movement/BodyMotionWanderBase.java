@@ -6,8 +6,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.npc.corecomponents.BodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionWanderBase;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
 import com.hypixel.hytale.server.npc.movement.steeringforces.SteeringForcePursue;
@@ -26,10 +26,12 @@ import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class BodyMotionWanderBase extends BodyMotionBase {
    public static final HytaleLogger LOGGER = NPCPlugin.get().getLogger();
@@ -48,8 +50,6 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
    protected final double minMoveDistance;
    protected final double stopDistance;
    protected final int testsPerTick;
-   protected final boolean isAvoidingBlockDamage;
-   protected final boolean isRelaxedMoveConstraints;
    protected final double desiredAltitudeWeight;
    protected final byte[] preOrderedDirections = new byte[32];
    protected final int insideConeCount;
@@ -69,6 +69,9 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
    protected double walkDistance;
    protected int directionIndex;
    protected double desiredWalkDistance;
+   protected boolean searchUsesEscapeConstraints;
+   @Nonnull
+   protected final EnumSet<RelaxedConstraint> cachedEffectiveConstraints;
    protected final double[] walkDistances = new double[32];
    protected final byte[] walkDirections = new byte[32];
 
@@ -86,12 +89,14 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
       this.stopDistance = builder.getStopDistance(builderSupport);
       this.testsPerTick = builder.getTestsPerTick(builderSupport);
       this.desiredAltitudeWeight = builder.getDesiredAltitudeWeight(builderSupport);
-      boolean avoidingBlockDamage = builder.isAvoidingBlockDamage(builderSupport);
-      this.isAvoidingBlockDamage = avoidingBlockDamage;
-      this.probeMoveData.setAvoidingBlockDamage(avoidingBlockDamage);
-      boolean relaxedMoveConstraints = builder.isRelaxedMoveConstraints(builderSupport);
-      this.isRelaxedMoveConstraints = relaxedMoveConstraints;
-      this.probeMoveData.setRelaxedMoveConstraints(relaxedMoveConstraints);
+      boolean legacyRelaxedMoveConstraints = builder.isLegacyRelaxedMoveConstraints(builderSupport);
+      boolean usesLegacyConstraintMode = !builder.isRelaxedConstraintsPresent();
+      EnumSet<RelaxedConstraint> relaxedConstraints = builder.getRelaxedConstraints(builderSupport);
+      boolean isLegacyAvoidingBlockDamage = builder.isAvoidingBlockDamage(builderSupport);
+      this.cachedEffectiveConstraints = computeEffectiveRelaxedConstraints(
+         usesLegacyConstraintMode, relaxedConstraints, legacyRelaxedMoveConstraints, isLegacyAvoidingBlockDamage
+      );
+      this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
       int count = 0;
 
       for (int i = this.minDirection; i <= this.maxDirection; i++) {
@@ -100,13 +105,19 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
 
       this.insideConeCount = count;
 
-      for (int var7 = 0; var7 < this.minDirection; var7++) {
-         count = this.addPreOrderedDirection(var7, count);
+      for (int var9 = 0; var9 < this.minDirection; var9++) {
+         count = this.addPreOrderedDirection(var9, count);
       }
 
-      for (int var8 = this.maxDirection + 1; var8 <= 16; var8++) {
-         count = this.addPreOrderedDirection(var8, count);
+      for (int var10 = this.maxDirection + 1; var10 <= 16; var10++) {
+         count = this.addPreOrderedDirection(var10, count);
       }
+   }
+
+   @Nullable
+   @Override
+   public EnumSet<RelaxedConstraint> getRelaxedConstraints() {
+      return this.cachedEffectiveConstraints;
    }
 
    @Override
@@ -153,9 +164,9 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
       if (this.debugSteer) {
          LOGGER.at(Level.INFO)
             .log(
-               "Wander compute: state=%s canAct=%s blocked=%s walkTime=%s",
+               "Wander compute: state=%s canSteer=%s blocked=%s walkTime=%s",
                this.state.toString(),
-               activeMotionController.canAct(ref, componentAccessor),
+               activeMotionController.canSteer(ref, componentAccessor),
                activeMotionController.isObstructed(),
                this.walkTime
             );
@@ -173,22 +184,29 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
             this.restartSearch(ref, npcComponent, activeMotionController, componentAccessor);
          }
 
+         this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
+         boolean usesEscapeConstraints = applyEscapeConstraints(role, this.probeMoveData);
+         if (this.state == BodyMotionWanderBase.State.SEARCHING && this.directionIndex == 0) {
+            this.searchUsesEscapeConstraints = usesEscapeConstraints;
+         } else if (this.searchUsesEscapeConstraints && !usesEscapeConstraints) {
+            this.restartSearch(ref, npcComponent, activeMotionController, componentAccessor);
+         }
+
          if (activeMotionController.isInProgress()) {
             if (this.state == BodyMotionWanderBase.State.WALKING) {
                this.walkTime -= dt;
-               activeMotionController.setRelaxedMoveConstraints(this.isRelaxedMoveConstraints);
-               activeMotionController.setAvoidingBlockDamage(this.isAvoidingBlockDamage && activeMotionController.isAvoidingBlockDamage());
+               activeMotionController.setRelaxedMoveConstraints(this.cachedEffectiveConstraints);
             }
 
             return true;
-         } else if (!activeMotionController.canAct(ref, componentAccessor)) {
+         } else if (!activeMotionController.canSteer(ref, componentAccessor)) {
             return true;
          } else {
             TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
 
             assert transformComponent != null;
 
-            Vector3f bodyRotation = transformComponent.getRotation();
+            Rotation3f bodyRotation = transformComponent.getRotation();
             if (activeMotionController.isObstructed() && this.state == BodyMotionWanderBase.State.WALKING) {
                this.restartSearch(ref, npcComponent, activeMotionController, componentAccessor);
                if (this.debugSteer) {
@@ -198,7 +216,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
                         this.state.toString(),
                         this.directionIndex,
                         this.walkTime,
-                        (180.0F / (float)Math.PI) * bodyRotation.getYaw(),
+                        (180.0F / (float)Math.PI) * bodyRotation.yaw(),
                         (180.0F / (float)Math.PI) * this.walkHeading
                      );
                }
@@ -239,14 +257,14 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
                         "Wander: Found move state=%s directionIndex=%s yaw=%s newYaw=%s",
                         this.state.toString(),
                         this.directionIndex,
-                        (180.0F / (float)Math.PI) * bodyRotation.getYaw(),
+                        (180.0F / (float)Math.PI) * bodyRotation.yaw(),
                         (180.0F / (float)Math.PI) * this.walkHeading
                      );
                }
             }
 
             if (this.state == BodyMotionWanderBase.State.TURNING) {
-               float heading = bodyRotation.getYaw();
+               float heading = bodyRotation.yaw();
                double turnAngle = NPCPhysicsMath.turnAngle(this.walkHeading, heading);
                if (!(Math.abs(turnAngle) < 0.05235988F)) {
                   desiredSteering.setYaw(this.walkHeading);
@@ -269,7 +287,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
                      .log(
                         "Wander: Walk state=%s yaw=%s desiredYaw=%s walkTime=%s",
                         this.state.toString(),
-                        (180.0F / (float)Math.PI) * bodyRotation.getYaw(),
+                        (180.0F / (float)Math.PI) * bodyRotation.yaw(),
                         (180.0F / (float)Math.PI) * this.walkHeading,
                         this.walkTime
                      );
@@ -289,14 +307,15 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
                            "Wander: Walk done state=%s directionIndex=%s yaw=%s desiredYaw=%s",
                            this.state.toString(),
                            this.directionIndex,
-                           (180.0F / (float)Math.PI) * bodyRotation.getYaw(),
+                           (180.0F / (float)Math.PI) * bodyRotation.yaw(),
                            (180.0F / (float)Math.PI) * this.walkHeading
                         );
                   }
                }
 
-               activeMotionController.setRelaxedMoveConstraints(this.isRelaxedMoveConstraints);
-               activeMotionController.setAvoidingBlockDamage(this.isAvoidingBlockDamage && activeMotionController.isAvoidingBlockDamage());
+               activeMotionController.setRelaxedMoveConstraints(this.cachedEffectiveConstraints);
+               this.probeMoveData.setRelaxedConstraints(this.cachedEffectiveConstraints);
+               applyEscapeConstraints(role, this.probeMoveData);
                desiredSteering.scaleTranslation(this.relativeSpeed);
             }
 
@@ -366,6 +385,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
       @Nullable ComponentAccessor<EntityStore> componentAccessor
    ) {
       this.state = BodyMotionWanderBase.State.SEARCHING;
+      this.searchUsesEscapeConstraints = false;
       float currentHorizontalSpeedMultiplier = npcComponent.getCurrentHorizontalSpeedMultiplier(ref, componentAccessor);
       this.walkTime = RandomExtra.randomRange(this.minWalkTime, this.maxWalkTime) / currentHorizontalSpeedMultiplier;
       this.desiredWalkDistance = this.relativeSpeed * activeMotionController.getMaximumSpeed() * this.walkTime;
@@ -418,10 +438,13 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
          return false;
       } else {
          if (constrainDistance < this.desiredWalkDistance) {
-            this.probeDirection.scale(constrainDistance / this.desiredWalkDistance);
+            this.probeDirection.mul(constrainDistance / this.desiredWalkDistance);
          }
 
-         this.probeMoveData.setAvoidingBlockDamage(!motionController.willReceiveBlockDamage());
+         if (motionController.willReceiveBlockDamage()) {
+            this.probeMoveData.getRelaxedConstraints().add(RelaxedConstraint.DAMAGE);
+         }
+
          double moveDistance = motionController.probeMove(ref, this.probePosition, this.probeDirection, this.probeMoveData, componentAccessor);
          if (moveDistance < 1.0E-5) {
             return false;
@@ -431,12 +454,12 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
                return false;
             } else {
                if (moveDistance < constrainDistance) {
-                  this.probeDirection.scale(moveDistance / constrainDistance);
+                  this.probeDirection.mul(moveDistance / constrainDistance);
                }
 
                this.walkDistance = moveDistance;
                this.walkHeading = heading;
-               this.targetPosition.assign(this.probePosition).add(this.probeDirection);
+               this.targetPosition.set(this.probePosition).add(this.probeDirection);
                return true;
             }
          }
@@ -448,11 +471,11 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
 
       assert transformComponent != null;
 
-      this.probePosition.assign(transformComponent.getPosition());
+      this.probePosition.set(transformComponent.getPosition());
       this.probeDirection.x = PhysicsMath.headingX(heading) * distance;
       this.probeDirection.y = this.probeDY * distance / this.desiredWalkDistance;
       this.probeDirection.z = PhysicsMath.headingZ(heading) * distance;
-      this.targetPosition.assign(this.probePosition).add(this.probeDirection);
+      this.targetPosition.set(this.probePosition).add(this.probeDirection);
    }
 
    protected float toAngle(@Nonnull Ref<EntityStore> ref, int direction, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -460,7 +483,7 @@ public abstract class BodyMotionWanderBase extends BodyMotionBase {
 
       assert transformComponent != null;
 
-      return PhysicsMath.normalizeAngle(transformComponent.getRotation().getYaw() + direction * (float) (Math.PI / 16) + this.angleOffset);
+      return PhysicsMath.normalizeAngle(transformComponent.getRotation().yaw() + direction * (float) (Math.PI / 16) + this.angleOffset);
    }
 
    private int addPreOrderedDirection(int direction, int count) {

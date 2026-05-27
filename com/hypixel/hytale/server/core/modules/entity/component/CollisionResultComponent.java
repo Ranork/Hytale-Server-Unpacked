@@ -2,11 +2,11 @@ package com.hypixel.hytale.server.core.modules.entity.component;
 
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.collision.CollisionResult;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class CollisionResultComponent implements Component<EntityStore> {
    private final CollisionResult collisionResult;
@@ -70,7 +70,7 @@ public class CollisionResultComponent implements Component<EntityStore> {
    }
 
    public void resetLocationChange() {
-      this.collisionPositionOffset.assign(Vector3d.ZERO);
+      this.collisionPositionOffset.zero();
       this.pendingCollisionCheck = false;
    }
 

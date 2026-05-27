@@ -6,6 +6,7 @@ public class PlayerStatsSubCommand extends AbstractCommandCollection {
    public PlayerStatsSubCommand() {
       super("stats", "server.commands.player.stats.desc");
       this.addAliases("stat");
+      this.setPermissionGroups("hytale:Builder");
       this.addSubCommand(new PlayerStatsAddCommand());
       this.addSubCommand(new PlayerStatsGetCommand());
       this.addSubCommand(new PlayerStatsSetCommand());

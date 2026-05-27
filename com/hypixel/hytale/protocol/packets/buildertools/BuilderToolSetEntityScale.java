@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -44,20 +47,63 @@ public class BuilderToolSetEntityScale implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolSetEntityScale deserialize(@Nonnull ByteBuf buf, int offset) {
-      BuilderToolSetEntityScale obj = new BuilderToolSetEntityScale();
-      obj.entityId = buf.getIntLE(offset + 0);
-      obj.scale = buf.getFloatLE(offset + 4);
-      return obj;
+      if (buf.readableBytes() - offset < 8) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSetEntityScale", 8, buf.readableBytes() - offset);
+      } else {
+         BuilderToolSetEntityScale obj = new BuilderToolSetEntityScale();
+         obj.entityId = buf.getIntLE(offset + 0);
+         obj.scale = buf.getFloatLE(offset + 4);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 8;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 8L;
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4));
+   }
+
+   public static BuilderToolSetEntityScale toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolSetEntityScale toObject(MemorySegment mem, int offset) {
+      if (offset + 8 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolSetEntityScale", offset + 8, (int)mem.byteSize());
+      } else {
+         return new BuilderToolSetEntityScale(mem.get(PacketIO.PROTO_INT, (long)(offset + 0)), mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.entityId);
       buf.writeFloatLE(this.scale);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.entityId);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 4), this.scale);
+      return 8;
    }
 
    @Override

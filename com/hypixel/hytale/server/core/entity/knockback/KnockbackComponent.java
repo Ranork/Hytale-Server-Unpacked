@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.entity.knockback;
 
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.splitvelocity.VelocityConfig;
@@ -11,6 +10,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class KnockbackComponent implements Component<EntityStore> {
    @Nonnull
@@ -59,7 +59,7 @@ public class KnockbackComponent implements Component<EntityStore> {
 
    public void applyModifiers() {
       for (int i = 0; i < this.modifiers.size(); i++) {
-         this.velocity.scale(this.modifiers.getDouble(i));
+         this.velocity.mul(this.modifiers.getDouble(i));
       }
 
       this.modifiers.clear();

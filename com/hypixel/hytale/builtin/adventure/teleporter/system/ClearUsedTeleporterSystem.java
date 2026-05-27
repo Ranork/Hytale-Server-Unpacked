@@ -12,8 +12,6 @@ import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
@@ -25,6 +23,8 @@ import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class ClearUsedTeleporterSystem extends EntityTickingSystem<EntityStore> {
    @Nonnull

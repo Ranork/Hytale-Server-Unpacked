@@ -1,12 +1,12 @@
 package com.hypixel.hytale.builtin.hytalegenerator.noise.pointprovider;
 
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector2i;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public interface PointProvider {
    List<Vector3i> points3i(@Nonnull Vector3i var1, @Nonnull Vector3i var2);

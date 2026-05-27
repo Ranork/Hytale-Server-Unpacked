@@ -11,7 +11,6 @@ import com.hypixel.hytale.codec.function.FunctionCodec;
 import com.hypixel.hytale.codec.schema.SchemaContext;
 import com.hypixel.hytale.codec.schema.config.BooleanSchema;
 import com.hypixel.hytale.codec.schema.config.IntegerSchema;
-import com.hypixel.hytale.codec.schema.config.NullSchema;
 import com.hypixel.hytale.codec.schema.config.NumberSchema;
 import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.codec.schema.config.StringSchema;
@@ -22,7 +21,6 @@ import com.hypixel.hytale.protocol.DoubleParamValue;
 import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.IntParamValue;
 import com.hypixel.hytale.protocol.LongParamValue;
-import com.hypixel.hytale.protocol.MaybeBool;
 import com.hypixel.hytale.protocol.ParamValue;
 import com.hypixel.hytale.protocol.StringParamValue;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
@@ -43,7 +41,6 @@ import org.bson.BsonBoolean;
 import org.bson.BsonDouble;
 import org.bson.BsonInt32;
 import org.bson.BsonInt64;
-import org.bson.BsonNull;
 import org.bson.BsonString;
 import org.bson.BsonValue;
 
@@ -51,7 +48,6 @@ public class Message {
    private static final BuilderCodec.Builder<FormattedMessage> MESSAGE_CODEC_BUILDER = BuilderCodec.builder(FormattedMessage.class, FormattedMessage::new);
    private static final BuilderCodec<FormattedMessage> MESSAGE_CODEC = MESSAGE_CODEC_BUILDER.build();
    private static final Codec<ParamValue> PARAM_CODEC = new Message.ParamValueCodec();
-   private static final Codec<MaybeBool> MAYBE_BOOL_CODEC = new Message.MaybeBoolCodec();
    public static final FunctionCodec<FormattedMessage, Message> CODEC = new FunctionCodec<>(MESSAGE_CODEC, Message::new, Message::getFormattedMessage);
    private final FormattedMessage message;
 
@@ -156,19 +152,19 @@ public class Message {
 
    @Nonnull
    public Message bold(boolean bold) {
-      this.message.bold = bold ? MaybeBool.True : MaybeBool.False;
+      this.message.bold = bold;
       return this;
    }
 
    @Nonnull
    public Message italic(boolean italic) {
-      this.message.italic = italic ? MaybeBool.True : MaybeBool.False;
+      this.message.italic = italic;
       return this;
    }
 
    @Nonnull
    public Message monospace(boolean monospace) {
-      this.message.monospace = monospace ? MaybeBool.True : MaybeBool.False;
+      this.message.monospace = monospace;
       return this;
    }
 
@@ -357,74 +353,22 @@ public class Message {
             (o, p) -> o.children = p.children
          )
          .add()
-         .appendInherited(new KeyedCodec<>("Bold", MAYBE_BOOL_CODEC), (o, v) -> o.bold = v != null ? v : MaybeBool.Null, o -> o.bold, (o, p) -> o.bold = p.bold)
+         .appendInherited(new KeyedCodec<>("Bold", Codec.NULLABLE_BOOLEAN), (o, v) -> o.bold = v, o -> o.bold, (o, p) -> o.bold = p.bold)
+         .add()
+         .appendInherited(new KeyedCodec<>("Italic", Codec.NULLABLE_BOOLEAN), (o, v) -> o.italic = v, o -> o.italic, (o, p) -> o.italic = p.italic)
          .add()
          .appendInherited(
-            new KeyedCodec<>("Italic", MAYBE_BOOL_CODEC), (o, v) -> o.italic = v != null ? v : MaybeBool.Null, o -> o.italic, (o, p) -> o.italic = p.italic
+            new KeyedCodec<>("Monospace", Codec.NULLABLE_BOOLEAN), (o, v) -> o.monospace = v, o -> o.monospace, (o, p) -> o.monospace = p.monospace
          )
          .add()
          .appendInherited(
-            new KeyedCodec<>("Monospace", MAYBE_BOOL_CODEC),
-            (o, v) -> o.monospace = v != null ? v : MaybeBool.Null,
-            o -> o.monospace,
-            (o, p) -> o.monospace = p.monospace
-         )
-         .add()
-         .appendInherited(
-            new KeyedCodec<>("Underline", MAYBE_BOOL_CODEC),
-            (o, v) -> o.underlined = v != null ? v : MaybeBool.Null,
-            o -> o.underlined,
-            (o, p) -> o.underlined = p.underlined
+            new KeyedCodec<>("Underline", Codec.NULLABLE_BOOLEAN), (o, v) -> o.underlined = v, o -> o.underlined, (o, p) -> o.underlined = p.underlined
          )
          .add()
          .appendInherited(new KeyedCodec<>("Color", Codec.STRING), (o, v) -> o.color = v, o -> o.color, (o, p) -> o.color = p.color)
          .add()
          .appendInherited(new KeyedCodec<>("Link", Codec.STRING), (o, v) -> o.link = v, o -> o.link, (o, p) -> o.link = p.link)
          .add();
-   }
-
-   private static class MaybeBoolCodec implements Codec<MaybeBool> {
-      @Nullable
-      public MaybeBool decode(BsonValue bsonValue, ExtraInfo extraInfo) {
-         if (bsonValue.isNull()) {
-            return MaybeBool.Null;
-         } else {
-            return bsonValue.asBoolean().getValue() ? MaybeBool.True : MaybeBool.False;
-         }
-      }
-
-      public BsonValue encode(MaybeBool maybeBool, ExtraInfo extraInfo) {
-         return (BsonValue)(switch (maybeBool) {
-            case Null -> BsonNull.VALUE;
-            case False -> BsonBoolean.FALSE;
-            case True -> BsonBoolean.TRUE;
-         });
-      }
-
-      @Nullable
-      public MaybeBool decodeJson(@Nonnull RawJsonReader reader, ExtraInfo extraInfo) throws IOException {
-         if (reader.peekFor('n')) {
-            if (!reader.tryConsume("null")) {
-               throw new IllegalArgumentException("Invalid null value");
-            } else {
-               return MaybeBool.Null;
-            }
-         } else if (reader.peekFor('N')) {
-            if (!reader.tryConsume("NULL")) {
-               throw new IllegalArgumentException("Invalid null value");
-            } else {
-               return MaybeBool.Null;
-            }
-         } else {
-            return reader.readBooleanValue() ? MaybeBool.True : MaybeBool.False;
-         }
-      }
-
-      @Nonnull
-      @Override
-      public Schema toSchema(@Nonnull SchemaContext context) {
-         return Schema.anyOf(new BooleanSchema(), new NullSchema());
-      }
    }
 
    private static class ParamValueCodec implements Codec<ParamValue> {

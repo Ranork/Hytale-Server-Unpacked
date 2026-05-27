@@ -1,23 +1,23 @@
 package com.hypixel.hytale.builtin.hytalegenerator;
 
 import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.doubles.DoubleObjectPair;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector2i;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import org.joml.Vector3i;
 
 public class VectorUtil {
    public static void assignFloored(@Nonnull Vector3i to, @Nonnull Vector3d from) {
       to.x = (int)Math.floor(from.x);
       to.y = (int)Math.floor(from.y);
       to.z = (int)Math.floor(from.z);
-      to.dropHash();
    }
 
    public static boolean areasOverlap(@Nonnull Vector3d minA, @Nonnull Vector3d maxA, @Nonnull Vector3d minB, @Nonnull Vector3d maxB) {
@@ -25,15 +25,15 @@ public class VectorUtil {
    }
 
    public static double distanceToSegment3d(@Nonnull Vector3d point, @Nonnull Vector3d p0, @Nonnull Vector3d p1) {
-      Vector3d lineVec = p1.clone().addScaled(p0, -1.0);
-      Vector3d pointVec = point.clone().addScaled(p0, -1.0);
+      Vector3d lineVec = new Vector3d(p1).fma(-1.0, p0);
+      Vector3d pointVec = new Vector3d(point).fma(-1.0, p0);
       double lineLength = lineVec.length();
-      Vector3d lineUnitVec = lineVec.clone().setLength(1.0);
-      Vector3d pointVecScaled = pointVec.clone().scale(1.0 / lineLength);
+      Vector3d lineUnitVec = new Vector3d(lineVec).normalize(1.0);
+      Vector3d pointVecScaled = new Vector3d(pointVec).mul(1.0 / lineLength);
       double t = lineUnitVec.dot(pointVecScaled);
       t = Calculator.clamp(0.0, t, 1.0);
-      Vector3d nearestPoint = lineVec.clone().scale(t);
-      return nearestPoint.distanceTo(pointVec);
+      Vector3d nearestPoint = new Vector3d(lineVec).mul(t);
+      return nearestPoint.distance(pointVec);
    }
 
    public static double distanceToLine3d(
@@ -46,30 +46,29 @@ public class VectorUtil {
       @Nonnull Vector3d rPointVecScaled,
       @Nonnull Vector3d rNearestPoint
    ) {
-      rLineVec.assign(p1).subtract(p0);
-      rPointVec.assign(point).subtract(p0);
+      rLineVec.set(p1).sub(p0);
+      rPointVec.set(point).sub(p0);
       double lineLength = rLineVec.length();
-      rLineUnitVec.assign(rLineVec).setLength(1.0);
-      rPointVecScaled.assign(rPointVec).scale(1.0 / lineLength);
+      rLineUnitVec.set(rLineVec).normalize(1.0);
+      rPointVecScaled.set(rPointVec).mul(1.0 / lineLength);
       double t = rLineUnitVec.dot(rPointVecScaled);
-      rNearestPoint.assign(rLineVec).scale(t);
-      return rNearestPoint.distanceTo(rPointVec);
+      rNearestPoint.set(rLineVec).mul(t);
+      return rNearestPoint.distance(rPointVec);
    }
 
    @Nonnull
    public static Vector3d nearestPointOnSegment3d(@Nonnull Vector3d point, @Nonnull Vector3d p0, @Nonnull Vector3d p1) {
-      Vector3d lineVec = p1.clone().addScaled(p0, -1.0);
-      Vector3d pointVec = point.clone().addScaled(p0, -1.0);
+      Vector3d lineVec = new Vector3d(p1).fma(-1.0, p0);
+      Vector3d pointVec = new Vector3d(point).fma(-1.0, p0);
       double lineLength = lineVec.length();
-      Vector3d lineUnitVec = lineVec.clone().setLength(1.0);
-      Vector3d pointVecScaled = pointVec.clone().scale(1.0 / lineLength);
+      Vector3d lineUnitVec = new Vector3d(lineVec).normalize(1.0);
+      Vector3d pointVecScaled = new Vector3d(pointVec).mul(1.0 / lineLength);
       double t = lineUnitVec.dot(pointVecScaled);
       t = Calculator.clamp(0.0, t, 1.0);
-      Vector3d nearestPoint = lineVec.clone().scale(t);
+      Vector3d nearestPoint = new Vector3d(lineVec).mul(t);
       return nearestPoint.add(p0);
    }
 
-   @Nonnull
    public static void nearestPointOnLine3d(
       @Nonnull Vector3d point,
       @Nonnull Vector3d p0,
@@ -80,13 +79,13 @@ public class VectorUtil {
       @Nonnull Vector3d rLineUnitVec,
       @Nonnull Vector3d rPointVecScaled
    ) {
-      rLineVec.assign(p1).subtract(p0);
-      rPointVec.assign(point).subtract(p0);
+      rLineVec.set(p1).sub(p0);
+      rPointVec.set(point).sub(p0);
       double lineLength = rLineVec.length();
-      rLineUnitVec.assign(rLineVec).setLength(1.0);
-      rPointVecScaled.assign(rPointVec).scale(1.0 / lineLength);
+      rLineUnitVec.set(rLineVec).normalize(1.0);
+      rPointVecScaled.set(rPointVec).mul(1.0 / lineLength);
       double t = rLineUnitVec.dot(rPointVecScaled);
-      vector_out.assign(rLineVec).scale(t);
+      vector_out.set(rLineVec).mul(t);
       vector_out.add(p0);
    }
 
@@ -94,43 +93,43 @@ public class VectorUtil {
       @Nonnull Vector3d a0, @Nonnull Vector3d a1, @Nonnull Vector3d b0, @Nonnull Vector3d b1, boolean clamp, @Nonnull Vector3d p0Out, @Nonnull Vector3d p1Out
    ) {
       boolean[] flags = new boolean[2];
-      Vector3d A = a1.clone().addScaled(a0, -1.0);
-      Vector3d B = b1.clone().addScaled(b0, -1.0);
+      Vector3d A = new Vector3d(a1).fma(-1.0, a0);
+      Vector3d B = new Vector3d(b1).fma(-1.0, b0);
       double magA = A.length();
       double magB = B.length();
-      Vector3d _A = A.clone().scale(1.0 / magA);
-      Vector3d _B = B.clone().scale(1.0 / magB);
-      Vector3d cross = _A.cross(_B);
+      Vector3d _A = new Vector3d(A).mul(1.0 / magA);
+      Vector3d _B = new Vector3d(B).mul(1.0 / magB);
+      Vector3d cross = _A.cross(_B, new Vector3d());
       double denom = Math.pow(cross.length(), 2.0);
       if (denom == 0.0) {
          flags[0] = true;
-         double d0 = _A.dot(b0.clone().addScaled(a0, -1.0));
+         double d0 = _A.dot(new Vector3d(b0).fma(-1.0, a0));
          if (clamp) {
-            double d1 = _A.dot(b1.clone().addScaled(a0, -1.0));
+            double d1 = _A.dot(new Vector3d(b1).fma(-1.0, a0));
             if (d0 <= 0.0 && d1 <= 0.0) {
                if (Math.abs(d0) < Math.abs(d1)) {
-                  p0Out.assign(a0);
-                  p1Out.assign(b0);
+                  p0Out.set(a0);
+                  p1Out.set(b0);
                   flags[1] = true;
                   return flags;
                }
 
-               p0Out.assign(a0);
-               p1Out.assign(b1);
+               p0Out.set(a0);
+               p1Out.set(b1);
                flags[1] = true;
                return flags;
             }
 
             if (d0 >= magA && d1 >= magA) {
                if (Math.abs(d0) < Math.abs(d1)) {
-                  p0Out.assign(a1);
-                  p1Out.assign(b0);
+                  p0Out.set(a1);
+                  p1Out.set(b0);
                   flags[1] = true;
                   return flags;
                }
 
-               p0Out.assign(a1);
-               p1Out.assign(b1);
+               p0Out.set(a1);
+               p1Out.set(b1);
                flags[1] = true;
                return flags;
             }
@@ -138,58 +137,58 @@ public class VectorUtil {
 
          return flags;
       } else {
-         Vector3d t = b0.clone().addScaled(a0, -1.0);
+         Vector3d t = new Vector3d(b0).fma(-1.0, a0);
          double detA = determinant(t, _B, cross);
          double detB = determinant(t, _A, cross);
          double t0 = detA / denom;
          double t1 = detB / denom;
-         Vector3d pA = _A.clone().scale(t0).add(a0);
-         Vector3d pB = _B.clone().scale(t1).add(b0);
+         Vector3d pA = new Vector3d(_A).mul(t0).add(a0);
+         Vector3d pB = new Vector3d(_B).mul(t1).add(b0);
          if (clamp) {
             if (t0 < 0.0) {
-               pA = a0.clone();
+               pA = new Vector3d(a0);
             } else if (t0 > magA) {
-               pA = a1.clone();
+               pA = new Vector3d(a1);
             }
 
             if (t1 < 0.0) {
-               pB = b0.clone();
+               pB = new Vector3d(b0);
             } else if (t1 > magB) {
-               pB = b1.clone();
+               pB = new Vector3d(b1);
             }
 
             if (t0 < 0.0 || t0 > magA) {
-               double dot = _B.dot(pA.clone().addScaled(b0, -1.0));
+               double dot = _B.dot(new Vector3d(pA).fma(-1.0, b0));
                if (dot < 0.0) {
                   dot = 0.0;
                } else if (dot > magB) {
                   dot = magB;
                }
 
-               pB = b0.clone().add(_B.clone().scale(dot));
+               pB = new Vector3d(b0).add(new Vector3d(_B).mul(dot));
             }
 
             if (t1 < 0.0 || t1 > magA) {
-               double dot = _A.dot(pB.clone().addScaled(a0, -1.0));
+               double dot = _A.dot(new Vector3d(pB).fma(-1.0, a0));
                if (dot < 0.0) {
                   dot = 0.0;
                } else if (dot > magA) {
                   dot = magA;
                }
 
-               pA = a0.clone().add(_A.clone().scale(dot));
+               pA = new Vector3d(a0).add(new Vector3d(_A).mul(dot));
             }
          }
 
-         p0Out.assign(pA);
-         p1Out.assign(pB);
+         p0Out.set(pA);
+         p1Out.set(pB);
          flags[1] = true;
          return flags;
       }
    }
 
-   public static double determinant(@Nonnull Vector3d v1, @Nonnull Vector3d v2) {
-      Vector3d crossProduct = v1.cross(v2);
+   public static double determinant(@Nonnull Vector3dc v1, @Nonnull Vector3dc v2) {
+      Vector3d crossProduct = v1.cross(v2, new Vector3d());
       return crossProduct.length();
    }
 
@@ -200,15 +199,15 @@ public class VectorUtil {
 
    @Nonnull
    public static DoubleObjectPair<Vector3d> distanceAndNearestPointOnSegment3d(@Nonnull Vector3d point, @Nonnull Vector3d p0, @Nonnull Vector3d p1) {
-      Vector3d lineVec = p1.clone().addScaled(p0, -1.0);
-      Vector3d pointVec = point.clone().addScaled(p0, -1.0);
+      Vector3d lineVec = new Vector3d(p1).fma(-1.0, p0);
+      Vector3d pointVec = new Vector3d(point).fma(-1.0, p0);
       double lineLength = lineVec.length();
-      Vector3d lineUnitVec = lineVec.clone().setLength(1.0);
-      Vector3d pointVecScaled = pointVec.clone().scale(1.0 / lineLength);
+      Vector3d lineUnitVec = new Vector3d(lineVec).normalize(1.0);
+      Vector3d pointVecScaled = new Vector3d(pointVec).mul(1.0 / lineLength);
       double t = lineUnitVec.dot(pointVecScaled);
       t = Calculator.clamp(0.0, t, 1.0);
-      Vector3d nearestPoint = lineVec.clone().scale(t);
-      return DoubleObjectPair.of(nearestPoint.distanceTo(pointVec), nearestPoint.add(p0));
+      Vector3d nearestPoint = new Vector3d(lineVec).mul(t);
+      return DoubleObjectPair.of(nearestPoint.distance(pointVec), nearestPoint.add(p0));
    }
 
    public static double angle(@Nonnull Vector3d a, @Nonnull Vector3d b) {
@@ -236,7 +235,7 @@ public class VectorUtil {
    }
 
    public static void rotateVectorByAxisAngle(@Nonnull Vector3d vec, @Nonnull Vector3d axis, double angle) {
-      Vector3d crossProd = axis.cross(vec);
+      Vector3d crossProd = axis.cross(vec, new Vector3d());
       double cosAngle = Math.cos(angle);
       double sinAngle = Math.sin(angle);
       double x = vec.x * cosAngle + crossProd.x * sinAngle + axis.x * axis.dot(vec) * (1.0 - cosAngle);
@@ -326,7 +325,6 @@ public class VectorUtil {
          vector.x >>= shift;
          vector.y >>= shift;
          vector.z >>= shift;
-         vector.dropHash();
       }
    }
 
@@ -337,7 +335,6 @@ public class VectorUtil {
          vector.x <<= shift;
          vector.y <<= shift;
          vector.z <<= shift;
-         vector.dropHash();
       }
    }
 
@@ -383,6 +380,11 @@ public class VectorUtil {
          this.index = index;
       }
 
+      @Nonnull
+      public static VectorUtil.Retriever ofIndex(int index) {
+         return new VectorUtil.Retriever(index);
+      }
+
       public int getIndex() {
          return this.index;
       }
@@ -419,11 +421,6 @@ public class VectorUtil {
             case 1 -> vec.y;
             default -> throw new IllegalArgumentException();
          };
-      }
-
-      @Nonnull
-      public static VectorUtil.Retriever ofIndex(int index) {
-         return new VectorUtil.Retriever(index);
       }
    }
 }

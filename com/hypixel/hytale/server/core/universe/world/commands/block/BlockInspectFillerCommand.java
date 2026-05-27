@@ -8,8 +8,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -24,6 +22,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class BlockInspectFillerCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -33,7 +33,7 @@ public class BlockInspectFillerCommand extends AbstractPlayerCommand {
 
    public BlockInspectFillerCommand() {
       super("inspectfiller", "server.commands.block.inspectfiller.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override
@@ -45,9 +45,9 @@ public class BlockInspectFillerCommand extends AbstractPlayerCommand {
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      int x = MathUtil.floor(position.getX());
-      int z = MathUtil.floor(position.getZ());
-      int y = MathUtil.floor(position.getY());
+      int x = MathUtil.floor(position.x());
+      int z = MathUtil.floor(position.z());
+      int y = MathUtil.floor(position.y());
       int chunkX = ChunkUtil.chunkCoordinate(x);
       int chunkY = ChunkUtil.chunkCoordinate(y);
       int chunkZ = ChunkUtil.chunkCoordinate(z);
@@ -110,11 +110,11 @@ public class BlockInspectFillerCommand extends AbstractPlayerCommand {
                         maxZ++;
                      }
 
-                     Vector3f colour = new Vector3f();
-                     colour.x = (float)(fillerX - minX) / (maxX - minX);
-                     colour.y = (float)(fillerY - minY) / (maxY - minY);
-                     colour.z = (float)(fillerZ - minZ) / (maxZ - minZ);
-                     DebugUtils.addCube(chunkStore.getExternalData().getWorld(), pos, colour, 1.05, 30.0F);
+                     Vector3f color = new Vector3f();
+                     color.x = (float)(fillerX - minX) / (maxX - minX);
+                     color.y = (float)(fillerY - minY) / (maxY - minY);
+                     color.z = (float)(fillerZ - minZ) / (maxZ - minZ);
+                     DebugUtils.addCube(chunkStore.getExternalData().getWorld(), pos, color, 1.05, 30.0F);
                   }
                }
             }

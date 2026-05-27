@@ -2,9 +2,8 @@ package com.hypixel.hytale.server.core.command.commands.debug;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -17,6 +16,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class DebugPlayerPositionCommand extends AbstractPlayerCommand {
    public DebugPlayerPositionCommand() {
@@ -36,7 +37,7 @@ public class DebugPlayerPositionCommand extends AbstractPlayerCommand {
 
       assert headRotationComponent != null;
 
-      Vector3f headRotation = headRotationComponent.getRotation();
+      Rotation3f headRotation = headRotationComponent.getRotation();
       Teleport teleport = store.getComponent(ref, Teleport.getComponentType());
       PendingTeleport pendingTeleport = store.getComponent(ref, PendingTeleport.getComponentType());
       String teleportFmt = teleport == null ? "none" : fmtPos(teleport.getPosition());
@@ -55,11 +56,11 @@ public class DebugPlayerPositionCommand extends AbstractPlayerCommand {
 
    private static String fmtPos(@Nonnull Vector3d vector) {
       String fmt = "%.1f";
-      return String.format("%.1f", vector.getX()) + ", " + String.format("%.1f", vector.getY()) + ", " + String.format("%.1f", vector.getZ());
+      return String.format("%.1f", vector.x()) + ", " + String.format("%.1f", vector.y()) + ", " + String.format("%.1f", vector.z());
    }
 
-   private static String fmtRot(@Nonnull Vector3f vector) {
-      return "Pitch=" + fmtDegrees(vector.getPitch()) + ", Yaw=" + fmtDegrees(vector.getYaw()) + ", Roll=" + fmtDegrees(vector.getRoll());
+   private static String fmtRot(@Nonnull Rotation3f vector) {
+      return "Pitch=" + fmtDegrees(vector.pitch()) + ", Yaw=" + fmtDegrees(vector.yaw()) + ", Roll=" + fmtDegrees(vector.roll());
    }
 
    private static String fmtDegrees(float radians) {

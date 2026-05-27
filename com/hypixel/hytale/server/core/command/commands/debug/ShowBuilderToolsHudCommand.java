@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.command.commands.debug;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.interface_.HudComponent;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -20,7 +19,7 @@ public class ShowBuilderToolsHudCommand extends AbstractPlayerCommand {
 
    public ShowBuilderToolsHudCommand() {
       super("builderToolsLegend", "server.commands.builderToolsLegend.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

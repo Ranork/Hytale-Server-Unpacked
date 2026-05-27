@@ -6,10 +6,11 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class AssignedPropDistribution extends PropDistribution {
    @Nonnull
@@ -23,8 +24,14 @@ public class AssignedPropDistribution extends PropDistribution {
    private PropDistribution.Context rContext;
    @Nonnull
    private final Pipe.Two<Vector3d, Prop> rChildPipe = new Pipe.Two<Vector3d, Prop>() {
+      {
+         Objects.requireNonNull(AssignedPropDistribution.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Prop existingProp, @NonNullDecl Control control) {
-         if (AssignedPropDistribution.this.isOverrideAllProps || existingProp == EmptyProp.INSTANCE) {
+         if (existingProp != EmptyProp.INSTANCE && !AssignedPropDistribution.this.isOverrideAllProps) {
+            AssignedPropDistribution.this.rContext.pipe.accept(position, existingProp, control);
+         } else {
             Prop newProp = AssignedPropDistribution.this.assignments
                .propAt(position, WorkerIndexer.Id.MAIN, AssignedPropDistribution.this.rContext.distanceFromBiomeEdge);
             AssignedPropDistribution.this.rContext.pipe.accept(position, newProp, control);

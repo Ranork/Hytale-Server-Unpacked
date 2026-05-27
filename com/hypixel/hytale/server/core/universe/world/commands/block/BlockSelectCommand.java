@@ -66,6 +66,7 @@ public class BlockSelectCommand extends AbstractPlayerCommand {
 
    public BlockSelectCommand() {
       super("blockselect", "server.commands.block.select.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

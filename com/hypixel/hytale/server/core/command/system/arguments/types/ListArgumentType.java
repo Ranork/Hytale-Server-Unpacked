@@ -1,7 +1,9 @@
 package com.hypixel.hytale.server.core.command.system.arguments.types;
 
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.ParseResult;
+import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionResult;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,6 +22,7 @@ public class ListArgumentType<DataType> extends ArgumentType<List<DataType>> {
          argumentType.getExamples()
       );
       this.argumentType = argumentType;
+      this.withSharedSuggestions(argumentType);
    }
 
    @Override
@@ -42,5 +45,15 @@ public class ListArgumentType<DataType> extends ArgumentType<List<DataType>> {
       }
 
       return returnList;
+   }
+
+   @Override
+   public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+      this.argumentType.suggest(sender, textAlreadyEntered, numParametersTyped, result);
+   }
+
+   @Override
+   public int getSuggestionValueCount() {
+      return this.argumentType.getSuggestionValueCount();
    }
 }

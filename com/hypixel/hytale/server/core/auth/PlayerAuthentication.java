@@ -1,6 +1,7 @@
 package com.hypixel.hytale.server.core.auth;
 
 import com.hypixel.hytale.protocol.HostAddress;
+import com.hypixel.hytale.protocol.PlayerSkin;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -11,6 +12,7 @@ public class PlayerAuthentication {
    private String username;
    private byte[] referralData;
    private HostAddress referralSource;
+   private PlayerSkin skin;
 
    public PlayerAuthentication() {
    }
@@ -66,5 +68,14 @@ public class PlayerAuthentication {
 
    public void setReferralSource(@Nullable HostAddress referralSource) {
       this.referralSource = referralSource;
+   }
+
+   @Nullable
+   public PlayerSkin getSkin() {
+      return this.skin;
+   }
+
+   public void setSkin(@Nullable PlayerSkin skin) {
+      this.skin = skin;
    }
 }

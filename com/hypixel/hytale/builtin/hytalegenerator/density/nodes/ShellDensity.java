@@ -2,10 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ShellDensity extends Density {
    public static final double ZERO_DELTA = 1.0E-9;
@@ -29,11 +28,11 @@ public class ShellDensity extends Density {
 
    @Override
    public double process(@Nonnull Density.Context context) {
-      double distance = Calculator.distance(context.position, Vector3d.ZERO);
+      double distance = context.position.length();
       if (this.axis.length() == 0.0) {
          return 0.0;
       } else {
-         this.rRadialVector.assign(context.position);
+         this.rRadialVector.set(context.position);
          double amplitude = this.distanceCurve.applyAsDouble(distance);
          if (amplitude == 0.0) {
             return 0.0;

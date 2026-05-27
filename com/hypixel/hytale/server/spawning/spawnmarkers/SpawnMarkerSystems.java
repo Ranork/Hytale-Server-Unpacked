@@ -1,7 +1,5 @@
 package com.hypixel.hytale.server.spawning.spawnmarkers;
 
-import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ArchetypeChunk;
@@ -13,11 +11,9 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.SystemGroup;
-import com.hypixel.hytale.component.data.unknown.UnknownComponents;
 import com.hypixel.hytale.component.dependency.Dependency;
 import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.OrderPriority;
-import com.hypixel.hytale.component.dependency.RootDependency;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
@@ -25,24 +21,17 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
-import com.hypixel.hytale.server.core.asset.type.model.config.Model;
-import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
-import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.entity.reference.InvalidatablePersistentRef;
 import com.hypixel.hytale.server.core.entity.reference.PersistentRefCount;
-import com.hypixel.hytale.server.core.modules.entity.AllLegacyEntityTypesQuery;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
 import com.hypixel.hytale.server.core.modules.entity.component.FromWorldGen;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
-import com.hypixel.hytale.server.core.modules.entity.component.HiddenFromAdventurePlayers;
 import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
-import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.WorldGenId;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
@@ -51,6 +40,7 @@ import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.prefab.PrefabCopyableComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.WorldConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.flock.StoredFlock;
 import com.hypixel.hytale.server.npc.components.SpawnMarkerReference;
@@ -60,12 +50,11 @@ import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bson.BsonDocument;
+import org.joml.Vector3d;
 
 public class SpawnMarkerSystems {
    @Nonnull
@@ -231,6 +220,19 @@ public class SpawnMarkerSystems {
       public void onEntityRemove(
          @Nonnull Ref<EntityStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
+         if (reason == RemoveReason.BUILDER_TOOLS_UNDO) {
+            SpawnMarkerEntity spawnMarker = store.getComponent(ref, this.spawnMarkerEntityComponentType);
+            if (spawnMarker != null) {
+               for (InvalidatablePersistentRef npcRef : spawnMarker.getNpcReferences()) {
+                  if (npcRef != null) {
+                     Ref<EntityStore> npcEntityRef = npcRef.getEntity(store);
+                     if (npcEntityRef != null && npcEntityRef.isValid()) {
+                        commandBuffer.removeEntity(npcEntityRef, RemoveReason.BUILDER_TOOLS_UNDO);
+                     }
+                  }
+               }
+            }
+         }
       }
    }
 
@@ -290,73 +292,6 @@ public class SpawnMarkerSystems {
       @Override
       public SystemGroup<EntityStore> getGroup() {
          return EntityModule.get().getPreClearMarkersGroup();
-      }
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class LegacyEntityMigration extends EntityModule.MigrationSystem {
-      @Nonnull
-      private final ComponentType<EntityStore, PersistentModel> persistentModelComponentType = PersistentModel.getComponentType();
-      @Nonnull
-      private final ComponentType<EntityStore, Nameplate> nameplateComponentType = Nameplate.getComponentType();
-      @Nonnull
-      private final ComponentType<EntityStore, UUIDComponent> uuidComponentType = UUIDComponent.getComponentType();
-      @Nonnull
-      private final ComponentType<EntityStore, UnknownComponents<EntityStore>> unknownComponentsComponentType = EntityStore.REGISTRY.getUnknownComponentType();
-      @Nonnull
-      private final Query<EntityStore> query = Query.and(this.unknownComponentsComponentType, Query.not(AllLegacyEntityTypesQuery.INSTANCE));
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         UnknownComponents<EntityStore> unknownComponentsComponent = holder.getComponent(this.unknownComponentsComponentType);
-
-         assert unknownComponentsComponent != null;
-
-         Map<String, BsonDocument> unknownComponents = unknownComponentsComponent.getUnknownComponents();
-         BsonDocument spawnMarker = unknownComponents.remove("SpawnMarker");
-         if (spawnMarker != null) {
-            Archetype<EntityStore> archetype = holder.getArchetype();
-
-            assert archetype != null;
-
-            if (!archetype.contains(this.persistentModelComponentType)) {
-               Model.ModelReference modelReference = Entity.MODEL.get(spawnMarker).get();
-               holder.addComponent(this.persistentModelComponentType, new PersistentModel(modelReference));
-            }
-
-            if (!archetype.contains(this.nameplateComponentType)) {
-               holder.addComponent(this.nameplateComponentType, new Nameplate(Entity.DISPLAY_NAME.get(spawnMarker).get()));
-            }
-
-            if (!archetype.contains(this.uuidComponentType)) {
-               holder.addComponent(this.uuidComponentType, new UUIDComponent(Entity.UUID.get(spawnMarker).get()));
-            }
-
-            holder.ensureComponent(HiddenFromAdventurePlayers.getComponentType());
-            int worldGenId = Codec.INTEGER.decode(spawnMarker.get("WorldgenId"));
-            if (worldGenId != 0) {
-               holder.addComponent(WorldGenId.getComponentType(), new WorldGenId(worldGenId));
-            }
-
-            SpawnMarkerEntity marker = SpawnMarkerEntity.CODEC.decode(spawnMarker, new ExtraInfo(5));
-            holder.addComponent(SpawnMarkerEntity.getComponentType(), marker);
-         }
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return this.query;
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<EntityStore>> getDependencies() {
-         return RootDependency.firstSet();
       }
    }
 
@@ -426,6 +361,7 @@ public class SpawnMarkerSystems {
          assert transformComponent != null;
 
          World world = store.getExternalData().getWorld();
+         WorldConfig worldConfig = world.getWorldConfig();
          SpawnMarker cachedMarker = spawnMarkerEntityComponent.getCachedMarker();
          if (spawnMarkerEntityComponent.getSpawnCount() > 0) {
             StoredFlock storedFlock = spawnMarkerEntityComponent.getStoredFlock();
@@ -522,7 +458,7 @@ public class SpawnMarkerSystems {
                      storedFlock.restoreNPCs(tempStorageList, _store);
                      spawnMarkerEntityComponent.setSpawnCount(tempStorageList.size());
                      Vector3d position = spawnMarkerEntityComponent.getSpawnPosition();
-                     Vector3f rotation = transformComponent.getRotation();
+                     Rotation3f rotation = transformComponent.getRotation();
                      InvalidatablePersistentRef[] npcReferencesx = new InvalidatablePersistentRef[tempStorageList.size()];
                      int ix = 0;
 
@@ -543,8 +479,8 @@ public class SpawnMarkerSystems {
                         InvalidatablePersistentRef referencex = new InvalidatablePersistentRef();
                         referencex.setEntity(refx, _store);
                         npcReferencesx[ix] = referencex;
-                        npcTransform.getPosition().assign(position);
-                        npcTransform.getRotation().assign(rotation);
+                        npcTransform.getPosition().set(position);
+                        npcTransform.getRotation().set(rotation);
                         npcHeadRotation.setRotation(rotation);
                         npcComponentx.playAnimation(refx, AnimationSlot.Status, null, commandBuffer);
                      }
@@ -556,7 +492,7 @@ public class SpawnMarkerSystems {
                }
             }
 
-            if (spawnMarkerEntityComponent.tickSpawnLostTimeout(dt)) {
+            if (spawnMarkerEntityComponent.tickSpawnLostTimeout(dt) && worldConfig.isSpawningNPC()) {
                PersistentRefCount refId = archetypeChunk.getComponent(index, this.referenceIdComponentType);
                if (refId != null) {
                   refId.increment();
@@ -566,7 +502,8 @@ public class SpawnMarkerSystems {
                Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                commandBuffer.run(_store -> spawnMarkerEntityComponent.spawnNPC(ref, cachedMarker, _store));
             }
-         } else if (world.getWorldConfig().isSpawnMarkersEnabled()
+         } else if (world.getWorldConfig().isSpawningNPC()
+            && world.getWorldConfig().isSpawnMarkersEnabled()
             && !cachedMarker.isManualTrigger()
             && (spawnMarkerEntityComponent.getSuppressedBy() == null || spawnMarkerEntityComponent.getSuppressedBy().isEmpty())) {
             Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);

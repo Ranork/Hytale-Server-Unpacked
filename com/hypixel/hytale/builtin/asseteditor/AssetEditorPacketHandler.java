@@ -8,6 +8,8 @@ import com.hypixel.hytale.common.util.CompletableFutureUtil;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.HostAddress;
+import com.hypixel.hytale.protocol.NetworkChannel;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorActivateButton;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorCreateAsset;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorCreateAssetPack;
@@ -45,11 +47,9 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
 import com.hypixel.hytale.server.core.io.handlers.GenericPacketHandler;
-import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.file.Path;
 import java.util.List;
@@ -62,19 +62,21 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
    @Nonnull
    private final EditorClient editorClient;
 
-   public AssetEditorPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language, @Nonnull PlayerAuthentication auth) {
+   public AssetEditorPacketHandler(
+      @Nonnull ChannelConnection channel, @Nonnull ProtocolVersion protocolVersion, String language, @Nonnull PlayerAuthentication auth
+   ) {
       super(channel, protocolVersion);
       this.auth = auth;
       this.editorClient = new EditorClient(language, auth, this);
       this.init();
    }
 
-   public AssetEditorPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion, String language, UUID uuid, String username) {
+   public AssetEditorPacketHandler(@Nonnull ChannelConnection channel, @Nonnull ProtocolVersion protocolVersion, String language, UUID uuid, String username) {
       this(channel, protocolVersion, language, uuid, username, null, null);
    }
 
    public AssetEditorPacketHandler(
-      @Nonnull Channel channel,
+      @Nonnull ChannelConnection channel,
       @Nonnull ProtocolVersion protocolVersion,
       String language,
       UUID uuid,
@@ -101,11 +103,11 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
    @Nonnull
    @Override
    public String getIdentifier() {
-      return "{Editor(" + NettyUtil.formatRemoteAddress(this.getChannel()) + "), " + this.editorClient.getUuid() + ", " + this.editorClient.getUsername() + "}";
+      return "{Editor(" + this.getChannel().formatRemoteAddress() + "), " + this.editorClient.getUuid() + ", " + this.editorClient.getUsername() + "}";
    }
 
    @Override
-   public void closed(ChannelHandlerContext ctx) {
+   public void closed(NetworkChannel channel) {
       AssetEditorPlugin.get().handleEditorClientDisconnected(this.editorClient, this.disconnectReason);
    }
 
@@ -205,18 +207,31 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
 
    public void handle(@Nonnull AssetEditorFetchAsset packet) {
       if (!this.lacksPermission(packet.token)) {
-         LOGGER.at(Level.INFO).log("%s is fetching asset %s, from opened tab: %s", this.editorClient.getUsername(), packet.path, packet.isFromOpenedTab);
-         AssetEditorPlugin.get().handleFetchAsset(this.editorClient, new AssetPath(packet.path.pack, Path.of(packet.path.path)), packet.token);
+         String pack = packet.path != null ? packet.path.pack : null;
+         String path = packet.path != null ? packet.path.path : null;
+         if (pack != null && path != null) {
+            LOGGER.at(Level.INFO).log("%s is fetching asset %s:%s, from opened tab: %s", this.editorClient.getUsername(), pack, path, packet.isFromOpenedTab);
+            AssetEditorPlugin.get().handleFetchAsset(this.editorClient, new AssetPath(packet.path.pack, Path.of(packet.path.path)), packet.token);
+         } else {
+            LOGGER.at(Level.SEVERE).log("%s is fetching json asset with null pack or path", this.editorClient.getUsername());
+         }
       }
    }
 
    public void handle(@Nonnull AssetEditorFetchJsonAssetWithParents packet) {
       if (!this.lacksPermission(packet.token)) {
-         LOGGER.at(Level.INFO).log("%s is fetching json asset %s, from opened tab: %s", this.editorClient.getUsername(), packet.path, packet.isFromOpenedTab);
-         AssetEditorPlugin.get()
-            .handleFetchJsonAssetWithParents(
-               this.editorClient, new AssetPath(packet.path.pack, Path.of(packet.path.path)), packet.isFromOpenedTab, packet.token
-            );
+         String pack = packet.path != null ? packet.path.pack : null;
+         String path = packet.path != null ? packet.path.path : null;
+         if (pack != null && path != null) {
+            LOGGER.at(Level.INFO)
+               .log("%s is fetching json asset %s:%s, from opened tab: %s", this.editorClient.getUsername(), pack, path, packet.isFromOpenedTab);
+            AssetEditorPlugin.get()
+               .handleFetchJsonAssetWithParents(
+                  this.editorClient, new AssetPath(packet.path.pack, Path.of(packet.path.path)), packet.isFromOpenedTab, packet.token
+               );
+         } else {
+            LOGGER.at(Level.SEVERE).log("%s is fetching json asset with null pack or path", this.editorClient.getUsername());
+         }
       }
    }
 
@@ -313,7 +328,9 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
 
    public void handle(@Nonnull AssetEditorSelectAsset packet) {
       if (!this.lacksPermission()) {
-         LOGGER.at(Level.INFO).log("%s selecting %s", this.editorClient.getUsername(), packet.path);
+         String pack = packet.path != null ? packet.path.pack : null;
+         String path = packet.path != null ? packet.path.path : null;
+         LOGGER.at(Level.INFO).log("%s selecting %s/%s", this.editorClient.getUsername(), pack, path);
          AssetEditorPlugin.get().handleSelectAsset(this.editorClient, packet.path != null ? new AssetPath(packet.path) : null);
       }
    }
@@ -334,7 +351,7 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
 
    public void handle(@Nonnull AssetEditorRenameDirectory packet) {
       if (!this.lacksPermission(packet.token)) {
-         LOGGER.at(Level.INFO).log("%s is renaming directory %s to $s", this.editorClient.getUsername(), packet.path, packet.newPath);
+         LOGGER.at(Level.INFO).log("%s is renaming directory %s to %s", this.editorClient.getUsername(), packet.path, packet.newPath);
          AssetEditorPlugin.get().handleRenameDirectory(this.editorClient, new AssetPath(packet.path), new AssetPath(packet.newPath), packet.token);
       }
    }
@@ -367,21 +384,21 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
    }
 
    public void handle(@Nonnull AssetEditorUpdateAssetPack packet) {
-      if (!this.lacksPermission("hytale.editor.packs.edit")) {
+      if (!this.lacksPermission(HytalePermissions.ASSET_EDITOR_PACKS_EDIT)) {
          LOGGER.at(Level.INFO).log("%s is updating the asset pack manifest for %s", this.editorClient.getUsername(), packet.id);
          AssetEditorPlugin.get().handleUpdateAssetPack(this.editorClient, packet.id, packet.manifest);
       }
    }
 
    public void handle(@Nonnull AssetEditorDeleteAssetPack packet) {
-      if (!this.lacksPermission("hytale.editor.packs.delete")) {
+      if (!this.lacksPermission(HytalePermissions.ASSET_EDITOR_PACKS_DELETE)) {
          LOGGER.at(Level.INFO).log("%s is deleting the asset pack %s", this.editorClient.getUsername(), packet.id);
          AssetEditorPlugin.get().handleDeleteAssetPack(this.editorClient, packet.id);
       }
    }
 
    public void handle(@Nonnull AssetEditorCreateAssetPack packet) {
-      if (!this.lacksPermission(packet.token, "hytale.editor.packs.create")) {
+      if (!this.lacksPermission(packet.token, HytalePermissions.ASSET_EDITOR_PACKS_CREATE)) {
          LOGGER.at(Level.INFO)
             .log(
                "%s is creating a new asset pack: %s:%s (directory index: %d)",
@@ -408,15 +425,15 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
             "%s - %s at %s left with reason: %s - %s",
             this.editorClient.getUuid(),
             this.editorClient.getUsername(),
-            NettyUtil.formatRemoteAddress(this.getChannel()),
+            this.getChannel().formatRemoteAddress(),
             packet.type.name(),
             packet.reason.name()
          );
-      this.getChannel().close();
+      this.getChannel().closeApplicationConnection();
    }
 
    private boolean lacksPermission(int token) {
-      if (!this.editorClient.hasPermission("hytale.editor.asset")) {
+      if (!this.editorClient.hasPermission(HytalePermissions.ASSET_EDITOR)) {
          this.editorClient.sendFailureReply(token, Messages.USAGE_DENIED);
          return true;
       } else {
@@ -425,7 +442,7 @@ public class AssetEditorPacketHandler extends GenericPacketHandler {
    }
 
    private boolean lacksPermission() {
-      return this.lacksPermission("hytale.editor.asset");
+      return this.lacksPermission(HytalePermissions.ASSET_EDITOR);
    }
 
    private boolean lacksPermission(String permissionId) {

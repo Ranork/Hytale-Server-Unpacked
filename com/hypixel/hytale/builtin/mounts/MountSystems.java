@@ -23,7 +23,7 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.BlockMount;
 import com.hypixel.hytale.protocol.ComponentUpdateType;
@@ -64,6 +64,8 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class MountSystems {
    private static void handleMountedRemoval(
@@ -181,58 +183,60 @@ public class MountSystems {
 
          MountController controller = mountedComponent.getControllerType();
          Ref<EntityStore> targetRef = controller == MountController.BlockMount ? archetypeChunk.getReferenceTo(index) : mountedComponent.getMountedToEntity();
-         List<PlayerInput.InputUpdate> queue = playerInputComponent.getMovementUpdateQueue();
+         if (targetRef != null && targetRef.isValid()) {
+            List<PlayerInput.InputUpdate> queue = playerInputComponent.getMovementUpdateQueue();
 
-         for (int i = 0; i < queue.size(); i++) {
-            PlayerInput.InputUpdate inputUpdate = queue.get(i);
-            if (controller == MountController.BlockMount
-               && (inputUpdate instanceof PlayerInput.RelativeMovement || inputUpdate instanceof PlayerInput.AbsoluteMovement)) {
-               if (mountedComponent.getMountedDurationMs() < 600L) {
-                  continue;
+            for (int i = 0; i < queue.size(); i++) {
+               PlayerInput.InputUpdate inputUpdate = queue.get(i);
+               if (controller == MountController.BlockMount
+                  && (inputUpdate instanceof PlayerInput.RelativeMovement || inputUpdate instanceof PlayerInput.AbsoluteMovement)) {
+                  if (mountedComponent.getMountedDurationMs() < 600L) {
+                     continue;
+                  }
+
+                  Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+                  commandBuffer.tryRemoveComponent(ref, this.mountedComponentType);
                }
 
-               Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-               commandBuffer.tryRemoveComponent(ref, this.mountedComponentType);
-            }
-
-            if (inputUpdate instanceof PlayerInput.SetRiderMovementStates s) {
-               MovementStates states = s.movementStates();
-               MovementStatesComponent movementStatesComponent = archetypeChunk.getComponent(index, this.movementStatesComponentType);
-               if (movementStatesComponent != null) {
-                  movementStatesComponent.setMovementStates(states);
-               }
-            } else if (!(inputUpdate instanceof PlayerInput.WishMovement)) {
-               if (inputUpdate instanceof PlayerInput.RelativeMovement relative) {
-                  relative.apply(commandBuffer, archetypeChunk, index);
-                  TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
-                  if (transform != null) {
-                     transform.getPosition().add(relative.getX(), relative.getY(), relative.getZ());
-                  }
-               } else if (inputUpdate instanceof PlayerInput.AbsoluteMovement absolute) {
-                  absolute.apply(commandBuffer, archetypeChunk, index);
-                  TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
-                  if (transform != null) {
-                     transform.getPosition().assign(absolute.getX(), absolute.getY(), absolute.getZ());
-                  }
-               } else if (inputUpdate instanceof PlayerInput.SetMovementStates sx) {
-                  MovementStates states = sx.movementStates();
-                  MovementStatesComponent movementStatesComponent = commandBuffer.getComponent(targetRef, this.movementStatesComponentType);
+               if (inputUpdate instanceof PlayerInput.SetRiderMovementStates s) {
+                  MovementStates states = s.movementStates();
+                  MovementStatesComponent movementStatesComponent = archetypeChunk.getComponent(index, this.movementStatesComponentType);
                   if (movementStatesComponent != null) {
                      movementStatesComponent.setMovementStates(states);
                   }
-               } else if (inputUpdate instanceof PlayerInput.SetBody body) {
-                  body.apply(commandBuffer, archetypeChunk, index);
-                  TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
-                  if (transform != null) {
-                     transform.getRotation().assign(body.direction().pitch, body.direction().yaw, body.direction().roll);
+               } else if (!(inputUpdate instanceof PlayerInput.WishMovement)) {
+                  if (inputUpdate instanceof PlayerInput.RelativeMovement relative) {
+                     relative.apply(commandBuffer, archetypeChunk, index);
+                     TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
+                     if (transform != null) {
+                        transform.getPosition().add(relative.getX(), relative.getY(), relative.getZ());
+                     }
+                  } else if (inputUpdate instanceof PlayerInput.AbsoluteMovement absolute) {
+                     absolute.apply(commandBuffer, archetypeChunk, index);
+                     TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
+                     if (transform != null) {
+                        transform.getPosition().set(absolute.getX(), absolute.getY(), absolute.getZ());
+                     }
+                  } else if (inputUpdate instanceof PlayerInput.SetMovementStates sx) {
+                     MovementStates states = sx.movementStates();
+                     MovementStatesComponent movementStatesComponent = commandBuffer.getComponent(targetRef, this.movementStatesComponentType);
+                     if (movementStatesComponent != null) {
+                        movementStatesComponent.setMovementStates(states);
+                     }
+                  } else if (inputUpdate instanceof PlayerInput.SetBody body) {
+                     body.apply(commandBuffer, archetypeChunk, index);
+                     TransformComponent transform = commandBuffer.getComponent(targetRef, this.transformComponentType);
+                     if (transform != null) {
+                        transform.getRotation().set(body.direction().pitch, body.direction().yaw, body.direction().roll);
+                     }
+                  } else if (inputUpdate instanceof PlayerInput.SetHead head) {
+                     head.apply(commandBuffer, archetypeChunk, index);
                   }
-               } else if (inputUpdate instanceof PlayerInput.SetHead head) {
-                  head.apply(commandBuffer, archetypeChunk, index);
                }
             }
-         }
 
-         queue.clear();
+            queue.clear();
+         }
       }
 
       @Nonnull
@@ -374,8 +378,9 @@ public class MountSystems {
 
                   assert transform != null;
 
+                  Vector3d dropPosition = transform.getPosition().add(new Vector3d(0.0, 0.5, 0.0));
                   Holder<EntityStore> drop = ItemComponent.generateItemDrop(
-                     commandBuffer, new ItemStack(minecartComponent.getSourceItem()), transform.getPosition(), transform.getRotation(), 0.0F, 1.0F, 0.0F
+                     commandBuffer, new ItemStack(minecartComponent.getSourceItem()), dropPosition, transform.getRotation(), 0.0F, 1.0F, 0.0F
                   );
                   if (drop != null) {
                      commandBuffer.addEntity(drop, AddReason.SPAWN);
@@ -859,10 +864,10 @@ public class MountSystems {
       ) {
          Ref<EntityStore> mountedToEntity = component.getMountedToEntity();
          Ref<ChunkStore> mountedToBlock = component.getMountedToBlock();
-         Vector3f offset = component.getAttachmentOffset();
-         com.hypixel.hytale.protocol.Vector3f netOffset = new com.hypixel.hytale.protocol.Vector3f(offset.x, offset.y, offset.z);
+         Rotation3f offset = component.getAttachmentOffset();
+         Vector3f netOffset = new Vector3f(offset.x, offset.y, offset.z);
          MountedUpdate mountedUpdate;
-         if (mountedToEntity != null) {
+         if (mountedToEntity != null && mountedToEntity.isValid()) {
             NetworkId mountedToNetworkIdComponent = ref.getStore().getComponent(mountedToEntity, NetworkId.getComponentType());
             if (mountedToNetworkIdComponent == null) {
                return;
@@ -886,12 +891,12 @@ public class MountSystems {
             }
 
             BlockType blockType = blockMountComponent.getExpectedBlockType();
-            Vector3f position = occupiedSeat.computeWorldSpacePosition(blockMountComponent.getBlockPos());
-            Vector3f rotationEuler = occupiedSeat.computeRotationEuler(blockMountComponent.getExpectedRotation());
+            Vector3d position = occupiedSeat.computeWorldSpacePosition(blockMountComponent.getBlockPos());
+            Rotation3f rotationEuler = occupiedSeat.computeRotationEuler(blockMountComponent.getExpectedRotation());
             BlockMount blockMount = new BlockMount(
                blockMountComponent.getType(),
-               new com.hypixel.hytale.protocol.Vector3f(position.x, position.y, position.z),
-               new com.hypixel.hytale.protocol.Vector3f(rotationEuler.x, rotationEuler.y, rotationEuler.z),
+               new Vector3f((float)position.x, (float)position.y, (float)position.z),
+               new Vector3f(rotationEuler.x, rotationEuler.y, rotationEuler.z),
                BlockType.getAssetMap().getIndex(blockType.getId())
             );
             mountedUpdate = new MountedUpdate(0, netOffset, component.getControllerType(), blockMount);

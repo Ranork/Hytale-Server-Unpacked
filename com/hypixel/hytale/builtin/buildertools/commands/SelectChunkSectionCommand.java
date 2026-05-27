@@ -5,9 +5,6 @@ import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSetting
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -16,11 +13,13 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class SelectChunkSectionCommand extends AbstractPlayerCommand {
    public SelectChunkSectionCommand() {
       super("selectchunksection", "server.commands.selectchunksection.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override
@@ -31,15 +30,15 @@ public class SelectChunkSectionCommand extends AbstractPlayerCommand {
 
       assert playerComponent != null;
 
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
 
          assert transformComponent != null;
 
          Vector3d position = transformComponent.getPosition();
-         int chunkX = MathUtil.floor(position.getX()) >> 5;
-         int chunkY = MathUtil.floor(position.getY()) >> 5;
-         int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+         int chunkX = MathUtil.floor(position.x()) >> 5;
+         int chunkY = MathUtil.floor(position.y()) >> 5;
+         int chunkZ = MathUtil.floor(position.z()) >> 5;
          Vector3i min = new Vector3i(chunkX << 5, chunkY << 5, chunkZ << 5);
          Vector3i max = new Vector3i((chunkX + 1 << 5) - 1, (chunkY + 1 << 5) - 1, (chunkZ + 1 << 5) - 1);
          BuilderToolsPlugin.addToQueue(

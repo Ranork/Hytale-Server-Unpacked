@@ -77,7 +77,8 @@ public class PastePrefabOperation extends SequenceBrushOperation {
                brushConfig.setErrorFlag("No prefab found in prefab list. Please double check your PrefabList asset.");
                return false;
             } else {
-               PrefabBuffer.PrefabBufferAccessor accessor = PrefabBufferUtil.loadBuffer(prefabPath).newAccess();
+               PrefabBuffer prefab = PrefabBufferUtil.loadBuffer(prefabPath);
+               PrefabBuffer.PrefabBufferAccessor accessor = prefab.newAccess();
                this.hasBeenPlacedAlready = true;
                accessor.forEach(
                   IPrefabBuffer.iterateAllColumns(),
@@ -97,7 +98,6 @@ public class PastePrefabOperation extends SequenceBrushOperation {
                   (xi, yi, zi, path, fitHeightmap, inheritSeed, inheritHeightCondition, weights, rotation, t) -> {},
                   new PrefabBufferCall(new Random(), PrefabRotation.fromRotation(Rotation.None))
                );
-               accessor.release();
                return false;
             }
          }

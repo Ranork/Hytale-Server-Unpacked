@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 public interface PlayerStorage {
@@ -13,7 +14,10 @@ public interface PlayerStorage {
    CompletableFuture<Holder<EntityStore>> load(@Nonnull UUID var1);
 
    @Nonnull
-   CompletableFuture<Void> save(@Nonnull UUID var1, @Nonnull Holder<EntityStore> var2);
+   CompletableFuture<Void> save(@Nonnull UUID var1, @Nonnull Holder<EntityStore> var2, boolean var3);
+
+   @Nonnull
+   CompletableFuture<Void> update(@Nonnull UUID var1, @Nonnull Consumer<Holder<EntityStore>> var2);
 
    @Nonnull
    CompletableFuture<Void> remove(@Nonnull UUID var1);

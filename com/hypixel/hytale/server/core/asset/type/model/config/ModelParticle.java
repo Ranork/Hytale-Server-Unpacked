@@ -6,14 +6,15 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.EntityPart;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
 
 public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.protocol.ModelParticle> {
    public static final BuilderCodec<ModelParticle> CODEC = BuilderCodec.builder(ModelParticle.class, ModelParticle::new)
@@ -35,7 +36,7 @@ public class ModelParticle implements NetworkSerializable<com.hypixel.hytale.pro
       .<Double>append(new KeyedCodec<>("Scale", Codec.DOUBLE), (particle, o) -> particle.scale = o.floatValue(), particle -> (double)particle.scale)
       .addValidator(Validators.greaterThan(0.0))
       .add()
-      .append(new KeyedCodec<>("PositionOffset", ProtocolCodecs.VECTOR3F), (particle, s) -> particle.positionOffset = s, particle -> particle.positionOffset)
+      .append(new KeyedCodec<>("PositionOffset", Vector3fUtil.CODEC), (particle, s) -> particle.positionOffset = s, particle -> particle.positionOffset)
       .add()
       .append(new KeyedCodec<>("RotationOffset", ProtocolCodecs.DIRECTION), (particle, s) -> particle.rotationOffset = s, particle -> particle.rotationOffset)
       .add()

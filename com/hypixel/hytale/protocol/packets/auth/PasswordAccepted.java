@@ -3,8 +3,10 @@ package com.hypixel.hytale.protocol.packets.auth;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public class PasswordAccepted implements Packet, ToClientPacket {
@@ -35,8 +37,29 @@ public class PasswordAccepted implements Packet, ToClientPacket {
       return 0;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static PasswordAccepted toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PasswordAccepted toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PasswordAccepted", offset + 0, (int)mem.byteSize());
+      } else {
+         return new PasswordAccepted();
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      return 0;
    }
 
    @Override

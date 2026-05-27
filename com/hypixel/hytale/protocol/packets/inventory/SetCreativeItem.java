@@ -4,8 +4,11 @@ import com.hypixel.hytale.protocol.ItemQuantity;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -52,14 +55,18 @@ public class SetCreativeItem implements Packet, ToServerPacket {
 
    @Nonnull
    public static SetCreativeItem deserialize(@Nonnull ByteBuf buf, int offset) {
-      SetCreativeItem obj = new SetCreativeItem();
-      obj.inventorySectionId = buf.getIntLE(offset + 0);
-      obj.slotId = buf.getIntLE(offset + 4);
-      obj.override = buf.getByte(offset + 8) != 0;
-      int pos = offset + 9;
-      obj.item = ItemQuantity.deserialize(buf, pos);
-      pos += ItemQuantity.computeBytesConsumed(buf, pos);
-      return obj;
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("SetCreativeItem", 9, buf.readableBytes() - offset);
+      } else {
+         SetCreativeItem obj = new SetCreativeItem();
+         obj.inventorySectionId = buf.getIntLE(offset + 0);
+         obj.slotId = buf.getIntLE(offset + 4);
+         obj.override = buf.getByte(offset + 8) != 0;
+         int pos = offset + 9;
+         obj.item = ItemQuantity.deserialize(buf, pos);
+         pos += ItemQuantity.computeBytesConsumed(buf, pos);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -68,12 +75,75 @@ public class SetCreativeItem implements Packet, ToServerPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   public static int getInventorySectionId(MemorySegment mem) {
+      return getInventorySectionId(mem, 0);
+   }
+
+   public static int getInventorySectionId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static int getSlotId(MemorySegment mem) {
+      return getSlotId(mem, 0);
+   }
+
+   public static int getSlotId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 4));
+   }
+
+   public static ItemQuantity getItem(MemorySegment mem) {
+      return getItem(mem, 0);
+   }
+
+   public static ItemQuantity getItem(MemorySegment mem, int offset) {
+      return ItemQuantity.toObject(mem, offset + 9);
+   }
+
+   public static boolean getOverride(MemorySegment mem) {
+      return getOverride(mem, 0);
+   }
+
+   public static boolean getOverride(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 8));
+   }
+
+   public static SetCreativeItem toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetCreativeItem toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetCreativeItem", offset + 9, (int)mem.byteSize());
+      } else {
+         return new SetCreativeItem(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 4)),
+            ItemQuantity.toObject(mem, offset + 9),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 8))
+         );
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.inventorySectionId);
       buf.writeIntLE(this.slotId);
       buf.writeByte(this.override ? 1 : 0);
       this.item.serialize(buf);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.inventorySectionId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 4), this.slotId);
+      mem.set(PacketIO.PROTO_BOOL, offset + 8, this.override);
+      int varOffset = offset + 9;
+      varOffset += this.item.serialize(mem, varOffset);
+      return varOffset - offset;
    }
 
    @Override

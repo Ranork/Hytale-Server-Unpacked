@@ -11,11 +11,14 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.ComponentInfo;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionState extends ActionBase {
    protected final int state;
    protected final int subState;
    protected final boolean clearOnce;
+   protected final boolean clearHeadMotion;
+   protected final boolean clearBodyMotion;
    protected final boolean componentLocal;
    protected final int componentIndex;
 
@@ -24,12 +27,14 @@ public class ActionState extends ActionBase {
       this.state = builderActionState.getStateIndex();
       this.subState = builderActionState.getSubStateIndex();
       this.clearOnce = builderActionState.isClearState();
+      this.clearHeadMotion = builderActionState.isClearHeadMotion();
+      this.clearBodyMotion = builderActionState.isClearBodyMotion();
       this.componentLocal = builderActionState.isComponentLocal();
       this.componentIndex = support.getComponentIndex();
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       if (this.componentLocal) {
          role.getStateSupport().setComponentState(this.componentIndex, this.state);
@@ -37,6 +42,8 @@ public class ActionState extends ActionBase {
       } else {
          StateEvaluator stateEvaluatorComponent = store.getComponent(ref, StateEvaluator.getComponentType());
          if (stateEvaluatorComponent == null || !stateEvaluatorComponent.isActive()) {
+            role.getStateSupport().setClearHeadMotion(this.clearHeadMotion);
+            role.getStateSupport().setClearBodyMotion(this.clearBodyMotion);
             role.getStateSupport().setState(this.state, this.subState, this.clearOnce, false);
          }
 

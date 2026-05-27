@@ -3,9 +3,10 @@ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 import com.hypixel.hytale.builtin.hytalegenerator.delimiters.RangeDouble;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class SimpleHorizontalPositionProvider extends PositionProvider {
    @Nonnull
@@ -18,6 +19,10 @@ public class SimpleHorizontalPositionProvider extends PositionProvider {
    private PositionProvider.Context rContext;
    @Nonnull
    private final Pipe.One<Vector3d> rChildPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(SimpleHorizontalPositionProvider.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
          if (SimpleHorizontalPositionProvider.this.rangeY.contains(position.y)) {
             SimpleHorizontalPositionProvider.this.rContext.pipe.accept(position, control);

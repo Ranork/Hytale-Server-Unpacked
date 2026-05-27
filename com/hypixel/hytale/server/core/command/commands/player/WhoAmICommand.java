@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.command.commands.player;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -20,7 +19,7 @@ public class WhoAmICommand extends AbstractPlayerCommand {
 
    public WhoAmICommand() {
       super("whoami", "server.commands.whoami.desc");
-      this.setPermissionGroup(GameMode.Adventure);
+      this.setPermissionGroups("hytale:Adventurer");
       this.addAliases("uuid");
       this.addUsageVariant(new WhoAmICommand.WhoAmIOtherCommand());
    }

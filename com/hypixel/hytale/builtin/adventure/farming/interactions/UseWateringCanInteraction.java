@@ -5,12 +5,13 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
@@ -26,6 +27,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class UseWateringCanInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -65,8 +67,8 @@ public class UseWateringCanInteraction extends SimpleBlockInteraction {
       HeadRotation headRotation = commandBuffer.getComponent(context.getEntity(), HeadRotation.getComponentType());
       if (headRotation != null) {
          Vector3i facing = headRotation.getHorizontalAxisDirection();
-         facingX = facing.getX();
-         facingZ = facing.getZ();
+         facingX = facing.x();
+         facingZ = facing.z();
       }
 
       if (facingX != 0 && facingZ != 0) {
@@ -83,9 +85,9 @@ public class UseWateringCanInteraction extends SimpleBlockInteraction {
 
       for (int forward = 0; forward < depth; forward++) {
          for (int lateral = -halfLeft; lateral <= halfRight; lateral++) {
-            int bx = targetBlock.getX() + lateral * lateralX + forward * facingX;
-            int bz = targetBlock.getZ() + lateral * lateralZ + forward * facingZ;
-            if (this.waterBlockAt(world, bx, targetBlock.getY(), bz, wateredUntil)) {
+            int bx = targetBlock.x() + lateral * lateralX + forward * facingX;
+            int bz = targetBlock.z() + lateral * lateralZ + forward * facingZ;
+            if (this.waterBlockAt(world, bx, targetBlock.y(), bz, wateredUntil)) {
                anyWatered = true;
             }
          }
@@ -103,36 +105,56 @@ public class UseWateringCanInteraction extends SimpleBlockInteraction {
          return false;
       } else {
          Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
-         Ref<ChunkStore> blockRef = worldChunk.getBlockComponentEntity(x, y, z);
-         if (blockRef == null) {
-            blockRef = BlockModule.ensureBlockEntity(worldChunk, x, y, z);
-         }
+         if (isTilledSoilBlock(worldChunk, x, y, z)) {
+            Ref<ChunkStore> blockRef = worldChunk.getBlockComponentEntity(x, y, z);
+            if (blockRef == null) {
+               blockRef = BlockModule.ensureBlockEntity(worldChunk, x, y, z);
+            }
 
-         if (blockRef != null && blockRef.isValid()) {
-            TilledSoilBlock tilledSoilBlockComponent = chunkStore.getComponent(blockRef, TilledSoilBlock.getComponentType());
-            if (tilledSoilBlockComponent != null) {
-               tilledSoilBlockComponent.setWateredUntil(wateredUntil);
-               worldChunk.setTicking(x, y, z, true);
-               worldChunk.getBlockChunk().getSectionAtBlockY(y).scheduleTick(ChunkUtil.indexBlock(x, y, z), wateredUntil);
-               worldChunk.setTicking(x, y + 1, z, true);
-               return true;
+            if (blockRef != null && blockRef.isValid()) {
+               TilledSoilBlock tilledSoilBlockComponent = chunkStore.getComponent(blockRef, TilledSoilBlock.getComponentType());
+               if (tilledSoilBlockComponent != null) {
+                  tilledSoilBlockComponent.setWateredUntil(wateredUntil);
+                  worldChunk.setTicking(x, y, z, true);
+                  worldChunk.getBlockChunk().getSectionAtBlockY(y).scheduleTick(ChunkUtil.indexBlock(x, y, z), wateredUntil);
+                  worldChunk.setTicking(x, y + 1, z, true);
+                  return true;
+               }
             }
          }
 
-         Ref<ChunkStore> soilBlockRef = worldChunk.getBlockComponentEntity(x, y - 1, z);
-         if (soilBlockRef != null && soilBlockRef.isValid()) {
-            TilledSoilBlock tilledSoilBlockComponent = chunkStore.getComponent(soilBlockRef, TilledSoilBlock.getComponentType());
-            if (tilledSoilBlockComponent == null) {
-               return false;
-            } else {
-               tilledSoilBlockComponent.setWateredUntil(wateredUntil);
-               worldChunk.getBlockChunk().getSectionAtBlockY(y - 1).scheduleTick(ChunkUtil.indexBlock(x, y - 1, z), wateredUntil);
-               worldChunk.setTicking(x, y - 1, z, true);
-               worldChunk.setTicking(x, y, z, true);
-               return true;
-            }
-         } else {
+         if (!isTilledSoilBlock(worldChunk, x, y - 1, z)) {
             return false;
+         } else {
+            Ref<ChunkStore> soilBlockRef = worldChunk.getBlockComponentEntity(x, y - 1, z);
+            if (soilBlockRef != null && soilBlockRef.isValid()) {
+               TilledSoilBlock tilledSoilBlockComponent = chunkStore.getComponent(soilBlockRef, TilledSoilBlock.getComponentType());
+               if (tilledSoilBlockComponent == null) {
+                  return false;
+               } else {
+                  tilledSoilBlockComponent.setWateredUntil(wateredUntil);
+                  worldChunk.getBlockChunk().getSectionAtBlockY(y - 1).scheduleTick(ChunkUtil.indexBlock(x, y - 1, z), wateredUntil);
+                  worldChunk.setTicking(x, y - 1, z, true);
+                  worldChunk.setTicking(x, y, z, true);
+                  return true;
+               }
+            } else {
+               return false;
+            }
+         }
+      }
+   }
+
+   private static boolean isTilledSoilBlock(@Nonnull WorldChunk worldChunk, int x, int y, int z) {
+      if (worldChunk.getBlockChunk().getSectionAtBlockY(y).getFiller(x, y, z) != 0) {
+         return false;
+      } else {
+         BlockType blockType = worldChunk.getBlockType(x, y, z);
+         if (blockType == null) {
+            return false;
+         } else {
+            Holder<ChunkStore> blockEntityTemplate = blockType.getBlockEntity();
+            return blockEntityTemplate == null ? false : blockEntityTemplate.getComponent(TilledSoilBlock.getComponentType()) != null;
          }
       }
    }

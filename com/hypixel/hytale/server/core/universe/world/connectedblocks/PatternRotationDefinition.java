@@ -10,6 +10,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 
 public class PatternRotationDefinition {
@@ -35,7 +36,12 @@ public class PatternRotationDefinition {
    @Nonnull
    public List<Pair<Rotation, PatternRotationDefinition.MirrorAxis>> getRotations() {
       return new AbstractList<Pair<Rotation, PatternRotationDefinition.MirrorAxis>>() {
-         private final int[] enabledIndexes = this.computeEnabled();
+         private final int[] enabledIndexes;
+
+         {
+            Objects.requireNonNull(PatternRotationDefinition.this);
+            this.enabledIndexes = this.computeEnabled();
+         }
 
          private int[] computeEnabled() {
             IntList idx = new IntArrayList();

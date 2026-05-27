@@ -4,7 +4,6 @@ import com.hypixel.hytale.builtin.buildertools.tooloperations.transform.Transfor
 import com.hypixel.hytale.builtin.buildertools.utils.FluidPatternHelper;
 import com.hypixel.hytale.builtin.buildertools.utils.Material;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushShape;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
@@ -14,6 +13,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BrushConfig {
    private static final Random random = new Random();
@@ -54,13 +54,13 @@ public class BrushConfig {
       this.isCurrentlyExecuting = other.isCurrentlyExecuting;
       this.hasExecutionContextEncounteredError = other.hasExecutionContextEncounteredError;
       this.executionErrorMessage = other.executionErrorMessage;
-      this.originOffset = other.originOffset.clone();
-      this.originAfterOffset = other.originAfterOffset.clone();
+      this.originOffset = new Vector3i(other.originOffset);
+      this.originAfterOffset = new Vector3i(other.originAfterOffset);
       this.shape = other.shape;
       this.shapeWidth = other.shapeWidth;
       this.shapeHeight = other.shapeHeight;
       this.shapeThickness = other.shapeThickness;
-      this.transformOrigin = other.transformOrigin.clone();
+      this.transformOrigin = new Vector3i(other.transformOrigin);
       this.transform = other.transform;
       this.capped = other.capped;
       this.pattern = other.pattern;
@@ -126,7 +126,7 @@ public class BrushConfig {
 
    @Nullable
    public Vector3i getExecutionOrigin() {
-      return this.origin.clone();
+      return new Vector3i(this.origin);
    }
 
    @Nullable
@@ -136,7 +136,7 @@ public class BrushConfig {
 
    @Nonnull
    public Vector3i getOriginOffset() {
-      return this.originOffset.clone();
+      return new Vector3i(this.originOffset);
    }
 
    public void setOriginOffset(Vector3i originOffset) {
@@ -151,7 +151,7 @@ public class BrushConfig {
 
    public void updateOriginWithOffsets() {
       if (this.origin != null) {
-         this.originAfterOffset = this.origin.clone().add(this.originOffset);
+         this.originAfterOffset = new Vector3i(this.origin).add(this.originOffset);
       }
    }
 

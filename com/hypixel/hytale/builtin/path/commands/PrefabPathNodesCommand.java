@@ -5,8 +5,7 @@ import com.hypixel.hytale.builtin.path.WorldPathData;
 import com.hypixel.hytale.builtin.path.path.IPrefabPath;
 import com.hypixel.hytale.builtin.path.waypoint.IPrefabPathWaypoint;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -18,6 +17,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PrefabPathNodesCommand extends AbstractWorldCommand {
    @Nonnull
@@ -57,7 +57,7 @@ public class PrefabPathNodesCommand extends AbstractWorldCommand {
                   order[0]++;
                } else {
                   Vector3d pos = waypoint.getWaypointPosition(store);
-                  Vector3f rotation = waypoint.getWaypointRotation(store);
+                  Rotation3f rotation = waypoint.getWaypointRotation(store);
                   sb.append("\n  ").append('#').append(waypoint.getOrder());
                   sb.append(" (").append(pos.x).append(", ").append(pos.y).append(", ").append(pos.z).append(')');
                   sb.append("\n   ").append("Rotation: (").append(rotation.x).append(", ").append(rotation.y).append(", ").append(rotation.z).append(')');

@@ -1,12 +1,12 @@
 package com.hypixel.hytale.server.worldgen.cave.shape;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.worldgen.cave.CaveNodeType;
 import com.hypixel.hytale.server.worldgen.cave.CaveType;
 import com.hypixel.hytale.server.worldgen.cave.element.CaveNode;
 import com.hypixel.hytale.server.worldgen.util.bounds.IWorldBounds;
 import java.util.Random;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 @Deprecated
 public class TetrahedronCaveNodeShape extends AbstractCaveNodeShape implements IWorldBounds {
@@ -38,12 +38,12 @@ public class TetrahedronCaveNodeShape extends AbstractCaveNodeShape implements I
       this.a = new Vector3d(10.0, 0.0, 0.0);
       this.b = new Vector3d(0.0, 10.0, 0.0);
       this.c = new Vector3d(0.0, 0.0, 10.0);
-      this.n1 = this.c.cross(this.b);
-      this.n2 = this.b.cross(this.a);
-      this.n3 = this.a.cross(this.c);
-      Vector3d ba = this.a.clone().subtract(this.b);
-      Vector3d bc = this.c.clone().subtract(this.b);
-      this.n4 = bc.cross(ba);
+      this.n1 = this.c.cross(this.b, new Vector3d());
+      this.n2 = this.b.cross(this.a, new Vector3d());
+      this.n3 = this.a.cross(this.c, new Vector3d());
+      Vector3d ba = new Vector3d(this.a).sub(this.b);
+      Vector3d bc = new Vector3d(this.c).sub(this.b);
+      this.n4 = bc.cross(ba, new Vector3d());
       this.lowBoundX = (int)(o.x - 10.0);
       this.lowBoundY = (int)(o.y - 10.0);
       this.lowBoundZ = (int)(o.z - 10.0);
@@ -55,13 +55,13 @@ public class TetrahedronCaveNodeShape extends AbstractCaveNodeShape implements I
    @Nonnull
    @Override
    public Vector3d getStart() {
-      return this.o.clone();
+      return new Vector3d(this.o);
    }
 
    @Nonnull
    @Override
    public Vector3d getEnd() {
-      return this.o.clone().add(this.c);
+      return new Vector3d(this.o).add(this.c);
    }
 
    @Nonnull

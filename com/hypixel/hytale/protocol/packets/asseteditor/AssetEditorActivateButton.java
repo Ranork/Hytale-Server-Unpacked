@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,25 +47,33 @@ public class AssetEditorActivateButton implements Packet, ToServerPacket {
 
    @Nonnull
    public static AssetEditorActivateButton deserialize(@Nonnull ByteBuf buf, int offset) {
-      AssetEditorActivateButton obj = new AssetEditorActivateButton();
-      byte nullBits = buf.getByte(offset);
-      int pos = offset + 1;
-      if ((nullBits & 1) != 0) {
-         int buttonIdLen = VarInt.peek(buf, pos);
-         if (buttonIdLen < 0) {
-            throw ProtocolException.negativeLength("ButtonId", buttonIdLen);
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("AssetEditorActivateButton", 1, buf.readableBytes() - offset);
+      } else {
+         AssetEditorActivateButton obj = new AssetEditorActivateButton();
+         byte nullBits = buf.getByte(offset);
+         int pos = offset + 1;
+         if ((nullBits & 1) != 0) {
+            int buttonIdLen = VarInt.peek(buf, pos);
+            if (buttonIdLen < 0) {
+               throw ProtocolException.invalidVarInt("ButtonId");
+            }
+
+            int buttonIdVarLen = VarInt.size(buttonIdLen);
+            if (buttonIdLen > 4096000) {
+               throw ProtocolException.stringTooLong("ButtonId", buttonIdLen, 4096000);
+            }
+
+            if (pos + buttonIdVarLen + buttonIdLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("ButtonId", pos + buttonIdVarLen + buttonIdLen, buf.readableBytes());
+            }
+
+            obj.buttonId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+            pos += buttonIdVarLen + buttonIdLen;
          }
 
-         if (buttonIdLen > 4096000) {
-            throw ProtocolException.stringTooLong("ButtonId", buttonIdLen, 4096000);
-         }
-
-         int buttonIdVarLen = VarInt.length(buf, pos);
-         obj.buttonId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += buttonIdVarLen + buttonIdLen;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -72,10 +81,41 @@ public class AssetEditorActivateButton implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static String getButtonId(MemorySegment mem) {
+      return getButtonId(mem, 0);
+   }
+
+   @Nullable
+   public static String getButtonId(MemorySegment mem, int offset) {
+      return hasButtonId(mem, offset) ? PacketIO.readVarString("ButtonId", mem, offset + 1, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasButtonId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorActivateButton toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorActivateButton toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorActivateButton", offset + 1, (int)mem.byteSize());
+      } else {
+         return new AssetEditorActivateButton(hasButtonId(mem, offset) ? PacketIO.readVarString("ButtonId", mem, offset + 1, 4096000, PacketIO.UTF8) : null);
+      }
    }
 
    @Override
@@ -89,6 +129,22 @@ public class AssetEditorActivateButton implements Packet, ToServerPacket {
       if (this.buttonId != null) {
          PacketIO.writeVarString(buf, this.buttonId, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.buttonId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 1;
+      if (this.buttonId != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.buttonId, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -117,7 +173,7 @@ public class AssetEditorActivateButton implements Packet, ToServerPacket {
                return ValidationResult.error("ButtonId exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(buttonIdLen);
             pos += buttonIdLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading ButtonId");

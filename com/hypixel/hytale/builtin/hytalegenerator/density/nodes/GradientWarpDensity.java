@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class GradientWarpDensity extends Density {
    private static final double HALF_PI = Math.PI / 2;
@@ -45,18 +45,18 @@ public class GradientWarpDensity extends Density {
          double maxX = context.position.x + this.slopeRange;
          double maxY = context.position.y + this.slopeRange;
          double maxZ = context.position.z + this.slopeRange;
-         this.rPosition.assign(context.position);
+         this.rPosition.set(context.position);
          this.rChildContext.assign(context);
          this.rChildContext.position = this.rPosition;
-         this.rChildContext.position.assign(maxX, context.position.y, context.position.z);
+         this.rChildContext.position.set(maxX, context.position.y, context.position.z);
          double deltaX = this.warpInput.process(this.rChildContext) - valueAtOrigin;
-         this.rChildContext.position.assign(context.position.x, maxY, context.position.z);
+         this.rChildContext.position.set(context.position.x, maxY, context.position.z);
          double deltaY = this.warpInput.process(this.rChildContext) - valueAtOrigin;
-         this.rChildContext.position.assign(context.position.x, context.position.z, maxZ);
+         this.rChildContext.position.set(context.position.x, context.position.z, maxZ);
          double deltaZ = this.warpInput.process(this.rChildContext) - valueAtOrigin;
-         this.rGradient.assign(deltaX, deltaY, deltaZ);
-         this.rGradient.scale(1.0 / this.slopeRange);
-         this.rGradient.scale(this.warpFactor);
+         this.rGradient.set(deltaX, deltaY, deltaZ);
+         this.rGradient.mul(1.0 / this.slopeRange);
+         this.rGradient.mul(this.warpFactor);
          this.rGradient.add(context.position.x, context.position.y, context.position.z);
          this.rChildContext.position = this.rGradient;
          return this.input.process(this.rChildContext);

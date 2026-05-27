@@ -7,7 +7,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.metadata.AdventureM
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -20,6 +20,7 @@ public class CursedHeldItemCommand extends AbstractPlayerCommand {
 
    public CursedHeldItemCommand() {
       super("cursethis", "server.commands.cursethis.desc");
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override
@@ -28,15 +29,19 @@ public class CursedHeldItemCommand extends AbstractPlayerCommand {
    ) {
       Player playerComponent = store.getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {
-         Inventory inventory = playerComponent.getInventory();
-         if (!inventory.usingToolsItem()) {
-            ItemStack inHandItemStack = inventory.getActiveHotbarItem();
-            if (inHandItemStack != null && !inHandItemStack.isEmpty()) {
-               AdventureMetadata adventureMeta = inHandItemStack.getFromMetadataOrDefault("Adventure", AdventureMetadata.CODEC);
+         InventoryComponent.Tool toolComponent = store.getComponent(ref, InventoryComponent.Tool.getComponentType());
+         if (toolComponent == null || !toolComponent.isUsingToolsItem()) {
+            ItemStack itemInHand = InventoryComponent.getItemInHand(store, ref);
+            if (itemInHand != null && !itemInHand.isEmpty()) {
+               AdventureMetadata adventureMeta = itemInHand.getFromMetadataOrDefault("Adventure", AdventureMetadata.CODEC);
                adventureMeta.setCursed(!adventureMeta.isCursed());
-               ItemStack edited = inHandItemStack.withMetadata(AdventureMetadata.KEYED_CODEC, adventureMeta);
-               inventory.getHotbar().replaceItemStackInSlot(inventory.getActiveHotbarSlot(), inHandItemStack, edited);
-               playerRef.sendMessage(Message.translation("server.commands.cursethis.done").param("state", adventureMeta.isCursed()));
+               ItemStack edited = itemInHand.withMetadata(AdventureMetadata.KEYED_CODEC, adventureMeta);
+               InventoryComponent.Hotbar hotbarComponent = store.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+               if (hotbarComponent != null) {
+                  byte activeSlot = hotbarComponent.getActiveSlot();
+                  hotbarComponent.getInventory().replaceItemStackInSlot(activeSlot, itemInHand, edited);
+                  playerRef.sendMessage(Message.translation("server.commands.cursethis.done").param("state", adventureMeta.isCursed()));
+               }
             } else {
                playerRef.sendMessage(MESSAGE_COMMANDS_CURSE_THIS_NOT_HOLDING_ITEM);
             }

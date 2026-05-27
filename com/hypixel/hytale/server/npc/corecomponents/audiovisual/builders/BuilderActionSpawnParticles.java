@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.npc.corecomponents.audiovisual.builders;
 
 import com.google.gson.JsonElement;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetHolder;
@@ -14,6 +13,7 @@ import com.hypixel.hytale.server.npc.asset.builder.validators.asset.ParticleSyst
 import com.hypixel.hytale.server.npc.corecomponents.audiovisual.ActionSpawnParticles;
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderActionBase;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class BuilderActionSpawnParticles extends BuilderActionBase {
    protected final AssetHolder particleSystem = new AssetHolder();
@@ -68,7 +68,7 @@ public class BuilderActionSpawnParticles extends BuilderActionBase {
    }
 
    public Vector3d getOffset(BuilderSupport support) {
-      return createVector3d(this.offset.get(support.getExecutionContext()), Vector3d.ZERO::clone);
+      return createVector3d(this.offset.get(support.getExecutionContext()), Vector3d::new);
    }
 
    public String getTargetNodeName(BuilderSupport support) {

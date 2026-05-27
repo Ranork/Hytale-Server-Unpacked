@@ -23,6 +23,7 @@ import javax.annotation.Nonnull;
 public class HitboxCommand extends AbstractCommandCollection {
    public HitboxCommand() {
       super("hitbox", "server.commands.hitbox.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new HitboxCommand.HitboxExtentsCommand());
       this.addUsageVariant(new HitboxCommand.HitboxGetCommand());
    }

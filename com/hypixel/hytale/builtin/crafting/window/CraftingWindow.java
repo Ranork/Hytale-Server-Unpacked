@@ -17,7 +17,8 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.CraftingBench;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -122,11 +123,8 @@ public abstract class CraftingWindow extends BenchWindow {
             playerRef.getPacketHandler().disconnect(Message.translation("server.general.disconnect.unknownRecipe"));
             return false;
          } else {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-
-            assert playerComponent != null;
-
-            craftingManager.craftItem(ref, store, recipe, quantity, playerComponent.getInventory().getCombinedBackpackStorageHotbar());
+            CombinedItemContainer combinedBackpackStorageHotbar = InventoryComponent.getCombined(store, ref, InventoryComponent.BACKPACK_STORAGE_HOTBAR);
+            craftingManager.craftItem(ref, store, recipe, quantity, combinedBackpackStorageHotbar);
             return true;
          }
       }

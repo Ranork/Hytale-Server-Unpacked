@@ -9,6 +9,8 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.lookup.MapProvidedMapCodec;
+import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolArg;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolState;
 import com.hypixel.hytale.server.core.Message;
@@ -17,11 +19,11 @@ import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.MaskArg
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.StringArg;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.ToolArg;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.args.ToolArgException;
-import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.lang.ref.SoftReference;
 import java.util.Arrays;
@@ -58,8 +60,8 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
    public static final String MASK_BELOW_KEY = "builtin_MaskBelow";
    public static final String MASK_ADJACENT_KEY = "builtin_MaskAdjacent";
    public static final String MASK_NEIGHBOR_KEY = "builtin_MaskNeighbor";
+   public static final String MASK_ENTRIES_KEY = "builtin_MaskEntries";
    public static final String MASK_COMMANDS_KEY = "builtin_MaskCommands";
-   public static final String USE_MASK_COMMANDS_KEY = "builtin_UseMaskCommands";
    public static final String INVERT_MASK_KEY = "builtin_InvertMask";
    public static HashSet<String> MASK_ARGS = setMandatoryToolArgs();
    public static final BuilderTool DEFAULT = new BuilderTool();
@@ -94,12 +96,12 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
             allArgs.put("builtin_InvertMask", new BoolArg(false));
          }
 
-         if (!allArgs.containsKey("builtin_UseMaskCommands")) {
-            allArgs.put("builtin_UseMaskCommands", new BoolArg(false));
-         }
-
          if (!allArgs.containsKey("builtin_MaskCommands")) {
             allArgs.put("builtin_MaskCommands", new StringArg(""));
+         }
+
+         if (!allArgs.containsKey("builtin_MaskEntries")) {
+            allArgs.put("builtin_MaskEntries", new StringArg(""));
          }
 
          builderTool.argsCodec = new MapProvidedMapCodec<>(allArgs, ToolArg::getCodec, HashMap::new);
@@ -135,15 +137,9 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
    }
 
    @Nullable
-   public static BuilderTool getActiveBuilderTool(@Nonnull Player player) {
-      ItemStack activeItemStack = player.getInventory().getItemInHand();
-      if (activeItemStack == null) {
-         return null;
-      } else {
-         Item item = activeItemStack.getItem();
-         BuilderTool builderToolData = item.getBuilderTool();
-         return builderToolData == null ? null : builderToolData;
-      }
+   public static BuilderTool getActiveBuilderTool(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+      return itemInHand == null ? null : itemInHand.getItem().getBuilderTool();
    }
 
    public String getId() {
@@ -182,8 +178,17 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
    public BuilderTool.ArgData getItemArgData(@Nonnull ItemStack itemStack) {
       Map<String, Object> toolArgs = null;
       if (!this.args.isEmpty()) {
-         Map<String, Object> toolData = itemStack.getFromMetadataOrNull("ToolData", this.argsCodec);
-         toolArgs = toolData == null ? this.getDefaultToolArgs(itemStack) : toolData;
+         try {
+            Map<String, Object> toolData = itemStack.getFromMetadataOrNull("ToolData", this.argsCodec);
+            if (toolData == null) {
+               toolArgs = this.getDefaultToolArgs(itemStack);
+            } else {
+               toolArgs = this.getDefaultToolArgs(itemStack);
+               toolArgs.putAll(toolData);
+            }
+         } catch (Exception var4) {
+            toolArgs = this.getDefaultToolArgs(itemStack);
+         }
       }
 
       return new BuilderTool.ArgData(toolArgs);
@@ -202,7 +207,7 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
    @Nonnull
    public ItemStack updateArgMetadata(@Nonnull ItemStack itemStack, @Nonnull String id, @Nullable String value) throws ToolArgException {
       BuilderTool.ArgData argData = this.getItemArgData(itemStack);
-      if (!MASK_ARGS.contains(id) && !id.equals("builtin_UseMaskCommands") && !id.equals("builtin_InvertMask") && !id.equals("builtin_MaskCommands")) {
+      if (!id.equals("builtin_MaskEntries") && !MASK_ARGS.contains(id) && !id.equals("builtin_InvertMask") && !id.equals("builtin_MaskCommands")) {
          ToolArg arg = this.args.get(id);
          if (arg == null) {
             throw new ToolArgException(Message.translation("server.builderTools.toolUnknownArg").param("arg", id));
@@ -220,11 +225,11 @@ public class BuilderTool implements JsonAssetWithMap<String, DefaultAssetMap<Str
          }
       } else if (value == null) {
          argData = BuilderTool.ArgData.removeToolArg(argData, id);
+      } else if (id.equals("builtin_MaskEntries")) {
+         argData = BuilderTool.ArgData.setToolArg(argData, id, value);
       } else if (MASK_ARGS.contains(id)) {
          BlockMask mask = BlockMask.parse(value);
          argData = BuilderTool.ArgData.setToolArg(argData, id, mask);
-      } else if (id.equals("builtin_UseMaskCommands")) {
-         argData = BuilderTool.ArgData.setToolArg(argData, id, Boolean.parseBoolean(value));
       } else if (id.equals("builtin_InvertMask")) {
          argData = BuilderTool.ArgData.setToolArg(argData, id, Boolean.parseBoolean(value));
       } else if (id.equals("builtin_MaskCommands")) {

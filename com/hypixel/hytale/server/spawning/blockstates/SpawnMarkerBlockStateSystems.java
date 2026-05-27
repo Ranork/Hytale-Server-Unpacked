@@ -13,9 +13,8 @@ import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -37,6 +36,8 @@ import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import com.hypixel.hytale.server.spawning.spawnmarkers.SpawnMarkerEntity;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class SpawnMarkerBlockStateSystems {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -68,7 +69,7 @@ public class SpawnMarkerBlockStateSystems {
                         Vector3i pos = new Vector3i(
                            ChunkUtil.worldCoordFromLocalCoord(blockChunk.getX(), bx), by, ChunkUtil.worldCoordFromLocalCoord(blockChunk.getZ(), bz)
                         );
-                        Vector3i blockPos = pos.clone();
+                        Vector3i blockPos = new Vector3i(pos);
                         Vector3i offset = data.getMarkerOffset();
                         if (offset != null) {
                            pos.add(offset);
@@ -79,10 +80,10 @@ public class SpawnMarkerBlockStateSystems {
                         Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
                         holder.addComponent(SpawnMarkerEntity.getComponentType(), spawnMarker);
                         holder.addComponent(SpawnMarkerBlockReference.getComponentType(), new SpawnMarkerBlockReference(blockPos));
-                        Vector3d markerPos = pos.toVector3d();
+                        Vector3d markerPos = Vector3iUtil.toVector3d(pos);
                         markerPos.add(0.5, 0.0, 0.5);
                         holder.addComponent(Nameplate.getComponentType(), new Nameplate(marker.getId()));
-                        holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(markerPos, Vector3f.ZERO));
+                        holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(markerPos, Rotation3f.IDENTITY));
                         UUIDComponent uuidComponent = holder.ensureAndGetComponent(UUIDComponent.getComponentType());
                         Model model = SpawnMarkerEntity.getModel(marker);
                         holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));

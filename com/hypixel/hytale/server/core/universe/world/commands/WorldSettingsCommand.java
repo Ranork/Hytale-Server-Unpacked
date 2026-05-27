@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.universe.world.commands;
 
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box2D;
-import com.hypixel.hytale.math.vector.Vector2d;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -24,6 +23,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class WorldSettingsCommand extends AbstractCommandCollection {
    @Nonnull
@@ -143,7 +143,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
       );
       this.generateSubCommand(
          "chunksaving",
-         "server.commands.world.settings.chunksaving.desc",
+         "server.commands.world.settings.chunkSaving.desc",
          "enabled",
          ArgTypes.BOOLEAN,
          "server.commands.world.settings.chunksaving.name",
@@ -152,7 +152,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
       );
       this.generateSubCommand(
          "chunkunloading",
-         "server.commands.world.settings.chunkunload.desc",
+         "server.commands.world.settings.chunkUnload.desc",
          "enabled",
          ArgTypes.BOOLEAN,
          "server.commands.world.settings.chunkunloading.name",
@@ -300,6 +300,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
 
       private class ResetSubCommand extends AbstractWorldCommand {
          public ResetSubCommand() {
+            Objects.requireNonNull(WorldSettingsBox2DCommand.this);
             super("reset", "server.commands.world.settings.reset.desc");
          }
 
@@ -321,16 +322,21 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
 
       private class SetSubCommand extends AbstractWorldCommand {
          @Nonnull
-         private final RequiredArg<Double> minXArg = this.withRequiredArg("minX", "server.commands.world.settings.box2d.minX.desc", ArgTypes.DOUBLE);
+         private final RequiredArg<Double> minXArg;
          @Nonnull
-         private final RequiredArg<Double> minZArg = this.withRequiredArg("minZ", "server.commands.world.settings.box2d.minZ.desc", ArgTypes.DOUBLE);
+         private final RequiredArg<Double> minZArg;
          @Nonnull
-         private final RequiredArg<Double> maxXArg = this.withRequiredArg("maxX", "server.commands.world.settings.box2d.maxX.desc", ArgTypes.DOUBLE);
+         private final RequiredArg<Double> maxXArg;
          @Nonnull
-         private final RequiredArg<Double> maxZArg = this.withRequiredArg("maxZ", "server.commands.world.settings.box2d.maxZ.desc", ArgTypes.DOUBLE);
+         private final RequiredArg<Double> maxZArg;
 
          public SetSubCommand() {
+            Objects.requireNonNull(WorldSettingsBox2DCommand.this);
             super("set", "server.commands.world.settings.set.desc");
+            this.minXArg = this.withRequiredArg("minX", "server.commands.world.settings.box2d.minX.desc", ArgTypes.DOUBLE);
+            this.minZArg = this.withRequiredArg("minZ", "server.commands.world.settings.box2d.minZ.desc", ArgTypes.DOUBLE);
+            this.maxXArg = this.withRequiredArg("maxX", "server.commands.world.settings.box2d.maxX.desc", ArgTypes.DOUBLE);
+            this.maxZArg = this.withRequiredArg("maxZ", "server.commands.world.settings.box2d.maxZ.desc", ArgTypes.DOUBLE);
          }
 
          @Override
@@ -397,10 +403,12 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
 
       private class AddSubCommand extends AbstractWorldCommand {
          @Nonnull
-         private final RequiredArg<String> valueArg = this.withRequiredArg("value", "server.commands.world.settings.set.add.value.desc", ArgTypes.STRING);
+         private final RequiredArg<String> valueArg;
 
          public AddSubCommand() {
+            Objects.requireNonNull(WorldSettingsSetCommand.this);
             super("add", "server.commands.world.settings.set.add.desc");
+            this.valueArg = this.withRequiredArg("value", "server.commands.world.settings.set.add.value.desc", ArgTypes.STRING);
          }
 
          @Override
@@ -429,6 +437,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
 
       private class ClearSubCommand extends AbstractWorldCommand {
          public ClearSubCommand() {
+            Objects.requireNonNull(WorldSettingsSetCommand.this);
             super("clear", "server.commands.world.settings.set.clear.desc");
          }
 
@@ -454,10 +463,12 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
 
       private class RemoveSubCommand extends AbstractWorldCommand {
          @Nonnull
-         private final RequiredArg<String> valueArg = this.withRequiredArg("value", "server.commands.world.settings.set.remove.value.desc", ArgTypes.STRING);
+         private final RequiredArg<String> valueArg;
 
          public RemoveSubCommand() {
+            Objects.requireNonNull(WorldSettingsSetCommand.this);
             super("remove", "server.commands.world.settings.set.remove.desc");
+            this.valueArg = this.withRequiredArg("value", "server.commands.world.settings.set.remove.value.desc", ArgTypes.STRING);
          }
 
          @Override
@@ -533,6 +544,7 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
 
       private class ResetSubCommand extends AbstractWorldCommand {
          public ResetSubCommand() {
+            Objects.requireNonNull(WorldSettingsSubCommand.this);
             super("reset", "server.commands.world.settings.reset.desc");
          }
 
@@ -554,12 +566,12 @@ public class WorldSettingsCommand extends AbstractCommandCollection {
 
       private class SetSubCommand extends AbstractWorldCommand {
          @Nonnull
-         private final RequiredArg<T> valueArg = this.withRequiredArg(
-            "value", "server.commands.world.settings.value.desc", WorldSettingsSubCommand.this.argumentType
-         );
+         private final RequiredArg<T> valueArg;
 
          public SetSubCommand() {
+            Objects.requireNonNull(WorldSettingsSubCommand.this);
             super("set", "server.commands.world.settings.set.desc");
+            this.valueArg = this.withRequiredArg("value", "server.commands.world.settings.value.desc", WorldSettingsSubCommand.this.argumentType);
          }
 
          @Override

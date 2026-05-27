@@ -11,7 +11,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -33,6 +32,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Instant;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class ChangeFarmingStageInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -99,9 +99,9 @@ public class ChangeFarmingStageInteraction extends SimpleBlockInteraction {
       @Nonnull Vector3i targetBlock,
       @Nonnull CooldownHandler cooldownHandler
    ) {
-      int x = targetBlock.getX();
-      int y = targetBlock.getY();
-      int z = targetBlock.getZ();
+      int x = targetBlock.x();
+      int y = targetBlock.y();
+      int z = targetBlock.z();
       ((HytaleLogger.Api)LOGGER.atInfo())
          .log(
             "[ChangeFarmingStage] Starting interaction at pos=(%d, %d, %d), increaseBy=%s, decreaseBy=%s, targetStage=%d, targetStageSet=%s",

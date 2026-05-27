@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
@@ -33,12 +34,12 @@ public class EntityEffectsUpdate extends ComponentUpdate {
       int pos = offset + 0;
       int entityEffectUpdatesCount = VarInt.peek(buf, pos);
       if (entityEffectUpdatesCount < 0) {
-         throw ProtocolException.negativeLength("EntityEffectUpdates", entityEffectUpdatesCount);
-      } else if (entityEffectUpdatesCount > 4096000) {
-         throw ProtocolException.arrayTooLong("EntityEffectUpdates", entityEffectUpdatesCount, 4096000);
+         throw ProtocolException.invalidVarInt("EntityEffectUpdates");
       } else {
          int entityEffectUpdatesVarLen = VarInt.size(entityEffectUpdatesCount);
-         if (pos + entityEffectUpdatesVarLen + entityEffectUpdatesCount * 12L > buf.readableBytes()) {
+         if (entityEffectUpdatesCount > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityEffectUpdates", entityEffectUpdatesCount, 4096000);
+         } else if (pos + entityEffectUpdatesVarLen + entityEffectUpdatesCount * 12L > buf.readableBytes()) {
             throw ProtocolException.bufferTooSmall("EntityEffectUpdates", pos + entityEffectUpdatesVarLen + entityEffectUpdatesCount * 12, buf.readableBytes());
          } else {
             pos += entityEffectUpdatesVarLen;
@@ -57,13 +58,81 @@ public class EntityEffectsUpdate extends ComponentUpdate {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos);
+      pos += VarInt.size(arrLen);
 
       for (int i = 0; i < arrLen; i++) {
          pos += EntityEffectUpdate.computeBytesConsumed(buf, pos);
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static EntityEffectUpdate[] getEntityEffectUpdates(MemorySegment mem) {
+      return getEntityEffectUpdates(mem, 0);
+   }
+
+   public static EntityEffectUpdate[] getEntityEffectUpdates(MemorySegment mem, int offset) {
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("EntityEffectUpdates", len);
+      } else if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("EntityEffectUpdates", len, 4096000);
+      } else {
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("EntityEffectUpdates", off + lenOffset + len, (int)mem.byteSize());
+         } else {
+            off += lenOffset;
+            EntityEffectUpdate[] data = new EntityEffectUpdate[len];
+
+            for (int i = 0; i < len; i++) {
+               data[i] = EntityEffectUpdate.toObject(mem, off);
+               off += data[i].computeSize();
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static EntityEffectsUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EntityEffectsUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EntityEffectsUpdate", offset + 0, (int)mem.byteSize());
+      } else {
+         int off = offset + 0;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("EntityEffectUpdates", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("EntityEffectUpdates", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("EntityEffectUpdates", off + lenOffset + len, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               EntityEffectUpdate[] entityEffectUpdates = new EntityEffectUpdate[len];
+
+               for (int i = 0; i < len; i++) {
+                  entityEffectUpdates[i] = EntityEffectUpdate.toObject(mem, off);
+                  off += entityEffectUpdates[i].computeSize();
+               }
+
+               return new EntityEffectsUpdate(entityEffectUpdates);
+            }
+         }
+      }
    }
 
    @Override
@@ -79,6 +148,24 @@ public class EntityEffectsUpdate extends ComponentUpdate {
          }
 
          return buf.writerIndex() - startPos;
+      }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      if (this.entityEffectUpdates.length > 4096000) {
+         throw ProtocolException.arrayTooLong("EntityEffectUpdates", this.entityEffectUpdates.length, 4096000);
+      } else {
+         varOffset += VarInt.set(mem, varOffset, this.entityEffectUpdates.length);
+         int entityEffectUpdatesValueOffset = 0;
+
+         for (int i = 0; i < this.entityEffectUpdates.length; i++) {
+            entityEffectUpdatesValueOffset += this.entityEffectUpdates[i].serialize(mem, varOffset + entityEffectUpdatesValueOffset);
+         }
+
+         varOffset += entityEffectUpdatesValueOffset;
+         return varOffset - offset;
       }
    }
 
@@ -105,7 +192,7 @@ public class EntityEffectsUpdate extends ComponentUpdate {
          } else if (entityEffectUpdatesCount > 4096000) {
             return ValidationResult.error("EntityEffectUpdates exceeds max length 4096000");
          } else {
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(entityEffectUpdatesCount);
 
             for (int i = 0; i < entityEffectUpdatesCount; i++) {
                ValidationResult structResult = EntityEffectUpdate.validateStructure(buffer, pos);

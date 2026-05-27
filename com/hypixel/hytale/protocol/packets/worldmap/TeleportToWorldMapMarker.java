@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,25 +47,33 @@ public class TeleportToWorldMapMarker implements Packet, ToServerPacket {
 
    @Nonnull
    public static TeleportToWorldMapMarker deserialize(@Nonnull ByteBuf buf, int offset) {
-      TeleportToWorldMapMarker obj = new TeleportToWorldMapMarker();
-      byte nullBits = buf.getByte(offset);
-      int pos = offset + 1;
-      if ((nullBits & 1) != 0) {
-         int idLen = VarInt.peek(buf, pos);
-         if (idLen < 0) {
-            throw ProtocolException.negativeLength("Id", idLen);
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("TeleportToWorldMapMarker", 1, buf.readableBytes() - offset);
+      } else {
+         TeleportToWorldMapMarker obj = new TeleportToWorldMapMarker();
+         byte nullBits = buf.getByte(offset);
+         int pos = offset + 1;
+         if ((nullBits & 1) != 0) {
+            int idLen = VarInt.peek(buf, pos);
+            if (idLen < 0) {
+               throw ProtocolException.invalidVarInt("Id");
+            }
+
+            int idVarLen = VarInt.size(idLen);
+            if (idLen > 4096000) {
+               throw ProtocolException.stringTooLong("Id", idLen, 4096000);
+            }
+
+            if (pos + idVarLen + idLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Id", pos + idVarLen + idLen, buf.readableBytes());
+            }
+
+            obj.id = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+            pos += idVarLen + idLen;
          }
 
-         if (idLen > 4096000) {
-            throw ProtocolException.stringTooLong("Id", idLen, 4096000);
-         }
-
-         int idVarLen = VarInt.length(buf, pos);
-         obj.id = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += idVarLen + idLen;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -72,10 +81,41 @@ public class TeleportToWorldMapMarker implements Packet, ToServerPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem) {
+      return getId(mem, 0);
+   }
+
+   @Nullable
+   public static String getId(MemorySegment mem, int offset) {
+      return hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 1, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static TeleportToWorldMapMarker toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TeleportToWorldMapMarker toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TeleportToWorldMapMarker", offset + 1, (int)mem.byteSize());
+      } else {
+         return new TeleportToWorldMapMarker(hasId(mem, offset) ? PacketIO.readVarString("Id", mem, offset + 1, 4096000, PacketIO.UTF8) : null);
+      }
    }
 
    @Override
@@ -89,6 +129,22 @@ public class TeleportToWorldMapMarker implements Packet, ToServerPacket {
       if (this.id != null) {
          PacketIO.writeVarString(buf, this.id, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.id != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 1;
+      if (this.id != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.id, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -117,7 +173,7 @@ public class TeleportToWorldMapMarker implements Packet, ToServerPacket {
                return ValidationResult.error("Id exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(idLen);
             pos += idLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Id");

@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionLog extends ActionBase {
    protected final String text;
@@ -23,12 +24,12 @@ public class ActionLog extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       return super.canExecute(ref, role, sensorInfo, dt, store) && this.text != null;
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       ((HytaleLogger.Api)NPCPlugin.get().getLogger().at(Level.INFO).atMostEvery(1, TimeUnit.SECONDS))
          .log("[%d]<%s>: %s", ref.getIndex(), role.getRoleName(), this.text);

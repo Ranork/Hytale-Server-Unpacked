@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -32,6 +33,7 @@ public class AccessControlModule extends JavaPlugin {
    private final HytaleBanProvider banProvider = new HytaleBanProvider();
    private final List<AccessProvider> providerRegistry = new CopyOnWriteArrayList<AccessProvider>() {
       {
+         Objects.requireNonNull(AccessControlModule.this);
          this.add(AccessControlModule.this.whitelistProvider);
          this.add(AccessControlModule.this.banProvider);
       }

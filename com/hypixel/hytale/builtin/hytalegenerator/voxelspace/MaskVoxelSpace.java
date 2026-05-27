@@ -3,10 +3,10 @@ package com.hypixel.hytale.builtin.hytalegenerator.voxelspace;
 import com.hypixel.hytale.builtin.hytalegenerator.BlockMask;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import org.joml.Vector3i;
 
 public class MaskVoxelSpace implements VoxelSpace<Material> {
    @Nonnull

@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -30,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BodyMotionMaintainDistance extends BodyMotionBase {
    protected static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
@@ -193,7 +193,7 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
             IPositionProvider positionProvider = sensorInfo.getPositionProvider();
             positionProvider.providePosition(this.targetPosition);
             Vector3d selfPosition = transformComponent.getPosition();
-            double distanceSquared = selfPosition.distanceSquaredTo(this.targetPosition);
+            double distanceSquared = selfPosition.distanceSquared(this.targetPosition);
             if (forceNewTargetRange) {
                double targetDistance;
                if (distanceSquared > this.thresholdDistanceRangeSquared[1]) {
@@ -243,8 +243,8 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
                desiredSteering.scaleTranslation(this.relativeForwardsSpeed);
             }
 
-            double x = this.targetPosition.getX() - selfPosition.getX();
-            double z = this.targetPosition.getZ() - selfPosition.getZ();
+            double x = this.targetPosition.x() - selfPosition.x();
+            double z = this.targetPosition.z() - selfPosition.z();
             float targetYaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
             MotionController motionController = support.getActiveMotionController();
             Ref<EntityStore> targetRef = positionProvider.getTarget();
@@ -265,8 +265,8 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
 
                   assert targetTransformComponent != null;
 
-                  float selfYaw = NPCPhysicsMath.lookatHeading(selfPosition, this.targetPosition, transformComponent.getRotation().getYaw());
-                  float difference = PhysicsMath.normalizeTurnAngle(targetTransformComponent.getRotation().getYaw() - selfYaw - (float)positioningAngle);
+                  float selfYaw = NPCPhysicsMath.lookatHeading(selfPosition, this.targetPosition, transformComponent.getRotation().yaw());
+                  float difference = PhysicsMath.normalizeTurnAngle(targetTransformComponent.getRotation().yaw() - selfYaw - (float)positioningAngle);
                   if (Math.abs(difference) > 0.08726646F) {
                      this.strafingDirection = difference > 0.0F ? -1 : 1;
                      this.pauseStrafing = false;
@@ -280,14 +280,14 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
                if (!this.pauseStrafing) {
                   float angle;
                   if (!desiredSteering.hasTranslation()) {
-                     this.toTarget.add(this.targetPosition).subtract(selfPosition).setY(0.0);
+                     this.toTarget.add(this.targetPosition).sub(selfPosition).y = 0.0;
                      this.toTarget.normalize();
                      desiredSteering.setTranslation(this.toTarget);
                      Vector3d translation = desiredSteering.getTranslation();
-                     double newX = translation.getZ() * this.strafingDirection;
-                     double newZ = translation.getX() * -this.strafingDirection;
-                     translation.setX(newX);
-                     translation.setZ(newZ);
+                     double newX = translation.z() * this.strafingDirection;
+                     double newZ = translation.x() * -this.strafingDirection;
+                     translation.x = newX;
+                     translation.z = newZ;
                      desiredSteering.scaleTranslation(this.relativeForwardsSpeed);
                      angle = this.strafingDirection * (float) (Math.PI / 4);
                   } else {
@@ -306,7 +306,6 @@ public class BodyMotionMaintainDistance extends BodyMotionBase {
                this.lastTargetEntity = targetRef;
             }
 
-            motionController.requireDepthProbing();
             desiredSteering.setYaw(targetYaw);
             return false;
          } else {

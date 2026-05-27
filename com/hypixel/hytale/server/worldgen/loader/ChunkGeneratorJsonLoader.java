@@ -12,7 +12,6 @@ import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.procedurallib.file.FileIO;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.Loader;
@@ -33,6 +32,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
+import org.joml.Vector2i;
 
 public class ChunkGeneratorJsonLoader extends Loader<SeedStringResource, ChunkGenerator> {
    @Nonnull

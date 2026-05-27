@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
@@ -34,41 +35,52 @@ public class ActiveAnimationsUpdate extends ComponentUpdate {
       int pos = offset + 0;
       int activeAnimationsCount = VarInt.peek(buf, pos);
       if (activeAnimationsCount < 0) {
-         throw ProtocolException.negativeLength("ActiveAnimations", activeAnimationsCount);
-      } else if (activeAnimationsCount > 4096000) {
-         throw ProtocolException.arrayTooLong("ActiveAnimations", activeAnimationsCount, 4096000);
+         throw ProtocolException.invalidVarInt("ActiveAnimations");
       } else {
-         pos += VarInt.size(activeAnimationsCount);
-         int activeAnimationsBitfieldSize = (activeAnimationsCount + 7) / 8;
-         byte[] activeAnimationsBitfield = PacketIO.readBytes(buf, pos, activeAnimationsBitfieldSize);
-         pos += activeAnimationsBitfieldSize;
-         obj.activeAnimations = new String[activeAnimationsCount];
+         int activeAnimationsVarLen = VarInt.size(activeAnimationsCount);
+         if (activeAnimationsCount > 4096000) {
+            throw ProtocolException.arrayTooLong("ActiveAnimations", activeAnimationsCount, 4096000);
+         } else {
+            pos += activeAnimationsVarLen;
+            int activeAnimationsBitfieldSize = (activeAnimationsCount + 7) / 8;
+            if (pos + activeAnimationsBitfieldSize > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("ActiveAnimations", pos + activeAnimationsBitfieldSize, buf.readableBytes());
+            } else {
+               byte[] activeAnimationsBitfield = PacketIO.readBytes(buf, pos, activeAnimationsBitfieldSize);
+               pos += activeAnimationsBitfieldSize;
+               obj.activeAnimations = new String[activeAnimationsCount];
 
-         for (int i = 0; i < activeAnimationsCount; i++) {
-            if ((activeAnimationsBitfield[i / 8] & 1 << i % 8) != 0) {
-               int strLen = VarInt.peek(buf, pos);
-               if (strLen < 0) {
-                  throw ProtocolException.negativeLength("activeAnimations[" + i + "]", strLen);
+               for (int i = 0; i < activeAnimationsCount; i++) {
+                  if ((activeAnimationsBitfield[i / 8] & 1 << i % 8) != 0) {
+                     int strLen = VarInt.peek(buf, pos);
+                     if (strLen < 0) {
+                        throw ProtocolException.invalidVarInt("activeAnimations[" + i + "]");
+                     }
+
+                     int strVarLen = VarInt.size(strLen);
+                     if (strLen > 4096000) {
+                        throw ProtocolException.stringTooLong("activeAnimations[" + i + "]", strLen, 4096000);
+                     }
+
+                     if (pos + strVarLen + strLen > buf.readableBytes()) {
+                        throw ProtocolException.bufferTooSmall("activeAnimations[" + i + "]", pos + strVarLen + strLen, buf.readableBytes());
+                     }
+
+                     obj.activeAnimations[i] = PacketIO.readVarString(buf, pos);
+                     pos += strVarLen + strLen;
+                  }
                }
 
-               if (strLen > 4096000) {
-                  throw ProtocolException.stringTooLong("activeAnimations[" + i + "]", strLen, 4096000);
-               }
-
-               int strVarLen = VarInt.length(buf, pos);
-               obj.activeAnimations[i] = PacketIO.readVarString(buf, pos);
-               pos += strVarLen + strLen;
+               return obj;
             }
          }
-
-         return obj;
       }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 0;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos);
+      pos += VarInt.size(arrLen);
       int bitfieldSize = (arrLen + 7) / 8;
       byte[] bitfield = PacketIO.readBytes(buf, pos, bitfieldSize);
       pos += bitfieldSize;
@@ -76,11 +88,111 @@ public class ActiveAnimationsUpdate extends ComponentUpdate {
       for (int i = 0; i < arrLen; i++) {
          if ((bitfield[i / 8] & 1 << i % 8) != 0) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static String[] getActiveAnimations(MemorySegment mem) {
+      return getActiveAnimations(mem, 0);
+   }
+
+   public static String[] getActiveAnimations(MemorySegment mem, int offset) {
+      int off = offset + 0;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("ActiveAnimations", len);
+      } else if (len > 4096000) {
+         throw ProtocolException.arrayTooLong("ActiveAnimations", len, 4096000);
+      } else {
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + (len + 7) / 8 > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("ActiveAnimations", off + lenOffset + (len + 7) / 8, (int)mem.byteSize());
+         } else {
+            off += lenOffset;
+            String[] data = new String[len];
+            int bitfieldSize = (len + 7) / 8;
+            int bitfieldOff = off;
+            off += bitfieldSize;
+            if (off + bitfieldSize > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("ActiveAnimations", off + bitfieldSize, (int)mem.byteSize());
+            } else {
+               int i = 0;
+
+               while (i < len) {
+                  byte bits = mem.get(PacketIO.PROTO_BYTE, (long)(bitfieldOff + i / 8));
+
+                  for (int batchEnd = Math.min(len, (i & -8) + 8); i < batchEnd; i++) {
+                     if ((bits & 1 << (i & 7)) != 0) {
+                        long sp = VarInt.getWithLength(mem, off);
+                        int n = (int)sp + (int)(sp >>> 32);
+                        data[i] = PacketIO.readVarString("ActiveAnimations", mem, off, 16384000, PacketIO.UTF8);
+                        off += n;
+                     }
+                  }
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   public static ActiveAnimationsUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ActiveAnimationsUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ActiveAnimationsUpdate", offset + 0, (int)mem.byteSize());
+      } else {
+         int off = offset + 0;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ActiveAnimations", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ActiveAnimations", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + (len + 7) / 8 > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("ActiveAnimations", off + lenOffset + (len + 7) / 8, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               String[] activeAnimations = new String[len];
+               int bitfieldSize = (len + 7) / 8;
+               int bitfieldOff = off;
+               off += bitfieldSize;
+               if (off + bitfieldSize > mem.byteSize()) {
+                  throw ProtocolException.bufferTooSmall("ActiveAnimations", off + bitfieldSize, (int)mem.byteSize());
+               } else {
+                  int i = 0;
+
+                  while (i < len) {
+                     byte bits = mem.get(PacketIO.PROTO_BYTE, (long)(bitfieldOff + i / 8));
+
+                     for (int batchEnd = Math.min(len, (i & -8) + 8); i < batchEnd; i++) {
+                        if ((bits & 1 << (i & 7)) != 0) {
+                           long sp = VarInt.getWithLength(mem, off);
+                           int n = (int)sp + (int)(sp >>> 32);
+                           activeAnimations[i] = PacketIO.readVarString("ActiveAnimations", mem, off, 16384000, PacketIO.UTF8);
+                           off += n;
+                        }
+                     }
+                  }
+
+                  return new ActiveAnimationsUpdate(activeAnimations);
+               }
+            }
+         }
+      }
    }
 
    @Override
@@ -112,6 +224,39 @@ public class ActiveAnimationsUpdate extends ComponentUpdate {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      int varOffset = offset + 0;
+      if (this.activeAnimations.length > 4096000) {
+         throw ProtocolException.arrayTooLong("ActiveAnimations", this.activeAnimations.length, 4096000);
+      } else {
+         varOffset += VarInt.set(mem, varOffset, this.activeAnimations.length);
+         int activeAnimationsBitfieldSize = (this.activeAnimations.length + 7) / 8;
+
+         for (int bi = 0; bi < activeAnimationsBitfieldSize; bi++) {
+            byte bits = 0;
+
+            for (int j = bi * 8; j < Math.min(this.activeAnimations.length, bi * 8 + 8); j++) {
+               if (this.activeAnimations[j] != null) {
+                  bits |= (byte)(1 << (j & 7));
+               }
+            }
+
+            mem.set(PacketIO.PROTO_BYTE, (long)(varOffset + bi), bits);
+         }
+
+         varOffset += activeAnimationsBitfieldSize;
+
+         for (int i = 0; i < this.activeAnimations.length; i++) {
+            if (this.activeAnimations[i] != null) {
+               varOffset += PacketIO.writeVarString(mem, varOffset, this.activeAnimations[i], 16384000);
+            }
+         }
+
+         return varOffset - offset;
+      }
+   }
+
+   @Override
    public int computeSize() {
       int size = 0;
       int activeAnimationsSize = 0;
@@ -136,22 +281,31 @@ public class ActiveAnimationsUpdate extends ComponentUpdate {
          } else if (activeAnimationsCount > 4096000) {
             return ValidationResult.error("ActiveAnimations exceeds max length 4096000");
          } else {
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(activeAnimationsCount);
+            int activeAnimationsBitfieldSize = (activeAnimationsCount + 7) / 8;
+            if (pos + activeAnimationsBitfieldSize > buffer.writerIndex()) {
+               return ValidationResult.error("Buffer overflow reading bitfield for ActiveAnimations");
+            } else {
+               byte[] activeAnimationsBitfield = PacketIO.readBytes(buffer, pos, activeAnimationsBitfieldSize);
+               pos += activeAnimationsBitfieldSize;
 
-            for (int i = 0; i < activeAnimationsCount; i++) {
-               int strLen = VarInt.peek(buffer, pos);
-               if (strLen < 0) {
-                  return ValidationResult.error("Invalid string length in ActiveAnimations");
+               for (int i = 0; i < activeAnimationsCount; i++) {
+                  if ((activeAnimationsBitfield[i / 8] & 1 << i % 8) != 0) {
+                     int strLen = VarInt.peek(buffer, pos);
+                     if (strLen < 0) {
+                        return ValidationResult.error("Invalid string length in activeAnimations");
+                     }
+
+                     pos += VarInt.size(strLen);
+                     pos += strLen;
+                     if (pos > buffer.writerIndex()) {
+                        return ValidationResult.error("Buffer overflow reading string in activeAnimations");
+                     }
+                  }
                }
 
-               pos += VarInt.length(buffer, pos);
-               pos += strLen;
-               if (pos > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading string in ActiveAnimations");
-               }
+               return ValidationResult.OK;
             }
-
-            return ValidationResult.OK;
          }
       }
    }

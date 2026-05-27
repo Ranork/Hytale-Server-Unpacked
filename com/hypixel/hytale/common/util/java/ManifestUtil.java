@@ -41,7 +41,7 @@ public class ManifestUtil {
 
          return theManifest;
       } catch (Throwable var10) {
-         HytaleLogger.getLogger().at(Level.WARNING).log("Exception was thrown getting manifest!", var10);
+         ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.WARNING).withCause(var10)).log("Exception was thrown getting manifest!");
          return null;
       }
    });
@@ -53,7 +53,7 @@ public class ManifestUtil {
                ? "NoJar"
                : Objects.requireNonNull(localManifest.getMainAttributes().getValue("Implementation-Version"), "Null implementation version!");
          } catch (Throwable var1) {
-            HytaleLogger.getLogger().at(Level.WARNING).log("Exception was thrown getting implementation version!", var1);
+            ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.WARNING).withCause(var1)).log("Exception was thrown getting implementation version!");
             return "UNKNOWN";
          }
       }
@@ -66,7 +66,7 @@ public class ManifestUtil {
                ? "NoJar"
                : Objects.requireNonNull(localManifest.getMainAttributes().getValue("Implementation-Revision-Id"), "Null implementation revision id!");
          } catch (Throwable var1) {
-            HytaleLogger.getLogger().at(Level.WARNING).log("Exception was thrown getting implementation revision id!", var1);
+            ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.WARNING).withCause(var1)).log("Exception was thrown getting implementation revision id!");
             return "UNKNOWN";
          }
       }
@@ -81,7 +81,7 @@ public class ManifestUtil {
             return value != null && !value.isEmpty() ? value : "dev";
          }
       } catch (Throwable var2) {
-         HytaleLogger.getLogger().at(Level.WARNING).log("Exception was thrown getting implementation patchline!", var2);
+         ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.WARNING).withCause(var2)).log("Exception was thrown getting implementation patchline!");
          return "dev";
       }
    });

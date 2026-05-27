@@ -34,6 +34,10 @@ public class Options {
       "bare",
       "Runs the server bare. For example without loading worlds, binding to ports or creating directories. (Note: Plugins will still be loaded which may not respect this flag)"
    );
+   public static final OptionSpec<Void> BOOTSTRAP = PARSER.accepts(
+      "bootstrap",
+      "Runs the server in bootstrap mode. Only the plugins required to authenticate and download the full server payload are loaded; use '/update download' to populate the current directory with Assets.zip, start.sh/bat and the Server/ JAR layout. Implies --bare."
+   );
    public static final OptionSpec<Entry<String, Level>> LOG_LEVELS = PARSER.accepts("log", "Sets the logger level.")
       .withRequiredArg()
       .withValuesSeparatedBy(',')
@@ -162,6 +166,10 @@ public class Options {
 
    public static OptionSet getOptionSet() {
       return optionSet;
+   }
+
+   public static boolean isBare() {
+      return optionSet.has(BARE) || optionSet.has(BOOTSTRAP);
    }
 
    public static <T> T getOrDefault(OptionSpec<T> optionSpec, @Nonnull OptionSet optionSet, T def) {

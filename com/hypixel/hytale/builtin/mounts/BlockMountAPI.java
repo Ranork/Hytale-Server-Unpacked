@@ -5,8 +5,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockMountType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.mountpoints.BlockMountPoint;
@@ -18,6 +17,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public final class BlockMountAPI {
    private BlockMountAPI() {
@@ -25,7 +26,7 @@ public final class BlockMountAPI {
 
    @Nonnull
    public static BlockMountAPI.BlockMountResult mountOnBlock(
-      @Nonnull Ref<EntityStore> entity, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Vector3i targetBlock, @Nonnull Vector3f interactPos
+      @Nonnull Ref<EntityStore> entity, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Vector3i targetBlock, @Nonnull Vector3d interactPos
    ) {
       MountedComponent existingMounted = commandBuffer.getComponent(entity, MountedComponent.getComponentType());
       if (existingMounted != null) {
@@ -88,13 +89,13 @@ public final class BlockMountAPI {
                         } else {
                            TransformComponent transformComponent = commandBuffer.getComponent(entity, TransformComponent.getComponentType());
                            if (transformComponent != null) {
-                              Vector3f position = pickedMountPoint.computeWorldSpacePosition(blockMountComponent.getBlockPos());
-                              Vector3f rotationEuler = pickedMountPoint.computeRotationEuler(blockMountComponent.getExpectedRotation());
-                              transformComponent.setPosition(position.toVector3d());
+                              Vector3d position = pickedMountPoint.computeWorldSpacePosition(blockMountComponent.getBlockPos());
+                              Rotation3f rotationEuler = pickedMountPoint.computeRotationEuler(blockMountComponent.getExpectedRotation());
+                              transformComponent.setPosition(position);
                               transformComponent.setRotation(rotationEuler);
                            }
 
-                           MountedComponent mountedComponent = new MountedComponent(blockRef, new Vector3f(0.0F, 0.0F, 0.0F), blockMountType);
+                           MountedComponent mountedComponent = new MountedComponent(blockRef, new Rotation3f(0.0F, 0.0F, 0.0F), blockMountType);
                            commandBuffer.addComponent(entity, MountedComponent.getComponentType(), mountedComponent);
                            blockMountComponent.putSeatedEntity(pickedMountPoint, entity);
                            return new BlockMountAPI.Mounted(blockType, mountedComponent);

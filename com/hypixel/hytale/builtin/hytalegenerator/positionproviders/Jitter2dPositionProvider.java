@@ -5,9 +5,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class Jitter2dPositionProvider extends PositionProvider {
    private static final double SEED_GENERATOR_RESOLUTION = 10.0;
@@ -28,12 +29,16 @@ public class Jitter2dPositionProvider extends PositionProvider {
    private PositionProvider.Context rContext;
    @Nonnull
    private final Pipe.One<Vector3d> rChildPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(Jitter2dPositionProvider.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
          int localSeed = Jitter2dPositionProvider.this.rngField.get(position.x, position.y, position.z);
          Jitter2dPositionProvider.this.random.setSeed(localSeed);
          double radius = Jitter2dPositionProvider.this.magnitude * Math.sqrt(Jitter2dPositionProvider.this.random.nextDouble());
          double theta = Jitter2dPositionProvider.this.random.nextDouble() * 2.0 * Math.PI;
-         Jitter2dPositionProvider.this.rVector.assign(radius * Math.cos(theta), 0.0, radius * Math.sin(theta));
+         Jitter2dPositionProvider.this.rVector.set(radius * Math.cos(theta), 0.0, radius * Math.sin(theta));
          position.add(Jitter2dPositionProvider.this.rVector);
          if (Jitter2dPositionProvider.this.rContext.bounds.contains(position)) {
             Jitter2dPositionProvider.this.rContext.pipe.accept(position, control);

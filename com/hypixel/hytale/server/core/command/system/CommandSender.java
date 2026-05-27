@@ -5,7 +5,7 @@ import com.hypixel.hytale.server.core.receiver.IMessageReceiver;
 import java.util.UUID;
 
 public interface CommandSender extends IMessageReceiver, PermissionHolder {
-   String getDisplayName();
+   String getUsername();
 
    UUID getUuid();
 }

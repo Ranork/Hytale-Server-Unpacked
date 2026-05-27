@@ -4,7 +4,6 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
@@ -31,7 +30,7 @@ public class UpdateSelectionCommand extends AbstractPlayerCommand {
 
    public UpdateSelectionCommand() {
       super("updateselection", "server.commands.updateselection.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override
@@ -42,7 +41,7 @@ public class UpdateSelectionCommand extends AbstractPlayerCommand {
 
       assert playerComponent != null;
 
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          int xMin = this.xMinArg.get(context);
          int yMin = this.yMinArg.get(context);
          int zMin = this.zMinArg.get(context);

@@ -2,9 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class AxisDensity extends Density {
    public static final double ZERO_DELTA = 1.0E-9;
@@ -60,7 +60,7 @@ public class AxisDensity extends Density {
          if (anchor == null) {
             return 0.0;
          } else {
-            this.rPosition.assign(context.position).subtract(anchor);
+            this.rPosition.set(context.position).sub(anchor);
             double distance = VectorUtil.distanceToLine3d(this.rPosition, ZERO_VECTOR, this.axis, this.r0, this.r1, this.r2, this.r3, this.r4);
             return this.distanceCurve.get(distance);
          }

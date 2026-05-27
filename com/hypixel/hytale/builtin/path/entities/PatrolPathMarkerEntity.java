@@ -10,8 +10,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -23,6 +22,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PatrolPathMarkerEntity extends Entity implements IPrefabPathWaypoint {
    public static final BuilderCodec<PatrolPathMarkerEntity> CODEC = BuilderCodec.builder(
@@ -227,7 +227,7 @@ public class PatrolPathMarkerEntity extends Entity implements IPrefabPathWaypoin
 
    @Nonnull
    @Override
-   public Vector3f getWaypointRotation(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public Rotation3f getWaypointRotation(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       Ref<EntityStore> ref = this.getReference();
 
       assert ref != null && ref.isValid() : "Entity reference is null or invalid";

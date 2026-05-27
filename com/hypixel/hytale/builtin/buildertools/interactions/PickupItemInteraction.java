@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -20,6 +19,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Roo
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PickupItemInteraction extends SimpleInstantInteraction {
    public static final BuilderCodec<PickupItemInteraction> CODEC = BuilderCodec.builder(
@@ -58,12 +58,12 @@ public class PickupItemInteraction extends SimpleInstantInteraction {
                   ItemStack itemStack = itemComponent.getItemStack();
                   if (!ItemStack.isEmpty(itemStack)) {
                      Vector3d itemEntityPosition = transformComponent.getPosition();
-                     ItemStackTransaction transaction = playerComponent.giveItem(itemStack, ref, commandBuffer);
+                     ItemStackTransaction transaction = Player.giveItem(itemStack, ref, commandBuffer);
                      ItemStack remainder = transaction.getRemainder();
                      if (ItemStack.isEmpty(remainder)) {
                         itemComponent.setRemovedByPlayerPickup(true);
                         commandBuffer.removeEntity(targetRef, RemoveReason.REMOVE);
-                        playerComponent.notifyPickupItem(ref, itemStack, itemEntityPosition, commandBuffer);
+                        Player.notifyPickupItem(ref, itemStack, itemEntityPosition, commandBuffer);
                         Holder<EntityStore> pickupItemHolder = ItemComponent.generatePickedUpItem(targetRef, commandBuffer, ref, itemEntityPosition);
                         if (pickupItemHolder != null) {
                            commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
@@ -77,7 +77,7 @@ public class PickupItemInteraction extends SimpleInstantInteraction {
                         }
 
                         if (quantity > 0) {
-                           playerComponent.notifyPickupItem(ref, itemStack.withQuantity(quantity), itemEntityPosition, commandBuffer);
+                           Player.notifyPickupItem(ref, itemStack.withQuantity(quantity), itemEntityPosition, commandBuffer);
                         }
                      }
                   }

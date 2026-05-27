@@ -6,7 +6,7 @@ import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.InstantData;
 import com.hypixel.hytale.protocol.packets.world.UpdateTime;
 import com.hypixel.hytale.protocol.packets.world.UpdateTimeSettings;
@@ -22,6 +22,7 @@ import java.time.ZoneOffset;
 import java.time.temporal.ChronoField;
 import java.time.temporal.ChronoUnit;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class WorldTimeResource implements Resource<EntityStore> {
    public static final long NANOS_PER_DAY = ChronoUnit.DAYS.getDuration().toNanos();
@@ -222,7 +223,7 @@ public class WorldTimeResource implements Resource<EntityStore> {
    }
 
    public boolean isDayTimeWithinRange(double minTime, double maxTime) {
-      double dayProgress = (double)this._gameTimeLocalDateTime.getHour() / HOURS_PER_DAY;
+      double dayProgress = this.getDayProgress();
       return !(minTime > maxTime)
          ? MathUtil.within(dayProgress, minTime, maxTime)
          : MathUtil.within(dayProgress, minTime, 1.0) || MathUtil.within(dayProgress, 0.0, maxTime);
@@ -266,7 +267,7 @@ public class WorldTimeResource implements Resource<EntityStore> {
    }
 
    @Nonnull
-   public Vector3f getSunDirection() {
+   public Vector3d getSunDirection() {
       float dayTime = this.getDayProgress() * HOURS_PER_DAY;
       float daylightDuration = 0.6F * HOURS_PER_DAY;
       float nightDuration = HOURS_PER_DAY - daylightDuration;
@@ -286,16 +287,16 @@ public class WorldTimeResource implements Resource<EntityStore> {
          );
       }
 
-      Vector3f sunPosition = new Vector3f(TrigMathUtil.cos(sunAngle), TrigMathUtil.sin(sunAngle) * 2.0F, TrigMathUtil.sin(sunAngle));
+      Vector3d sunPosition = new Vector3d(TrigMathUtil.cos(sunAngle), TrigMathUtil.sin(sunAngle) * 2.0F, TrigMathUtil.sin(sunAngle));
       sunPosition.normalize();
-      float tweakedSunHeight = sunPosition.y + 0.2F;
-      if (tweakedSunHeight > 0.0F) {
-         sunPosition.scale(-1.0F);
+      double tweakedSunHeight = sunPosition.y + 0.2F;
+      if (tweakedSunHeight > 0.0) {
+         sunPosition.negate();
       }
 
-      sunPosition.x = MathUtil.lerp(sunPosition.x, Vector3f.DOWN.x, 0.35F);
-      sunPosition.y = MathUtil.lerp(sunPosition.y, Vector3f.DOWN.y, 0.35F);
-      sunPosition.z = MathUtil.lerp(sunPosition.z, Vector3f.DOWN.z, 0.35F);
+      sunPosition.x = MathUtil.lerp(sunPosition.x, Vector3dUtil.DOWN.x(), 0.35F);
+      sunPosition.y = MathUtil.lerp(sunPosition.y, Vector3dUtil.DOWN.y(), 0.35F);
+      sunPosition.z = MathUtil.lerp(sunPosition.z, Vector3dUtil.DOWN.z(), 0.35F);
       return sunPosition;
    }
 

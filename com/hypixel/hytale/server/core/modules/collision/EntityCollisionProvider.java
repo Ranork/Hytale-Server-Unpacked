@@ -5,8 +5,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.ProjectileComponent;
@@ -21,6 +19,8 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class EntityCollisionProvider {
    protected static final int ALLOC_SIZE = 4;
@@ -150,9 +150,9 @@ public class EntityCollisionProvider {
       }
    }
 
-   protected void setContact(@Nonnull Entity entity) {
-      this.collisionPosition.assign(this.position).addScaled(this.direction, this.minMax.x);
-      this.contacts[0].assign(this.collisionPosition, this.minMax.x, this.minMax.y, entity.getReference(), null);
+   protected void setContact(@Nonnull Ref<EntityStore> ref) {
+      this.collisionPosition.set(this.position).fma(this.minMax.x, this.direction);
+      this.contacts[0].assign(this.collisionPosition, this.minMax.x, this.minMax.y, ref, null);
       this.count = 1;
    }
 
@@ -202,7 +202,7 @@ public class EntityCollisionProvider {
             && collisionProvider.isColliding(ref, collisionProvider.minMax, componentAccessor)
             && collisionProvider.minMax.x < collisionProvider.nearestCollisionStart) {
             collisionProvider.nearestCollisionStart = collisionProvider.minMax.x;
-            collisionProvider.setContact(entity);
+            collisionProvider.setContact(ref);
          }
       }
    }

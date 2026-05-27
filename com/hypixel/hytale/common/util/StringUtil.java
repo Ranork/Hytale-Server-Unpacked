@@ -17,6 +17,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class StringUtil {
+   private static final char[] HEX_CHARS = "0123456789ABCDEF".toCharArray();
    public static final Pattern RAW_ARGS_PATTERN = Pattern.compile(" -- ");
    @Nonnull
    private static final char[] GRAPH_CHARS = new char[]{'_', '▄', '─', '▀', '¯'};
@@ -134,6 +135,35 @@ public class StringUtil {
       }
 
       return s;
+   }
+
+   @Nullable
+   public static String sanitizeAsciiString(@Nullable String input) {
+      if (input != null && !input.isEmpty()) {
+         StringBuilder result = null;
+
+         for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (c >= ' ' && c <= '~') {
+               if (result != null) {
+                  result.append(c);
+               }
+            } else {
+               if (result == null) {
+                  result = new StringBuilder(input.length() + 16);
+                  result.append(input, 0, i);
+               }
+
+               result.append("\\x");
+               result.append(HEX_CHARS[c >> 4 & 15]);
+               result.append(HEX_CHARS[c & 15]);
+            }
+         }
+
+         return result != null ? result.toString() : input;
+      } else {
+         return input;
+      }
    }
 
    public static boolean isGlobMatching(@Nonnull String pattern, @Nonnull String text) {

@@ -17,7 +17,6 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.spatial.SpatialStructure;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
@@ -28,6 +27,7 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
+import com.hypixel.hytale.server.core.modules.entity.component.PropComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
@@ -42,6 +42,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStore> {
    @Nonnull
@@ -72,7 +73,8 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
          TransformComponent.getComponentType(),
          Query.not(Interactable.getComponentType()),
          Query.not(PickupItemComponent.getComponentType()),
-         Query.not(PreventPickup.getComponentType())
+         Query.not(PreventPickup.getComponentType()),
+         Query.not(PropComponent.getComponentType())
       );
    }
 
@@ -133,7 +135,7 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
                   assert targetInteractionManagerComponent != null;
 
                   Vector3d targetPosition = targetTransformComponent.getPosition();
-                  double distance = targetPosition.distanceTo(itemEntityPosition);
+                  double distance = targetPosition.distance(itemEntityPosition);
                   if (!(distance > pickupRadius)) {
                      Ref<EntityStore> reference = archetypeChunk.getReferenceTo(index);
                      commandBuffer.run(
@@ -161,12 +163,12 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
 
                      assert playerComponent != null;
 
-                     ItemStackTransaction transaction = playerComponent.giveItem(itemStack, targetPlayerRef, commandBuffer);
+                     ItemStackTransaction transaction = Player.giveItem(itemStack, targetPlayerRef, commandBuffer);
                      ItemStack remainder = transaction.getRemainder();
                      if (ItemStack.isEmpty(remainder)) {
                         itemComponent.setRemovedByPlayerPickup(true);
                         commandBuffer.removeEntity(itemRef, RemoveReason.REMOVE);
-                        playerComponent.notifyPickupItem(targetPlayerRef, itemStack, itemEntityPosition, commandBuffer);
+                        Player.notifyPickupItem(targetPlayerRef, itemStack, itemEntityPosition, commandBuffer);
                         Holder<EntityStore> pickupItemHolder = ItemComponent.generatePickedUpItem(itemRef, commandBuffer, targetPlayerRef, itemEntityPosition);
                         if (pickupItemHolder != null) {
                            commandBuffer.addEntity(pickupItemHolder, AddReason.SPAWN);
@@ -186,7 +188,7 @@ public class PlayerItemEntityPickupSystem extends EntityTickingSystem<EntityStor
                         }
 
                         if (quantity > 0) {
-                           playerComponent.notifyPickupItem(targetPlayerRef, remainder.withQuantity(quantity), itemEntityPosition, commandBuffer);
+                           Player.notifyPickupItem(targetPlayerRef, remainder.withQuantity(quantity), itemEntityPosition, commandBuffer);
                         }
                      }
                   }

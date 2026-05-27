@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.List;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionCompleteTask extends ActionPlayAnimation {
    protected final boolean playAnimation;
@@ -24,14 +25,14 @@ public class ActionCompleteTask extends ActionPlayAnimation {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       Ref<EntityStore> targetRef = role.getStateSupport().getInteractionIterationTarget();
       boolean targetExists = targetRef != null && targetRef.isValid() && !store.getArchetype(targetRef).contains(DeathComponent.getComponentType());
       return super.canExecute(ref, role, sensorInfo, dt, store) && targetExists;
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       UUIDComponent parentUuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
       if (parentUuidComponent == null) {
          return false;

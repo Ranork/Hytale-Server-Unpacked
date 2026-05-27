@@ -2,17 +2,16 @@ package com.hypixel.hytale.server.core.universe.world.chunk.section.palette;
 
 import com.hypixel.hytale.function.consumer.BiIntConsumer;
 import com.hypixel.hytale.protocol.packets.world.PaletteType;
-import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
 import it.unimi.dsi.fastutil.ints.Int2ShortOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import java.lang.foreign.MemorySegment;
 import java.util.function.IntConsumer;
-import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 
-public class EmptySectionPalette implements ISectionPalette {
+public final class EmptySectionPalette extends AbstractSectionPalette {
    public static final int EMPTY_ID = 0;
    public static final EmptySectionPalette INSTANCE = new EmptySectionPalette();
 
@@ -27,8 +26,8 @@ public class EmptySectionPalette implements ISectionPalette {
 
    @Nonnull
    @Override
-   public ISectionPalette.SetResult set(int index, int id) {
-      return id == 0 ? ISectionPalette.SetResult.UNCHANGED : ISectionPalette.SetResult.REQUIRES_PROMOTE;
+   public AbstractSectionPalette.SetResult set(int index, int id) {
+      return id == 0 ? AbstractSectionPalette.SetResult.UNCHANGED : AbstractSectionPalette.SetResult.REQUIRES_PROMOTE;
    }
 
    @Override
@@ -42,13 +41,13 @@ public class EmptySectionPalette implements ISectionPalette {
    }
 
    @Override
-   public ISectionPalette demote() {
+   public AbstractSectionPalette demote() {
       throw new UnsupportedOperationException("Cannot demote empty chunk section!");
    }
 
    @Nonnull
    @Override
-   public ISectionPalette promote() {
+   public AbstractSectionPalette promote() {
       return new HalfByteSectionPalette();
    }
 
@@ -117,14 +116,27 @@ public class EmptySectionPalette implements ISectionPalette {
    }
 
    @Override
-   public void serializeForPacket(ByteBuf buf) {
+   public int serializedPacketByteSize() {
+      return 0;
    }
 
    @Override
-   public void serialize(ISectionPalette.KeySerializer keySerializer, ByteBuf buf) {
+   public int serializeForPacket(MemorySegment memorySegment, int offset) {
+      return 0;
    }
 
    @Override
-   public void deserialize(ToIntFunction<ByteBuf> deserializer, ByteBuf buf, int version) {
+   public int serializedByteSize(AbstractSectionPalette.KeyMemorySerializer keySerializer) {
+      return 0;
+   }
+
+   @Override
+   public int serialize(AbstractSectionPalette.KeyMemorySerializer keySerializer, MemorySegment memorySegment, int offset) {
+      return 0;
+   }
+
+   @Override
+   public int deserialize(AbstractSectionPalette.KeyMemoryDeserializer deserializer, MemorySegment memorySegment, int offset) {
+      return 0;
    }
 }

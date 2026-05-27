@@ -36,6 +36,7 @@ import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.ItemBase;
 import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.protocol.ModelTrail;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
@@ -187,7 +188,9 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       .metadata(new UIEditorSectionStart("Rendering"))
       .metadata(new UIRebuildCaches(false, UIRebuildCaches.ClientCache.MODELS))
       .metadata(new UIPropertyTitle("Item Model"))
-      .documentation("The model used for rendering this item. If this is a block, BlockType.Model should be used instead.")
+      .documentation(
+         "The model used for rendering this item when held, in inventory, or attached. If set, takes priority over BlockType.CustomModel. Block entities always use BlockType.CustomModel."
+      )
       .add()
       .<Double>appendInherited(
          new KeyedCodec<>("Scale", Codec.DOUBLE),
@@ -203,7 +206,9 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       .addValidator(CommonAssetValidator.TEXTURE_ITEM)
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
       .metadata(new UIPropertyTitle("Item Texture"))
-      .documentation("The texture used for rendering this item. If this is a block, block specific properties should be used instead.")
+      .documentation(
+         "The texture used for rendering this item when held, in inventory, or attached. Paired with Item.Model when set; otherwise block-specific texture properties are used."
+      )
       .add()
       .<String>appendInherited(
          new KeyedCodec<>("Animation", Codec.STRING),
@@ -214,7 +219,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       .addValidator(CommonAssetValidator.ANIMATION_ITEM_BLOCK)
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
       .metadata(new UIPropertyTitle("Item Animation"))
-      .documentation("The animation used for rendering this item. If this is a block, block specific properties should be used instead.")
+      .documentation("The animation used for rendering this item. Used only when Item.Model is set; otherwise the block's animation is used.")
       .add()
       .appendInherited(
          new KeyedCodec<>("UsePlayerAnimations", Codec.BOOLEAN),
@@ -248,7 +253,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .metadata(new UIPropertyTitle("Item Particles"))
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
-      .documentation("The particles played for this item. If this is a block, block specific properties should be used instead.")
+      .documentation("The particles played for this item. Used only when Item.Model is set; otherwise the block's particles are used.")
       .add()
       .<ModelParticle[]>appendInherited(
          new KeyedCodec<>("FirstPersonParticles", ModelParticle.ARRAY_CODEC),
@@ -258,7 +263,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .metadata(new UIPropertyTitle("Item First Person Particles"))
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
-      .documentation("The particles played for this item when in first person. If this is a block, block specific properties should be used instead.")
+      .documentation("The particles played for this item when in first person. Used only when Item.Model is set; otherwise the block's particles are used.")
       .add()
       .<ModelTrail[]>appendInherited(
          new KeyedCodec<>("Trails", ModelAsset.MODEL_TRAIL_ARRAY_CODEC),
@@ -274,7 +279,9 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       )
       .metadata(new UIPropertyTitle("Item Light"))
       .metadata(new UIRebuildCaches(UIRebuildCaches.ClientCache.MODELS))
-      .documentation("The light this item is emitting when being held or dropped. For block light, see Block properties")
+      .documentation(
+         "The light this item is emitting when being held or dropped. Used only when Item.Model is set; otherwise the block's emitted light is used."
+      )
       .add()
       .<CraftingRecipe>append(new KeyedCodec<>("Recipe", CraftingRecipe.CODEC), (item, s) -> item.recipeToGenerate = s, item -> item.recipeToGenerate)
       .metadata(new UIEditorSectionStart("Crafting"))
@@ -396,6 +403,16 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
          (item, parent) -> item.durabilityLossOnDeath = parent.durabilityLossOnDeath
       )
       .documentation("Whether this item should loose durability on death, if so configured in DeathConfig.")
+      .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("Repairable", Codec.BOOLEAN),
+         (item, s) -> item.repairable = s,
+         item -> item.repairable,
+         (item, parent) -> item.repairable = parent.repairable
+      )
+      .documentation(
+         "Whether this item can be repaired with a repair kit. Defaults to true. Set to false for items that use durability as a consumable resource (e.g. watering cans, fertilizer)."
+      )
       .add()
       .<String>appendInherited(
          new KeyedCodec<>("BlockType", new ContainedAssetCodec<>(BlockType.class, BlockType.CODEC, ContainedAssetCodec.Mode.INHERIT_ID_AND_PARENT)),
@@ -562,6 +579,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    protected ItemHudUI[] hudUI;
    protected boolean dropOnDeath;
    protected boolean durabilityLossOnDeath = true;
+   protected boolean repairable = true;
    private transient SoftReference<ItemBase> cachedPacket;
 
    public static AssetStore<String, Item, DefaultAssetMap<String, Item>> getAssetStore() {
@@ -574,6 +592,20 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
 
    public static DefaultAssetMap<String, Item> getAssetMap() {
       return (DefaultAssetMap<String, Item>)getAssetStore().getAssetMap();
+   }
+
+   public void invalidatePacketCache() {
+      this.cachedPacket = null;
+   }
+
+   @Nullable
+   public ItemWeapon unshareWeapon() {
+      if (this.weapon == null) {
+         return null;
+      } else {
+         this.weapon = new ItemWeapon(this.weapon);
+         return this.weapon;
+      }
    }
 
    protected Item() {
@@ -634,6 +666,7 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       this.clipsGeometry = other.clipsGeometry;
       this.renderDeployablePreview = other.renderDeployablePreview;
       this.dropOnDeath = other.dropOnDeath;
+      this.repairable = other.repairable;
    }
 
    @Nonnull
@@ -869,6 +902,21 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
    }
 
    @Nonnull
+   public Message getTranslationMessage() {
+      Message msg = Message.translation(this.getTranslationKey());
+      if (this.translationProperties != null) {
+         Map<String, Message> args = this.translationProperties.getNameArguments();
+         if (args != null) {
+            for (Entry<String, Message> entry : args.entrySet()) {
+               msg.param(entry.getKey(), entry.getValue());
+            }
+         }
+      }
+
+      return msg;
+   }
+
+   @Nonnull
    public String getDescriptionTranslationKey() {
       if (this.translationProperties != null) {
          String descriptionTranslation = this.translationProperties.getDescription();
@@ -878,6 +926,21 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       }
 
       return "server.items." + this.id + ".description";
+   }
+
+   @Nonnull
+   public Message getDescriptionTranslationMessage() {
+      Message msg = Message.translation(this.getDescriptionTranslationKey());
+      if (this.translationProperties != null) {
+         Map<String, Message> args = this.translationProperties.getDescriptionArguments();
+         if (args != null) {
+            for (Entry<String, Message> entry : args.entrySet()) {
+               msg.param(entry.getKey(), entry.getValue());
+            }
+         }
+      }
+
+      return msg;
    }
 
    public String getModel() {
@@ -1031,6 +1094,10 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       return this.durabilityLossOnDeath;
    }
 
+   public boolean isRepairable() {
+      return this.repairable;
+   }
+
    public int[] getDisplayEntityStatsHUD() {
       return this.displayEntityStatsHUD;
    }
@@ -1150,9 +1217,14 @@ public class Item implements JsonAssetWithMap<String, DefaultAssetMap<String, It
       if (this.recipeToGenerate != null) {
          CraftingRecipe recipe = this.recipeToGenerate;
          CraftingRecipe newRecipe = new CraftingRecipe(recipe);
-         MaterialQuantity primaryOutput = new MaterialQuantity(this.id, null, null, newRecipe.primaryOutputQuantity, null);
-         if (newRecipe.outputs == null || newRecipe.outputs.length == 0) {
-            newRecipe.outputs = new MaterialQuantity[]{primaryOutput};
+         MaterialQuantity primaryOutput;
+         if (newRecipe.outputs != null && newRecipe.outputs.length == 1 && this.id.equals(newRecipe.outputs[0].getItemId())) {
+            primaryOutput = newRecipe.outputs[0];
+         } else {
+            primaryOutput = new MaterialQuantity(this.id, null, null, newRecipe.primaryOutputQuantity, null);
+            if (newRecipe.outputs == null || newRecipe.outputs.length == 0) {
+               newRecipe.outputs = new MaterialQuantity[]{primaryOutput};
+            }
          }
 
          newRecipe.primaryOutput = primaryOutput;

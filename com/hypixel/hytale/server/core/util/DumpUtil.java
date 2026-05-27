@@ -32,8 +32,6 @@ import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenTimingsCollector;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import java.io.BufferedWriter;
@@ -156,20 +154,6 @@ public class DumpUtil {
          .toArray(CompletableFuture[]::new);
       CompletableFuture.allOf(futures).join();
       return result;
-   }
-
-   @Nonnull
-   public static String hexDump(@Nonnull ByteBuf buf) {
-      int readerIndex = buf.readerIndex();
-      byte[] data = new byte[buf.readableBytes()];
-      buf.readBytes(data);
-      buf.readerIndex(readerIndex);
-      return hexDump(data);
-   }
-
-   @Nonnull
-   public static String hexDump(@Nonnull byte[] data) {
-      return data.length == 0 ? "[EMPTY ARRAY]" : ByteBufUtil.hexDump(data);
    }
 
    @Nonnull

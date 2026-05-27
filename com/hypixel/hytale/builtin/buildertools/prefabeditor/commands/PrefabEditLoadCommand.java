@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
@@ -121,6 +122,10 @@ public class PrefabEditLoadCommand extends AbstractAsyncPlayerCommand {
             private static final Message MESSAGE_COMMANDS_PREFAB_EDIT_SESSION_MANAGER_EXISTING_EDIT_SESSION = Message.translation(
                "server.commands.prefabeditsessionmanager.existingEditSession"
             );
+
+            {
+               Objects.requireNonNull(PrefabEditLoadCommand.this);
+            }
 
             @Override
             protected void execute(

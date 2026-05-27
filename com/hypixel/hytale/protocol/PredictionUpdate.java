@@ -1,8 +1,10 @@
 package com.hypixel.hytale.protocol;
 
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -29,13 +31,41 @@ public class PredictionUpdate extends ComponentUpdate {
 
    @Nonnull
    public static PredictionUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
-      PredictionUpdate obj = new PredictionUpdate();
-      obj.predictionId = PacketIO.readUUID(buf, offset + 0);
-      return obj;
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("PredictionUpdate", 16, buf.readableBytes() - offset);
+      } else {
+         PredictionUpdate obj = new PredictionUpdate();
+         obj.predictionId = PacketIO.readUUID(buf, offset + 0);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 16;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 16L;
+   }
+
+   public static UUID getPredictionId(MemorySegment mem) {
+      return getPredictionId(mem, 0);
+   }
+
+   public static UUID getPredictionId(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 0);
+   }
+
+   public static PredictionUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PredictionUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 16 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PredictionUpdate", offset + 16, (int)mem.byteSize());
+      } else {
+         return new PredictionUpdate(PacketIO.readUUID(mem, offset + 0));
+      }
    }
 
    @Override
@@ -43,6 +73,12 @@ public class PredictionUpdate extends ComponentUpdate {
       int startPos = buf.writerIndex();
       PacketIO.writeUUID(buf, this.predictionId);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      PacketIO.writeUUID(mem, offset + 0, this.predictionId);
+      return 16;
    }
 
    @Override

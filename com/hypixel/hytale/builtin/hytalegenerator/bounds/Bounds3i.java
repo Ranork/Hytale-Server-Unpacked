@@ -1,10 +1,12 @@
 package com.hypixel.hytale.builtin.hytalegenerator.bounds;
 
 import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.MemInstrument;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class Bounds3i implements MemInstrument {
    @Nonnull
@@ -15,12 +17,12 @@ public class Bounds3i implements MemInstrument {
    public final Vector3i max;
 
    public Bounds3i() {
-      this(Vector3i.ZERO, Vector3i.ZERO);
+      this(Vector3iUtil.ZERO, Vector3iUtil.ZERO);
    }
 
-   public Bounds3i(@Nonnull Vector3i min, @Nonnull Vector3i max) {
-      this.min = min.clone();
-      this.max = max.clone();
+   public Bounds3i(@Nonnull Vector3ic min, @Nonnull Vector3ic max) {
+      this.min = new Vector3i(min);
+      this.max = new Vector3i(max);
       this.correct();
    }
 
@@ -74,21 +76,21 @@ public class Bounds3i implements MemInstrument {
 
    @Nonnull
    public Vector3i getSize() {
-      return this.max.clone().subtract(this.min);
+      return new Vector3i(this.max).sub(this.min);
    }
 
    @Nonnull
    public Bounds3i assign(@Nonnull Bounds3i other) {
-      this.min.assign(other.min);
-      this.max.assign(other.max);
+      this.min.set(other.min);
+      this.max.set(other.max);
       this.correct();
       return this;
    }
 
    @Nonnull
    public Bounds3i assign(@Nonnull Vector3i min, @Nonnull Vector3i max) {
-      this.min.assign(min);
-      this.max.assign(max);
+      this.min.set(min);
+      this.max.set(max);
       this.correct();
       return this;
    }
@@ -109,20 +111,20 @@ public class Bounds3i implements MemInstrument {
 
    @Nonnull
    public Bounds3i offsetOpposite(@Nonnull Vector3i vector) {
-      this.min.subtract(vector);
-      this.max.subtract(vector);
+      this.min.sub(vector);
+      this.max.sub(vector);
       return this;
    }
 
    @Nonnull
    public Bounds3i intersect(@Nonnull Bounds3i other) {
       if (!this.intersects(other)) {
-         this.min.assign(Vector3i.ZERO);
-         this.max.assign(Vector3i.ZERO);
+         this.min.set(Vector3iUtil.ZERO);
+         this.max.set(Vector3iUtil.ZERO);
       }
 
-      this.min.assign(Math.max(this.min.x, other.min.x), Math.max(this.min.y, other.min.y), Math.max(this.min.z, other.min.z));
-      this.max.assign(Math.min(this.max.x, other.max.x), Math.min(this.max.y, other.max.y), Math.min(this.max.z, other.max.z));
+      this.min.set(Math.max(this.min.x, other.min.x), Math.max(this.min.y, other.min.y), Math.max(this.min.z, other.min.z));
+      this.max.set(Math.min(this.max.x, other.max.x), Math.min(this.max.y, other.max.y), Math.min(this.max.z, other.max.z));
       return this;
    }
 
@@ -131,32 +133,32 @@ public class Bounds3i implements MemInstrument {
       if (other.isZeroVolume()) {
          return this;
       } else if (this.isZeroVolume()) {
-         this.min.assign(other.min);
-         this.max.assign(other.max);
+         this.min.set(other.min);
+         this.max.set(other.max);
          return this;
       } else {
-         this.min.assign(Math.min(this.min.x, other.min.x), Math.min(this.min.y, other.min.y), Math.min(this.min.z, other.min.z));
-         this.max.assign(Math.max(this.max.x, other.max.x), Math.max(this.max.y, other.max.y), Math.max(this.max.z, other.max.z));
+         this.min.set(Math.min(this.min.x, other.min.x), Math.min(this.min.y, other.min.y), Math.min(this.min.z, other.min.z));
+         this.max.set(Math.max(this.max.x, other.max.x), Math.max(this.max.y, other.max.y), Math.max(this.max.z, other.max.z));
          return this;
       }
    }
 
    @Nonnull
-   public Bounds3i encompass(@Nonnull Vector3i position) {
-      this.min.assign(Math.min(this.min.x, position.x), Math.min(this.min.y, position.y), Math.min(this.min.z, position.z));
-      this.max.assign(Math.max(this.max.x, position.x + 1), Math.max(this.max.y, position.y + 1), Math.max(this.max.z, position.z + 1));
+   public Bounds3i encompass(@Nonnull Vector3ic position) {
+      this.min.set(Math.min(this.min.x, position.x()), Math.min(this.min.y, position.y()), Math.min(this.min.z, position.z()));
+      this.max.set(Math.max(this.max.x, position.x() + 1), Math.max(this.max.y, position.y() + 1), Math.max(this.max.z, position.z() + 1));
       return this;
    }
 
    @Nonnull
    public Bounds3i stack(@Nonnull Bounds3i other) {
       if (!this.isZeroVolume() && !other.isZeroVolume()) {
-         Vector3i initialMax = this.max.clone();
+         Vector3i initialMax = new Vector3i(this.max);
          Bounds3i stamp = other.clone();
          stamp.offset(this.min);
          this.encompass(stamp);
          stamp = other.clone();
-         stamp.offset(initialMax.clone().subtract(Vector3i.ALL_ONES));
+         stamp.offset(new Vector3i(initialMax).sub(Vector3iUtil.ALL_ONES));
          this.encompass(stamp);
          return this;
       } else {
@@ -169,11 +171,11 @@ public class Bounds3i implements MemInstrument {
       if (this.isZeroVolume()) {
          return this;
       } else {
-         Vector3i swap = this.min.clone();
-         this.min.assign(this.max);
-         this.min.scale(-1);
-         this.max.assign(swap);
-         this.max.scale(-1);
+         Vector3i swap = new Vector3i(this.min);
+         this.min.set(this.max);
+         this.min.mul(-1);
+         this.max.set(swap);
+         this.max.mul(-1);
          return this;
       }
    }
@@ -183,57 +185,57 @@ public class Bounds3i implements MemInstrument {
       if (this.isZeroVolume()) {
          return this;
       } else {
-         Vector3i swap = this.min.clone();
-         this.min.assign(Vector3i.ALL_ONES);
-         this.min.subtract(this.max);
-         this.max.assign(Vector3i.ALL_ONES);
-         this.max.subtract(swap);
+         Vector3i swap = new Vector3i(this.min);
+         this.min.set(Vector3iUtil.ALL_ONES);
+         this.min.sub(this.max);
+         this.max.set(Vector3iUtil.ALL_ONES);
+         this.max.sub(swap);
          return this;
       }
    }
 
-   public Bounds3i applyRotationAroundVoxel(@Nonnull RotationTuple rotationTuple, @Nonnull Vector3i anchor) {
+   public Bounds3i applyRotationAroundVoxel(@Nonnull RotationTuple rotationTuple, @Nonnull Vector3ic anchor) {
       if (this.isZeroVolume()) {
          return this;
       } else {
-         this.max.subtract(Vector3i.ALL_ONES);
-         this.min.subtract(anchor);
+         this.max.sub(Vector3iUtil.ALL_ONES);
+         this.min.sub(anchor);
          rotationTuple.applyRotationTo(this.min);
          this.min.add(anchor);
-         this.max.subtract(anchor);
+         this.max.sub(anchor);
          rotationTuple.applyRotationTo(this.max);
          this.max.add(anchor);
          this.correct();
-         this.max.add(Vector3i.ALL_ONES);
+         this.max.add(Vector3iUtil.ALL_ONES);
          return this;
       }
    }
 
-   public Bounds3i undoRotationAroundVoxel(@Nonnull RotationTuple rotationTuple, @Nonnull Vector3i anchor) {
+   public Bounds3i undoRotationAroundVoxel(@Nonnull RotationTuple rotationTuple, @Nonnull Vector3ic anchor) {
       if (this.isZeroVolume()) {
          return this;
       } else {
-         this.max.subtract(Vector3i.ALL_ONES);
-         this.min.subtract(anchor);
+         this.max.sub(Vector3iUtil.ALL_ONES);
+         this.min.sub(anchor);
          rotationTuple.undoRotationTo(this.min);
          this.min.add(anchor);
-         this.max.subtract(anchor);
+         this.max.sub(anchor);
          rotationTuple.undoRotationTo(this.max);
          this.max.add(anchor);
          this.correct();
-         this.max.add(Vector3i.ALL_ONES);
+         this.max.add(Vector3iUtil.ALL_ONES);
          return this;
       }
    }
 
    @Nonnull
    public Bounds3d toBounds3d() {
-      return new Bounds3d(this.min.toVector3d(), this.max.toVector3d());
+      return new Bounds3d(Vector3iUtil.toVector3d(this.min), Vector3iUtil.toVector3d(this.max));
    }
 
    @Nonnull
    public Bounds3i clone() {
-      return new Bounds3i(this.min.clone(), this.max.clone());
+      return new Bounds3i(new Vector3i(this.min), new Vector3i(this.max));
    }
 
    public boolean isCorrect() {
@@ -241,9 +243,9 @@ public class Bounds3i implements MemInstrument {
    }
 
    public void correct() {
-      Vector3i swap = this.min.clone();
-      this.min.assign(Math.min(this.max.x, this.min.x), Math.min(this.max.y, this.min.y), Math.min(this.max.z, this.min.z));
-      this.max.assign(Math.max(swap.x, this.max.x), Math.max(swap.y, this.max.y), Math.max(swap.z, this.max.z));
+      Vector3i swap = new Vector3i(this.min);
+      this.min.set(Math.min(this.max.x, this.min.x), Math.min(this.max.y, this.min.y), Math.min(this.max.z, this.min.z));
+      this.max.set(Math.max(swap.x, this.max.x), Math.max(swap.y, this.max.y), Math.max(swap.z, this.max.z));
    }
 
    @Nonnull

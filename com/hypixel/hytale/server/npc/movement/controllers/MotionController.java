@@ -3,7 +3,7 @@ package com.hypixel.hytale.server.npc.movement.controllers;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
@@ -12,19 +12,32 @@ import com.hypixel.hytale.server.core.modules.physics.component.PhysicsValues;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.core.modules.splitvelocity.VelocityConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.MovementState;
 import com.hypixel.hytale.server.npc.movement.NavState;
 import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
 import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import java.util.EnumSet;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public interface MotionController extends DebugSupport.DebugFlagsChangeListener {
+   @Nonnull
    String getType();
 
+   @Nonnull
+   Set<MovementMode> getSupportedMovementModes();
+
+   @Nonnull
+   Set<MovementMode> getDefaultSpawnMovementModes();
+
+   @Nonnull
    Role getRole();
 
    void setRole(Role var1);
@@ -54,9 +67,26 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
       @Nonnull ComponentAccessor<EntityStore> var7
    );
 
-   double probeMove(@Nonnull Ref<EntityStore> var1, Vector3d var2, Vector3d var3, ProbeMoveData var4, @Nonnull ComponentAccessor<EntityStore> var5);
+   double probeMove(
+      @Nonnull Ref<EntityStore> var1,
+      @Nonnull Vector3dc var2,
+      @Nonnull Vector3dc var3,
+      @Nonnull ProbeMoveData var4,
+      @Nonnull ComponentAccessor<EntityStore> var5
+   );
 
-   double probeMove(@Nonnull Ref<EntityStore> var1, ProbeMoveData var2, @Nonnull ComponentAccessor<EntityStore> var3);
+   double probeMove(@Nonnull Ref<EntityStore> var1, @Nonnull ProbeMoveData var2, @Nonnull ComponentAccessor<EntityStore> var3);
+
+   default void applyRailStep(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Role role,
+      @Nonnull Vector3dc translation,
+      @Nonnull RailStepConfig config,
+      @Nonnull RailStepResult result,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      throw new UnsupportedOperationException("applyRailStep is not supported by " + this.getType());
+   }
 
    void constrainRotations(Role var1, TransformComponent var2);
 
@@ -70,12 +100,14 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
       @Nonnull ComponentAccessor<EntityStore> var5
    );
 
-   boolean isValidPosition(Vector3d var1, ComponentAccessor<EntityStore> var2);
+   boolean isValidPosition(@Nonnull Vector3dc var1, ComponentAccessor<EntityStore> var2);
 
-   boolean canAct(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+   boolean canSteer(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+
+   boolean isForcePushed();
 
    @Nullable
-   String canActFailReason(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
+   String canSteerFailReason(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 
    boolean isInProgress();
 
@@ -97,9 +129,9 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    double getCurrentTurnRadius();
 
-   double waypointDistance(Vector3d var1, Vector3d var2);
+   double waypointDistance(Vector3dc var1, Vector3dc var2);
 
-   double waypointDistanceSquared(Vector3d var1, Vector3d var2);
+   double waypointDistanceSquared(Vector3dc var1, Vector3dc var2);
 
    double waypointDistance(@Nonnull Ref<EntityStore> var1, Vector3d var2, @Nonnull ComponentAccessor<EntityStore> var3);
 
@@ -108,6 +140,14 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
    float getMaxClimbAngle();
 
    float getMaxSinkAngle();
+
+   default double getMaxClimbHeight() {
+      return 0.0;
+   }
+
+   default double getMaxDropHeight() {
+      return 0.0;
+   }
 
    boolean translateToAccessiblePosition(Vector3d var1, Box var2, double var3, double var5, ComponentAccessor<EntityStore> var7);
 
@@ -119,21 +159,19 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    boolean is2D();
 
-   Vector3d getWorldNormal();
+   Vector3dc getWorldNormal();
 
-   Vector3d getWorldAntiNormal();
+   Vector3dc getWorldAntiNormal();
 
-   void addForce(@Nonnull Vector3d var1, @Nullable VelocityConfig var2);
+   void addVelocity(@Nonnull Vector3d var1, @Nullable VelocityConfig var2);
 
-   Vector3d getForce();
+   Vector3d getExternalVelocity();
 
-   void forceVelocity(@Nonnull Vector3d var1, @Nullable VelocityConfig var2, boolean var3);
+   void setVelocity(@Nonnull Vector3dc var1, @Nullable VelocityConfig var2, boolean var3);
 
    MotionController.VerticalRange getDesiredVerticalRange(@Nonnull Ref<EntityStore> var1, @Nonnull ComponentAccessor<EntityStore> var2);
 
    double getWanderVerticalMovementRatio();
-
-   void setAvoidingBlockDamage(boolean var1);
 
    boolean isAvoidingBlockDamage();
 
@@ -141,15 +179,14 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
 
    void requirePreciseMovement(Vector3d var1);
 
-   void requireDepthProbing();
-
    void enableHeadingBlending(double var1, Vector3d var3, double var4);
 
    void enableHeadingBlending();
 
-   void setRelaxedMoveConstraints(boolean var1);
+   void setRelaxedMoveConstraints(@Nonnull EnumSet<RelaxedConstraint> var1);
 
-   boolean isRelaxedMoveConstraints();
+   @Nonnull
+   EnumSet<RelaxedConstraint> getRelaxedConstraints();
 
    NavState getNavState();
 
@@ -181,7 +218,7 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
    }
 
    default double getSquaredDistance(@Nonnull Vector3d p1, @Nonnull Vector3d p2, boolean useProjectedDistance) {
-      return useProjectedDistance ? this.waypointDistanceSquared(p1, p2) : p1.distanceSquaredTo(p2);
+      return useProjectedDistance ? this.waypointDistanceSquared(p1, p2) : p1.distanceSquared(p2);
    }
 
    void updatePhysicsValues(PhysicsValues var1);
@@ -209,7 +246,7 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
                   throw new AssertionError();
                }
 
-               boolean isIdle = velocityComponent.getVelocity().closeToZero(0.001);
+               boolean isIdle = Vector3dUtil.closeToZero(velocityComponent.getVelocity(), 0.001);
                yield state == MovementState.IDLE
                   ? isIdle
                   : !isIdle
@@ -240,7 +277,7 @@ public interface MotionController extends DebugSupport.DebugFlagsChangeListener 
       public double min;
       public double max;
 
-      public void assign(double current, double min, double max) {
+      public void set(double current, double min, double max) {
          this.current = current;
          this.min = min;
          this.max = max;

@@ -13,7 +13,9 @@ import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequen
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.EchoOnceOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.EchoOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.ErodeOperation;
+import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.FluidFixOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.HeightmapLayerOperation;
+import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.KernelErosionOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.LayerOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.LiftOperation;
 import com.hypixel.hytale.builtin.buildertools.scriptedbrushes.operations.sequential.LoadIntFromToolArgOperation;
@@ -168,6 +170,8 @@ public abstract class BrushOperation {
       BRUSH_OPERATION_REGISTRY.put("disableonhold", DisableHoldInteractionOperation::new);
       BRUSH_OPERATION_REGISTRY.put("randomoffset", RandomOffsetOperation::new);
       BRUSH_OPERATION_REGISTRY.put("erode", ErodeOperation::new);
+      BRUSH_OPERATION_REGISTRY.put("kernelsmooth", KernelErosionOperation::new);
+      BRUSH_OPERATION_REGISTRY.put("fluidfix", FluidFixOperation::new);
       BRUSH_OPERATION_REGISTRY.put("persistentdata", PersistentDataOperation::new);
       BRUSH_OPERATION_REGISTRY.put("pasteprefab", PastePrefabOperation::new);
       BRUSH_OPERATION_REGISTRY.put("echo", EchoOperation::new);

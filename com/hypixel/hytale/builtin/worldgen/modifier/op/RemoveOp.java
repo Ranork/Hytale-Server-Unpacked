@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.worldgen.modifier.op;
 
+import com.hypixel.hytale.builtin.worldgen.modifier.content.Content;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -22,6 +23,9 @@ public class RemoveOp implements Op {
    public static final String ID = "Remove";
    public static final BuilderCodec<RemoveOp> CODEC = BuilderCodec.builder(RemoveOp.class, RemoveOp::new)
       .documentation("Removes matching content from the target content list")
+      .<Content.Type>append(new KeyedCodec<>("ContentType", Content.Type.CODEC), (instance, type) -> instance.type = type, instance -> instance.type)
+      .documentation("The type of content to remove")
+      .add()
       .<String[]>append(new KeyedCodec<>("Rules", BuilderCodec.STRING_ARRAY), (instance, array) -> instance.rules = array, instance -> instance.rules)
       .documentation(
          "List of glob-matching rules to match entries. Rules are only implemented for Prefab paths and CaveType names, but can be set to '*' to remove all entries of any content type"
@@ -29,8 +33,14 @@ public class RemoveOp implements Op {
       .add()
       .afterDecode(op -> op.isClearAll = ArrayUtil.contains(op.rules, "*"))
       .build();
+   private Content.Type type = Content.Type.NONE;
    private String[] rules = ArrayUtil.EMPTY_STRING_ARRAY;
    private transient boolean isClearAll = false;
+
+   @Override
+   public Content.Type type() {
+      return this.type;
+   }
 
    @Override
    public <T> void apply(@Nonnull ModifyEvent<T> event) throws Error {

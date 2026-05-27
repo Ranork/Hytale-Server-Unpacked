@@ -11,6 +11,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Map;
@@ -60,15 +61,15 @@ public class JumpIfToolArgOperation extends SequenceBrushOperation {
 
       assert playerComponent != null;
 
-      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(playerComponent);
+      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
       if (builderTool == null) {
          brushConfig.setErrorFlag("JumpIfToolArg: No active builder tool");
       } else {
-         ItemStack itemStack = playerComponent.getInventory().getItemInHand();
-         if (itemStack == null) {
+         ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+         if (itemInHand == null) {
             brushConfig.setErrorFlag("JumpIfToolArg: No item in hand");
          } else {
-            BuilderTool.ArgData argData = builderTool.getItemArgData(itemStack);
+            BuilderTool.ArgData argData = builderTool.getItemArgData(itemInHand);
             Map<String, Object> toolArgs = argData.tool();
             if (toolArgs != null && toolArgs.containsKey(this.argNameArg)) {
                Object argValue = toolArgs.get(this.argNameArg);
@@ -82,6 +83,7 @@ public class JumpIfToolArgOperation extends SequenceBrushOperation {
                         break;
                      case NotEquals:
                         shouldJump = boolValue != expectedValue;
+                     case Contains:
                   }
                } else if (argValue instanceof String stringValue) {
                   switch (this.comparisonTypeArg) {

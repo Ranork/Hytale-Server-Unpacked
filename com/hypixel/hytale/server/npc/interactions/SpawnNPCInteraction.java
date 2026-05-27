@@ -13,16 +13,18 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -31,9 +33,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.validators.NPCRoleValidator;
+import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class SpawnNPCInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -57,8 +63,8 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
       .documentation("A weighted list of entity IDs from which an entity will be selected for spawning. Supersedes any provided EntityId.")
       .add()
       .<Vector3d>append(
-         new KeyedCodec<>("SpawnOffset", Vector3d.CODEC),
-         (spawnNPCInteraction, s) -> spawnNPCInteraction.spawnOffset.assign(s),
+         new KeyedCodec<>("SpawnOffset", Vector3dUtil.CODEC),
+         (spawnNPCInteraction, s) -> spawnNPCInteraction.spawnOffset.set(s),
          spawnNPCInteraction -> spawnNPCInteraction.spawnOffset
       )
       .documentation("The offset to apply to the spawn position of the NPC, relative to the block's rotation and center.")
@@ -76,6 +82,16 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
          spawnNPCInteraction -> spawnNPCInteraction.spawnChance
       )
       .documentation("The chance of the NPC spawning when the interaction is triggered.")
+      .add()
+      .<Integer>append(
+         new KeyedCodec<>("AlternateSpawnMaxSearchDistance", Codec.INTEGER),
+         (spawnNPCInteraction, i) -> spawnNPCInteraction.alternateSpawnMaxSearchDistance = i,
+         spawnNPCInteraction -> spawnNPCInteraction.alternateSpawnMaxSearchDistance
+      )
+      .documentation(
+         "When the primary spawn position has no space (FAIL_INVALID_POSITION), try adjacent world columns along the horizontal cardinal axis toward the interacting player, up to this many block steps from the primary column. 0 disables alternate search. Distance is along that axis only, not a Euclidean radius."
+      )
+      .addValidator(Validators.min(0))
       .add()
       .afterDecode(interaction -> {
          if (interaction.weightedSpawns != null && interaction.weightedSpawns.length > 0) {
@@ -96,8 +112,10 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
    protected Vector3d spawnOffset = new Vector3d();
    protected float spawnYawOffset;
    protected float spawnChance = 1.0F;
+   protected int alternateSpawnMaxSearchDistance;
 
-   private void spawnNPC(@Nonnull Store<EntityStore> store, @Nonnull Vector3i targetBlock) {
+   private void spawnNPC(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionContext context, @Nonnull Vector3i targetBlock) {
+      Store<EntityStore> store = commandBuffer.getStore();
       World world = store.getExternalData().getWorld();
       SpawnNPCInteraction.SpawnData spawnData = this.computeSpawnData(world, targetBlock);
       String entityToSpawn = this.entityId;
@@ -106,7 +124,67 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
       }
 
       if (entityToSpawn != null) {
-         NPCPlugin.get().spawnNPC(store, entityToSpawn, null, spawnData.position(), spawnData.rotation());
+         SpawnTestResult spawnTestResult = NPCPlugin.get().spawnNPCWithSpaceValidation(store, entityToSpawn, null, spawnData.position(), spawnData.rotation());
+         if (spawnTestResult != SpawnTestResult.TEST_OK) {
+            if (spawnTestResult == SpawnTestResult.FAIL_INVALID_POSITION && this.alternateSpawnMaxSearchDistance > 0) {
+               Ref<EntityStore> entityRef = context.getEntity();
+               if (entityRef != null) {
+                  TransformComponent transform = commandBuffer.getComponent(entityRef, TransformComponent.getComponentType());
+                  if (transform != null) {
+                     Vector3d playerPos = transform.getPosition();
+                     Vector3d primaryPos = spawnData.position();
+                     int originBlockX = MathUtil.floor(primaryPos.x);
+                     int originBlockZ = MathUtil.floor(primaryPos.z);
+                     int stepX;
+                     int stepZ;
+                     if (Math.abs(playerPos.x() - primaryPos.x) >= Math.abs(playerPos.z() - primaryPos.z)) {
+                        stepX = playerPos.x() >= primaryPos.x ? 1 : -1;
+                        stepZ = 0;
+                     } else {
+                        stepX = 0;
+                        stepZ = playerPos.z() >= primaryPos.z ? 1 : -1;
+                     }
+
+                     Rotation3f alternateSpawnRotation = new Rotation3f(0.0F, PhysicsMath.headingFromDirection(stepX, stepZ), 0.0F);
+
+                     for (int step = 1; step <= this.alternateSpawnMaxSearchDistance; step++) {
+                        int blockX = originBlockX + step * stepX;
+                        int blockZ = originBlockZ + step * stepZ;
+                        SpawnTestResult probeResult = NPCPlugin.get()
+                           .spawnNPCWithColumnProbe(store, entityToSpawn, null, world, blockX, blockZ, primaryPos.y(), alternateSpawnRotation);
+                        if (probeResult == SpawnTestResult.TEST_OK) {
+                           return;
+                        }
+
+                        if (probeResult == SpawnTestResult.FAIL_SPAWN) {
+                           break;
+                        }
+                     }
+                  }
+               }
+            }
+
+            SpawnNPCInteractionFailureTracker tracker = commandBuffer.getResource(SpawnNPCInteractionFailureTracker.getResourceType());
+            if (tracker.recordFailure(targetBlock)) {
+               if (spawnTestResult == SpawnTestResult.FAIL_INVALID_POSITION) {
+                  NPCPlugin.get()
+                     .getLogger()
+                     .at(Level.WARNING)
+                     .log(
+                        "Failed to spawn NPC with Entity ID '%s' at block %d/%d/%d, because there isn't enough space.",
+                        entityToSpawn,
+                        targetBlock.x,
+                        targetBlock.y,
+                        targetBlock.z
+                     );
+               } else {
+                  NPCPlugin.get()
+                     .getLogger()
+                     .at(Level.WARNING)
+                     .log("Failed to spawn NPC with Entity ID '%s' at block %d/%d/%d.", entityToSpawn, targetBlock.x, targetBlock.y, targetBlock.z);
+               }
+            }
+         }
       }
    }
 
@@ -122,11 +200,15 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
 
          BlockType blockType = worldChunkComponent.getBlockType(targetBlock.x, targetBlock.y, targetBlock.z);
          if (blockType == null) {
-            return new SpawnNPCInteraction.SpawnData(this.spawnOffset.clone().add(targetBlock).add(0.5, 0.5, 0.5), Vector3f.ZERO);
+            return new SpawnNPCInteraction.SpawnData(
+               new Vector3d(this.spawnOffset).add(targetBlock.x, targetBlock.y, targetBlock.z).add(0.5, 0.5, 0.5), new Rotation3f(Rotation3f.IDENTITY)
+            );
          } else {
             BlockChunk blockChunkComponent = chunkStore.getStore().getComponent(chunkRef, BlockChunk.getComponentType());
             if (blockChunkComponent == null) {
-               return new SpawnNPCInteraction.SpawnData(this.spawnOffset.clone().add(targetBlock).add(0.5, 0.5, 0.5), Vector3f.ZERO);
+               return new SpawnNPCInteraction.SpawnData(
+                  new Vector3d(this.spawnOffset).add(targetBlock.x, targetBlock.y, targetBlock.z).add(0.5, 0.5, 0.5), new Rotation3f(Rotation3f.IDENTITY)
+               );
             } else {
                BlockSection section = blockChunkComponent.getSectionAtBlockY(targetBlock.y);
                int rotationIndex = section.getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
@@ -134,13 +216,15 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
                Vector3d position = rotationTuple.rotatedVector(this.spawnOffset);
                Vector3d blockCenter = new Vector3d();
                blockType.getBlockCenter(rotationIndex, blockCenter);
-               position.add(blockCenter).add(targetBlock);
-               Vector3f rotation = new Vector3f(0.0F, (float)(rotationTuple.yaw().getRadians() + Math.toRadians(this.spawnYawOffset)), 0.0F);
+               position.add(blockCenter).add(targetBlock.x, targetBlock.y, targetBlock.z);
+               Rotation3f rotation = new Rotation3f(0.0F, (float)(rotationTuple.yaw().getRadians() + Math.toRadians(this.spawnYawOffset)), 0.0F);
                return new SpawnNPCInteraction.SpawnData(position, rotation);
             }
          }
       } else {
-         return new SpawnNPCInteraction.SpawnData(this.spawnOffset.clone().add(targetBlock).add(0.5, 0.5, 0.5), Vector3f.ZERO);
+         return new SpawnNPCInteraction.SpawnData(
+            new Vector3d(this.spawnOffset).add(targetBlock.x, targetBlock.y, targetBlock.z).add(0.5, 0.5, 0.5), new Rotation3f(Rotation3f.IDENTITY)
+         );
       }
    }
 
@@ -155,7 +239,7 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
       @Nonnull CooldownHandler cooldownHandler
    ) {
       if (!(ThreadLocalRandom.current().nextFloat() > this.spawnChance)) {
-         commandBuffer.run(store -> this.spawnNPC(world.getEntityStore().getStore(), targetBlock));
+         commandBuffer.run(_store -> this.spawnNPC(commandBuffer, context, targetBlock));
       }
    }
 
@@ -168,11 +252,11 @@ public class SpawnNPCInteraction extends SimpleBlockInteraction {
 
          assert commandBuffer != null;
 
-         commandBuffer.run(store -> this.spawnNPC(world.getEntityStore().getStore(), targetBlock));
+         commandBuffer.run(_store -> this.spawnNPC(commandBuffer, context, targetBlock));
       }
    }
 
-   private record SpawnData(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   private record SpawnData(@Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
    }
 
    protected static class WeightedNPCSpawn implements IWeightedElement {

@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -36,24 +39,43 @@ public class BlockGathering {
 
    @Nonnull
    public static BlockGathering deserialize(@Nonnull ByteBuf buf, int offset) {
-      BlockGathering obj = new BlockGathering();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 13 + buf.getIntLE(offset + 1);
-         obj.breaking = BlockBreaking.deserialize(buf, varPos0);
-      }
+      if (buf.readableBytes() - offset < 13) {
+         throw ProtocolException.bufferTooSmall("BlockGathering", 13, buf.readableBytes() - offset);
+      } else {
+         BlockGathering obj = new BlockGathering();
+         byte nullBits = buf.getByte(offset);
+         if ((nullBits & 1) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 1);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 13) {
+               throw ProtocolException.invalidOffset("Breaking", varPosBase0, buf.readableBytes());
+            }
 
-      if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 13 + buf.getIntLE(offset + 5);
-         obj.harvest = Harvesting.deserialize(buf, varPos1);
-      }
+            int varPos0 = offset + 13 + varPosBase0;
+            obj.breaking = BlockBreaking.deserialize(buf, varPos0);
+         }
 
-      if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 13 + buf.getIntLE(offset + 9);
-         obj.soft = SoftBlock.deserialize(buf, varPos2);
-      }
+         if ((nullBits & 2) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 5);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 13) {
+               throw ProtocolException.invalidOffset("Harvest", varPosBase1, buf.readableBytes());
+            }
 
-      return obj;
+            int varPos1 = offset + 13 + varPosBase1;
+            obj.harvest = Harvesting.deserialize(buf, varPos1);
+         }
+
+         if ((nullBits & 4) != 0) {
+            int varPosBase2 = buf.getIntLE(offset + 9);
+            if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 13) {
+               throw ProtocolException.invalidOffset("Soft", varPosBase2, buf.readableBytes());
+            }
+
+            int varPos2 = offset + 13 + varPosBase2;
+            obj.soft = SoftBlock.deserialize(buf, varPos2);
+         }
+
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -61,6 +83,10 @@ public class BlockGathering {
       int maxEnd = 13;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 1);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Breaking", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 13 + fieldOffset0;
          pos0 += BlockBreaking.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -70,6 +96,10 @@ public class BlockGathering {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 5);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Harvest", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 13 + fieldOffset1;
          pos1 += Harvesting.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -79,6 +109,10 @@ public class BlockGathering {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 9);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 13) {
+            throw ProtocolException.invalidOffset("Soft", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 13 + fieldOffset2;
          pos2 += SoftBlock.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -87,6 +121,80 @@ public class BlockGathering {
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 13L;
+   }
+
+   @Nullable
+   public static BlockBreaking getBreaking(MemorySegment mem) {
+      return getBreaking(mem, 0);
+   }
+
+   @Nullable
+   public static BlockBreaking getBreaking(MemorySegment mem, int offset) {
+      return hasBreaking(mem, offset) ? BlockBreaking.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 13, "Breaking")) : null;
+   }
+
+   @Nullable
+   public static Harvesting getHarvest(MemorySegment mem) {
+      return getHarvest(mem, 0);
+   }
+
+   @Nullable
+   public static Harvesting getHarvest(MemorySegment mem, int offset) {
+      return hasHarvest(mem, offset) ? Harvesting.toObject(mem, offset + getValidatedOffset(mem, offset, 5, 13, "Harvest")) : null;
+   }
+
+   @Nullable
+   public static SoftBlock getSoft(MemorySegment mem) {
+      return getSoft(mem, 0);
+   }
+
+   @Nullable
+   public static SoftBlock getSoft(MemorySegment mem, int offset) {
+      return hasSoft(mem, offset) ? SoftBlock.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 13, "Soft")) : null;
+   }
+
+   public static boolean hasBreaking(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasHarvest(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasSoft(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 4) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static BlockGathering toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BlockGathering toObject(MemorySegment mem, int offset) {
+      if (offset + 13 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BlockGathering", offset + 13, (int)mem.byteSize());
+      } else {
+         return new BlockGathering(
+            hasBreaking(mem, offset) ? BlockBreaking.toObject(mem, offset + getValidatedOffset(mem, offset, 1, 13, "Breaking")) : null,
+            hasHarvest(mem, offset) ? Harvesting.toObject(mem, offset + getValidatedOffset(mem, offset, 5, 13, "Harvest")) : null,
+            hasSoft(mem, offset) ? SoftBlock.toObject(mem, offset + getValidatedOffset(mem, offset, 9, 13, "Soft")) : null
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -134,6 +242,46 @@ public class BlockGathering {
       }
    }
 
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.breaking != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.harvest != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.soft != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 13;
+      if (this.breaking != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 1), varOffset - offset - 13);
+         varOffset += this.breaking.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 1), -1);
+      }
+
+      if (this.harvest != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 5), varOffset - offset - 13);
+         varOffset += this.harvest.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 5), -1);
+      }
+
+      if (this.soft != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 9), varOffset - offset - 13);
+         varOffset += this.soft.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 9), -1);
+      }
+
+      return varOffset - offset;
+   }
+
    public int computeSize() {
       int size = 13;
       if (this.breaking != null) {
@@ -158,15 +306,11 @@ public class BlockGathering {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 1) != 0) {
             int breakingOffset = buffer.getIntLE(offset + 1);
-            if (breakingOffset < 0) {
+            if (breakingOffset < 0 || breakingOffset > buffer.writerIndex() - offset - 13) {
                return ValidationResult.error("Invalid offset for Breaking");
             }
 
             int pos = offset + 13 + breakingOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Breaking");
-            }
-
             ValidationResult breakingResult = BlockBreaking.validateStructure(buffer, pos);
             if (!breakingResult.isValid()) {
                return ValidationResult.error("Invalid Breaking: " + breakingResult.error());
@@ -177,40 +321,32 @@ public class BlockGathering {
 
          if ((nullBits & 2) != 0) {
             int harvestOffset = buffer.getIntLE(offset + 5);
-            if (harvestOffset < 0) {
+            if (harvestOffset < 0 || harvestOffset > buffer.writerIndex() - offset - 13) {
                return ValidationResult.error("Invalid offset for Harvest");
             }
 
-            int posx = offset + 13 + harvestOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Harvest");
-            }
-
-            ValidationResult harvestResult = Harvesting.validateStructure(buffer, posx);
+            int pos = offset + 13 + harvestOffset;
+            ValidationResult harvestResult = Harvesting.validateStructure(buffer, pos);
             if (!harvestResult.isValid()) {
                return ValidationResult.error("Invalid Harvest: " + harvestResult.error());
             }
 
-            posx += Harvesting.computeBytesConsumed(buffer, posx);
+            pos += Harvesting.computeBytesConsumed(buffer, pos);
          }
 
          if ((nullBits & 4) != 0) {
             int softOffset = buffer.getIntLE(offset + 9);
-            if (softOffset < 0) {
+            if (softOffset < 0 || softOffset > buffer.writerIndex() - offset - 13) {
                return ValidationResult.error("Invalid offset for Soft");
             }
 
-            int posxx = offset + 13 + softOffset;
-            if (posxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Soft");
-            }
-
-            ValidationResult softResult = SoftBlock.validateStructure(buffer, posxx);
+            int pos = offset + 13 + softOffset;
+            ValidationResult softResult = SoftBlock.validateStructure(buffer, pos);
             if (!softResult.isValid()) {
                return ValidationResult.error("Invalid Soft: " + softResult.error());
             }
 
-            posxx += SoftBlock.computeBytesConsumed(buffer, posxx);
+            pos += SoftBlock.computeBytesConsumed(buffer, pos);
          }
 
          return ValidationResult.OK;

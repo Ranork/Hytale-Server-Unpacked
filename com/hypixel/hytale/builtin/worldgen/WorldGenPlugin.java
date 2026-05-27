@@ -1,12 +1,24 @@
 package com.hypixel.hytale.builtin.worldgen;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.builtin.worldgen.modifier.EventHandler;
 import com.hypixel.hytale.builtin.worldgen.modifier.WorldGenModifier;
 import com.hypixel.hytale.builtin.worldgen.modifier.content.Content;
-import com.hypixel.hytale.builtin.worldgen.modifier.content.FileRef;
-import com.hypixel.hytale.builtin.worldgen.modifier.event.EventType;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.FileContent;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.cave.CaveTypeContent;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.cave.CaveTypeGenerator;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.cave.ore.OreCluster;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.cover.BiomeCoverContent;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.cover.CaveCoverContent;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.fluid.BiomeFluidContent;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.layer.BiomeDynamicLayerContent;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.layer.BiomeStaticLayerContent;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.prefab.BiomePrefabContent;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.prefab.CavePrefabContent;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.tint.BiomeTintContent;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvents;
 import com.hypixel.hytale.builtin.worldgen.modifier.op.AddOp;
+import com.hypixel.hytale.builtin.worldgen.modifier.op.LogOp;
 import com.hypixel.hytale.builtin.worldgen.modifier.op.Op;
 import com.hypixel.hytale.builtin.worldgen.modifier.op.RemoveOp;
 import com.hypixel.hytale.codec.ExtraInfo;
@@ -59,20 +71,32 @@ public class WorldGenPlugin extends JavaPlugin {
       instance = this;
       this.getEntityStoreRegistry().registerSystem(new BiomeDataSystem());
       IWorldGenProvider.CODEC.register(Priority.DEFAULT.before(1), "Hytale", HytaleWorldGenProvider.class, HytaleWorldGenProvider.CODEC);
-      this.getEventRegistry().register(ModifyEvents.BiomeCovers.class, EventType.Biome_Covers, EventHandler::handle);
-      this.getEventRegistry().register(ModifyEvents.BiomeEnvironments.class, EventType.Biome_Environments, EventHandler::handle);
-      this.getEventRegistry().register(ModifyEvents.BiomeFluids.class, EventType.Biome_Fluids, EventHandler::handle);
-      this.getEventRegistry().register(ModifyEvents.BiomeDynamicLayers.class, EventType.Biome_Dynamic_Layers, EventHandler::handle);
-      this.getEventRegistry().register(ModifyEvents.BiomeStaticLayers.class, EventType.Biome_Static_Layers, EventHandler::handle);
-      this.getEventRegistry().register(ModifyEvents.BiomePrefabs.class, EventType.Biome_Prefabs, EventHandler::handle);
-      this.getEventRegistry().register(ModifyEvents.BiomeTints.class, EventType.Biome_Tints, EventHandler::handle);
-      this.getEventRegistry().register(ModifyEvents.CaveTypes.class, EventType.Cave_Types, EventHandler::handle);
-      this.getEventRegistry().register(ModifyEvents.CaveCovers.class, EventType.Cave_Covers, EventHandler::handle);
-      this.getEventRegistry().register(ModifyEvents.CavePrefabs.class, EventType.Cave_Prefabs, EventHandler::handle);
-      this.getCodecRegistry(Content.TYPE_CODEC).register(Priority.DEFAULT, "File", FileRef.class, FileRef.CODEC);
+      this.getEventRegistry().register(ModifyEvents.BiomeCovers.class, Content.Type.BIOME_COVER, EventHandler::handle);
+      this.getEventRegistry().register(ModifyEvents.BiomeEnvironments.class, Content.Type.BIOME_ENVIRONMENT, EventHandler::handle);
+      this.getEventRegistry().register(ModifyEvents.BiomeFluids.class, Content.Type.BIOME_FLUID, EventHandler::handle);
+      this.getEventRegistry().register(ModifyEvents.BiomeDynamicLayers.class, Content.Type.BIOME_DYNAMIC_LAYER, EventHandler::handle);
+      this.getEventRegistry().register(ModifyEvents.BiomeStaticLayers.class, Content.Type.BIOME_STATIC_LAYER, EventHandler::handle);
+      this.getEventRegistry().register(ModifyEvents.BiomePrefabs.class, Content.Type.BIOME_PREFAB, EventHandler::handle);
+      this.getEventRegistry().register(ModifyEvents.BiomeTints.class, Content.Type.BIOME_TINT, EventHandler::handle);
+      this.getEventRegistry().register(ModifyEvents.CaveTypes.class, Content.Type.CAVE_TYPE, EventHandler::handle);
+      this.getEventRegistry().register(ModifyEvents.CaveCovers.class, Content.Type.CAVE_COVER, EventHandler::handle);
+      this.getEventRegistry().register(ModifyEvents.CavePrefabs.class, Content.Type.CAVE_PREFAB, EventHandler::handle);
+      this.getCodecRegistry(CaveTypeGenerator.TYPE_CODEC).register("OreCluster", OreCluster.class, OreCluster.CODEC);
+      this.getCodecRegistry(Content.TYPE_CODEC)
+         .register("File", FileContent.class, FileContent.CODEC)
+         .register("BiomeCover", BiomeCoverContent.class, BiomeCoverContent.CODEC)
+         .register("BiomeFluid", BiomeFluidContent.class, BiomeFluidContent.CODEC)
+         .register("BiomeDynamicLayer", BiomeDynamicLayerContent.class, BiomeDynamicLayerContent.CODEC)
+         .register("BiomeStaticLayer", BiomeStaticLayerContent.class, BiomeStaticLayerContent.CODEC)
+         .register("BiomePrefab", BiomePrefabContent.class, BiomePrefabContent.CODEC)
+         .register("BiomeTint", BiomeTintContent.class, BiomeTintContent.CODEC)
+         .register("CaveCover", CaveCoverContent.class, CaveCoverContent.CODEC)
+         .register("CavePrefab", CavePrefabContent.class, CavePrefabContent.CODEC)
+         .register("CaveType", CaveTypeContent.class, CaveTypeContent.CODEC);
       this.getCodecRegistry(Op.TYPE_CODEC)
-         .register(Priority.DEFAULT, "Add", AddOp.class, AddOp.CODEC)
-         .register(Priority.NORMAL, "Remove", RemoveOp.class, RemoveOp.CODEC);
+         .register("Add", AddOp.class, AddOp.CODEC)
+         .register("Remove", RemoveOp.class, RemoveOp.CODEC)
+         .register("Log", LogOp.class, LogOp.CODEC);
       this.getAssetRegistry()
          .register(
             ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
@@ -95,10 +119,13 @@ public class WorldGenPlugin extends JavaPlugin {
 
          for (WorldGenPlugin.Version version : packs) {
             validateVersion(version, packs);
-            assets.registerPack(version.getPackName(), version.path, version.manifest, false);
-            Semver latest = (Semver)versions.get(version.name);
-            if (latest == null || version.manifest.getVersion().compareTo(latest) > 0) {
-               versions.put(version.name, version.manifest.getVersion());
+            if (!assets.registerPack(version.getPackName(), version.path, version.manifest, AssetPack.PackSource.CLASSPATH)) {
+               this.getLogger().at(Level.SEVERE).log("Failed to register world gen asset pack: %s", version.getPackName());
+            } else {
+               Semver latest = (Semver)versions.get(version.name);
+               if (latest == null || version.manifest.getVersion().compareTo(latest) > 0) {
+                  versions.put(version.name, version.manifest.getVersion());
+               }
             }
          }
 

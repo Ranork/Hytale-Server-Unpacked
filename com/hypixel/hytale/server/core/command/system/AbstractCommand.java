@@ -18,6 +18,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ListArgumen
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
+import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.plugin.PluginBase;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -27,7 +28,9 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectBidirectionalIterator;
 import it.unimi.dsi.fastutil.objects.ObjectBooleanPair;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -166,8 +169,15 @@ public abstract class AbstractCommand {
       this.permissionGroups = Arrays.asList(groups);
    }
 
-   protected void setPermissionGroup(@Nullable GameMode gameMode) {
-      this.setPermissionGroups(gameMode == null ? null : gameMode.toString());
+   @Deprecated(forRemoval = true)
+   protected void setPermissionGroup(@Nonnull GameMode gameMode) {
+      switch (gameMode) {
+         case Adventure:
+            this.setPermissionGroups("hytale:Adventurer");
+            break;
+         case Creative:
+            this.setPermissionGroups("hytale:WorldEditor");
+      }
    }
 
    @Nonnull
@@ -278,6 +288,9 @@ public abstract class AbstractCommand {
 
    public void completeRegistration() throws GeneralCommandException {
       this.hasBeenRegistered = true;
+      if (this.permission != null) {
+         PermissionsModule.registerPermission(this.permission);
+      }
 
       for (AbstractCommand command : this.subCommands.values()) {
          command.completeRegistration();
@@ -507,7 +520,11 @@ public abstract class AbstractCommand {
       if (permission == null) {
          return true;
       } else if (sender.hasPermission(permission)) {
-         return this.parentCommand == null ? true : this.parentCommand.hasPermission(sender);
+         if (this.parentCommand == null) {
+            return true;
+         } else {
+            return this.permissionGroups != null ? true : this.parentCommand.hasPermission(sender);
+         }
       } else {
          return false;
       }
@@ -954,7 +971,47 @@ public abstract class AbstractCommand {
       return this.requiredArguments;
    }
 
+   @Nonnull
+   public Map<String, AbstractOptionalArg<?, ?>> getOptionalArguments() {
+      return this.optionalArguments;
+   }
+
+   @Nonnull
+   public Collection<AbstractCommand> getVariantCommands() {
+      return this.variantCommands.values();
+   }
+
+   @Nullable
+   public AbstractCommand getVariantByArgCount(int requiredArgCount) {
+      return (AbstractCommand)this.variantCommands.get(requiredArgCount);
+   }
+
+   @Nullable
+   public List<AbstractCommand.SuggestionOverrideEntry> getSuggestionOverrides() {
+      List<AbstractCommand.SuggestionOverrideEntry> result = null;
+
+      for (int i = 0; i < this.requiredArguments.size(); i++) {
+         ArgumentType<?> overrideType = this.requiredArguments.get(i).getSuggestionOverrideType();
+         if (overrideType != null) {
+            if (result == null) {
+               result = new ArrayList<>();
+            }
+
+            result.add(new AbstractCommand.SuggestionOverrideEntry(i, overrideType.getNumberOfParameters(), overrideType));
+         }
+      }
+
+      return result;
+   }
+
    public boolean hasBeenRegistered() {
       return this.hasBeenRegistered;
+   }
+
+   public record SuggestionOverrideEntry(int argStart, int argCount, @Nonnull ArgumentType<?> overrideType) {
+      @Nonnull
+      public String argTypeId() {
+         return this.overrideType.getSuggestionTypeId();
+      }
    }
 }

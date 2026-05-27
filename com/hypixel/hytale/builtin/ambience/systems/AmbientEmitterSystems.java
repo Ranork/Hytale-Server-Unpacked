@@ -187,7 +187,7 @@ public class AmbientEmitterSystems {
          if (spawnedEmitterRef != null && spawnedEmitterRef.isValid()) {
             TransformComponent ownedEmitterTransform = commandBuffer.getComponent(spawnedEmitterRef, this.transformComponentType);
             if (ownedEmitterTransform != null) {
-               if (transformComponent.getPosition().distanceSquaredTo(ownedEmitterTransform.getPosition()) > 1.0) {
+               if (transformComponent.getPosition().distanceSquared(ownedEmitterTransform.getPosition()) > 1.0) {
                   ownedEmitterTransform.setPosition(transformComponent.getPosition());
                }
             }

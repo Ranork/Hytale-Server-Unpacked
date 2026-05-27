@@ -4,10 +4,12 @@ import com.hypixel.hytale.protocol.Asset;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,34 +48,38 @@ public class RemoveAssets implements Packet, ToClientPacket {
 
    @Nonnull
    public static RemoveAssets deserialize(@Nonnull ByteBuf buf, int offset) {
-      RemoveAssets obj = new RemoveAssets();
-      byte nullBits = buf.getByte(offset);
-      int pos = offset + 1;
-      if ((nullBits & 1) != 0) {
-         int assetCount = VarInt.peek(buf, pos);
-         if (assetCount < 0) {
-            throw ProtocolException.negativeLength("Asset", assetCount);
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("RemoveAssets", 1, buf.readableBytes() - offset);
+      } else {
+         RemoveAssets obj = new RemoveAssets();
+         byte nullBits = buf.getByte(offset);
+         int pos = offset + 1;
+         if ((nullBits & 1) != 0) {
+            int assetCount = VarInt.peek(buf, pos);
+            if (assetCount < 0) {
+               throw ProtocolException.invalidVarInt("Asset");
+            }
+
+            int assetVarLen = VarInt.size(assetCount);
+            if (assetCount > 4096000) {
+               throw ProtocolException.arrayTooLong("Asset", assetCount, 4096000);
+            }
+
+            if (pos + assetVarLen + assetCount * 64L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Asset", pos + assetVarLen + assetCount * 64, buf.readableBytes());
+            }
+
+            pos += assetVarLen;
+            obj.asset = new Asset[assetCount];
+
+            for (int i = 0; i < assetCount; i++) {
+               obj.asset[i] = Asset.deserialize(buf, pos);
+               pos += Asset.computeBytesConsumed(buf, pos);
+            }
          }
 
-         if (assetCount > 4096000) {
-            throw ProtocolException.arrayTooLong("Asset", assetCount, 4096000);
-         }
-
-         int assetVarLen = VarInt.size(assetCount);
-         if (pos + assetVarLen + assetCount * 64L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Asset", pos + assetVarLen + assetCount * 64, buf.readableBytes());
-         }
-
-         pos += assetVarLen;
-         obj.asset = new Asset[assetCount];
-
-         for (int i = 0; i < assetCount; i++) {
-            obj.asset[i] = Asset.deserialize(buf, pos);
-            pos += Asset.computeBytesConsumed(buf, pos);
-         }
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -81,7 +87,7 @@ public class RemoveAssets implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += Asset.computeBytesConsumed(buf, pos);
@@ -89,6 +95,90 @@ public class RemoveAssets implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static Asset[] getAsset(MemorySegment mem) {
+      return getAsset(mem, 0);
+   }
+
+   @Nullable
+   public static Asset[] getAsset(MemorySegment mem, int offset) {
+      if (!hasAsset(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 1;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Asset", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Asset", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Asset", off + lenOffset + len, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               Asset[] data = new Asset[len];
+
+               for (int i = 0; i < len; i++) {
+                  data[i] = Asset.toObject(mem, off);
+                  off += data[i].computeSize();
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   public static boolean hasAsset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static RemoveAssets toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static RemoveAssets toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("RemoveAssets", offset + 1, (int)mem.byteSize());
+      } else {
+         Asset[] asset = null;
+         if (hasAsset(mem, offset)) {
+            int off = offset + 1;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("Asset", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.arrayTooLong("Asset", len, 4096000);
+            }
+
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Asset", off + lenOffset + len, (int)mem.byteSize());
+            }
+
+            off += lenOffset;
+            asset = new Asset[len];
+
+            for (int i = 0; i < len; i++) {
+               asset[i] = Asset.toObject(mem, off);
+               off += asset[i].computeSize();
+            }
+         }
+
+         return new RemoveAssets(asset);
+      }
    }
 
    @Override
@@ -110,6 +200,33 @@ public class RemoveAssets implements Packet, ToClientPacket {
             item.serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.asset != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 1;
+      if (this.asset != null) {
+         if (this.asset.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Asset", this.asset.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.asset.length);
+         int assetValueOffset = 0;
+
+         for (int i = 0; i < this.asset.length; i++) {
+            assetValueOffset += this.asset[i].serialize(mem, varOffset + assetValueOffset);
+         }
+
+         varOffset += assetValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -144,7 +261,7 @@ public class RemoveAssets implements Packet, ToClientPacket {
                return ValidationResult.error("Asset exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(assetCount);
 
             for (int i = 0; i < assetCount; i++) {
                ValidationResult structResult = Asset.validateStructure(buffer, pos);

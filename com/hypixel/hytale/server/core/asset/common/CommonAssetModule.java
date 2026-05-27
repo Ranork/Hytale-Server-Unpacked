@@ -392,6 +392,10 @@ public class CommonAssetModule extends JavaPlugin {
          long walkFileTreeStart = System.nanoTime();
          final ObjectArrayList<CompletableFuture<Void>> futures = new ObjectArrayList();
          Files.walkFileTree(commonPath, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+            {
+               Objects.requireNonNull(CommonAssetModule.this);
+            }
+
             @Nonnull
             public FileVisitResult visitFile(@Nonnull Path path, @Nonnull BasicFileAttributes attrs) throws IOException {
                if (!attrs.isRegularFile()) {
@@ -598,6 +602,8 @@ public class CommonAssetModule extends JavaPlugin {
       private final Path commonPath;
 
       public CommonAssetMonitorHandler(AssetPack pack, Path commonPath) {
+         Objects.requireNonNull(CommonAssetModule.this);
+         super();
          this.pack = pack;
          this.commonPath = commonPath;
       }
@@ -667,9 +673,6 @@ public class CommonAssetModule extends JavaPlugin {
                      CommonAssetModule.this.getLogger().at(Level.INFO).log("File Modified: %s", path);
                      createdOrModifiedFilesToLoad.add(path);
                   }
-                  break;
-               default:
-                  throw new IllegalArgumentException("Unknown eventKind " + eventKind);
             }
          }
 

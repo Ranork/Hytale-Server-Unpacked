@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.command.commands.server;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractAsyncCommand;
@@ -24,7 +23,7 @@ import javax.annotation.Nonnull;
 public class WhoCommand extends AbstractAsyncCommand {
    public WhoCommand() {
       super("who", "server.commands.who.desc");
-      this.setPermissionGroup(GameMode.Adventure);
+      this.setPermissionGroups("hytale:Adventurer");
    }
 
    @Nonnull

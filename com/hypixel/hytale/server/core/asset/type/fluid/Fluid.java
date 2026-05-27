@@ -35,13 +35,12 @@ import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.InteractionTypeUtils;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
-import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.ISectionPalette;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import io.netty.buffer.ByteBuf;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.AbstractSectionPalette;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import java.lang.foreign.MemorySegment;
 import java.util.Collections;
 import java.util.Map;
-import java.util.function.ToIntFunction;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -191,13 +190,30 @@ public class Fluid implements JsonAssetWithMap<String, IndexedLookupTableAssetMa
       )
    };
    public static final ShaderType[] DEFAULT_SHADER_EFFECTS = new ShaderType[]{ShaderType.None};
-   public static final ISectionPalette.KeySerializer KEY_SERIALIZER = (buf, id) -> {
-      String key = getAssetMap().getAssetOrDefault(id, Fluid.UNKNOWN).getId();
-      ByteBufUtil.writeUTF(buf, key);
+   public static final AbstractSectionPalette.KeyMemorySerializer KEY_MEMORY_SERIALIZER = new AbstractSectionPalette.KeyMemorySerializer() {
+      @Override
+      public int serialize(MemorySegment memorySegment, int offset, int index) {
+         String key = Fluid.getAssetMap().getAssetOrDefault(index, Fluid.UNKNOWN).getId();
+         return MemorySegmentUtil.writeUTF(memorySegment, offset, key);
+      }
+
+      @Override
+      public int keySize(int index) {
+         String key = Fluid.getAssetMap().getAssetOrDefault(index, Fluid.UNKNOWN).getId();
+         return MemorySegmentUtil.utf8Size(key);
+      }
    };
-   public static final ToIntFunction<ByteBuf> KEY_DESERIALIZER = byteBuf -> {
-      String fluid = ByteBufUtil.readUTF(byteBuf);
-      return getFluidIdOrUnknown(fluid, "Failed to find fluid '%s' in chunk section!", fluid);
+   public static final AbstractSectionPalette.KeyMemoryDeserializer KEY_MEMORY_DESERIALIZER = new AbstractSectionPalette.KeyMemoryDeserializer() {
+      @Override
+      public int deserialize(MemorySegment mem, int offset) {
+         String fluid = MemorySegmentUtil.readUTF(mem, offset);
+         return Fluid.getFluidIdOrUnknown(fluid, "Failed to find fluid '%s' in chunk section!", fluid);
+      }
+
+      @Override
+      public int keySize(MemorySegment mem, int offset) {
+         return MemorySegmentUtil.utf8Size(mem, offset);
+      }
    };
    public static final int EMPTY_ID = 0;
    public static final String EMPTY_KEY = "Empty";

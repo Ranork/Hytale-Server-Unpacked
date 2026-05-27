@@ -72,18 +72,18 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
                commandBuilder.set("#BlockRelative #CheckBox.Value", (relativeMask & 64) != 0);
                Transform transform = teleporter.getTransform();
                if (transform != null) {
-                  commandBuilder.set("#X #Input.Value", transform.getPosition().getX());
-                  commandBuilder.set("#Y #Input.Value", transform.getPosition().getY());
-                  commandBuilder.set("#Z #Input.Value", transform.getPosition().getZ());
+                  commandBuilder.set("#X #Input.Value", transform.getPosition().x());
+                  commandBuilder.set("#Y #Input.Value", transform.getPosition().y());
+                  commandBuilder.set("#Z #Input.Value", transform.getPosition().z());
                }
 
                commandBuilder.set("#X #CheckBox.Value", (relativeMask & 1) != 0);
                commandBuilder.set("#Y #CheckBox.Value", (relativeMask & 2) != 0);
                commandBuilder.set("#Z #CheckBox.Value", (relativeMask & 4) != 0);
                if (transform != null) {
-                  commandBuilder.set("#Yaw #Input.Value", transform.getRotation().getYaw());
-                  commandBuilder.set("#Pitch #Input.Value", transform.getRotation().getPitch());
-                  commandBuilder.set("#Roll #Input.Value", transform.getRotation().getRoll());
+                  commandBuilder.set("#Yaw #Input.Value", transform.getRotation().yaw());
+                  commandBuilder.set("#Pitch #Input.Value", transform.getRotation().pitch());
+                  commandBuilder.set("#Roll #Input.Value", transform.getRotation().roll());
                }
 
                commandBuilder.set("#Yaw #CheckBox.Value", (relativeMask & 8) != 0);
@@ -217,7 +217,7 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
                   }
 
                   if (oldOwnedWarp != null && !oldOwnedWarp.isEmpty()) {
-                     TeleportPlugin.get().getWarps().remove(oldOwnedWarp.toLowerCase());
+                     TeleportPlugin.get().removeWarp(oldOwnedWarp);
                   }
 
                   playerComponent.getPageManager().setPage(ref, store, Page.None);
@@ -230,9 +230,9 @@ public class TeleporterSettingsPage extends InteractiveCustomUIPage<TeleporterSe
                      case FULL:
                         teleporterComponent.setWorldUuid(data.world != null && !data.world.isEmpty() ? UUID.fromString(data.world) : null);
                         Transform transform = new Transform();
-                        transform.getPosition().setX(data.x);
-                        transform.getPosition().setY(data.y);
-                        transform.getPosition().setZ(data.z);
+                        transform.getPosition().x = data.x;
+                        transform.getPosition().y = data.y;
+                        transform.getPosition().z = data.z;
                         transform.getRotation().setYaw(data.yaw);
                         transform.getRotation().setPitch(data.pitch);
                         transform.getRotation().setRoll(data.roll);

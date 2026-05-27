@@ -2,7 +2,7 @@ package com.hypixel.hytale.server.core.io.transport;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.FormattedMessage;
-import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
+import com.hypixel.hytale.protocol.io.ServerListener;
 import com.hypixel.hytale.protocol.packets.connection.DisconnectType;
 import com.hypixel.hytale.protocol.packets.connection.QuicApplicationErrorCode;
 import com.hypixel.hytale.protocol.packets.connection.ServerDisconnect;
@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.core.io.netty.HytaleChannelInitializer;
 import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -44,6 +43,8 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.util.Objects;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -120,11 +121,11 @@ public class QUICTransport implements Transport {
    }
 
    @Override
-   public ChannelFuture bind(@Nonnull InetSocketAddress address) throws InterruptedException {
+   public Future<ServerListener> bind(@Nonnull InetSocketAddress address) throws InterruptedException {
       if (address.getAddress() instanceof Inet4Address) {
-         return this.bootstrapIpv4.bind(address).sync();
+         return NettyUtil.wrapChannelFuture(this.bootstrapIpv4.bind(address), v -> new NettyUtil.NettyChannelServerListener(v.channel()));
       } else if (address.getAddress() instanceof Inet6Address) {
-         return this.bootstrapIpv6.bind(address).sync();
+         return NettyUtil.wrapChannelFuture(this.bootstrapIpv6.bind(address), v -> new NettyUtil.NettyChannelServerListener(v.channel()));
       } else {
          throw new UnsupportedOperationException("Unsupported address type: " + address.getAddress().getClass());
       }
@@ -172,6 +173,10 @@ public class QUICTransport implements Transport {
             .option(QuicChannelOption.QLOG, System.getProperty("hytale.qlog") != null ? new QLogConfiguration(".", "hytale-server-quic-qlogs", "") : null)
             .handler(
                new ChannelInboundHandlerAdapter() {
+                  {
+                     Objects.requireNonNull(QuicChannelInboundHandlerAdapter.this);
+                  }
+
                   public boolean isSharable() {
                      return true;
                   }
@@ -210,7 +215,7 @@ public class QUICTransport implements Transport {
                         QUICTransport.LOGGER
                            .at(Level.WARNING)
                            .log("Connection rejected: no client certificate from %s (SNI: %s)", NettyUtil.formatRemoteAddress(channel), sni);
-                        ProtocolUtil.closeConnection(channel);
+                        NettyUtil.closeConnection(channel);
                      } else {
                         channel.attr(QUICTransport.CLIENT_CERTIFICATE_ATTR).set(clientCert);
                         QUICTransport.LOGGER.at(Level.FINE).log("Client certificate: %s", clientCert.getSubjectX500Principal().getName());
@@ -243,9 +248,9 @@ public class QUICTransport implements Transport {
                      Channel channel = ctx.channel();
                      if (channel.isWritable()) {
                         FormattedMessage disconnectReason = Message.translation("server.general.disconnect.internalServerError").getFormattedMessage();
-                        channel.writeAndFlush(new ServerDisconnect(disconnectReason, DisconnectType.Crash)).addListener(ProtocolUtil.CLOSE_ON_COMPLETE);
+                        channel.writeAndFlush(new ServerDisconnect(disconnectReason, DisconnectType.Crash)).addListener(NettyUtil.CLOSE_ON_COMPLETE);
                      } else {
-                        ProtocolUtil.closeApplicationConnection(channel);
+                        NettyUtil.closeApplicationConnection(channel);
                      }
                   }
                }

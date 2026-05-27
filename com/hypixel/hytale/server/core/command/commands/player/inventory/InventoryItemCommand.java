@@ -25,6 +25,7 @@ public class InventoryItemCommand extends AbstractPlayerCommand {
 
    public InventoryItemCommand() {
       super("item", "server.commands.inventoryitem.desc");
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

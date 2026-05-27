@@ -23,6 +23,7 @@ public class InstanceExitCommand extends AbstractPlayerCommand {
 
    public InstanceExitCommand() {
       super("exit", "server.commands.instances.exit.desc");
+      this.setPermissionGroups("hytale:Adventurer");
       this.addAliases("leave");
       this.addUsageVariant(new InstanceExitCommand.InstanceExitOtherCommand());
    }
@@ -49,6 +50,12 @@ public class InstanceExitCommand extends AbstractPlayerCommand {
 
       InstanceExitOtherCommand() {
          super("server.commands.instances.exit.other.desc");
+         this.setPermissionGroups("hytale:WorldEditor");
+      }
+
+      @Override
+      protected String generatePermissionNode() {
+         return "other";
       }
 
       @Override

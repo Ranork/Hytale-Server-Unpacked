@@ -11,7 +11,6 @@ import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.math.codec.Vector3iArrayCodec;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolHideAnchors;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -28,6 +27,7 @@ import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PrefabEditSession implements Resource<EntityStore> {
    @Nonnull
@@ -106,7 +106,7 @@ public class PrefabEditSession implements Resource<EntityStore> {
       @Nonnull Path prefabPath, @Nonnull Vector3i minPoint, @Nonnull Vector3i maxPoint, @Nonnull Vector3i anchorPoint, @Nonnull Vector3i pastePosition
    ) {
       if (this.loadedPrefabMetadata.isEmpty()) {
-         this.spawnPoint.assign(maxPoint);
+         this.spawnPoint.set(maxPoint);
       }
 
       PrefabEditingMetadata prefabEditingMetadata = new PrefabEditingMetadata(

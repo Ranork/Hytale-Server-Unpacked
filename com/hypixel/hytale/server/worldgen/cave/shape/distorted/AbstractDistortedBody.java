@@ -2,11 +2,11 @@ package com.hypixel.hytale.server.worldgen.cave.shape.distorted;
 
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.logic.GeneralNoise;
 import com.hypixel.hytale.procedurallib.random.CoordinateRotator;
 import com.hypixel.hytale.server.worldgen.cave.CaveType;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public abstract class AbstractDistortedBody extends AbstractDistortedShape {
    @Nonnull

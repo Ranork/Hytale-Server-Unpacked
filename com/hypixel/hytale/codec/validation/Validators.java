@@ -19,6 +19,7 @@ import com.hypixel.hytale.codec.validation.validator.OrValidator;
 import com.hypixel.hytale.codec.validation.validator.RangeValidator;
 import com.hypixel.hytale.codec.validation.validator.RequiredMapKeysValidator;
 import com.hypixel.hytale.codec.validation.validator.SequentialDoubleArrayValidator;
+import com.hypixel.hytale.codec.validation.validator.ServerLocKeyValidator;
 import com.hypixel.hytale.codec.validation.validator.UniqueInArrayValidator;
 import java.util.List;
 import java.util.Map;
@@ -158,5 +159,10 @@ public class Validators {
    @Nonnull
    public static <T> Validator<List<T>> listItem(Validator<T> validator) {
       return new ListValidator<>(validator);
+   }
+
+   @Nonnull
+   public static Validator<String> serverLocKeyValidator() {
+      return ServerLocKeyValidator.INSTANCE;
    }
 }

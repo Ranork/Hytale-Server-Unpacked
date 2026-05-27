@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.core.universe.world.worldgen.WorldGenLoadExcept
 import com.hypixel.hytale.server.core.universe.world.worldmap.IWorldMap;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongListIterator;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.IOException;
@@ -108,8 +109,8 @@ public class WorldGenReloadCommand extends AbstractAsyncWorldCommand {
    private static CompletableFuture<Void> clearChunks(@Nonnull CommandContext context, @Nonnull World world) {
       ChunkStore chunkComponentStore = world.getChunkStore();
       Store<ChunkStore> componentStore = chunkComponentStore.getStore();
+      world.lockSaving();
       ChunkSavingSystems.Data data = componentStore.getResource(ChunkStore.SAVE_RESOURCE);
-      data.isSaving = false;
       data.clearSaveQueue();
       context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_RELOAD_CHUNK_SAVING_DISABLED);
       context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_RELOAD_DELETING_CHUNKS);
@@ -132,7 +133,7 @@ public class WorldGenReloadCommand extends AbstractAsyncWorldCommand {
                   AtomicInteger counter = new AtomicInteger();
                   double total = indexes.size();
                   ObjectArrayList<CompletableFuture<Void>> futures = new ObjectArrayList();
-                  LongIterator iterator = indexes.iterator();
+                  LongListIterator iterator = indexes.iterator();
 
                   while (iterator.hasNext()) {
                      long index = iterator.nextLong();
@@ -174,9 +175,7 @@ public class WorldGenReloadCommand extends AbstractAsyncWorldCommand {
                return CompletableFuture.allOf((CompletableFuture<?>[])regenerateFutures.toArray(CompletableFuture[]::new));
             }, world)
             .thenRunAsync(() -> {
-               Store<ChunkStore> chunkStore = chunkComponentStore.getStore();
-               ChunkSavingSystems.Data saveData = chunkStore.getResource(ChunkStore.SAVE_RESOURCE);
-               saveData.isSaving = true;
+               world.unlockSaving();
                context.sendMessage(MESSAGE_COMMANDS_WORLD_GEN_RELOAD_CHUNK_SAVING_ENABLED);
             }, world);
       }

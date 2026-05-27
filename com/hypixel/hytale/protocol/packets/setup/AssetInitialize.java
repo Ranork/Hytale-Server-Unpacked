@@ -4,8 +4,11 @@ import com.hypixel.hytale.protocol.Asset;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -46,12 +49,16 @@ public class AssetInitialize implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetInitialize deserialize(@Nonnull ByteBuf buf, int offset) {
-      AssetInitialize obj = new AssetInitialize();
-      obj.size = buf.getIntLE(offset + 0);
-      int pos = offset + 4;
-      obj.asset = Asset.deserialize(buf, pos);
-      pos += Asset.computeBytesConsumed(buf, pos);
-      return obj;
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("AssetInitialize", 4, buf.readableBytes() - offset);
+      } else {
+         AssetInitialize obj = new AssetInitialize();
+         obj.size = buf.getIntLE(offset + 0);
+         int pos = offset + 4;
+         obj.asset = Asset.deserialize(buf, pos);
+         pos += Asset.computeBytesConsumed(buf, pos);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -60,10 +67,50 @@ public class AssetInitialize implements Packet, ToClientPacket {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 4L;
+   }
+
+   public static Asset getAsset(MemorySegment mem) {
+      return getAsset(mem, 0);
+   }
+
+   public static Asset getAsset(MemorySegment mem, int offset) {
+      return Asset.toObject(mem, offset + 4);
+   }
+
+   public static int getSize(MemorySegment mem) {
+      return getSize(mem, 0);
+   }
+
+   public static int getSize(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static AssetInitialize toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetInitialize toObject(MemorySegment mem, int offset) {
+      if (offset + 4 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetInitialize", offset + 4, (int)mem.byteSize());
+      } else {
+         return new AssetInitialize(Asset.toObject(mem, offset + 4), mem.get(PacketIO.PROTO_INT, (long)(offset + 0)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.size);
       this.asset.serialize(buf);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.size);
+      int varOffset = offset + 4;
+      varOffset += this.asset.serialize(mem, varOffset);
+      return varOffset - offset;
    }
 
    @Override

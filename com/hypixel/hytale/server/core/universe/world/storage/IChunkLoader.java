@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.core.universe.world.storage;
 
 import com.hypixel.hytale.component.Holder;
-import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.longs.LongList;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
@@ -12,5 +12,5 @@ public interface IChunkLoader extends Closeable {
    CompletableFuture<Holder<ChunkStore>> loadHolder(int var1, int var2);
 
    @Nonnull
-   LongSet getIndexes() throws IOException;
+   LongList getIndexes() throws IOException;
 }

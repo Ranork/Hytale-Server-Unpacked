@@ -4,20 +4,20 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.protocol.Vector3f;
-import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
 
 public class ParticleAttractor implements NetworkSerializable<com.hypixel.hytale.protocol.ParticleAttractor> {
    public static final BuilderCodec<ParticleAttractor> CODEC = BuilderCodec.builder(ParticleAttractor.class, ParticleAttractor::new)
       .addField(
-         new KeyedCodec<>("Position", ProtocolCodecs.VECTOR3F),
+         new KeyedCodec<>("Position", Vector3fUtil.CODEC),
          (particleAttractor, o) -> particleAttractor.position = o,
          particleAttractor -> particleAttractor.position
       )
       .addField(
-         new KeyedCodec<>("RadialAxis", ProtocolCodecs.VECTOR3F),
+         new KeyedCodec<>("RadialAxis", Vector3fUtil.CODEC),
          (particleAttractor, o) -> particleAttractor.radialAxis = o,
          particleAttractor -> particleAttractor.radialAxis
       )
@@ -40,7 +40,7 @@ public class ParticleAttractor implements NetworkSerializable<com.hypixel.hytale
          particleAttractor -> particleAttractor.radialTangentAcceleration
       )
       .addField(
-         new KeyedCodec<>("LinearAcceleration", ProtocolCodecs.VECTOR3F),
+         new KeyedCodec<>("LinearAcceleration", Vector3fUtil.CODEC),
          (particleAttractor, o) -> particleAttractor.linearAcceleration = o,
          particleAttractor -> particleAttractor.linearAcceleration
       )
@@ -55,12 +55,12 @@ public class ParticleAttractor implements NetworkSerializable<com.hypixel.hytale
          particleAttractor -> particleAttractor.radialTangentImpulse
       )
       .addField(
-         new KeyedCodec<>("LinearImpulse", ProtocolCodecs.VECTOR3F),
+         new KeyedCodec<>("LinearImpulse", Vector3fUtil.CODEC),
          (particleAttractor, o) -> particleAttractor.linearImpulse = o,
          particleAttractor -> particleAttractor.linearImpulse
       )
       .addField(
-         new KeyedCodec<>("DampingMultiplier", ProtocolCodecs.VECTOR3F),
+         new KeyedCodec<>("DampingMultiplier", Vector3fUtil.CODEC),
          (particleAttractor, o) -> particleAttractor.dampingMultiplier = o,
          particleAttractor -> particleAttractor.dampingMultiplier
       )

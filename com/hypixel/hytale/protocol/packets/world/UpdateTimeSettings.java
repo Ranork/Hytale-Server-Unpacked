@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.world;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -50,16 +53,73 @@ public class UpdateTimeSettings implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateTimeSettings deserialize(@Nonnull ByteBuf buf, int offset) {
-      UpdateTimeSettings obj = new UpdateTimeSettings();
-      obj.daytimeDurationSeconds = buf.getIntLE(offset + 0);
-      obj.nighttimeDurationSeconds = buf.getIntLE(offset + 4);
-      obj.totalMoonPhases = buf.getByte(offset + 8);
-      obj.timePaused = buf.getByte(offset + 9) != 0;
-      return obj;
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("UpdateTimeSettings", 10, buf.readableBytes() - offset);
+      } else {
+         UpdateTimeSettings obj = new UpdateTimeSettings();
+         obj.daytimeDurationSeconds = buf.getIntLE(offset + 0);
+         obj.nighttimeDurationSeconds = buf.getIntLE(offset + 4);
+         obj.totalMoonPhases = buf.getByte(offset + 8);
+         obj.timePaused = buf.getByte(offset + 9) != 0;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 10;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 10L;
+   }
+
+   public static int getDaytimeDurationSeconds(MemorySegment mem) {
+      return getDaytimeDurationSeconds(mem, 0);
+   }
+
+   public static int getDaytimeDurationSeconds(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static int getNighttimeDurationSeconds(MemorySegment mem) {
+      return getNighttimeDurationSeconds(mem, 0);
+   }
+
+   public static int getNighttimeDurationSeconds(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 4));
+   }
+
+   public static byte getTotalMoonPhases(MemorySegment mem) {
+      return getTotalMoonPhases(mem, 0);
+   }
+
+   public static byte getTotalMoonPhases(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, (long)(offset + 8));
+   }
+
+   public static boolean getTimePaused(MemorySegment mem) {
+      return getTimePaused(mem, 0);
+   }
+
+   public static boolean getTimePaused(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 9));
+   }
+
+   public static UpdateTimeSettings toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateTimeSettings toObject(MemorySegment mem, int offset) {
+      if (offset + 10 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateTimeSettings", offset + 10, (int)mem.byteSize());
+      } else {
+         return new UpdateTimeSettings(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_BYTE, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 9))
+         );
+      }
    }
 
    @Override
@@ -68,6 +128,15 @@ public class UpdateTimeSettings implements Packet, ToClientPacket {
       buf.writeIntLE(this.nighttimeDurationSeconds);
       buf.writeByte(this.totalMoonPhases);
       buf.writeByte(this.timePaused ? 1 : 0);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.daytimeDurationSeconds);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 4), this.nighttimeDurationSeconds);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 8), this.totalMoonPhases);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.timePaused);
+      return 10;
    }
 
    @Override

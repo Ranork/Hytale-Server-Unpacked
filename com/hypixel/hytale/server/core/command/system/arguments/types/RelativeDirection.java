@@ -1,12 +1,12 @@
 package com.hypixel.hytale.server.core.command.system.arguments.types;
 
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.ParseResult;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public enum RelativeDirection {
    FORWARD,
@@ -52,7 +52,7 @@ public enum RelativeDirection {
       } else {
          return switch (direction) {
             case FORWARD -> headRotation.getHorizontalAxisDirection();
-            case BACKWARD -> headRotation.getHorizontalAxisDirection().clone().scale(-1);
+            case BACKWARD -> new Vector3i(headRotation.getHorizontalAxisDirection()).negate();
             case LEFT -> rotateLeft(headRotation.getHorizontalAxisDirection());
             case RIGHT -> rotateRight(headRotation.getHorizontalAxisDirection());
             case UP -> new Vector3i(0, 1, 0);
@@ -73,13 +73,13 @@ public enum RelativeDirection {
    @Nonnull
    private static Axis getHorizontalAxis(@Nonnull HeadRotation headRotation) {
       Vector3i horizontalDir = headRotation.getHorizontalAxisDirection();
-      return horizontalDir.getX() != 0 ? Axis.X : Axis.Z;
+      return horizontalDir.x() != 0 ? Axis.X : Axis.Z;
    }
 
    @Nonnull
    private static Axis getPerpendicularHorizontalAxis(@Nonnull HeadRotation headRotation) {
       Vector3i horizontalDir = headRotation.getHorizontalAxisDirection();
-      return horizontalDir.getX() != 0 ? Axis.Z : Axis.X;
+      return horizontalDir.x() != 0 ? Axis.Z : Axis.X;
    }
 
    @Nonnull

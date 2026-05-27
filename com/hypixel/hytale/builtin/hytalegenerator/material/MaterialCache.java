@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockRotationUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nonnull;
@@ -66,9 +67,10 @@ public class MaterialCache {
    @Nonnull
    public Material getMaterialRotated(@Nonnull Material material, @Nonnull RotationTuple rotation) {
       SolidMaterial solid = material.solid();
-      RotationTuple newMaterialRotation = RotationTuple.get(solid.rotation).add(rotation);
+      RotationTuple newMaterialRotation = RotationTuple.compose(rotation, RotationTuple.get(solid.rotation));
       int rotationIndex = newMaterialRotation.index();
-      SolidMaterial rotatedSolid = this.getSolidMaterial(solid.blockId, solid.support, rotationIndex, solid.filler, solid.holder);
+      int rotatedFiller = BlockRotationUtil.getRotatedFiller(solid.filler, rotation);
+      SolidMaterial rotatedSolid = this.getSolidMaterial(solid.blockId, solid.support, rotationIndex, rotatedFiller, solid.holder);
 
       assert rotatedSolid != null;
 

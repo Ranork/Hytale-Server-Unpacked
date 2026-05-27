@@ -9,6 +9,7 @@ import javax.annotation.Nonnull;
 public class HitDetectionCommand extends CommandBase {
    public HitDetectionCommand() {
       super("hitdetection", "server.commands.hitdetection.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

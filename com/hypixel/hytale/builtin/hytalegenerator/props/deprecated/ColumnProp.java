@@ -11,13 +11,13 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionalit
 import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality.RotatedPositionsScanResult;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 @Deprecated
 public class ColumnProp extends Prop {
@@ -97,7 +97,7 @@ public class ColumnProp extends Prop {
       RotatedPositionsScanResult scanResult = new RotatedPositionsScanResult(new ArrayList<>());
 
       for (Vector3i validPosition : validPositions) {
-         patternPosition.assign(validPosition);
+         patternPosition.set(validPosition);
          PrefabRotation rotation = this.directionality.getRotationAt(patternContext);
          if (rotation != null) {
             scanResult.positions.add(new RotatedPosition(validPosition.x, validPosition.y, validPosition.z, rotation));

@@ -2,7 +2,6 @@ package com.hypixel.hytale.builtin.buildertools.commands;
 
 import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.codec.validation.validator.RangeValidator;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -19,7 +18,7 @@ public class SetToolHistorySizeCommand extends CommandBase {
 
    public SetToolHistorySizeCommand() {
       super("setToolHistorySize", "server.commands.settoolhistorysize.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

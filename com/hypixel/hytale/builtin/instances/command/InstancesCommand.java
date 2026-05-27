@@ -15,6 +15,7 @@ import javax.annotation.Nonnull;
 public class InstancesCommand extends AbstractPlayerCommand {
    public InstancesCommand() {
       super("instances", "server.commands.instances.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addAliases("instance", "inst");
       this.addSubCommand(new InstancesCommand.InstancesEditCommand());
       this.addSubCommand(new InstanceSpawnCommand());

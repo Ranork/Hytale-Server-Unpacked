@@ -4,8 +4,6 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -20,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class StackCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -29,7 +28,7 @@ public class StackCommand extends AbstractPlayerCommand {
 
    public StackCommand() {
       super("stack", "server.commands.stack.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addUsageVariant(new StackCommand.StackWithCountCommand());
       this.addUsageVariant(new StackCommand.StackWithDirectionAndCountCommand());
    }
@@ -52,7 +51,7 @@ public class StackCommand extends AbstractPlayerCommand {
 
       assert playerRefComponent != null;
 
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRefComponent, store)) {
          HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
 
          assert headRotationComponent != null;
@@ -74,7 +73,7 @@ public class StackCommand extends AbstractPlayerCommand {
 
       public StackWithCountCommand() {
          super("server.commands.stack.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override
@@ -101,7 +100,7 @@ public class StackCommand extends AbstractPlayerCommand {
 
       public StackWithDirectionAndCountCommand() {
          super("server.commands.stack.desc");
-         this.setPermissionGroup(GameMode.Creative);
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

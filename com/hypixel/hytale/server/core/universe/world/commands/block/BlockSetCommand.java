@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.core.universe.world.commands.block;
 
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -15,7 +14,7 @@ public class BlockSetCommand extends SimpleBlockCommand {
 
    public BlockSetCommand() {
       super("set", "server.commands.block.set.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

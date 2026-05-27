@@ -1,8 +1,8 @@
 package com.hypixel.hytale.builtin.hytalegenerator.math;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.Objects;
 import javax.annotation.Nonnull;
+import org.joml.Vector3dc;
 
 public class Calculator {
    public static int toIntFloored(double d) {
@@ -104,8 +104,8 @@ public class Calculator {
       return Math.sqrt(Math.pow(x2 - x1, 2.0) + Math.pow(y2 - y1, 2.0) + Math.pow(z2 - z1, 2.0));
    }
 
-   public static double distance(@Nonnull Vector3d a, @Nonnull Vector3d b) {
-      return Math.sqrt(Math.pow(b.x - a.x, 2.0) + Math.pow(b.y - a.y, 2.0) + Math.pow(b.z - a.z, 2.0));
+   public static double distance(@Nonnull Vector3dc a, @Nonnull Vector3dc b) {
+      return Math.sqrt(Math.pow(b.x() - a.x(), 2.0) + Math.pow(b.y() - a.y(), 2.0) + Math.pow(b.z() - a.z(), 2.0));
    }
 
    public static double distance(double x1, double y1, double x2, double y2) {

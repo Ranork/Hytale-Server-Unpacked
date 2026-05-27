@@ -150,7 +150,7 @@ public class PrefabEditSaveCommand extends AbstractAsyncPlayerCommand {
 
                      AssetPack resolvedPack = packForMessage;
                      return PrefabSaver.savePrefab(
-                           playerComponent,
+                           playerRef,
                            world,
                            savePath,
                            selectedPrefab.getAnchorPoint(),
@@ -224,7 +224,7 @@ public class PrefabEditSaveCommand extends AbstractAsyncPlayerCommand {
                PrefabEditingMetadata valuexx = values[i];
                Path savePath = getWritableSavePath(valuexx, targetPack);
                prefabSavingFutures[i] = PrefabSaver.savePrefab(
-                  playerComponent,
+                  playerRef,
                   world,
                   savePath,
                   valuexx.getAnchorPoint(),

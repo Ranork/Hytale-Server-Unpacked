@@ -1,18 +1,19 @@
 package com.hypixel.hytale.server.core.util;
 
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.Position;
 import com.hypixel.hytale.protocol.Transform;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PositionUtil {
    @Nonnull
    public static Transform toTransformPacket(@Nonnull com.hypixel.hytale.math.vector.Transform transform) {
       Vector3d position = transform.getPosition();
-      Vector3f rotation = transform.getRotation();
+      Rotation3f rotation = transform.getRotation();
       return new Transform(toPositionPacket(position), toDirectionPacket(rotation));
    }
 
@@ -22,8 +23,8 @@ public class PositionUtil {
    }
 
    @Nonnull
-   public static Direction toDirectionPacket(@Nonnull Vector3f rotation) {
-      return new Direction(rotation.getYaw(), rotation.getPitch(), rotation.getRoll());
+   public static Direction toDirectionPacket(@Nonnull Rotation3f rotation) {
+      return new Direction(rotation.yaw(), rotation.pitch(), rotation.roll());
    }
 
    public static com.hypixel.hytale.math.vector.Transform toTransform(@Nullable Transform transform) {
@@ -36,8 +37,8 @@ public class PositionUtil {
    }
 
    @Nonnull
-   public static Vector3f toRotation(@Nonnull Direction orientation) {
-      return new Vector3f(orientation.pitch, orientation.yaw, orientation.roll);
+   public static Rotation3f toRotation(@Nonnull Direction orientation) {
+      return new Rotation3f(orientation.pitch, orientation.yaw, orientation.roll);
    }
 
    public static boolean equals(@Nonnull Vector3d vector, @Nonnull Position position) {
@@ -50,14 +51,14 @@ public class PositionUtil {
       position.z = vector.z;
    }
 
-   public static boolean equals(@Nonnull Vector3f vector, @Nonnull Direction direction) {
-      return vector.x == direction.pitch && vector.y == direction.yaw && vector.z == direction.roll;
+   public static boolean equals(@Nonnull Rotation3fc vector, @Nonnull Direction direction) {
+      return vector.x() == direction.pitch && vector.y() == direction.yaw && vector.z() == direction.roll;
    }
 
-   public static void assign(@Nonnull Direction direction, @Nonnull Vector3f vector) {
-      direction.pitch = vector.x;
-      direction.yaw = vector.y;
-      direction.roll = vector.z;
+   public static void assign(@Nonnull Direction direction, @Nonnull Rotation3fc vector) {
+      direction.pitch = vector.x();
+      direction.yaw = vector.y();
+      direction.roll = vector.z();
    }
 
    public static void assign(@Nonnull Position position, @Nonnull Position other) {

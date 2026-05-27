@@ -8,10 +8,10 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.LegacyValidator;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.codec.validation.validator.ArrayValidator;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class KillSpawnMarkerObjectiveTaskAsset extends KillObjectiveTaskAsset {
    @Nonnull

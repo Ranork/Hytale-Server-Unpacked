@@ -6,8 +6,9 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionData;
+import com.hypixel.hytale.server.core.modules.collision.CollisionConfig;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -19,17 +20,23 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.movement.MotionKind;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotionControllerFly;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import com.hypixel.hytale.server.npc.util.PositionProbeAir;
+import java.util.Set;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class MotionControllerFly extends MotionControllerBase {
    public static final String TYPE = "Fly";
+   public static final Set<MovementMode> SUPPORTED_MOVEMENT_MODES = Set.of(MovementMode.FLY);
+   public static final Set<MovementMode> DEFAULT_SPAWN_MOVEMENT_MODES = Set.of(MovementMode.FLY);
    public static final double DAMPING_FACTOR = 20.0;
    public static final int COLLISION_MATERIALS_PASSIVE = 4;
    public static final int COLLISION_MATERIALS_ACTIVE = 6;
@@ -63,14 +70,14 @@ public class MotionControllerFly extends MotionControllerBase {
    protected double lastSpeed;
    protected float lastRoll;
    protected double currentRelativeSpeed;
-   protected double minSpeedAfterForceSquared;
+   protected double externalVelocityStopThresholdSquared;
    @Nullable
    protected double[] desiredAltitudeOverride;
 
    public MotionControllerFly(@Nonnull BuilderSupport builderSupport, @Nonnull BuilderMotionControllerFly builder) {
       super(builderSupport, builder);
       this.setGravity(builder.getGravity());
-      this.componentSelector.assign(1.0, 1.0, 1.0);
+      this.componentSelector.set(1.0, 1.0, 1.0);
       this.minAirSpeed = builder.getMinAirSpeed();
       this.maxClimbSpeed = builder.getMaxClimbSpeed();
       this.maxSinkSpeed = builder.getMaxSinkSpeed();
@@ -91,14 +98,26 @@ public class MotionControllerFly extends MotionControllerBase {
       this.fastFlyThreshold = builder.getFastFlyThreshold();
       this.autoLevel = builder.isAutoLevel();
       this.desiredAltitudeWeight = builder.getDesiredAltitudeWeight();
-      this.minSpeedAfterForceSquared = MathUtil.minValue(this.maxHorizontalSpeed, this.maxSinkSpeed, this.maxClimbSpeed);
-      this.minSpeedAfterForceSquared = this.minSpeedAfterForceSquared * this.minSpeedAfterForceSquared;
+      this.externalVelocityStopThresholdSquared = MathUtil.minValue(this.maxHorizontalSpeed, this.maxSinkSpeed, this.maxClimbSpeed);
+      this.externalVelocityStopThresholdSquared = this.externalVelocityStopThresholdSquared * this.externalVelocityStopThresholdSquared;
    }
 
    @Nonnull
    @Override
    public String getType() {
       return "Fly";
+   }
+
+   @Nonnull
+   @Override
+   public Set<MovementMode> getSupportedMovementModes() {
+      return SUPPORTED_MOVEMENT_MODES;
+   }
+
+   @Nonnull
+   @Override
+   public Set<MovementMode> getDefaultSpawnMovementModes() {
+      return DEFAULT_SPAWN_MOVEMENT_MODES;
    }
 
    @Override
@@ -115,20 +134,20 @@ public class MotionControllerFly extends MotionControllerBase {
       this.moveProbe.probePosition(ref, this.collisionBoundingBox, this.position, this.collisionResult, componentAccessor);
       this.currentRelativeSpeed = steering.getSpeed();
       if (!this.isAlive(ref, componentAccessor)) {
-         this.forceVelocity.assign(Vector3d.ZERO);
+         this.externalVelocity.zero();
          this.appliedVelocities.clear();
       }
 
       double maxFallSpeed = this.moveProbe.isInWater() ? this.maxSinkSpeedFluid : this.maxFallSpeed;
       boolean onGround = this.onGround();
-      if (this.forceVelocity.equals(Vector3d.ZERO) && this.appliedVelocities.isEmpty()) {
-         if (NPCPhysicsMath.near(this.lastVelocity, Vector3d.ZERO)) {
+      if (this.externalVelocity.equals(Vector3dUtil.ZERO) && this.appliedVelocities.isEmpty()) {
+         if (NPCPhysicsMath.near(this.lastVelocity, Vector3dUtil.ZERO)) {
             PhysicsMath.vectorFromAngles(this.getYaw(), this.getPitch(), this.lastVelocity);
             this.lastSpeed = 0.0;
          }
 
-         if (this.canAct(ref, componentAccessor)) {
-            translation.assign(steering.getTranslation());
+         if (this.canSteer(ref, componentAccessor)) {
+            translation.set(steering.getTranslation());
             double steeringSpeed = steering.hasTranslation() ? translation.length() : 0.0;
             float yaw = PhysicsMath.normalizeAngle(this.getYaw());
             float pitch = PhysicsMath.normalizeTurnAngle(this.getPitch());
@@ -179,14 +198,14 @@ public class MotionControllerFly extends MotionControllerBase {
             steering.setPitch(newPitch);
             steering.setRoll(constrainedRoll);
             if (steeringSpeed == 0.0) {
-               translation.assign(Vector3d.ZERO);
+               translation.zero();
             } else {
-               translation.scale(steeringSpeed * this.effectHorizontalSpeedMultiplier);
+               translation.mul(steeringSpeed * this.effectHorizontalSpeedMultiplier);
             }
 
-            this.lastVelocity.assign(translation);
+            this.lastVelocity.set(translation);
             this.lastSpeed = steeringSpeed;
-            translation.scale(dt);
+            translation.mul(dt);
             if (this.debugModeValidateMath && !NPCPhysicsMath.isValid(translation)) {
                throw new IllegalArgumentException(String.valueOf(translation));
             }
@@ -196,7 +215,7 @@ public class MotionControllerFly extends MotionControllerBase {
             steering.setRoll(this.getRoll());
             if (onGround) {
                this.setMotionKind(MotionKind.STANDING);
-               this.lastVelocity.assign(Vector3d.ZERO);
+               this.lastVelocity.zero();
                this.lastSpeed = 0.0;
                return dt;
             }
@@ -219,9 +238,9 @@ public class MotionControllerFly extends MotionControllerBase {
                translation.z = 0.0;
             }
 
-            this.lastVelocity.assign(translation);
+            this.lastVelocity.set(translation);
             this.lastSpeed = this.lastVelocity.length();
-            translation.scale(dt);
+            translation.mul(dt);
             if (this.debugModeValidateMath && !NPCPhysicsMath.isValid(translation)) {
                throw new IllegalArgumentException(String.valueOf(translation));
             }
@@ -237,11 +256,11 @@ public class MotionControllerFly extends MotionControllerBase {
          steering.setPitch(this.getPitch());
          steering.setRoll(this.getRoll());
          if (!this.isObstructed()) {
-            translation.assign(this.forceVelocity);
+            translation.set(this.externalVelocity);
 
             for (int i = 0; i < this.appliedVelocities.size(); i++) {
                MotionControllerBase.AppliedVelocity entry = this.appliedVelocities.get(i);
-               if (entry.velocity.y + this.forceVelocity.y <= 0.0 || entry.velocity.y < 0.0) {
+               if (entry.velocity.y + this.externalVelocity.y <= 0.0 || entry.velocity.y < 0.0) {
                   entry.canClear = true;
                }
 
@@ -252,18 +271,18 @@ public class MotionControllerFly extends MotionControllerBase {
                translation.add(entry.velocity);
             }
          } else {
-            translation.assign(Vector3d.ZERO);
+            translation.zero();
             this.appliedVelocities.clear();
-            this.forceVelocity.assign(Vector3d.ZERO);
+            this.externalVelocity.zero();
          }
 
          if (!onGround) {
             translation.y = NPCPhysicsMath.accelerateDrag(translation.y, -this.gravity, dt, maxFallSpeed);
          }
 
-         this.lastVelocity.assign(translation);
+         this.lastVelocity.set(translation);
          this.lastSpeed = this.lastVelocity.length();
-         translation.scale(dt);
+         translation.mul(dt);
          if (this.debugModeValidateMath && !NPCPhysicsMath.isValid(translation)) {
             throw new IllegalArgumentException(String.valueOf(translation));
          } else {
@@ -288,8 +307,17 @@ public class MotionControllerFly extends MotionControllerBase {
 
    @Override
    public double probeMove(@Nonnull Ref<EntityStore> ref, @Nonnull ProbeMoveData probeMoveData, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return probeMoveData.probeDirection.length()
-         * this.doMove(ref, probeMoveData.probePosition, probeMoveData.probeDirection, this.probeMoveProbe, probeMoveData, componentAccessor);
+      Predicate<CollisionConfig> previousBlockCollisionFilter = this.collisionResult.setBlockCollisionFilter(probeMoveData.getBlockCollisionFilter());
+
+      double var5;
+      try {
+         var5 = probeMoveData.probeDirection.length()
+            * this.doMove(ref, probeMoveData.probePosition, probeMoveData.probeDirection, this.probeMoveProbe, probeMoveData, componentAccessor);
+      } finally {
+         this.collisionResult.setBlockCollisionFilter(previousBlockCollisionFilter);
+      }
+
+      return var5;
    }
 
    @Override
@@ -304,14 +332,14 @@ public class MotionControllerFly extends MotionControllerBase {
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      int ix = MathUtil.floor(position.getX());
-      int iz = MathUtil.floor(position.getZ());
+      int ix = MathUtil.floor(position.x());
+      int iz = MathUtil.floor(position.z());
       if (ix == this.lastVerticalPositionX && iz == this.lastVerticalPositionZ) {
          return this.verticalRange;
       } else {
          this.lastVerticalPositionX = ix;
          this.lastVerticalPositionZ = iz;
-         double y = position.getY();
+         double y = position.y();
          World world = componentAccessor.getExternalData().getWorld();
          ChunkStore chunkStore = world.getChunkStore();
          long chunkIndex = ChunkUtil.indexChunkFromBlock(ix, iz);
@@ -344,14 +372,14 @@ public class MotionControllerFly extends MotionControllerBase {
                   maxY = y;
                }
 
-               this.verticalRange.assign(y, minY, maxY);
+               this.verticalRange.set(y, minY, maxY);
                return this.verticalRange;
             } else {
-               this.verticalRange.assign(y, y, y);
+               this.verticalRange.set(y, y, y);
                return this.verticalRange;
             }
          } else {
-            this.verticalRange.assign(y, y, y);
+            this.verticalRange.set(y, y, y);
             return this.verticalRange;
          }
       }
@@ -372,15 +400,15 @@ public class MotionControllerFly extends MotionControllerBase {
    ) {
       boolean probeOnly = probeMoveData != null;
       boolean saveSegments = probeOnly && probeMoveData.startProbing();
-      boolean canAct = probeOnly || this.canAct(ref, componentAccessor);
+      boolean canSteer = probeOnly || this.canSteer(ref, componentAccessor);
       String debugPrefix = probeOnly ? "Probe" : "Move";
       if (this.debugModeMove) {
          LOGGER.at(Level.INFO)
             .log(
                "%s - Fly: Execute pos=%s vel=%s onGround=%s blocked=%s ",
                debugPrefix,
-               Vector3d.formatShortString(position),
-               Vector3d.formatShortString(translation),
+               Vector3dUtil.formatShortString(position),
+               Vector3dUtil.formatShortString(translation),
                this.onGround(),
                this.isObstructed
             );
@@ -400,7 +428,7 @@ public class MotionControllerFly extends MotionControllerBase {
             }
          }
 
-         this.collisionResult.setCollisionByMaterial(canAct ? 6 : 4);
+         this.collisionResult.setCollisionByMaterial(canSteer ? 6 : 4);
          CollisionModule.get();
          CollisionModule.findCollisions(this.collisionBoundingBox, position, translation, this.collisionResult, componentAccessor);
          if (this.debugModeBlockCollisions) {
@@ -412,7 +440,7 @@ public class MotionControllerFly extends MotionControllerBase {
          }
 
          BlockCollisionData collision = this.collisionResult.getFirstBlockCollision();
-         this.lastValidPosition.assign(position);
+         this.lastValidPosition.set(position);
          double distanceFactor;
          if (collision == null) {
             position.add(translation);
@@ -422,8 +450,8 @@ public class MotionControllerFly extends MotionControllerBase {
                   .log(
                      "%s - Fly: No collision pos=%s vel=%s onGround=%s blocked=%s ",
                      debugPrefix,
-                     Vector3d.formatShortString(position),
-                     Vector3d.formatShortString(translation),
+                     Vector3dUtil.formatShortString(position),
+                     Vector3dUtil.formatShortString(translation),
                      this.onGround(),
                      this.isObstructed
                   );
@@ -433,7 +461,7 @@ public class MotionControllerFly extends MotionControllerBase {
                throw new IllegalStateException("Invalid position");
             }
          } else {
-            position.assign(collision.collisionPoint);
+            position.set(collision.collisionPoint);
             distanceFactor = collision.collisionStart;
             if (!probeOnly) {
                this.isObstructed = true;
@@ -444,9 +472,9 @@ public class MotionControllerFly extends MotionControllerBase {
                   .log(
                      "%s - Fly: Collision pos=%s collStart=%s vel=%s onGround=%s blocked=%s ",
                      debugPrefix,
-                     Vector3d.formatShortString(position),
+                     Vector3dUtil.formatShortString(position),
                      distanceFactor,
-                     Vector3d.formatShortString(translation),
+                     Vector3dUtil.formatShortString(translation),
                      this.onGround(),
                      this.isObstructed
                   );
@@ -468,7 +496,9 @@ public class MotionControllerFly extends MotionControllerBase {
             distanceFactor *= adjust;
             if (this.debugModeMove) {
                LOGGER.at(Level.INFO)
-                  .log("%s - Fly: Bisect step pos=%s distanceFactor=%s adjust=%s", debugPrefix, Vector3d.formatShortString(position), distanceFactor, adjust);
+                  .log(
+                     "%s - Fly: Bisect step pos=%s distanceFactor=%s adjust=%s", debugPrefix, Vector3dUtil.formatShortString(position), distanceFactor, adjust
+                  );
             }
          }
 
@@ -499,7 +529,7 @@ public class MotionControllerFly extends MotionControllerBase {
       if (scale < 1.0) {
          dt *= scale;
          this.lastSpeed *= scale;
-         this.lastVelocity.scale(scale);
+         this.lastVelocity.mul(scale);
       }
 
       return dt;
@@ -515,13 +545,13 @@ public class MotionControllerFly extends MotionControllerBase {
    }
 
    @Override
-   protected void dampForceVelocity(
-      @Nonnull Vector3d forceVelocity, double forceVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
+   protected void dampExternalVelocity(
+      @Nonnull Vector3d externalVelocity, double externalVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (forceVelocity.squaredLength() < this.minSpeedAfterForceSquared) {
-         forceVelocity.assign(Vector3d.ZERO);
+      if (externalVelocity.lengthSquared() < this.externalVelocityStopThresholdSquared) {
+         externalVelocity.zero();
       } else {
-         NPCPhysicsMath.deccelerateToStop(forceVelocity, this.getDampingDeceleration(), interval);
+         NPCPhysicsMath.deccelerateToStop(externalVelocity, this.getDampingDeceleration(), interval);
       }
    }
 
@@ -540,8 +570,8 @@ public class MotionControllerFly extends MotionControllerBase {
    }
 
    @Override
-   public boolean canAct(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return super.canAct(ref, componentAccessor) && this.moveProbe.isInAir() && this.effectHorizontalSpeedMultiplier != 0.0;
+   public boolean canSteer(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return super.canSteer(ref, componentAccessor) && this.moveProbe.isInAir() && this.effectHorizontalSpeedMultiplier != 0.0;
    }
 
    @Override
@@ -611,7 +641,7 @@ public class MotionControllerFly extends MotionControllerBase {
 
    @Override
    public boolean estimateVelocity(Steering steering, @Nonnull Vector3d velocityOut) {
-      velocityOut.assign(Vector3d.ZERO);
+      velocityOut.zero();
       return false;
    }
 
@@ -629,16 +659,16 @@ public class MotionControllerFly extends MotionControllerBase {
 
       assert transformComponent != null;
 
-      PhysicsMath.vectorFromAngles(transformComponent.getRotation().getYaw(), (float) (Math.PI / 4), this.lastVelocity);
+      PhysicsMath.vectorFromAngles(transformComponent.getRotation().yaw(), (float) (Math.PI / 4), this.lastVelocity);
       this.lastSpeed = speed;
    }
 
-   public double getMinSpeedAfterForceSquared() {
-      return this.minSpeedAfterForceSquared;
+   public double getExternalVelocityStopThresholdSquared() {
+      return this.externalVelocityStopThresholdSquared;
    }
 
    public double getDampingDeceleration() {
-      return this.forceVelocityDamping * 20.0;
+      return this.externalVelocityDamping * 20.0;
    }
 
    protected double computeMaxSpeedFromPitch(double pitch) {

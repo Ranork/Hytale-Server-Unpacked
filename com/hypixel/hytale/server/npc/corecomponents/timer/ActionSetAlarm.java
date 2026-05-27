@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.time.temporal.TemporalAmount;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionSetAlarm extends ActionBase {
    protected final Alarm alarm;
@@ -33,7 +34,7 @@ public class ActionSetAlarm extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       if (this.cancel) {
          this.alarm.set(ref, null, store);

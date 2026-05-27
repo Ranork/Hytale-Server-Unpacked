@@ -15,6 +15,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -38,7 +39,7 @@ public class AssetPrefabFileProvider implements FileListProvider {
    private List<FileListProvider.FileEntry> buildPackListings() {
       List<FileListProvider.FileEntry> entries = new ObjectArrayList();
 
-      for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllAssetPrefabPaths()) {
+      for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllBrowsablePrefabPaths()) {
          String displayName = packPath.getDisplayName();
          String packKey = this.getPackKey(packPath);
          entries.add(new FileListProvider.FileEntry(packKey, displayName, true));
@@ -108,7 +109,7 @@ public class AssetPrefabFileProvider implements FileListProvider {
       List<AssetPrefabFileProvider.SearchResult> allResults = new ObjectArrayList();
       String lowerQuery = searchQuery.toLowerCase();
       if (currentDirStr.isEmpty()) {
-         for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllAssetPrefabPaths()) {
+         for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllBrowsablePrefabPaths()) {
             String packKey = this.getPackKey(packPath);
             this.searchInDirectory(packPath.prefabsPath(), packKey, "", lowerQuery, allResults);
          }
@@ -153,6 +154,10 @@ public class AssetPrefabFileProvider implements FileListProvider {
             Files.walkFileTree(
                root,
                new SimpleFileVisitor<Path>() {
+                  {
+                     Objects.requireNonNull(AssetPrefabFileProvider.this);
+                  }
+
                   @Nonnull
                   public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
                      String fileName = file.getFileName().toString();
@@ -184,7 +189,7 @@ public class AssetPrefabFileProvider implements FileListProvider {
 
    @Nullable
    private PrefabStore.AssetPackPrefabPath findPackByKey(@Nonnull String packKey) {
-      for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllAssetPrefabPaths()) {
+      for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllBrowsablePrefabPaths()) {
          if (this.getPackKey(packPath).equals(packKey)) {
             return packPath;
          }
@@ -196,6 +201,27 @@ public class AssetPrefabFileProvider implements FileListProvider {
    @Nonnull
    private String removeExtension(@Nonnull String fileName) {
       return fileName.endsWith(".prefab.json") ? fileName.substring(0, fileName.length() - ".prefab.json".length()) : fileName;
+   }
+
+   @Nullable
+   public static String toNodeEditorPath(@Nonnull String virtualPath) {
+      boolean isDirectory = virtualPath.endsWith("/");
+      String path = isDirectory ? virtualPath.substring(0, virtualPath.length() - 1) : virtualPath;
+      int firstSlash = path.indexOf(47);
+      if (firstSlash < 0) {
+         return null;
+      } else {
+         String subPath = path.substring(firstSlash + 1);
+         if (subPath.isEmpty()) {
+            return null;
+         } else {
+            if (!isDirectory && subPath.endsWith(".prefab.json")) {
+               subPath = subPath.substring(0, subPath.length() - ".prefab.json".length());
+            }
+
+            return "/" + subPath + (isDirectory ? "/" : "");
+         }
+      }
    }
 
    @Nullable

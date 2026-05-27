@@ -4,7 +4,6 @@ import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.function.predicate.TriIntPredicate;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -14,6 +13,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public interface BlockAccessor {
    int getX();
@@ -25,7 +26,7 @@ public interface BlockAccessor {
    int getBlock(int var1, int var2, int var3);
 
    default int getBlock(@Nonnull Vector3i pos) {
-      return this.getBlock(pos.getX(), pos.getY(), pos.getZ());
+      return this.getBlock(pos.x(), pos.y(), pos.z());
    }
 
    boolean setBlock(int var1, int var2, int var3, int var4, BlockType var5, int var6, int var7, int var8);
@@ -71,9 +72,15 @@ public interface BlockAccessor {
 
    default boolean breakBlock(int x, int y, int z, int filler, int settings) {
       if ((settings & 16) == 0) {
+         int fillerX = x;
+         int fillerY = y;
+         int fillerZ = z;
          x -= FillerBlockUtil.unpackX(filler);
          y -= FillerBlockUtil.unpackY(filler);
          z -= FillerBlockUtil.unpackZ(filler);
+         if (this.getBlock(x, y, z) == 0) {
+            return this.setBlock(fillerX, fillerY, fillerZ, 0, BlockType.EMPTY, 0, 0, settings);
+         }
       }
 
       return this.setBlock(x, y, z, 0, BlockType.EMPTY, 0, 0, settings);
@@ -174,8 +181,8 @@ public interface BlockAccessor {
    }
 
    @Nullable
-   default BlockType getBlockType(@Nonnull Vector3i block) {
-      return this.getBlockType(block.getX(), block.getY(), block.getZ());
+   default BlockType getBlockType(@Nonnull Vector3ic block) {
+      return this.getBlockType(block.x(), block.y(), block.z());
    }
 
    boolean setTicking(int var1, int var2, int var3, boolean var4);

@@ -7,8 +7,8 @@ import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.EmptyPositio
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ClustersPositionProviderAsset extends PositionProviderAsset {
    @Nonnull

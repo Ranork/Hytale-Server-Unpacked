@@ -1,7 +1,9 @@
 package com.hypixel.hytale.protocol.packets.window;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public class TierUpgradeAction extends WindowAction {
@@ -20,10 +22,31 @@ public class TierUpgradeAction extends WindowAction {
       return 0;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static TierUpgradeAction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static TierUpgradeAction toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("TierUpgradeAction", offset + 0, (int)mem.byteSize());
+      } else {
+         return new TierUpgradeAction();
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      return 0;
    }
 
    @Override

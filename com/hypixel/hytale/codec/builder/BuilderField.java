@@ -349,6 +349,10 @@ public class BuilderField<Type, FieldType> {
          this.validators.add(new LateValidator<FieldType>() {
             private LateValidator<? super FieldType> validator;
 
+            {
+               Objects.requireNonNull(FieldBuilder.this);
+            }
+
             @Override
             public void accept(FieldType fieldType, ValidationResults results) {
                if (this.validator == null) {

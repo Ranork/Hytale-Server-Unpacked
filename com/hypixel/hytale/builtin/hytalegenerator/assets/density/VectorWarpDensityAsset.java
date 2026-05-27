@@ -6,8 +6,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.VectorWarpDensit
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class VectorWarpDensityAsset extends DensityAsset {
    @Nonnull
@@ -16,7 +17,7 @@ public class VectorWarpDensityAsset extends DensityAsset {
       )
       .append(new KeyedCodec<>("WarpFactor", Codec.DOUBLE, true), (t, k) -> t.warpFactor = k, t -> t.warpFactor)
       .add()
-      .append(new KeyedCodec<>("WarpVector", Vector3d.CODEC, true), (t, k) -> t.warpVector = k, t -> t.warpVector)
+      .append(new KeyedCodec<>("WarpVector", Vector3dUtil.CODEC, true), (t, k) -> t.warpVector = k, t -> t.warpVector)
       .add()
       .build();
    private double warpFactor = 1.0;

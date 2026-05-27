@@ -5,13 +5,14 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.modules.projectile.ProjectileModule;
 import com.hypixel.hytale.server.core.modules.projectile.config.ProjectileConfig;
+import com.hypixel.hytale.server.core.modules.projectile.config.StandardPhysicsProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
-import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class DeployableProjectileShooterComponent implements Component<EntityStore> {
    @Nonnull
@@ -25,14 +26,29 @@ public class DeployableProjectileShooterComponent implements Component<EntitySto
    }
 
    public void spawnProjectile(
-      Ref<EntityStore> entityRef,
+      @Nonnull Ref<EntityStore> entityRef,
       @Nonnull CommandBuffer<EntityStore> commandBuffer,
       @Nonnull ProjectileConfig projectileConfig,
-      @Nonnull UUID ownerUuid,
       @Nonnull Vector3d spawnPos,
       @Nonnull Vector3d direction
    ) {
-      commandBuffer.getExternalData().getWorld().execute(() -> {});
+      Ref<EntityStore> projectileRef = ProjectileModule.get().spawnProjectile(entityRef, commandBuffer, projectileConfig, spawnPos, direction);
+      DeployableProjectileComponent deployableProjectileComponent = commandBuffer.addComponent(projectileRef, DeployableProjectileComponent.getComponentType());
+      deployableProjectileComponent.setPreviousTickPosition(spawnPos);
+      commandBuffer.run(store -> {
+         if (projectileRef.isValid()) {
+            StandardPhysicsProvider physics = store.getComponent(projectileRef, StandardPhysicsProvider.getComponentType());
+            if (physics != null) {
+               physics.setImpactConsumer((ref, pos, targetRef, detail, cb) -> {
+                  if (targetRef != null) {
+                     deployableProjectileComponent.setHitEntityRef(targetRef);
+                  }
+               });
+               physics.setBounceConsumer(null);
+            }
+         }
+      });
+      this.projectiles.add(projectileRef);
    }
 
    @Nonnull

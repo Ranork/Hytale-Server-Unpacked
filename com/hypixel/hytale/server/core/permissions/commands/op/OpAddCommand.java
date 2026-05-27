@@ -28,15 +28,15 @@ public class OpAddCommand extends CommandBase {
    protected void executeSync(@Nonnull CommandContext context) {
       UUID uuid = this.playerArg.get(context);
       PermissionsModule permissionsModule = PermissionsModule.get();
-      String opGroup = "OP";
+      String opGroup = "hytale:Admin";
       PlayerRef playerRef = Universe.get().getPlayer(uuid);
       String displayName = playerRef != null ? playerRef.getUsername() : uuid.toString();
       Message displayMessage = Message.raw(displayName).bold(true);
       Set<String> groups = permissionsModule.getGroupsForUser(uuid);
-      if (groups.contains("OP")) {
+      if (groups.contains("hytale:Admin")) {
          context.sendMessage(Message.translation("server.commands.op.already").param("username", displayMessage));
       } else {
-         permissionsModule.addUserToGroup(uuid, "OP");
+         permissionsModule.addUserToGroup(uuid, "hytale:Admin");
          context.sendMessage(Message.translation("server.commands.op.added").param("username", displayMessage));
          if (playerRef != null) {
             playerRef.sendMessage(MESSAGE_COMMANDS_OP_ADDED_TARGET);

@@ -48,6 +48,8 @@ public class StateSupport {
    protected final Int2ObjectMap<IntSet> busyStates;
    protected final HashSet<String> missingStates = new HashSet<>();
    protected boolean needClearOnce;
+   protected boolean clearHeadMotion;
+   protected boolean clearBodyMotion;
    protected Set<Ref<EntityStore>> interactablePlayers;
    protected Set<Ref<EntityStore>> interactedPlayers;
    protected Map<Ref<EntityStore>, String> contextualInteractions;
@@ -224,6 +226,22 @@ public class StateSupport {
       }
    }
 
+   public boolean isClearBodyMotion() {
+      return this.clearBodyMotion;
+   }
+
+   public void setClearBodyMotion(boolean clearBodyMotion) {
+      this.clearBodyMotion = clearBodyMotion;
+   }
+
+   public boolean isClearHeadMotion() {
+      return this.clearHeadMotion;
+   }
+
+   public void setClearHeadMotion(boolean clearHeadMotion) {
+      this.clearHeadMotion = clearHeadMotion;
+   }
+
    public boolean isComponentInState(int componentIndex, int targetState) {
       int state = this.componentLocalStateMachines.get(componentIndex);
       if (state == Integer.MIN_VALUE) {
@@ -285,8 +303,8 @@ public class StateSupport {
       return contextualInteraction == null ? false : contextualInteraction.equals(context);
    }
 
-   public void addInteraction(@Nonnull Player player) {
-      this.interactedPlayers.add(player.getReference());
+   public void addInteraction(@Nonnull Ref<EntityStore> playerReference) {
+      this.interactedPlayers.add(playerReference);
    }
 
    public boolean consumeInteraction(@Nonnull Ref<EntityStore> playerReference) {

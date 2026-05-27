@@ -8,19 +8,43 @@ import com.hypixel.hytale.codec.codecs.map.ObjectMapCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.semver.Semver;
 import com.hypixel.hytale.common.semver.SemverRange;
+import com.hypixel.hytale.common.semver.SemverRangeCodec;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
+import com.hypixel.hytale.logger.HytaleLogger;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class PluginManifest {
    @Nonnull
+   private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+   @Nonnull
    private static final BuilderCodec.Builder<PluginManifest> BUILDER = BuilderCodec.builder(PluginManifest.class, PluginManifest::new);
+   private static final Pattern LEGACY_DATED_VERSION = Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}-.+");
+   @Nonnull
+   private static final Codec<SemverRange> SERVER_VERSION_CODEC = new SemverRangeCodec() {
+      @Override
+      protected SemverRange parse(String str) {
+         if (PluginManifest.LEGACY_DATED_VERSION.matcher(str).matches()) {
+            PluginManifest.LOGGER
+               .at(Level.WARNING)
+               .log(
+                  "Manifest ServerVersion '%s' is in the pre-semver YYYY.MM.DD-<sha> format. Treated as wildcard for backward compatibility. Update to a SemverRange.",
+                  str
+               );
+            return SemverRange.WILDCARD;
+         } else {
+            return super.parse(str);
+         }
+      }
+   };
    @Nonnull
    public static final Codec<PluginManifest> CODEC = BUILDER.append(
          new KeyedCodec<>("Group", Codec.STRING), (manifest, o) -> manifest.group = o, manifest -> manifest.group
@@ -43,7 +67,7 @@ public class PluginManifest {
       .add()
       .append(new KeyedCodec<>("Main", Codec.STRING), (manifest, o) -> manifest.main = o, manifest -> manifest.main)
       .add()
-      .append(new KeyedCodec<>("ServerVersion", Codec.STRING), (manifest, o) -> manifest.serverVersion = o, manifest -> manifest.serverVersion)
+      .append(new KeyedCodec<>("ServerVersion", SERVER_VERSION_CODEC), (manifest, o) -> manifest.serverVersion = o, manifest -> manifest.serverVersion)
       .add()
       .append(
          new KeyedCodec<>(
@@ -93,7 +117,7 @@ public class PluginManifest {
    @Nullable
    private String main;
    @Nullable
-   private String serverVersion;
+   private SemverRange serverVersion;
    @Nonnull
    private Map<PluginIdentifier, SemverRange> dependencies = new Object2ObjectLinkedOpenHashMap();
    @Nonnull
@@ -104,6 +128,23 @@ public class PluginManifest {
    private List<PluginManifest> subPlugins = new ArrayList<>();
    private boolean disabledByDefault = false;
    private boolean includesAssetPack = false;
+
+   @Nonnull
+   public static PluginManifest.ServerVersionCheck checkServerVersionCompatibility(@Nullable SemverRange range, @Nullable String serverVersionStr) {
+      if (range == null) {
+         return PluginManifest.ServerVersionCheck.MISSING;
+      } else if (serverVersionStr == null) {
+         return PluginManifest.ServerVersionCheck.PARSE_FAILED;
+      } else {
+         try {
+            return range.satisfies(Semver.fromString(serverVersionStr))
+               ? PluginManifest.ServerVersionCheck.COMPATIBLE
+               : PluginManifest.ServerVersionCheck.INCOMPATIBLE;
+         } catch (IllegalArgumentException var3) {
+            return PluginManifest.ServerVersionCheck.PARSE_FAILED;
+         }
+      }
+   }
 
    public PluginManifest() {
    }
@@ -116,7 +157,7 @@ public class PluginManifest {
       @Nonnull List<AuthorInfo> authors,
       @Nullable String website,
       @Nullable String main,
-      @Nonnull String serverVersion,
+      @Nonnull SemverRange serverVersion,
       @Nonnull Map<PluginIdentifier, SemverRange> dependencies,
       @Nonnull Map<PluginIdentifier, SemverRange> optionalDependencies,
       @Nonnull Map<PluginIdentifier, SemverRange> loadBefore,
@@ -194,11 +235,11 @@ public class PluginManifest {
       return this.main;
    }
 
-   public String getServerVersion() {
+   public SemverRange getServerVersion() {
       return this.serverVersion;
    }
 
-   public void setServerVersion(@Nullable String serverVersion) {
+   public void setServerVersion(@Nullable SemverRange serverVersion) {
       this.serverVersion = serverVersion;
    }
 
@@ -380,7 +421,7 @@ public class PluginManifest {
             Collections.emptyList(),
             null,
             this.main,
-            ManifestUtil.getVersion() == null ? "0.0.0-dev" : ManifestUtil.getVersion(),
+            SemverRange.WILDCARD,
             this.dependencies,
             this.optionalDependencies,
             this.loadBefore,
@@ -388,5 +429,12 @@ public class PluginManifest {
             false
          );
       }
+   }
+
+   public static enum ServerVersionCheck {
+      COMPATIBLE,
+      MISSING,
+      PARSE_FAILED,
+      INCOMPATIBLE;
    }
 }

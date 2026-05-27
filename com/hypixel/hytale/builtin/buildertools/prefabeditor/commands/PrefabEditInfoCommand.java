@@ -6,7 +6,6 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionMan
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadata;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -16,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class PrefabEditInfoCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -47,9 +47,9 @@ public class PrefabEditInfoCommand extends AbstractPlayerCommand {
          } else {
             Vector3i minPoint = selectedPrefab.getMinPoint();
             Vector3i maxPoint = selectedPrefab.getMaxPoint();
-            int xWidth = maxPoint.getX() - minPoint.getX();
-            int zWidth = maxPoint.getZ() - minPoint.getZ();
-            int yHeight = maxPoint.getY() - minPoint.getY();
+            int xWidth = maxPoint.x() - minPoint.x();
+            int zWidth = maxPoint.z() - minPoint.z();
+            int yHeight = maxPoint.y() - minPoint.y();
             context.sendMessage(
                Message.translation("server.commands.editprefab.info.format")
                   .param("path", selectedPrefab.getPrefabPath().toString())

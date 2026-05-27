@@ -8,9 +8,12 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class BoundingBox implements Component<EntityStore> {
    private final Box boundingBox = new Box();
+   @Nullable
+   private Box baseModelBox;
    protected Map<String, DetailBox[]> detailBoxes;
 
    public static ComponentType<EntityStore, BoundingBox> getComponentType() {
@@ -33,6 +36,16 @@ public class BoundingBox implements Component<EntityStore> {
       this.boundingBox.assign(boundingBox);
    }
 
+   public void setBaseModelBox(@Nullable Box baseModelBox) {
+      this.baseModelBox = baseModelBox != null ? baseModelBox.clone() : null;
+   }
+
+   public void applyRotation(float pitch, float yaw, float roll) {
+      if (this.baseModelBox != null) {
+         this.boundingBox.assign(this.baseModelBox.enclosingRotatedAABB(pitch, yaw, roll));
+      }
+   }
+
    public Map<String, DetailBox[]> getDetailBoxes() {
       return this.detailBoxes;
    }
@@ -44,6 +57,8 @@ public class BoundingBox implements Component<EntityStore> {
    @Nonnull
    @Override
    public Component<EntityStore> clone() {
-      return new BoundingBox(this.boundingBox);
+      BoundingBox copy = new BoundingBox(this.boundingBox);
+      copy.baseModelBox = this.baseModelBox != null ? this.baseModelBox.clone() : null;
+      return copy;
    }
 }

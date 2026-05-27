@@ -25,7 +25,7 @@ public class ConsoleSender implements CommandSender {
 
    @Nonnull
    @Override
-   public String getDisplayName() {
+   public String getUsername() {
       return "Console";
    }
 

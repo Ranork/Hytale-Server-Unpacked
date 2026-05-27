@@ -16,8 +16,8 @@ import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.group.EntityGroup;
@@ -52,6 +52,7 @@ import java.util.Map;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3dc;
 
 public class FlockPlugin extends JavaPlugin {
    private static FlockPlugin instance;
@@ -146,8 +147,8 @@ public class FlockPlugin extends JavaPlugin {
       @Nonnull NPCEntity npc,
       @Nonnull Store<EntityStore> store,
       int roleIndex,
-      @Nonnull Vector3d position,
-      Vector3f rotation,
+      @Nonnull Vector3dc position,
+      Rotation3fc rotation,
       @Nullable FlockAsset flockDefinition,
       TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn
    ) {
@@ -161,8 +162,8 @@ public class FlockPlugin extends JavaPlugin {
       @Nonnull NPCEntity npc,
       @Nonnull Store<EntityStore> store,
       int roleIndex,
-      @Nonnull Vector3d position,
-      Vector3f rotation,
+      @Nonnull Vector3dc position,
+      Rotation3fc rotation,
       int flockSize,
       TriConsumer<NPCEntity, Ref<EntityStore>, Store<EntityStore>> postSpawn
    ) {
@@ -174,8 +175,8 @@ public class FlockPlugin extends JavaPlugin {
       @Nonnull Ref<EntityStore> npcRef,
       @Nonnull NPCEntity npc,
       int roleIndex,
-      @Nonnull Vector3d position,
-      Vector3f rotation,
+      @Nonnull Vector3dc position,
+      Rotation3fc rotation,
       int flockSize,
       FlockAsset flockDefinition,
       TriConsumer<NPCEntity, Holder<EntityStore>, Store<EntityStore>> preAddToWorld,
@@ -204,11 +205,11 @@ public class FlockPlugin extends JavaPlugin {
          assert transformComponent != null;
 
          Box boundingBox = boundingBoxComponent.getBoundingBox();
-         Vector3f bodyRotation = transformComponent.getRotation();
-         double x = position.getX();
-         int y = MathUtil.floor(position.getY() + boundingBox.min.y + 1.0E-6);
-         double z = position.getZ();
-         double yaw = bodyRotation.getYaw();
+         Rotation3f bodyRotation = transformComponent.getRotation();
+         double x = position.x();
+         int y = MathUtil.floor(position.y() + boundingBox.min.y + 1.0E-6);
+         double z = position.z();
+         double yaw = bodyRotation.yaw();
          boolean randomSpawn = role.isFlockSpawnTypesRandom();
          int[] roles = role.getFlockSpawnTypes();
          int rolesSize = roles == null ? 0 : roles.length;
@@ -245,7 +246,7 @@ public class FlockPlugin extends JavaPlugin {
                   double offsetY = y - memberBoundingBoxComponent.getBoundingBox().min.y;
                   memberTransformComponent.getRotation().setYaw((float)(yaw + RandomExtra.randomRange((float) (Math.PI / 4), (float) (Math.PI / 4))));
                   memberHeadRotationComponent.getRotation().setPitch(0.0F);
-                  memberTransformComponent.getPosition().assign(x + RandomExtra.randomRange(-0.5, 0.5), offsetY, z + RandomExtra.randomRange(-0.5, 0.5));
+                  memberTransformComponent.getPosition().set(x + RandomExtra.randomRange(-0.5, 0.5), offsetY, z + RandomExtra.randomRange(-0.5, 0.5));
                   FlockMembershipSystems.join(memberRef, flockReference, store);
                }
             }

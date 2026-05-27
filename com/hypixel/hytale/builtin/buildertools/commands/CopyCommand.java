@@ -7,9 +7,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -19,6 +16,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
@@ -27,6 +25,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TempAssetIdUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class CopyCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -44,8 +44,8 @@ public class CopyCommand extends AbstractPlayerCommand {
 
    public CopyCommand() {
       super("copy", "server.commands.copy.desc");
-      this.setPermissionGroup(GameMode.Creative);
-      this.requirePermission("hytale.editor.selection.clipboard");
+      this.setPermissionGroups("hytale:WorldEditor");
+      this.requirePermission(HytalePermissions.EDITOR_SELECTION_CLIPBOARD);
       this.addUsageVariant(new CopyCommand.CopyRegionCommand());
    }
 
@@ -57,7 +57,7 @@ public class CopyCommand extends AbstractPlayerCommand {
 
       assert playerComponent != null;
 
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
          boolean entitiesOnly = this.entitiesOnlyFlag.get(context);
          boolean noEntities = this.noEntitiesFlag.get(context);
@@ -80,27 +80,21 @@ public class CopyCommand extends AbstractPlayerCommand {
 
          int settingsFinal = settings;
          Vector3i playerAnchor = getPlayerAnchor(ref, store, this.playerAnchorFlag.get(context));
-         BuilderToolsPlugin.addToQueue(
-            playerComponent,
-            playerRef,
-            (r, s, componentAccessor) -> {
-               try {
-                  BlockSelection selection = builderState.getSelection();
-                  if (selection == null || !selection.hasSelectionBounds()) {
-                     context.sendMessage(MESSAGE_BUILDER_TOOLS_COPY_CUT_NO_SELECTION);
-                     return;
-                  }
-
-                  Vector3i min = selection.getSelectionMin();
-                  Vector3i max = selection.getSelectionMax();
-                  builderState.copyOrCut(
-                     r, min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), settingsFinal, playerAnchor, componentAccessor
-                  );
-               } catch (PrefabCopyException var10x) {
-                  context.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", var10x.getMessage()));
+         BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
+            try {
+               BlockSelection selection = builderState.getSelection();
+               if (selection == null || !selection.hasSelectionBounds()) {
+                  context.sendMessage(MESSAGE_BUILDER_TOOLS_COPY_CUT_NO_SELECTION);
+                  return;
                }
+
+               Vector3i min = selection.getSelectionMin();
+               Vector3i max = selection.getSelectionMax();
+               builderState.copyOrCut(r, min.x(), min.y(), min.z(), max.x(), max.y(), max.z(), settingsFinal, playerAnchor, componentAccessor);
+            } catch (PrefabCopyException var10x) {
+               context.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", var10x.getMessage()));
             }
-         );
+         });
       }
    }
 
@@ -114,7 +108,7 @@ public class CopyCommand extends AbstractPlayerCommand {
             return null;
          } else {
             Vector3d position = transformComponent.getPosition();
-            return new Vector3i(MathUtil.floor(position.getX()), MathUtil.floor(position.getY()), MathUtil.floor(position.getZ()));
+            return new Vector3i(MathUtil.floor(position.x()), MathUtil.floor(position.y()), MathUtil.floor(position.z()));
          }
       }
    }
@@ -128,7 +122,7 @@ public class CopyCommand extends AbstractPlayerCommand {
 
       assert playerRefComponent != null;
 
-      copySelection(ref, componentAccessor, BuilderToolsPlugin.getState(playerComponent, playerRefComponent), 24);
+      copySelection(ref, componentAccessor, BuilderToolsPlugin.getState(playerComponent, playerRefComponent), 28);
    }
 
    public static void copySelection(
@@ -149,15 +143,15 @@ public class CopyCommand extends AbstractPlayerCommand {
          try {
             BlockSelection selection = builderState.getSelection();
             if (selection == null || !selection.hasSelectionBounds()) {
-               playerComponent.sendMessage(MESSAGE_BUILDER_TOOLS_COPY_CUT_NO_SELECTION);
+               playerRefComponent.sendMessage(MESSAGE_BUILDER_TOOLS_COPY_CUT_NO_SELECTION);
                return;
             }
 
             Vector3i min = selection.getSelectionMin();
             Vector3i max = selection.getSelectionMax();
-            builderState.copyOrCut(r, min.getX(), min.getY(), min.getZ(), max.getX(), max.getY(), max.getZ(), settings, c);
+            builderState.copyOrCut(r, min.x(), min.y(), min.z(), max.x(), max.y(), max.z(), settings, c);
          } catch (PrefabCopyException var9) {
-            playerComponent.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", var9.getMessage()));
+            playerRefComponent.sendMessage(Message.translation("server.builderTools.copycut.copyFailedReason").param("reason", var9.getMessage()));
          }
       });
    }
@@ -198,7 +192,7 @@ public class CopyCommand extends AbstractPlayerCommand {
 
          assert playerComponent != null;
 
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
             BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
             boolean entitiesOnly = this.entitiesOnlyFlag.get(context);
             boolean noEntities = this.noEntitiesFlag.get(context);

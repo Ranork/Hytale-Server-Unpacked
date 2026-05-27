@@ -1,10 +1,10 @@
 package com.hypixel.hytale.server.npc.util;
 
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.universe.world.World;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class VisHelper {
    public static final Vector3f DEBUG_COLOR_STEERING_POST = DebugUtils.COLOR_GREEN;
@@ -22,8 +22,8 @@ public class VisHelper {
    }
 
    public static void renderDebugVector(@Nonnull Vector3d position, @Nonnull Vector3d direction, @Nonnull Vector3f color, float opacity, @Nonnull World world) {
-      if (!(direction.squaredLength() < 0.01)) {
-         Vector3d scaledDir = direction.clone().scale(4.0);
+      if (!(direction.lengthSquared() < 0.01)) {
+         Vector3d scaledDir = new Vector3d(direction).mul(4.0);
          DebugUtils.addArrow(world, position, scaledDir, color, opacity, 0.05F, 0);
       }
    }
@@ -33,9 +33,9 @@ public class VisHelper {
    }
 
    public static void renderDebugVectorTo(@Nonnull Vector3d position, @Nonnull Vector3d direction, @Nonnull Vector3f color, float opacity, @Nonnull World world) {
-      if (!(direction.squaredLength() < 0.01)) {
-         Vector3d scaledDir = direction.clone().scale(4.0);
-         Vector3d start = position.clone().subtract(scaledDir);
+      if (!(direction.lengthSquared() < 0.01)) {
+         Vector3d scaledDir = new Vector3d(direction).mul(4.0);
+         Vector3d start = new Vector3d(position).sub(scaledDir);
          DebugUtils.addArrow(world, start, scaledDir, color, opacity, 0.05F, 0);
       }
    }

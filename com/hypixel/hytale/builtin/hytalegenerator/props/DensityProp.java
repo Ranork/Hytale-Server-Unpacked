@@ -5,10 +5,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.ArrayVoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class DensityProp extends Prop {
    @Nonnull
@@ -75,12 +75,12 @@ public class DensityProp extends Prop {
 
       assert this.rDensityContext.densityAnchor != null;
 
-      this.rDensityContext.densityAnchor.assign(context.position);
+      this.rDensityContext.densityAnchor.set(context.position);
 
       for (this.rPosition.x = this.rIntersectingWriteBounds.min.x; this.rPosition.x < this.rIntersectingWriteBounds.max.x; this.rPosition.x++) {
          for (this.rPosition.y = this.rIntersectingWriteBounds.min.y; this.rPosition.y < this.rIntersectingWriteBounds.max.y; this.rPosition.y++) {
             for (this.rPosition.z = this.rIntersectingWriteBounds.min.z; this.rPosition.z < this.rIntersectingWriteBounds.max.z; this.rPosition.z++) {
-               this.rDensityContext.position.assign(this.rPosition);
+               this.rDensityContext.position.set(this.rPosition);
                double densityValue = this.density.process(this.rDensityContext);
                this.rSolidityBuffer.set(densityValue > 0.0 ? Boolean.TRUE : Boolean.FALSE, this.rPosition);
             }
@@ -137,10 +137,10 @@ public class DensityProp extends Prop {
                }
             }
 
-            for (this.rPosition.y = this.rIntersectingWriteBounds.max.y - 2; this.rPosition.y > this.rIntersectingWriteBounds.min.x; this.rPosition.y--) {
+            for (this.rPosition.y = this.rIntersectingWriteBounds.max.y - 2; this.rPosition.y > this.rIntersectingWriteBounds.min.y; this.rPosition.y--) {
                if (this.rIntersectingWriteBounds.contains(this.rPosition)) {
                   int i = this.rPosition.y - this.rIntersectingWriteBounds.min.y;
-                  this.rMaterialProviderContext.position.assign(this.rPosition);
+                  this.rMaterialProviderContext.position.set(this.rPosition);
                   this.rMaterialProviderContext.depthIntoFloor = this.rDepthIntoFloor[i];
                   this.rMaterialProviderContext.depthIntoCeiling = this.rDepthIntoCeiling[i];
                   this.rMaterialProviderContext.spaceAboveFloor = this.rSpaceAboveFloor[i];

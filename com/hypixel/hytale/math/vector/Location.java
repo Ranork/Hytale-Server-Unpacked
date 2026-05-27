@@ -6,6 +6,8 @@ import com.hypixel.hytale.math.util.TrigMathUtil;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class Location {
    @Nullable
@@ -13,45 +15,45 @@ public class Location {
    @Nonnull
    protected Vector3d position;
    @Nonnull
-   protected Vector3f rotation;
+   protected Rotation3f rotation;
 
    public Location() {
-      this(null, new Vector3d(), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(null, new Vector3d(), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Location(@Nonnull Vector3i position) {
-      this(null, new Vector3d(position), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(null, new Vector3d(position), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Location(@Nullable String world, @Nonnull Vector3i position) {
-      this(world, new Vector3d(position), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(world, new Vector3d(position), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Location(@Nonnull Vector3d position) {
-      this(null, new Vector3d(position), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(null, new Vector3d(position), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Location(@Nullable String world, @Nonnull Vector3d position) {
-      this(world, new Vector3d(position), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(world, new Vector3d(position), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Location(double x, double y, double z) {
-      this(null, new Vector3d(x, y, z), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(null, new Vector3d(x, y, z), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Location(@Nullable String world, double x, double y, double z) {
-      this(world, new Vector3d(x, y, z), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(world, new Vector3d(x, y, z), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Location(double x, double y, double z, float pitch, float yaw, float roll) {
-      this(null, new Vector3d(x, y, z), new Vector3f(pitch, yaw, roll));
+      this(null, new Vector3d(x, y, z), new Rotation3f(pitch, yaw, roll));
    }
 
    public Location(@Nullable String world, double x, double y, double z, float pitch, float yaw, float roll) {
-      this(world, new Vector3d(x, y, z), new Vector3f(pitch, yaw, roll));
+      this(world, new Vector3d(x, y, z), new Rotation3f(pitch, yaw, roll));
    }
 
-   public Location(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public Location(@Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
       this(null, position, rotation);
    }
 
@@ -63,7 +65,7 @@ public class Location {
       this(world, transform.position, transform.rotation);
    }
 
-   public Location(@Nullable String world, @Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public Location(@Nullable String world, @Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
       this.world = world;
       this.position = position;
       this.rotation = rotation;
@@ -88,22 +90,22 @@ public class Location {
    }
 
    @Nonnull
-   public Vector3f getRotation() {
+   public Rotation3f getRotation() {
       return this.rotation;
    }
 
-   public void setRotation(@Nonnull Vector3f rotation) {
+   public void setRotation(@Nonnull Rotation3f rotation) {
       this.rotation = rotation;
    }
 
    @Nonnull
    public Vector3d getDirection() {
-      return Transform.getDirection(this.rotation.getPitch(), this.rotation.getYaw());
+      return Transform.getDirection(this.rotation.pitch(), this.rotation.yaw());
    }
 
    @Nonnull
    public Vector3i getAxisDirection() {
-      return this.getAxisDirection(this.rotation.getPitch(), this.rotation.getYaw());
+      return this.getAxisDirection(this.rotation.pitch(), this.rotation.yaw());
    }
 
    @Nonnull
@@ -124,10 +126,10 @@ public class Location {
    @Nonnull
    public Axis getAxis() {
       Vector3i axisDirection = this.getAxisDirection();
-      if (axisDirection.getX() != 0) {
+      if (axisDirection.x() != 0) {
          return Axis.X;
       } else {
-         return axisDirection.getY() != 0 ? Axis.Y : Axis.Z;
+         return axisDirection.y() != 0 ? Axis.Y : Axis.Z;
       }
    }
 

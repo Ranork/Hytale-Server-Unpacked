@@ -477,8 +477,11 @@ public class AssetPackSaveBrowser {
                               HytaleServerConfig.save(serverConfig).join();
                            }
 
-                           AssetModule.get().registerPack(packId, packPath, manifest, false);
-                           ((HytaleLogger.Api)LOGGER.atInfo()).log("Created new asset pack: %s at %s", packId, packPath);
+                           if (!AssetModule.get().registerPack(packId, packPath, manifest, AssetPack.PackSource.RUNTIME)) {
+                              ((HytaleLogger.Api)LOGGER.atSevere()).log("Failed to register asset pack: %s at %s", packId, packPath);
+                           } else {
+                              ((HytaleLogger.Api)LOGGER.atInfo()).log("Created new asset pack: %s at %s", packId, packPath);
+                           }
                         });
                         this.selectedPackKey = packId;
                         this.pendingPack = new AssetPackSaveBrowser.PendingPack(packId, name.trim());

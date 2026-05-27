@@ -8,5 +8,7 @@ public class PermCommand extends AbstractCommandCollection {
       this.addSubCommand(new PermGroupCommand());
       this.addSubCommand(new PermUserCommand());
       this.addSubCommand(new PermTestCommand());
+      this.addSubCommand(new PermListCommand());
+      this.addSubCommand(new PermReloadCommand());
    }
 }

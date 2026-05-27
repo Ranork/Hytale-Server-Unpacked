@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -32,21 +35,76 @@ public class Position {
 
    @Nonnull
    public static Position deserialize(@Nonnull ByteBuf buf, int offset) {
-      Position obj = new Position();
-      obj.x = buf.getDoubleLE(offset + 0);
-      obj.y = buf.getDoubleLE(offset + 8);
-      obj.z = buf.getDoubleLE(offset + 16);
-      return obj;
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("Position", 24, buf.readableBytes() - offset);
+      } else {
+         Position obj = new Position();
+         obj.x = buf.getDoubleLE(offset + 0);
+         obj.y = buf.getDoubleLE(offset + 8);
+         obj.z = buf.getDoubleLE(offset + 16);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 24;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 24L;
+   }
+
+   public static double getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static double getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 0));
+   }
+
+   public static double getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static double getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 8));
+   }
+
+   public static double getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static double getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 16));
+   }
+
+   public static Position toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Position toObject(MemorySegment mem, int offset) {
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Position", offset + 24, (int)mem.byteSize());
+      } else {
+         return new Position(
+            mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_DOUBLE, (long)(offset + 16))
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeDoubleLE(this.x);
       buf.writeDoubleLE(this.y);
       buf.writeDoubleLE(this.z);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_DOUBLE, (long)(offset + 0), this.x);
+      mem.set(PacketIO.PROTO_DOUBLE, (long)(offset + 8), this.y);
+      mem.set(PacketIO.PROTO_DOUBLE, (long)(offset + 16), this.z);
+      return 24;
    }
 
    public int computeSize() {

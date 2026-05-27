@@ -5,11 +5,11 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class IndividualSpawnProvider implements ISpawnProvider {
    @Nonnull
@@ -39,7 +39,7 @@ public class IndividualSpawnProvider implements ISpawnProvider {
 
    @Override
    public Transform getSpawnPoint(@Nonnull World world, @Nonnull UUID uuid) {
-      return this.spawnPoints[Math.abs((int)HashUtil.hashUuid(uuid)) % this.spawnPoints.length].clone();
+      return new Transform(this.spawnPoints[Math.abs((int)HashUtil.hashUuid(uuid)) % this.spawnPoints.length]);
    }
 
    @Override
@@ -57,7 +57,7 @@ public class IndividualSpawnProvider implements ISpawnProvider {
       double distanceSquared = distance * distance;
 
       for (Transform point : this.spawnPoints) {
-         if (position.distanceSquaredTo(point.getPosition()) < distanceSquared) {
+         if (position.distanceSquared(point.getPosition()) < distanceSquared) {
             return true;
          }
       }

@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.corecomponents.entity;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.SensorBase;
@@ -13,6 +12,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
 import com.hypixel.hytale.server.npc.util.DamageData;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SensorKill extends SensorBase {
    protected final int targetSlot;

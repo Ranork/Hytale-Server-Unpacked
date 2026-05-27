@@ -28,7 +28,7 @@ public class NPCGiveCommand extends NPCWorldCommandBase {
       Item item = this.itemArg.get(context);
       String itemName = item.getId();
       if (item.getArmor() != null) {
-         RoleUtils.setArmor(npc, itemName);
+         RoleUtils.setArmor(ref, npc, itemName, store);
       } else {
          RoleUtils.setItemInHand(ref, npc, itemName, store);
       }

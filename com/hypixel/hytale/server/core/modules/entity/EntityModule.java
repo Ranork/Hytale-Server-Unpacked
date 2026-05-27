@@ -63,12 +63,14 @@ import com.hypixel.hytale.server.core.modules.collision.TangiableEntitySpatialSy
 import com.hypixel.hytale.server.core.modules.entity.component.ActiveAnimationComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.AudioComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
+import com.hypixel.hytale.server.core.modules.entity.component.BreathingComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.CachedStatsComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.CollisionResultComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
+import com.hypixel.hytale.server.core.modules.entity.component.FromPrefabInstance;
 import com.hypixel.hytale.server.core.modules.entity.component.FromWorldGen;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.HiddenFromAdventurePlayers;
@@ -79,6 +81,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.MovementAudioComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.NPCMarkerComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.NewSpawnComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentDynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.PositionDataComponent;
@@ -106,6 +109,7 @@ import com.hypixel.hytale.server.core.modules.entity.condition.StatCondition;
 import com.hypixel.hytale.server.core.modules.entity.condition.SuffocatingCondition;
 import com.hypixel.hytale.server.core.modules.entity.condition.WieldingCondition;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageSystems;
 import com.hypixel.hytale.server.core.modules.entity.dynamiclight.DynamicLightSystems;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollision;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
@@ -144,6 +148,7 @@ import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionConfig;
 import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionConfigPacketGenerator;
 import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionSystems;
 import com.hypixel.hytale.server.core.modules.entity.system.AudioSystems;
+import com.hypixel.hytale.server.core.modules.entity.system.DisplayNameSystems;
 import com.hypixel.hytale.server.core.modules.entity.system.EntityInteractableSystems;
 import com.hypixel.hytale.server.core.modules.entity.system.EntitySpatialSystem;
 import com.hypixel.hytale.server.core.modules.entity.system.EntitySystems;
@@ -166,7 +171,6 @@ import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.TeleportRecord;
 import com.hypixel.hytale.server.core.modules.entity.teleport.TeleportSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
-import com.hypixel.hytale.server.core.modules.entity.tracker.LegacyEntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.modules.physics.component.PhysicsValues;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
@@ -185,7 +189,6 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -195,9 +198,6 @@ import javax.annotation.Nullable;
 
 public class EntityModule extends JavaPlugin {
    public static final PluginManifest MANIFEST = PluginManifest.corePlugin(EntityModule.class).depends(Universe.class).depends(CollisionModule.class).build();
-   public static final String[] LEGACY_ENTITY_CLASS_NAMES = new String[]{
-      "SpawnSuppressor", "Block", "LegacySpawnBeacon", "PatrolPathMarker", "Player", "SpawnBeacon", "SpawnMarker"
-   };
    public static final String MOUNT_MOVEMENT_SETTINGS_ASSET_ID = "Mount";
    private static EntityModule instance;
    private final Map<String, Class<? extends Entity>> idMap = new ConcurrentHashMap<>();
@@ -232,6 +232,7 @@ public class EntityModule extends JavaPlugin {
    private ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> itemSpatialResourceType;
    private ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> networkSendableSpatialResourceType;
    private ComponentType<EntityStore, DisplayNameComponent> displayNameComponentType;
+   private ComponentType<EntityStore, PersistentDisplayName> persistentDisplayNameComponentType;
    private ComponentType<EntityStore, EntityGroup> entityGroupComponentType;
    private ComponentType<EntityStore, MovementStatesComponent> movementStatesComponentType;
    private ComponentType<EntityStore, DamageDataComponent> damageDataComponentType;
@@ -246,6 +247,7 @@ public class EntityModule extends JavaPlugin {
    private ComponentType<EntityStore, PhysicsValues> physicsValuesComponentType;
    private ComponentType<EntityStore, FromPrefab> fromPrefabComponentType;
    private ComponentType<EntityStore, FromWorldGen> fromWorldGenComponentType;
+   private ComponentType<EntityStore, FromPrefabInstance> fromPrefabInstanceComponentType;
    private ComponentType<EntityStore, WorldGenId> worldGenIdComponentType;
    private ComponentType<EntityStore, Interactable> interactableComponentType;
    private ComponentType<EntityStore, Intangible> intangibleComponentType;
@@ -275,6 +277,7 @@ public class EntityModule extends JavaPlugin {
    private ComponentType<EntityStore, PositionDataComponent> positionDataComponentType;
    private ComponentType<EntityStore, ActiveAnimationComponent> activeAnimationComponentType;
    private ComponentType<EntityStore, CachedStatsComponent> cachedStatsComponentType;
+   private ComponentType<EntityStore, BreathingComponent> breathingComponentType;
    private ComponentType<EntityStore, NewSpawnComponent> newSpawnComponentType;
    private ComponentType<EntityStore, ItemComponent> itemComponentType;
    private ComponentType<EntityStore, PickupItemComponent> pickupItemComponentType;
@@ -334,6 +337,7 @@ public class EntityModule extends JavaPlugin {
       this.positionDataComponentType = entityStoreRegistry.registerComponent(PositionDataComponent.class, PositionDataComponent::new);
       this.activeAnimationComponentType = entityStoreRegistry.registerComponent(ActiveAnimationComponent.class, ActiveAnimationComponent::new);
       this.cachedStatsComponentType = entityStoreRegistry.registerComponent(CachedStatsComponent.class, CachedStatsComponent::new);
+      this.breathingComponentType = entityStoreRegistry.registerComponent(BreathingComponent.class, BreathingComponent::new);
       this.newSpawnComponentType = entityStoreRegistry.registerComponent(NewSpawnComponent.class, () -> {
          throw new UnsupportedOperationException("Not implemented");
       });
@@ -362,7 +366,6 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new SnapshotSystems.Resize());
       entityStoreRegistry.registerSystem(new SnapshotSystems.Capture());
       entityStoreRegistry.registerSystem(new UpdateEntitySeedSystem());
-      entityStoreRegistry.registerSystem(new EntityModule.LegacyTransformSystem());
       entityStoreRegistry.registerSystem(new EntityModule.LegacyUUIDSystem());
       entityStoreRegistry.registerSystem(new EntityModule.LegacyUUIDUpdateSystem());
       entityStoreRegistry.registerSystem(new EntitySystems.UnloadEntityFromChunk());
@@ -394,7 +397,13 @@ public class EntityModule extends JavaPlugin {
          throw new UnsupportedOperationException();
       });
       this.movementManagerComponentType = entityStoreRegistry.registerComponent(MovementManager.class, MovementManager::new);
-      this.displayNameComponentType = entityStoreRegistry.registerComponent(DisplayNameComponent.class, "DisplayName", DisplayNameComponent.CODEC);
+      this.displayNameComponentType = entityStoreRegistry.registerComponent(DisplayNameComponent.class, DisplayNameComponent::new);
+      this.persistentDisplayNameComponentType = entityStoreRegistry.registerComponent(
+         PersistentDisplayName.class, "PersistentDisplayName", PersistentDisplayName.CODEC
+      );
+      entityStoreRegistry.registerSystem(new DisplayNameSystems.HydrateDisplayName());
+      entityStoreRegistry.registerSystem(new DisplayNameSystems.MigratePlayerDisplayName());
+      entityStoreRegistry.registerSystem(new DisplayNameSystems.SyncDisplayName());
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerSpawnedSystem());
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerAddedSystem(this.movementManagerComponentType));
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerRemovedSystem());
@@ -424,6 +433,7 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new PlayerHudManagerSystems.InitializeSystem());
       this.fromWorldGenComponentType = entityStoreRegistry.registerComponent(FromWorldGen.class, "FromWorldGen", FromWorldGen.CODEC);
       entityStoreRegistry.registerSystem(new EntitySystems.ClearFromWorldGenMarker(this.fromWorldGenComponentType, this.preClearMarkersGroup));
+      this.fromPrefabInstanceComponentType = entityStoreRegistry.registerComponent(FromPrefabInstance.class, "FromPrefabInstance", FromPrefabInstance.CODEC);
       this.worldGenIdComponentType = entityStoreRegistry.registerComponent(WorldGenId.class, "WorldGenId", WorldGenId.CODEC);
       entityStoreRegistry.registerSystem(
          new EntitySystems.OnLoadFromExternal(this.fromPrefabComponentType, this.fromWorldGenComponentType, this.preClearMarkersGroup)
@@ -479,12 +489,11 @@ public class EntityModule extends JavaPlugin {
       this.networkSendableSpatialResourceType = entityStoreRegistry.registerSpatialResource(() -> new KDTree<>(Ref::isValid));
       entityStoreRegistry.registerSystem(new NetworkSendableSpatialSystem(this.networkSendableSpatialResourceType));
       entityStoreRegistry.registerSystem(new EntityTrackerSystems.CollectVisible(this.entityViewerComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyLODCull(this.entityViewerComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyHideFromEntity(this.entityViewerComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyEntityModel(this.visibleComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyEntitySkin(this.visibleComponentType, this.playerSkinComponentType));
+      entityStoreRegistry.registerSystem(new EntityTrackerSystems.LODCull(this.entityViewerComponentType));
+      entityStoreRegistry.registerSystem(new EntityTrackerSystems.HideFromPlayer(this.entityViewerComponentType));
+      entityStoreRegistry.registerSystem(new EntityTrackerSystems.EntityModel(this.visibleComponentType));
+      entityStoreRegistry.registerSystem(new EntityTrackerSystems.EntitySkin(this.visibleComponentType, this.playerSkinComponentType));
       entityStoreRegistry.registerSystem(new BlockEntitySystems.BlockEntityTrackerSystem(this.visibleComponentType, this.blockEntityComponentType));
-      entityStoreRegistry.registerSystem(new LegacyEntityTrackerSystems.LegacyEquipment(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new EntityTrackerSystems.EffectControllerSystem(this.visibleComponentType, this.effectControllerComponentType));
       entityStoreRegistry.registerSystem(new EntitySystems.DynamicLightTracker(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new DynamicLightSystems.Setup());
@@ -492,6 +501,7 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new LivingEntityEffectClearChangesSystem());
       entityStoreRegistry.registerSystem(new PlayerSendInventorySystem(this.playerComponentType));
       entityStoreRegistry.registerSystem(new PlayerSavingSystems.WorldRemovedSystem(this.playerComponentType));
+      entityStoreRegistry.registerSystem(new PlayerSavingSystems.EntityRemovedSystem(this.playerComponentType));
       entityStoreRegistry.registerSystem(new PlayerSavingSystems.TickingSystem(this.playerComponentType));
       this.entityGroupComponentType = entityStoreRegistry.registerComponent(EntityGroup.class, () -> {
          throw new UnsupportedOperationException("Not implemented");
@@ -513,7 +523,6 @@ public class EntityModule extends JavaPlugin {
       this.intangibleQueueResourceType = entityStoreRegistry.registerResource(IntangibleSystems.QueueResource.class, IntangibleSystems.QueueResource::new);
       entityStoreRegistry.registerSystem(new IntangibleSystems.EntityTrackerUpdate(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new IntangibleSystems.EntityTrackerAddAndRemove(this.visibleComponentType));
-      entityStoreRegistry.registerSystem(new EntityModule.TangibleMigrationSystem(ProjectileComponent.getComponentType()), true);
       this.invulnerableQueueResourceType = entityStoreRegistry.registerResource(InvulnerableSystems.QueueResource.class, InvulnerableSystems.QueueResource::new);
       entityStoreRegistry.registerSystem(new InvulnerableSystems.EntityTrackerUpdate(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new InvulnerableSystems.EntityTrackerAddAndRemove(this.visibleComponentType));
@@ -574,6 +583,7 @@ public class EntityModule extends JavaPlugin {
          new RepulsionSystems.RepulsionTicker(this.repulsionComponentType, this.transformComponentType, this.entitySpatialResourceType)
       );
       entityStoreRegistry.registerSystem(new EntitySystems.NewSpawnTick());
+      entityStoreRegistry.registerSystem(new DamageSystems.InvulnerableBreathing(this.invulnerableComponentType, this.breathingComponentType));
       AssetRegistry.register(
          ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
                                  MovementConfig.class, new IndexedLookupTableAssetMap<>(MovementConfig[]::new)
@@ -624,6 +634,11 @@ public class EntityModule extends JavaPlugin {
       entityStoreRegistry.registerSystem(new InventorySystems.LegacyHotbarChangeStatSystem());
       entityStoreRegistry.registerSystem(new InventorySystems.LegacyUtilityChangeStatSystem());
       entityStoreRegistry.registerSystem(new InventorySystems.PlayerInventoryChangeEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.ActiveSlotChangedToolsEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.ActiveSlotChangedEntityEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.ActiveSlotChangedToolsHolderEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.ActiveSlotChangedEntityHolderEventSystem());
+      entityStoreRegistry.registerSystem(new InventorySystems.SyncEquipmentSystem(this.visibleComponentType));
       entityStoreRegistry.registerSystem(new PlayerSystems.PlayerInitSystem());
       Condition.CODEC.register("LogicCondition", LogicCondition.class, LogicCondition.CODEC);
       Condition.CODEC.register("RegenHealth", RegenHealthCondition.class, RegenHealthCondition.CODEC);
@@ -691,6 +706,10 @@ public class EntityModule extends JavaPlugin {
 
    public ComponentType<EntityStore, DisplayNameComponent> getDisplayNameComponentType() {
       return this.displayNameComponentType;
+   }
+
+   public ComponentType<EntityStore, PersistentDisplayName> getPersistentDisplayNameComponentType() {
+      return this.persistentDisplayNameComponentType;
    }
 
    public ComponentType<EntityStore, ApplyRandomSkinPersistedComponent> getApplyRandomSkinPersistedComponent() {
@@ -791,6 +810,10 @@ public class EntityModule extends JavaPlugin {
 
    public ComponentType<EntityStore, FromWorldGen> getFromWorldGenComponentType() {
       return this.fromWorldGenComponentType;
+   }
+
+   public ComponentType<EntityStore, FromPrefabInstance> getFromPrefabInstanceComponentType() {
+      return this.fromPrefabInstanceComponentType;
    }
 
    public ComponentType<EntityStore, WorldGenId> getWorldGenIdComponentType() {
@@ -1091,6 +1114,10 @@ public class EntityModule extends JavaPlugin {
       return this.cachedStatsComponentType;
    }
 
+   public ComponentType<EntityStore, BreathingComponent> getBreathingComponentType() {
+      return this.breathingComponentType;
+   }
+
    @Nullable
    public <T extends Entity> EntityRegistration registerEntity(
       @Nonnull String id, @Nonnull Class<T> clazz, Function<World, T> entityConstructor, @Nullable DirectDecodeCodec<T> codec
@@ -1185,32 +1212,6 @@ public class EntityModule extends JavaPlugin {
       return entity != null && this.getConstructor(entity.getClass()) != null;
    }
 
-   @Deprecated(forRemoval = true)
-   public static class HiddenFromPlayerMigrationSystem extends EntityModule.MigrationSystem {
-      private final ComponentType<EntityStore, HiddenFromAdventurePlayers> hiddenFromAdventurePlayersComponentType = HiddenFromAdventurePlayers.getComponentType();
-      @Nonnull
-      private final Query<EntityStore> query;
-
-      public HiddenFromPlayerMigrationSystem(Query<EntityStore> query) {
-         this.query = Query.and(query, Query.not(this.hiddenFromAdventurePlayersComponentType));
-      }
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         holder.ensureComponent(this.hiddenFromAdventurePlayersComponentType);
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return this.query;
-      }
-   }
-
    public static class LegacyEntityHolderSystem<T extends Entity> extends HolderSystem<EntityStore> {
       private final ComponentType<EntityStore, T> componentType;
 
@@ -1250,6 +1251,7 @@ public class EntityModule extends JavaPlugin {
          T entity = holder.getComponent(this.componentType);
          switch (reason) {
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                if (!entity.wasRemoved()) {
                   entity.remove();
                   entity.unloadFromWorld();
@@ -1307,32 +1309,6 @@ public class EntityModule extends JavaPlugin {
       @Override
       public String toString() {
          return "LegacyEntityRefSystem{componentType=" + this.componentType + "}";
-      }
-   }
-
-   public static class LegacyTransformSystem extends EntityModule.MigrationSystem {
-      @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         TransformComponent transformComponent = holder.getComponent(TransformComponent.getComponentType());
-         Objects.requireNonNull(transformComponent);
-         Entity entity = EntityUtils.getEntity(holder);
-         entity.setTransformComponent(transformComponent);
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<EntityStore>> getDependencies() {
-         return RootDependency.firstSet();
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return AllLegacyEntityTypesQuery.INSTANCE;
       }
    }
 
@@ -1409,32 +1385,6 @@ public class EntityModule extends JavaPlugin {
    }
 
    public abstract static class MigrationSystem extends HolderSystem<EntityStore> {
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class TangibleMigrationSystem extends EntityModule.MigrationSystem {
-      private final ComponentType<EntityStore, Intangible> intangibleComponentType = Intangible.getComponentType();
-      @Nonnull
-      private final Query<EntityStore> query;
-
-      public TangibleMigrationSystem(Query<EntityStore> query) {
-         this.query = Query.and(query, Query.not(this.intangibleComponentType));
-      }
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
-         holder.ensureComponent(this.intangibleComponentType);
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<EntityStore> getQuery() {
-         return this.query;
-      }
    }
 
    public static enum Type {

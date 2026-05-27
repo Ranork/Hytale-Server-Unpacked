@@ -2,13 +2,13 @@ package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class MaterialPattern extends Pattern {
    @Nonnull
-   private static final Bounds3i BOUNDS = new Bounds3i(Vector3i.ZERO, Vector3i.ALL_ONES);
+   private static final Bounds3i BOUNDS = new Bounds3i(Vector3iUtil.ZERO, Vector3iUtil.ALL_ONES);
    @Nonnull
    private final Material material;
 

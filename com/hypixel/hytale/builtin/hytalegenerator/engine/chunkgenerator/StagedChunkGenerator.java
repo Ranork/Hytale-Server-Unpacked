@@ -24,8 +24,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.universe.world.chunk.environment.EnvironmentChunk;
@@ -48,13 +47,15 @@ import java.util.concurrent.ExecutorService;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class StagedChunkGenerator implements ChunkGenerator {
    public static final int WORLD_MIN_Y_BUFFER_GRID = 0;
    public static final int WORLD_MAX_Y_BUFFER_GRID = 40;
    public static final int WORLD_HEIGHT_BUFFER_GRID = 40;
    @Nonnull
-   public static final Bounds3i CHUNK_BOUNDS_BUFFER_GRID = new Bounds3i(Vector3i.ZERO, new Vector3i(4, 40, 4));
+   public static final Bounds3i CHUNK_BOUNDS_BUFFER_GRID = new Bounds3i(Vector3iUtil.ZERO, new Vector3i(4, 40, 4));
    @Nonnull
    public static final Bounds3i SINGLE_BUFFER_TILE_BOUNDS_BUFFER_GRID = new Bounds3i(
       new Vector3i(0, 0, 0), new Vector3i(VoxelBuffer.SIZE.x, 320, VoxelBuffer.SIZE.x)
@@ -121,7 +122,6 @@ public class StagedChunkGenerator implements ChunkGenerator {
                   tilePos_bufferGrid.z < stageChunkOutputBounds_bufferGrid.max.z;
                   tilePos_bufferGrid.z++
                ) {
-                  tilePos_bufferGrid.dropHash();
                   this.totalCacheBufferRequests++;
                   boolean isOutputCached = true;
 
@@ -135,7 +135,7 @@ public class StagedChunkGenerator implements ChunkGenerator {
 
                   if (!isOutputCached) {
                      this.missedCacheBufferRequests++;
-                     positions_bufferGrid.add(tilePos_bufferGrid.clone());
+                     positions_bufferGrid.add(new Vector3i(tilePos_bufferGrid));
                   }
                }
             }
@@ -269,7 +269,7 @@ public class StagedChunkGenerator implements ChunkGenerator {
          context.bufferAccess.put(bufferType, bufferAccess);
       }
 
-      Vector3i bufferPositionClone_bufferTileGrid = position_bufferTileGrid.clone();
+      Vector3i bufferPositionClone_bufferTileGrid = new Vector3i(position_bufferTileGrid);
       return () -> {
          try {
             stage.run(context);
@@ -459,7 +459,6 @@ public class StagedChunkGenerator implements ChunkGenerator {
                         world_voxelGrid.x = x_voxelGrid_final + chunkBounds_voxelGrid.min.x;
                         world_voxelGrid.y = y_voxelGrid + chunkBounds_voxelGrid.min.y;
                         world_voxelGrid.z = z_voxelGrid_final + chunkBounds_voxelGrid.min.z;
-                        world_voxelGrid.dropHash();
                         Integer environment = environmentVoxelSpace.get(world_voxelGrid);
 
                         assert environment != null;
@@ -499,18 +498,24 @@ public class StagedChunkGenerator implements ChunkGenerator {
       EntityBufferView entityView = new EntityBufferView(entityBufferAccess.createView());
       GeneratedEntityChunk entityChunk = generatedChunk.getEntityChunk();
       TimeInstrument.Probe entitesTransfer_timeProbe = transfer_timeProbe.createProbe("Entities");
-      return CompletableFuture.runAsync(() -> {
-         entitesTransfer_timeProbe.start();
-         entityView.forEach(e -> entityChunk.addEntities(e.getOffset(), e.getRotation(), new Holder[]{e.getEntityHolder()}, arguments.seed()));
-         entitesTransfer_timeProbe.stop();
-      }, this.concurrentExecutor).handle((r, e) -> {
-         if (e == null) {
-            return (Void)r;
-         } else {
-            LoggerUtil.logException("a HytaleGenerator async process", e, LoggerUtil.getLogger());
-            return null;
-         }
-      });
+      return CompletableFuture.runAsync(
+            () -> {
+               entitesTransfer_timeProbe.start();
+               entityView.forEach(
+                  e -> entityChunk.addEntities(e.getOffset(), e.getRotation(), new Holder[]{e.getEntityHolder()}, arguments.seed(), e.getPrefabInstanceId())
+               );
+               entitesTransfer_timeProbe.stop();
+            },
+            this.concurrentExecutor
+         )
+         .handle((r, e) -> {
+            if (e == null) {
+               return (Void)r;
+            } else {
+               LoggerUtil.logException("a HytaleGenerator async process", e, LoggerUtil.getLogger());
+               return null;
+            }
+         });
    }
 
    @Nonnull
@@ -533,7 +538,7 @@ public class StagedChunkGenerator implements ChunkGenerator {
          Bounds3i bounds_bufferGrid = this.stagesOutputBounds_bufferGrid[stageIndex];
          Vector3i size_bufferGrid = bounds_bufferGrid.getSize().add(3, 0, 3);
          Vector3d size_chunkGrid = new Vector3d(size_bufferGrid);
-         size_chunkGrid.scale(0.25);
+         size_chunkGrid.mul(0.25);
          builder.append("\t".repeat(indentation)).append(this.stages[stageIndex].getName()).append(" (Stage ").append(stageIndex).append("):\n");
          builder.append("\t".repeat(indentation + 1))
             .append("Output Size (Buffer Column): {x=")
@@ -568,8 +573,8 @@ public class StagedChunkGenerator implements ChunkGenerator {
    }
 
    private static void setBoundsToWorldHeight_bufferGrid(@Nonnull Bounds3i bounds_bufferGrid) {
-      bounds_bufferGrid.min.setY(0);
-      bounds_bufferGrid.max.setY(40);
+      bounds_bufferGrid.min.y = 0;
+      bounds_bufferGrid.max.y = 40;
    }
 
    private static boolean isColumnCached(@Nonnull BufferBundle.Access access, @Nonnull Vector3i position_bufferGrid, int stageIndex) {
@@ -581,7 +586,6 @@ public class StagedChunkGenerator implements ChunkGenerator {
 
    private static void updateTrackersForColumn(int stageIndex, @Nonnull BufferBundle.Access.View access, @Nonnull Vector3i position_bufferGrid) {
       for (position_bufferGrid.y = 0; position_bufferGrid.y < 40; position_bufferGrid.y++) {
-         position_bufferGrid.dropHash();
          BufferBundle.Tracker tracker = access.getBuffer(position_bufferGrid).tracker();
          tracker.stageIndex = stageIndex;
       }
@@ -798,7 +802,7 @@ public class StagedChunkGenerator implements ChunkGenerator {
       private void createTotalOutputBoundsForStage(
          int stageIndex, @Nonnull Map<Integer, Set<Integer>> stageDependencyMap, @Nonnull Bounds3i[] totalOutputBoundsPerStage_bufferGrid
       ) {
-         Bounds3i initialOutputBounds_bufferGrid = new Bounds3i(Vector3i.ZERO, Vector3i.ALL_ONES);
+         Bounds3i initialOutputBounds_bufferGrid = new Bounds3i(Vector3iUtil.ZERO, Vector3iUtil.ALL_ONES);
          Stage stage = this.stages.get(stageIndex);
          List<Bounds3i> allOutputBounds = new ArrayList<>();
 

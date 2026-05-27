@@ -2,8 +2,8 @@ package com.hypixel.hytale.builtin.hytalegenerator.engine.containers;
 
 import com.hypixel.hytale.builtin.hytalegenerator.GridUtils;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class FloatContainer3d {
    @Nonnull
@@ -43,7 +43,7 @@ public class FloatContainer3d {
    }
 
    public void moveMinTo(@Nonnull Vector3i min_voxelGrid) {
-      Vector3i oldMin_voxelGrid = this.bounds_voxelGrid.min.clone().scale(-1);
+      Vector3i oldMin_voxelGrid = new Vector3i(this.bounds_voxelGrid.min).negate();
       this.bounds_voxelGrid.offset(oldMin_voxelGrid);
       this.bounds_voxelGrid.offset(min_voxelGrid);
    }

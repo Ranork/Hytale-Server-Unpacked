@@ -1,15 +1,15 @@
 package com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class RotatedPosition {
-   public final int x;
-   public final int y;
-   public final int z;
+   public int x;
+   public int y;
+   public int z;
    @Nonnull
-   public final PrefabRotation rotation;
+   public PrefabRotation rotation;
 
    public RotatedPosition(int x, int y, int z, @Nonnull PrefabRotation rotation) {
       this.x = x;

@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class WorldPathCommand extends AbstractCommandCollection {
    public WorldPathCommand() {
       super("worldpath", "server.commands.worldpath.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new WorldPathListCommand());
       this.addSubCommand(new WorldPathRemoveCommand());
       this.addSubCommand(new WorldPathSaveCommand());

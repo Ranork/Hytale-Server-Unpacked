@@ -10,11 +10,11 @@ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.protocol.Vector2f;
-import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
+import com.hypixel.hytale.math.vector.Vector2fUtil;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.lang.ref.SoftReference;
 import javax.annotation.Nonnull;
+import org.joml.Vector2f;
 
 public abstract class EntityUIComponent
    implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, EntityUIComponent>>,
@@ -23,7 +23,7 @@ public abstract class EntityUIComponent
       Codec.STRING, (t, k) -> t.id = k, t -> t.id, (t, data) -> t.data = data, t -> t.data
    );
    public static final BuilderCodec<EntityUIComponent> ABSTRACT_CODEC = AssetBuilderCodec.abstractBuilder(EntityUIComponent.class)
-      .append(new KeyedCodec<>("HitboxOffset", ProtocolCodecs.VECTOR2F), (config, v) -> config.hitboxOffset = v, config -> config.hitboxOffset)
+      .append(new KeyedCodec<>("HitboxOffset", Vector2fUtil.CODEC), (config, v) -> config.hitboxOffset = v, config -> config.hitboxOffset)
       .documentation("Offset from the centre of the entity's hitbox to display this component.")
       .add()
       .build();

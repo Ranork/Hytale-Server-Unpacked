@@ -3,15 +3,16 @@ package com.hypixel.hytale.server.core.asset.type.trail.config;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector2i;
+import com.hypixel.hytale.math.vector.Vector2iUtil;
 import com.hypixel.hytale.protocol.Range;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import javax.annotation.Nonnull;
+import org.joml.Vector2i;
 
 public class Animation {
    public static final BuilderCodec<Animation> CODEC = BuilderCodec.builder(Animation.class, Animation::new)
       .appendInherited(
-         new KeyedCodec<>("FrameSize", Vector2i.CODEC),
+         new KeyedCodec<>("FrameSize", Vector2iUtil.CODEC),
          (animation, b) -> animation.frameSize = b,
          animation -> animation.frameSize,
          (animation, parent) -> animation.frameSize = parent.frameSize

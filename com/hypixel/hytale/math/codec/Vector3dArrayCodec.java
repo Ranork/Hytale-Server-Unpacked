@@ -7,12 +7,12 @@ import com.hypixel.hytale.codec.schema.config.ArraySchema;
 import com.hypixel.hytale.codec.schema.config.NumberSchema;
 import com.hypixel.hytale.codec.schema.config.Schema;
 import com.hypixel.hytale.codec.util.RawJsonReader;
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.io.IOException;
 import javax.annotation.Nonnull;
 import org.bson.BsonArray;
 import org.bson.BsonDouble;
 import org.bson.BsonValue;
+import org.joml.Vector3d;
 
 @Deprecated
 public class Vector3dArrayCodec implements Codec<Vector3d> {
@@ -25,9 +25,9 @@ public class Vector3dArrayCodec implements Codec<Vector3d> {
    @Nonnull
    public BsonValue encode(@Nonnull Vector3d t, ExtraInfo extraInfo) {
       BsonArray array = new BsonArray();
-      array.add(new BsonDouble(t.getX()));
-      array.add(new BsonDouble(t.getY()));
-      array.add(new BsonDouble(t.getZ()));
+      array.add(new BsonDouble(t.x()));
+      array.add(new BsonDouble(t.y()));
+      array.add(new BsonDouble(t.z()));
       return array;
    }
 

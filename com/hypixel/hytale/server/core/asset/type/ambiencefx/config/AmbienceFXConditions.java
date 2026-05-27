@@ -3,11 +3,17 @@ package com.hypixel.hytale.server.core.asset.type.ambiencefx.config;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
+import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.protocol.Range;
 import com.hypixel.hytale.protocol.Rangeb;
 import com.hypixel.hytale.protocol.Rangef;
+import com.hypixel.hytale.protocol.RoofState;
+import com.hypixel.hytale.protocol.ShelterType;
+import com.hypixel.hytale.protocol.SpaceSize;
+import com.hypixel.hytale.protocol.SurfaceType;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.asset.type.fluidfx.config.FluidFX;
 import com.hypixel.hytale.server.core.asset.type.tagpattern.config.TagPattern;
@@ -90,12 +96,14 @@ public class AmbienceFXConditions implements NetworkSerializable<com.hypixel.hyt
          (ambienceFXConditions, parent) -> ambienceFXConditions.walls = parent.walls
       )
       .add()
-      .appendInherited(
+      .<Boolean>appendInherited(
          new KeyedCodec<>("Roof", Codec.BOOLEAN),
          (ambienceFXConditions, aBoolean) -> ambienceFXConditions.roof = aBoolean,
          ambienceFXConditions -> ambienceFXConditions.roof,
          (ambienceFXConditions, parent) -> ambienceFXConditions.roof = parent.roof
       )
+      .documentation("Deprecated: Use RoofState instead.")
+      .addValidator(Validators.deprecated())
       .add()
       .<String>appendInherited(
          new KeyedCodec<>("RoofMaterialTagPattern", TagPattern.CHILD_ASSET_CODEC),
@@ -141,6 +149,118 @@ public class AmbienceFXConditions implements NetworkSerializable<com.hypixel.hyt
          (ambienceFXConditions, parent) -> ambienceFXConditions.dayTime = parent.dayTime
       )
       .add()
+      .<SpaceSize[]>appendInherited(
+         new KeyedCodec<>("Space", new ArrayCodec<>(new EnumCodec<>(SpaceSize.class), SpaceSize[]::new)),
+         (c, v) -> c.space = v,
+         c -> c.space,
+         (c, parent) -> c.space = parent.space
+      )
+      .documentation("The rough scale of the space to match.")
+      .add()
+      .<ShelterType[]>appendInherited(
+         new KeyedCodec<>("Shelter", new ArrayCodec<>(new EnumCodec<>(ShelterType.class), ShelterType[]::new)),
+         (c, v) -> c.shelter = v,
+         c -> c.shelter,
+         (c, parent) -> c.shelter = parent.shelter
+      )
+      .documentation("The rough amount of shelter from exterior elements to match.")
+      .add()
+      .<SurfaceType[]>appendInherited(
+         new KeyedCodec<>("Surfaces", new ArrayCodec<>(new EnumCodec<>(SurfaceType.class), SurfaceType[]::new)),
+         (c, v) -> c.surfaces = v,
+         c -> c.surfaces,
+         (c, parent) -> c.surfaces = parent.surfaces
+      )
+      .documentation("Reflectivity of surfaces within the space to match.")
+      .add()
+      .<RoofState>appendInherited(
+         new KeyedCodec<>("RoofState", new EnumCodec<>(RoofState.class)),
+         (c, v) -> c.roofState = v,
+         c -> c.roofState,
+         (c, parent) -> c.roofState = parent.roofState
+      )
+      .documentation("Whether or not a roof must be present to match (or can be set to not care).")
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("SpaceScaleRange", ProtocolCodecs.RANGEF),
+         (c, v) -> c.spaceScaleRange = v,
+         c -> c.spaceScaleRange,
+         (c, parent) -> c.spaceScaleRange = parent.spaceScaleRange
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("SpaceScaleMinRange", ProtocolCodecs.RANGEF),
+         (c, v) -> c.spaceScaleMinRange = v,
+         c -> c.spaceScaleMinRange,
+         (c, parent) -> c.spaceScaleMinRange = parent.spaceScaleMinRange
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("SpaceScaleMaxRange", ProtocolCodecs.RANGEF),
+         (c, v) -> c.spaceScaleMaxRange = v,
+         c -> c.spaceScaleMaxRange,
+         (c, parent) -> c.spaceScaleMaxRange = parent.spaceScaleMaxRange
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("EscapedRayPercentRange", ProtocolCodecs.RANGEF),
+         (c, v) -> c.escapedRayPercentRange = v,
+         c -> c.escapedRayPercentRange,
+         (c, parent) -> c.escapedRayPercentRange = parent.escapedRayPercentRange
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("ReflectionCoeffRange", ProtocolCodecs.RANGEF),
+         (c, v) -> c.reflectionCoeffRange = v,
+         c -> c.reflectionCoeffRange,
+         (c, parent) -> c.reflectionCoeffRange = parent.reflectionCoeffRange
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("AbsorptionCoeffRange", ProtocolCodecs.RANGEF),
+         (c, v) -> c.absorptionCoeffRange = v,
+         c -> c.absorptionCoeffRange,
+         (c, parent) -> c.absorptionCoeffRange = parent.absorptionCoeffRange
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("RoofDistanceRange", ProtocolCodecs.RANGEF),
+         (c, v) -> c.roofDistanceRange = v,
+         c -> c.roofDistanceRange,
+         (c, parent) -> c.roofDistanceRange = parent.roofDistanceRange
+      )
+      .add()
+      .appendInherited(
+         new KeyedCodec<>("SurfacePhysicalMaterials", new ArrayCodec<>(AmbienceFXPhysicalMaterial.CODEC, AmbienceFXPhysicalMaterial[]::new)),
+         (c, v) -> c.surfacePhysicalMaterials = v,
+         c -> c.surfacePhysicalMaterials,
+         (c, parent) -> c.surfacePhysicalMaterials = parent.surfacePhysicalMaterials
+      )
+      .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("SurfacePhysicalMaterialsMatchAny", Codec.BOOLEAN),
+         (c, v) -> c.surfacePhysicalMaterialsMatchAny = v,
+         c -> c.surfacePhysicalMaterialsMatchAny,
+         (c, parent) -> c.surfacePhysicalMaterialsMatchAny = parent.surfacePhysicalMaterialsMatchAny
+      )
+      .documentation("When true, the SurfacePhysicalMaterials condition matches if any entry matches (OR semantics). By default all must much.")
+      .add()
+      .<AmbienceFXPhysicalMaterial[]>appendInherited(
+         new KeyedCodec<>("ExteriorRoofPhysicalMaterials", new ArrayCodec<>(AmbienceFXPhysicalMaterial.CODEC, AmbienceFXPhysicalMaterial[]::new)),
+         (c, v) -> c.exteriorRoofPhysicalMaterials = v,
+         c -> c.exteriorRoofPhysicalMaterials,
+         (c, parent) -> c.exteriorRoofPhysicalMaterials = parent.exteriorRoofPhysicalMaterials
+      )
+      .documentation("The percentage ratios of the last physical material encountered before a probe ray escapes, i.e. the inferred \"roof\" materials.")
+      .add()
+      .<Boolean>appendInherited(
+         new KeyedCodec<>("ExteriorRoofPhysicalMaterialsMatchAny", Codec.BOOLEAN),
+         (c, v) -> c.exteriorRoofPhysicalMaterialsMatchAny = v,
+         c -> c.exteriorRoofPhysicalMaterialsMatchAny,
+         (c, parent) -> c.exteriorRoofPhysicalMaterialsMatchAny = parent.exteriorRoofPhysicalMaterialsMatchAny
+      )
+      .documentation("When true, the ExteriorRoofPhysicalMaterials condition matches if any entry matches (OR semantics). By default all must match.")
+      .add()
       .afterDecode(AmbienceFXConditions::processConfig)
       .build();
    public static final Range DEFAULT_ALTITUDE = new Range(0, 512);
@@ -159,6 +279,7 @@ public class AmbienceFXConditions implements NetworkSerializable<com.hypixel.hyt
    protected AmbienceFXBlockSoundSet[] surroundingBlockSoundSets;
    protected Range altitude = DEFAULT_ALTITUDE;
    protected Rangeb walls = DEFAULT_WALLS;
+   @Deprecated
    protected boolean roof;
    protected String roofMaterialTagPattern;
    protected boolean floor;
@@ -166,6 +287,21 @@ public class AmbienceFXConditions implements NetworkSerializable<com.hypixel.hyt
    protected Rangeb torchLightLevel = DEFAULT_LIGHT_LEVEL;
    protected Rangeb globalLightLevel = DEFAULT_LIGHT_LEVEL;
    protected Rangef dayTime = DEFAULT_DAY_TIME;
+   protected SpaceSize[] space;
+   protected ShelterType[] shelter;
+   protected SurfaceType[] surfaces;
+   protected RoofState roofState = RoofState.Any;
+   protected Rangef spaceScaleRange;
+   protected Rangef spaceScaleMinRange;
+   protected Rangef spaceScaleMaxRange;
+   protected Rangef escapedRayPercentRange;
+   protected Rangef reflectionCoeffRange;
+   protected Rangef absorptionCoeffRange;
+   protected Rangef roofDistanceRange;
+   protected AmbienceFXPhysicalMaterial[] surfacePhysicalMaterials;
+   protected boolean surfacePhysicalMaterialsMatchAny;
+   protected AmbienceFXPhysicalMaterial[] exteriorRoofPhysicalMaterials;
+   protected boolean exteriorRoofPhysicalMaterialsMatchAny;
 
    protected AmbienceFXConditions() {
    }
@@ -218,6 +354,31 @@ public class AmbienceFXConditions implements NetworkSerializable<com.hypixel.hyt
       packet.torchLightLevel = this.torchLightLevel;
       packet.globalLightLevel = this.globalLightLevel;
       packet.dayTime = this.dayTime;
+      packet.space = this.space;
+      packet.shelter = this.shelter;
+      packet.surfaces = this.surfaces;
+      packet.roofState = this.roofState;
+      packet.spaceScaleRange = this.spaceScaleRange;
+      packet.spaceScaleMinRange = this.spaceScaleMinRange;
+      packet.spaceScaleMaxRange = this.spaceScaleMaxRange;
+      packet.escapedRayPercentRange = this.escapedRayPercentRange;
+      packet.reflectionCoeffRange = this.reflectionCoeffRange;
+      packet.absorptionCoeffRange = this.absorptionCoeffRange;
+      packet.roofDistanceRange = this.roofDistanceRange;
+      if (this.surfacePhysicalMaterials != null && this.surfacePhysicalMaterials.length > 0) {
+         packet.surfacePhysicalMaterials = ArrayUtil.copyAndMutate(
+            this.surfacePhysicalMaterials, AmbienceFXPhysicalMaterial::toPacket, com.hypixel.hytale.protocol.AmbienceFXPhysicalMaterial[]::new
+         );
+      }
+
+      packet.surfacePhysicalMaterialsMatchAny = this.surfacePhysicalMaterialsMatchAny;
+      if (this.exteriorRoofPhysicalMaterials != null && this.exteriorRoofPhysicalMaterials.length > 0) {
+         packet.exteriorRoofPhysicalMaterials = ArrayUtil.copyAndMutate(
+            this.exteriorRoofPhysicalMaterials, AmbienceFXPhysicalMaterial::toPacket, com.hypixel.hytale.protocol.AmbienceFXPhysicalMaterial[]::new
+         );
+      }
+
+      packet.exteriorRoofPhysicalMaterialsMatchAny = this.exteriorRoofPhysicalMaterialsMatchAny;
       return packet;
    }
 

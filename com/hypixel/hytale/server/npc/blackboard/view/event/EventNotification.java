@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.npc.blackboard.view.event;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class EventNotification {
    private final Vector3d position = new Vector3d();
@@ -16,7 +16,7 @@ public class EventNotification {
    }
 
    public void setPosition(double x, double y, double z) {
-      this.position.assign(x, y, z);
+      this.position.set(x, y, z);
    }
 
    public Ref<EntityStore> getInitiator() {

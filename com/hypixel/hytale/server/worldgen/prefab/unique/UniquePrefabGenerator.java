@@ -3,8 +3,6 @@ package com.hypixel.hytale.server.worldgen.prefab.unique;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateRndCondition;
 import com.hypixel.hytale.server.worldgen.biome.Biome;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGenerator;
@@ -21,6 +19,8 @@ import java.util.Random;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2i;
+import org.joml.Vector3i;
 
 public class UniquePrefabGenerator {
    private static final int UNIQUE_ZONE_PLACEMENT_HEURISTIC_ITERATIONS = 8;
@@ -101,8 +101,8 @@ public class UniquePrefabGenerator {
    protected Vector3i tryPlacement(
       int seed, @Nonnull ChunkGenerator chunkGenerator, @Nonnull Random random, @Nonnull UniquePrefabContainer.UniquePrefabEntry[] entries
    ) {
-      double x = this.configuration.getAnchor().getX();
-      double z = this.configuration.getAnchor().getY();
+      double x = this.configuration.getAnchor().x();
+      double z = this.configuration.getAnchor().y();
       double distance = random.nextDouble() * this.configuration.getMaxDistance();
       float angle = random.nextFloat() * (float) (Math.PI * 2);
       x += TrigMathUtil.cos(angle) * distance;
@@ -144,8 +144,8 @@ public class UniquePrefabGenerator {
 
    @Nonnull
    protected Vector3i forceGeneration(int seed, @Nonnull ChunkGenerator chunkGenerator) {
-      double x = this.configuration.getAnchor().getX();
-      double z = this.configuration.getAnchor().getY();
+      double x = this.configuration.getAnchor().x();
+      double z = this.configuration.getAnchor().y();
       int lx = MathUtil.floor(x);
       int lz = MathUtil.floor(z);
       ZoneBiomeResult result = chunkGenerator.getZoneBiomeResultAt(seed, lx, lz);

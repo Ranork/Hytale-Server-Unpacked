@@ -5,9 +5,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.NullSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public abstract class Pattern {
    public abstract boolean matches(@Nonnull Pattern.Context var1);

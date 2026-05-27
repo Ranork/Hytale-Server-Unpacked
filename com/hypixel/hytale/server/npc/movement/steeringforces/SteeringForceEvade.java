@@ -41,8 +41,8 @@ public class SteeringForceEvade extends SteeringForceWithTarget {
    @Override
    public boolean compute(@Nonnull Steering output) {
       if (super.compute(output)) {
-         output.setTranslation(this.selfPosition).getTranslation().subtract(this.targetPosition);
-         double distanceSquared = output.getTranslation().squaredLength();
+         output.setTranslation(this.selfPosition).getTranslation().sub(this.targetPosition);
+         double distanceSquared = output.getTranslation().lengthSquared();
          if (distanceSquared >= this.squaredStopDistance) {
             output.clear();
             return false;
@@ -58,7 +58,7 @@ public class SteeringForceEvade extends SteeringForceWithTarget {
 
                if (!(distanceSquared < this.squaredSlowdownDistance) && this.distanceDelta != 0.0) {
                   double scale = Math.pow((this.stopDistance - Math.sqrt(distanceSquared)) / this.distanceDelta, 1.0 / this.falloff);
-                  output.getTranslation().setLength(scale);
+                  output.getTranslation().normalize(scale);
                   return true;
                } else {
                   output.getTranslation().normalize();

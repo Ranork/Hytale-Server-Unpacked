@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -24,6 +23,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class FertilizeSoilInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -55,14 +55,14 @@ public class FertilizeSoilInteraction extends SimpleBlockInteraction {
       @Nonnull Vector3i targetBlock,
       @Nonnull CooldownHandler cooldownHandler
    ) {
-      int x = targetBlock.getX();
-      int z = targetBlock.getZ();
+      int x = targetBlock.x();
+      int z = targetBlock.z();
       long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
       WorldChunk worldChunkComponent = world.getChunk(chunkIndex);
       if (worldChunkComponent == null) {
          context.getState().state = InteractionState.Failed;
       } else {
-         Ref<ChunkStore> blockRef = worldChunkComponent.getBlockComponentEntity(x, targetBlock.getY(), z);
+         Ref<ChunkStore> blockRef = worldChunkComponent.getBlockComponentEntity(x, targetBlock.y(), z);
          if (blockRef == null || !blockRef.isValid()) {
             blockRef = BlockModule.ensureBlockEntity(worldChunkComponent, targetBlock.x, targetBlock.y, targetBlock.z);
          }
@@ -72,20 +72,20 @@ public class FertilizeSoilInteraction extends SimpleBlockInteraction {
             TilledSoilBlock tilledSoilComponent = chunkStore.getComponent(blockRef, TilledSoilBlock.getComponentType());
             if (tilledSoilComponent != null && !tilledSoilComponent.isFertilized()) {
                tilledSoilComponent.setFertilized(true);
-               worldChunkComponent.setTicking(x, targetBlock.getY(), z, true);
-               worldChunkComponent.setTicking(x, targetBlock.getY() + 1, z, true);
+               worldChunkComponent.setTicking(x, targetBlock.y(), z, true);
+               worldChunkComponent.setTicking(x, targetBlock.y() + 1, z, true);
             } else {
                FarmingBlock farmingBlockComponent = chunkStore.getComponent(blockRef, FarmingBlock.getComponentType());
                if (farmingBlockComponent == null) {
                   context.getState().state = InteractionState.Failed;
                } else {
-                  Ref<ChunkStore> soilBlockRef = worldChunkComponent.getBlockComponentEntity(x, targetBlock.getY() - 1, z);
+                  Ref<ChunkStore> soilBlockRef = worldChunkComponent.getBlockComponentEntity(x, targetBlock.y() - 1, z);
                   if (soilBlockRef != null && soilBlockRef.isValid()) {
                      tilledSoilComponent = chunkStore.getComponent(soilBlockRef, TilledSoilBlock.getComponentType());
                      if (tilledSoilComponent != null && !tilledSoilComponent.isFertilized()) {
                         tilledSoilComponent.setFertilized(true);
-                        worldChunkComponent.setTicking(x, targetBlock.getY() - 1, z, true);
-                        worldChunkComponent.setTicking(x, targetBlock.getY(), z, true);
+                        worldChunkComponent.setTicking(x, targetBlock.y() - 1, z, true);
+                        worldChunkComponent.setTicking(x, targetBlock.y(), z, true);
                      } else {
                         context.getState().state = InteractionState.Failed;
                      }

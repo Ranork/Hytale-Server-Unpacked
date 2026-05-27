@@ -5,7 +5,7 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
-import com.hypixel.hytale.server.core.modules.entity.tracker.LegacyEntityTrackerSystems;
+import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import javax.annotation.Nonnull;
 
 public class EntityLodCommand extends CommandBase {
@@ -19,8 +19,8 @@ public class EntityLodCommand extends CommandBase {
 
    @Override
    protected void executeSync(@Nonnull CommandContext context) {
-      LegacyEntityTrackerSystems.LegacyLODCull.ENTITY_LOD_RATIO = this.ratioArg.get(context);
-      context.sendMessage(Message.translation("server.commands.entity.lod.ratioSet").param("ratio", LegacyEntityTrackerSystems.LegacyLODCull.ENTITY_LOD_RATIO));
+      EntityTrackerSystems.LODCull.ENTITY_LOD_RATIO = this.ratioArg.get(context);
+      context.sendMessage(Message.translation("server.commands.entity.lod.ratioSet").param("ratio", EntityTrackerSystems.LODCull.ENTITY_LOD_RATIO));
    }
 
    static class Default extends CommandBase {
@@ -30,10 +30,8 @@ public class EntityLodCommand extends CommandBase {
 
       @Override
       protected void executeSync(@Nonnull CommandContext context) {
-         LegacyEntityTrackerSystems.LegacyLODCull.ENTITY_LOD_RATIO = 3.5E-5;
-         context.sendMessage(
-            Message.translation("server.commands.entity.lod.ratioSet").param("ratio", LegacyEntityTrackerSystems.LegacyLODCull.ENTITY_LOD_RATIO)
-         );
+         EntityTrackerSystems.LODCull.ENTITY_LOD_RATIO = 3.5E-5;
+         context.sendMessage(Message.translation("server.commands.entity.lod.ratioSet").param("ratio", EntityTrackerSystems.LODCull.ENTITY_LOD_RATIO));
       }
    }
 }

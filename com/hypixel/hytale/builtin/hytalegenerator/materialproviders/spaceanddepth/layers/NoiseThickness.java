@@ -24,7 +24,7 @@ public class NoiseThickness<V> extends SpaceAndDepthMaterialProvider.Layer<V> {
    public int getThicknessAt(
       int x, int y, int z, int depthIntoFloor, int depthIntoCeiling, int spaceAboveFloor, int spaceBelowCeiling, double distanceToBiomeEdge
    ) {
-      this.rDensityContext.position.assign(x, y, z);
+      this.rDensityContext.position.set(x, y, z);
       this.rDensityContext.distanceToBiomeEdge = distanceToBiomeEdge;
       return (int)this.density.process(this.rDensityContext);
    }

@@ -3,8 +3,6 @@ package com.hypixel.hytale.server.core.command.system.arguments.types;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
@@ -13,6 +11,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class RelativeIntPosition {
    @Nonnull
@@ -56,7 +56,7 @@ public class RelativeIntPosition {
       } else if (relative) {
          throw new GeneralCommandException(MESSAGE_COMMANDS_ERRORS_RELATIVE_POSITION_ARG);
       } else {
-         Vector3d base = Vector3d.ZERO;
+         Vector3d base = new Vector3d();
          World world = componentAccessor.getExternalData().getWorld();
          return this.getBlockPosition(base, world.getChunkStore());
       }

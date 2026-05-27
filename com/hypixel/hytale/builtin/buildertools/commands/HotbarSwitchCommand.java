@@ -3,7 +3,6 @@ package com.hypixel.hytale.builtin.buildertools.commands;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -25,7 +24,7 @@ public class HotbarSwitchCommand extends AbstractPlayerCommand {
 
    public HotbarSwitchCommand() {
       super("hotbar", "server.commands.hotbar.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

@@ -21,16 +21,27 @@ import com.hypixel.hytale.component.spatial.SpatialStructure;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ComponentUpdate;
 import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.EntityEffectsUpdate;
+import com.hypixel.hytale.protocol.ModelUpdate;
+import com.hypixel.hytale.protocol.PlayerSkinUpdate;
+import com.hypixel.hytale.protocol.PropUpdate;
 import com.hypixel.hytale.protocol.packets.entities.EntityUpdates;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
+import com.hypixel.hytale.server.core.entity.entities.player.HiddenPlayersManager;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
+import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PropComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerSkinComponent;
 import com.hypixel.hytale.server.core.modules.entity.system.NetworkSendableSpatialSystem;
 import com.hypixel.hytale.server.core.receiver.IPacketReceiver;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -51,6 +62,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.StampedLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class EntityTrackerSystems {
    @Nonnull
@@ -100,6 +112,16 @@ public class EntityTrackerSystems {
             entityViewerComponent.sent.clear();
             return true;
          }
+      }
+   }
+
+   public static boolean clear(@Nonnull Holder<EntityStore> holder) {
+      EntityTrackerSystems.EntityViewer entityViewerComponent = holder.getComponent(EntityTrackerSystems.EntityViewer.getComponentType());
+      if (entityViewerComponent == null) {
+         return false;
+      } else {
+         entityViewerComponent.sent.clear();
+         return true;
       }
    }
 
@@ -466,6 +488,163 @@ public class EntityTrackerSystems {
       }
    }
 
+   public static class EntityModel extends EntityTickingSystem<EntityStore> {
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, ModelComponent> modelComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public EntityModel(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType) {
+         this.visibleComponentType = visibleComponentType;
+         this.modelComponentType = ModelComponent.getComponentType();
+         this.query = Query.and(visibleComponentType, this.modelComponentType);
+      }
+
+      @Nullable
+      @Override
+      public SystemGroup<EntityStore> getGroup() {
+         return EntityTrackerSystems.QUEUE_UPDATE_GROUP;
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         EntityTrackerSystems.Visible visibleComponent = archetypeChunk.getComponent(index, this.visibleComponentType);
+
+         assert visibleComponent != null;
+
+         ModelComponent modelComponent = archetypeChunk.getComponent(index, this.modelComponentType);
+
+         assert modelComponent != null;
+
+         float entityScale = 0.0F;
+         boolean scaleOutdated = false;
+         EntityScaleComponent entityScaleComponent = archetypeChunk.getComponent(index, EntityScaleComponent.getComponentType());
+         if (entityScaleComponent != null) {
+            entityScale = entityScaleComponent.getScale();
+            scaleOutdated = entityScaleComponent.consumeNetworkOutdated();
+         }
+
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+         boolean isProp = archetypeChunk.getComponent(index, PropComponent.getComponentType()) != null;
+         boolean modelOutdated = modelComponent.consumeNetworkOutdated();
+         if (modelOutdated || scaleOutdated) {
+            queueUpdatesFor(ref, modelComponent, entityScale, isProp, visibleComponent.visibleTo);
+         } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
+            queueUpdatesFor(ref, modelComponent, entityScale, isProp, visibleComponent.newlyVisibleTo);
+         }
+      }
+
+      private static void queueUpdatesFor(
+         @Nonnull Ref<EntityStore> ref,
+         @Nullable ModelComponent model,
+         float entityScale,
+         boolean isProp,
+         @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
+      ) {
+         ModelUpdate update = new ModelUpdate(model != null ? model.getModel().toPacket() : null, entityScale);
+
+         for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
+            viewer.queueUpdate(ref, update);
+         }
+
+         if (isProp) {
+            PropUpdate propUpdate = new PropUpdate();
+
+            for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
+               viewer.queueUpdate(ref, propUpdate);
+            }
+         }
+      }
+   }
+
+   public static class EntitySkin extends EntityTickingSystem<EntityStore> {
+      @Nonnull
+      private final ComponentType<EntityStore, PlayerSkinComponent> playerSkinComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+
+      public EntitySkin(
+         @Nonnull ComponentType<EntityStore, EntityTrackerSystems.Visible> visibleComponentType,
+         @Nonnull ComponentType<EntityStore, PlayerSkinComponent> playerSkinComponentType
+      ) {
+         this.visibleComponentType = visibleComponentType;
+         this.playerSkinComponentType = playerSkinComponentType;
+         this.query = Query.and(visibleComponentType, playerSkinComponentType);
+      }
+
+      @Nullable
+      @Override
+      public SystemGroup<EntityStore> getGroup() {
+         return EntityTrackerSystems.QUEUE_UPDATE_GROUP;
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         EntityTrackerSystems.Visible visibleComponent = archetypeChunk.getComponent(index, this.visibleComponentType);
+
+         assert visibleComponent != null;
+
+         PlayerSkinComponent playerSkinComponent = archetypeChunk.getComponent(index, this.playerSkinComponentType);
+
+         assert playerSkinComponent != null;
+
+         if (playerSkinComponent.consumeNetworkOutdated()) {
+            queueUpdatesFor(archetypeChunk.getReferenceTo(index), playerSkinComponent, visibleComponent.visibleTo);
+         } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
+            queueUpdatesFor(archetypeChunk.getReferenceTo(index), playerSkinComponent, visibleComponent.newlyVisibleTo);
+         }
+      }
+
+      private static void queueUpdatesFor(
+         @Nonnull Ref<EntityStore> ref, @Nonnull PlayerSkinComponent component, @Nonnull Map<Ref<EntityStore>, EntityTrackerSystems.EntityViewer> visibleTo
+      ) {
+         PlayerSkinUpdate update = new PlayerSkinUpdate();
+         update.skin = component.getPlayerSkin();
+
+         for (EntityTrackerSystems.EntityViewer viewer : visibleTo.values()) {
+            viewer.queueUpdate(ref, update);
+         }
+      }
+   }
+
    public static class EntityUpdate {
       @Nonnull
       private final StampedLock removeLock = new StampedLock();
@@ -581,6 +760,169 @@ public class EntityTrackerSystems {
             throw new IllegalArgumentException("Entity is not visible!");
          } else {
             this.updates.computeIfAbsent(ref, k -> new EntityTrackerSystems.EntityUpdate()).queueUpdate(update);
+         }
+      }
+   }
+
+   public static class HideFromPlayer extends EntityTickingSystem<EntityStore> {
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, PlayerSettings> playerSettingsComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, UUIDComponent> uuidComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies;
+
+      public HideFromPlayer(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType) {
+         this.entityViewerComponentType = entityViewerComponentType;
+         this.playerRefComponentType = PlayerRef.getComponentType();
+         this.playerSettingsComponentType = EntityModule.get().getPlayerSettingsComponentType();
+         this.uuidComponentType = EntityModule.get().getUuidComponentType();
+         this.query = Query.and(entityViewerComponentType, this.playerRefComponentType, this.playerSettingsComponentType);
+         this.dependencies = Collections.singleton(new SystemDependency<>(Order.AFTER, EntityTrackerSystems.CollectVisible.class));
+      }
+
+      @Nullable
+      @Override
+      public SystemGroup<EntityStore> getGroup() {
+         return EntityTrackerSystems.FIND_VISIBLE_ENTITIES_GROUP;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         PlayerSettings playerSettings = archetypeChunk.getComponent(index, this.playerSettingsComponentType);
+
+         assert playerSettings != null;
+
+         if (!playerSettings.showEntityMarkers()) {
+            EntityTrackerSystems.EntityViewer entityViewerComponent = archetypeChunk.getComponent(index, this.entityViewerComponentType);
+
+            assert entityViewerComponent != null;
+
+            PlayerRef playerRef = archetypeChunk.getComponent(index, this.playerRefComponentType);
+
+            assert playerRef != null;
+
+            HiddenPlayersManager hiddenPlayersManager = playerRef.getHiddenPlayersManager();
+            Iterator<Ref<EntityStore>> iterator = entityViewerComponent.visible.iterator();
+
+            while (iterator.hasNext()) {
+               Ref<EntityStore> targetRef = iterator.next();
+               if (commandBuffer.getArchetype(targetRef).contains(this.playerRefComponentType)) {
+                  UUIDComponent targetUuidComponent = commandBuffer.getComponent(targetRef, this.uuidComponentType);
+                  if (targetUuidComponent != null && hiddenPlayersManager.isPlayerHidden(targetUuidComponent.getUuid())) {
+                     entityViewerComponent.hiddenCount++;
+                     iterator.remove();
+                  }
+               }
+            }
+         }
+      }
+   }
+
+   public static class LODCull extends EntityTickingSystem<EntityStore> {
+      public static final double ENTITY_LOD_RATIO_DEFAULT = 3.5E-5;
+      public static double ENTITY_LOD_RATIO = 3.5E-5;
+      @Nonnull
+      private final ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, BoundingBox> boundingBoxComponentType;
+      @Nonnull
+      private final Query<EntityStore> query;
+      @Nonnull
+      private final Set<Dependency<EntityStore>> dependencies;
+
+      public LODCull(@Nonnull ComponentType<EntityStore, EntityTrackerSystems.EntityViewer> entityViewerComponentType) {
+         this.entityViewerComponentType = entityViewerComponentType;
+         this.boundingBoxComponentType = BoundingBox.getComponentType();
+         this.query = Query.and(entityViewerComponentType, TransformComponent.getComponentType());
+         this.dependencies = Collections.singleton(new SystemDependency<>(Order.AFTER, EntityTrackerSystems.CollectVisible.class));
+      }
+
+      @Nullable
+      @Override
+      public SystemGroup<EntityStore> getGroup() {
+         return EntityTrackerSystems.FIND_VISIBLE_ENTITIES_GROUP;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return this.dependencies;
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.query;
+      }
+
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return EntityTickingSystem.maybeUseParallel(archetypeChunkSize, taskCount);
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         EntityTrackerSystems.EntityViewer entityViewerComponent = archetypeChunk.getComponent(index, this.entityViewerComponentType);
+
+         assert entityViewerComponent != null;
+
+         TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
+
+         assert transformComponent != null;
+
+         Vector3d position = transformComponent.getPosition();
+         Iterator<Ref<EntityStore>> iterator = entityViewerComponent.visible.iterator();
+
+         while (iterator.hasNext()) {
+            Ref<EntityStore> targetRef = iterator.next();
+            BoundingBox targetBoundingBoxComponent = commandBuffer.getComponent(targetRef, this.boundingBoxComponentType);
+            if (targetBoundingBoxComponent != null) {
+               TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, TransformComponent.getComponentType());
+               if (targetTransformComponent != null) {
+                  double distanceSq = targetTransformComponent.getPosition().distanceSquared(position);
+                  double maximumThickness = targetBoundingBoxComponent.getBoundingBox().getMaximumThickness();
+                  if (maximumThickness < ENTITY_LOD_RATIO * distanceSq) {
+                     entityViewerComponent.lodExcludedCount++;
+                     iterator.remove();
+                  }
+               }
+            }
          }
       }
    }

@@ -204,7 +204,7 @@ public class BlockPhysicsSystems {
                   BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
                   if (blockType == null || blockId == 0) {
                      return BlockTickStrategy.IGNORED;
-                  } else if (blockType.canBePlacedAsDeco() && isDeco) {
+                  } else if (isDeco) {
                      return BlockTickStrategy.IGNORED;
                   } else {
                      World world = wc.getWorld();

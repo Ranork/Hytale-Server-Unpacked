@@ -19,8 +19,9 @@ import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction
 import com.hypixel.hytale.server.core.inventory.transaction.ListTransaction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.shorts.Short2ObjectMap.Entry;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,19 +38,46 @@ public class SimpleItemContainer extends ItemContainer {
       .append(new KeyedCodec<>("Capacity", Codec.SHORT), (o, i) -> o.capacity = i, o -> o.capacity)
       .addValidator(Validators.greaterThanOrEqual((short)0))
       .add()
-      .append(new KeyedCodec<>("Items", new Short2ObjectMapCodec<>(ItemStack.CODEC, Short2ObjectOpenHashMap::new, false)), (o, i) -> o.items = i, o -> o.items)
+      .append(new KeyedCodec<>("Items", new Short2ObjectMapCodec<>(ItemStack.CODEC, Short2ObjectOpenHashMap::new, false)), (o, i) -> {
+         o.items = new ItemStack[o.capacity];
+         int count = 0;
+         Iterator i$ = i.short2ObjectEntrySet().iterator();
+
+         while (i$.hasNext()) {
+            Entry<ItemStack> entry = (Entry<ItemStack>)i$.next();
+            short slot = entry.getShortKey();
+            ItemStack stack = (ItemStack)entry.getValue();
+            if (slot >= 0 && slot < o.capacity && !ItemStack.isEmpty(stack)) {
+               o.items[slot] = stack;
+               count++;
+            }
+         }
+
+         o.itemsCount = count;
+      }, o -> {
+         Short2ObjectOpenHashMap<ItemStack> map = new Short2ObjectOpenHashMap();
+
+         for (short slot = 0; slot < o.capacity; slot++) {
+            ItemStack stack = o.items[slot];
+            if (stack != null && !ItemStack.isEmpty(stack)) {
+               map.put(slot, stack);
+            }
+         }
+
+         return map;
+      })
       .add()
       .afterDecode(i -> {
          if (i.items == null) {
-            i.items = new Short2ObjectOpenHashMap(i.capacity);
+            i.items = new ItemStack[i.capacity];
+            i.itemsCount = 0;
          }
-
-         i.items.short2ObjectEntrySet().removeIf(e -> e.getShortKey() < 0 || e.getShortKey() >= i.capacity || ItemStack.isEmpty((ItemStack)e.getValue()));
       })
       .build();
    protected short capacity;
    protected final ReadWriteLock lock = new ReentrantReadWriteLock();
-   protected Short2ObjectMap<ItemStack> items;
+   protected ItemStack[] items;
+   protected int itemsCount;
    private final Map<FilterActionType, Int2ObjectConcurrentHashMap<SlotFilter>> slotFilters = new ConcurrentHashMap<>();
    private FilterType globalFilter = FilterType.ALLOW_ALL;
 
@@ -61,7 +89,7 @@ public class SimpleItemContainer extends ItemContainer {
          throw new IllegalArgumentException("Capacity is less than or equal zero! " + capacity + " <= 0");
       } else {
          this.capacity = capacity;
-         this.items = new Short2ObjectOpenHashMap(capacity);
+         this.items = new ItemStack[capacity];
       }
    }
 
@@ -70,7 +98,9 @@ public class SimpleItemContainer extends ItemContainer {
       other.lock.readLock().lock();
 
       try {
-         this.items = new Short2ObjectOpenHashMap(other.items);
+         this.items = new ItemStack[other.capacity];
+         System.arraycopy(other.items, 0, this.items, 0, other.capacity);
+         this.itemsCount = other.itemsCount;
       } finally {
          other.lock.readLock().unlock();
       }
@@ -157,17 +187,33 @@ public class SimpleItemContainer extends ItemContainer {
 
    @Override
    protected ItemStack internal_getSlot(short slot) {
-      return (ItemStack)this.items.get(slot);
+      return this.items[slot];
    }
 
    @Override
    protected ItemStack internal_setSlot(short slot, ItemStack itemStack) {
-      return ItemStack.isEmpty(itemStack) ? this.internal_removeSlot(slot) : (ItemStack)this.items.put(slot, itemStack);
+      if (ItemStack.isEmpty(itemStack)) {
+         return this.internal_removeSlot(slot);
+      } else {
+         ItemStack previous = this.items[slot];
+         this.items[slot] = itemStack;
+         if (previous == null) {
+            this.itemsCount++;
+         }
+
+         return previous;
+      }
    }
 
    @Override
    protected ItemStack internal_removeSlot(short slot) {
-      return (ItemStack)this.items.remove(slot);
+      ItemStack previous = this.items[slot];
+      this.items[slot] = null;
+      if (previous != null) {
+         this.itemsCount--;
+      }
+
+      return previous;
    }
 
    @Override
@@ -211,10 +257,11 @@ public class SimpleItemContainer extends ItemContainer {
       ItemStack[] itemStacks = new ItemStack[this.getCapacity()];
 
       for (short i = 0; i < itemStacks.length; i++) {
-         itemStacks[i] = (ItemStack)this.items.get(i);
+         itemStacks[i] = this.items[i];
+         this.items[i] = null;
       }
 
-      this.items.clear();
+      this.itemsCount = 0;
       return new ClearTransaction(true, (short)0, itemStacks);
    }
 
@@ -228,7 +275,7 @@ public class SimpleItemContainer extends ItemContainer {
       this.lock.readLock().lock();
 
       try {
-         if (this.items.isEmpty()) {
+         if (this.itemsCount == 0) {
             return true;
          }
       } finally {
@@ -276,38 +323,46 @@ public class SimpleItemContainer extends ItemContainer {
    public boolean equals(Object o) {
       if (this == o) {
          return true;
-      } else if (o instanceof SimpleItemContainer that) {
-         if (this.capacity != that.capacity) {
-            return false;
-         } else {
-            this.lock.readLock().lock();
-
-            boolean var3;
-            try {
-               var3 = this.items.equals(that.items);
-            } finally {
-               this.lock.readLock().unlock();
-            }
-
-            return var3;
-         }
-      } else {
+      } else if (!(o instanceof SimpleItemContainer that)) {
          return false;
+      } else if (this.capacity != that.capacity) {
+         return false;
+      } else {
+         this.lock.readLock().lock();
+
+         try {
+            if (this.itemsCount != that.itemsCount) {
+               return false;
+            } else {
+               for (int itr = 0; itr < this.capacity; itr++) {
+                  if (!Objects.equals(this.items[itr], that.items[itr])) {
+                     return false;
+                  }
+               }
+
+               return true;
+            }
+         } finally {
+            this.lock.readLock().unlock();
+         }
       }
    }
 
    @Override
    public int hashCode() {
+      int result = this.capacity;
       this.lock.readLock().lock();
 
-      int result;
       try {
-         result = this.items.hashCode();
+         for (int i = 0; i < this.capacity; i++) {
+            ItemStack item = this.items[i];
+            result = 31 * result + (item != null ? item.hashCode() : 0);
+         }
       } finally {
          this.lock.readLock().unlock();
       }
 
-      return 31 * result + this.capacity;
+      return result;
    }
 
    public static ItemContainer getNewContainer(short capacity) {

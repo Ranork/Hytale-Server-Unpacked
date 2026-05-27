@@ -6,13 +6,13 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class LookBlocksBelowProvider extends WorldLocationProvider {
    @Nonnull
@@ -96,7 +96,7 @@ public class LookBlocksBelowProvider extends WorldLocationProvider {
    @Nullable
    @Override
    public Vector3i runCondition(@Nonnull World world, @Nonnull Vector3i position) {
-      Vector3i newPosition = position.clone();
+      Vector3i newPosition = new Vector3i(position);
       long chunkIndex = ChunkUtil.indexChunkFromBlock(newPosition.x, newPosition.z);
       WorldChunk worldChunkComponent = world.getChunk(chunkIndex);
       if (worldChunkComponent == null) {

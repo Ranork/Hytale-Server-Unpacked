@@ -3,17 +3,18 @@ package com.hypixel.hytale.builtin.buildertools.tooloperations;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolLaserPointer;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.PlayerUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class LaserPointerOperation extends ToolOperation {
    private static final double MAX_DISTANCE = 128.0;
@@ -21,6 +22,7 @@ public class LaserPointerOperation extends ToolOperation {
    public LaserPointerOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
@@ -30,9 +32,9 @@ public class LaserPointerOperation extends ToolOperation {
       int laserColor;
       try {
          laserColor = ColorParseUtil.hexStringToRGBInt(colorText);
-      } catch (NumberFormatException var18) {
-         player.sendMessage(Message.translation("server.builderTools.laserPointer.colorParseError").param("value", colorText));
-         throw var18;
+      } catch (NumberFormatException var19) {
+         playerRef.sendMessage(Message.translation("server.builderTools.laserPointer.colorParseError").param("value", colorText));
+         throw var19;
       }
 
       Object durationObj = this.args.tool().get("Duration");
@@ -42,9 +44,9 @@ public class LaserPointerOperation extends ToolOperation {
       } else if (durationObj instanceof String) {
          try {
             duration = Integer.parseInt((String)durationObj);
-         } catch (NumberFormatException var17) {
-            player.sendMessage(Message.translation("server.builderTools.laserPointer.durationParseError").param("value", String.valueOf(durationObj)));
-            throw var17;
+         } catch (NumberFormatException var18) {
+            playerRef.sendMessage(Message.translation("server.builderTools.laserPointer.durationParseError").param("value", String.valueOf(durationObj)));
+            throw var18;
          }
       } else {
          duration = 300;
@@ -59,7 +61,7 @@ public class LaserPointerOperation extends ToolOperation {
       Vector3d lookVecPosition = lookVec.getPosition();
       Vector3d lookVecDirection = lookVec.getDirection();
       Vector3d hitLocation = TargetUtil.getTargetLocation(ref, blockId -> blockId != 0, 128.0, componentAccessor);
-      Vector3d endLocation = hitLocation != null ? hitLocation : lookVecPosition.clone().add(lookVecDirection.clone().scale(128.0));
+      Vector3d endLocation = hitLocation != null ? hitLocation : new Vector3d(lookVecPosition).add(new Vector3d(lookVecDirection).mul(128.0));
       BuilderToolLaserPointer laserPacket = new BuilderToolLaserPointer();
       laserPacket.playerNetworkId = playerNetworkId;
       laserPacket.startX = (float)lookVecPosition.x;
@@ -83,7 +85,7 @@ public class LaserPointerOperation extends ToolOperation {
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       return false;
    }
 }

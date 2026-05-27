@@ -3,6 +3,7 @@ package com.hypixel.hytale.logger.util;
 import com.hypixel.hytale.logger.HytaleLogger;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
 
 public class LoggerPrintStream extends PrintStream {
@@ -28,7 +29,7 @@ public class LoggerPrintStream extends PrintStream {
             super.write(b);
          } else {
             try {
-               this.logger.at(this.level).log(this.bufferedOutput.toString());
+               this.logger.at(this.level).log(this.bufferedOutput.toString(StandardCharsets.UTF_8));
             } finally {
                this.bufferedOutput.reset();
             }

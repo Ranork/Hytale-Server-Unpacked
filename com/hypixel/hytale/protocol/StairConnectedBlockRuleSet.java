@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -53,30 +54,38 @@ public class StairConnectedBlockRuleSet {
 
    @Nonnull
    public static StairConnectedBlockRuleSet deserialize(@Nonnull ByteBuf buf, int offset) {
-      StairConnectedBlockRuleSet obj = new StairConnectedBlockRuleSet();
-      byte nullBits = buf.getByte(offset);
-      obj.straightBlockId = buf.getIntLE(offset + 1);
-      obj.cornerLeftBlockId = buf.getIntLE(offset + 5);
-      obj.cornerRightBlockId = buf.getIntLE(offset + 9);
-      obj.invertedCornerLeftBlockId = buf.getIntLE(offset + 13);
-      obj.invertedCornerRightBlockId = buf.getIntLE(offset + 17);
-      int pos = offset + 21;
-      if ((nullBits & 1) != 0) {
-         int materialNameLen = VarInt.peek(buf, pos);
-         if (materialNameLen < 0) {
-            throw ProtocolException.negativeLength("MaterialName", materialNameLen);
+      if (buf.readableBytes() - offset < 21) {
+         throw ProtocolException.bufferTooSmall("StairConnectedBlockRuleSet", 21, buf.readableBytes() - offset);
+      } else {
+         StairConnectedBlockRuleSet obj = new StairConnectedBlockRuleSet();
+         byte nullBits = buf.getByte(offset);
+         obj.straightBlockId = buf.getIntLE(offset + 1);
+         obj.cornerLeftBlockId = buf.getIntLE(offset + 5);
+         obj.cornerRightBlockId = buf.getIntLE(offset + 9);
+         obj.invertedCornerLeftBlockId = buf.getIntLE(offset + 13);
+         obj.invertedCornerRightBlockId = buf.getIntLE(offset + 17);
+         int pos = offset + 21;
+         if ((nullBits & 1) != 0) {
+            int materialNameLen = VarInt.peek(buf, pos);
+            if (materialNameLen < 0) {
+               throw ProtocolException.invalidVarInt("MaterialName");
+            }
+
+            int materialNameVarLen = VarInt.size(materialNameLen);
+            if (materialNameLen > 4096000) {
+               throw ProtocolException.stringTooLong("MaterialName", materialNameLen, 4096000);
+            }
+
+            if (pos + materialNameVarLen + materialNameLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("MaterialName", pos + materialNameVarLen + materialNameLen, buf.readableBytes());
+            }
+
+            obj.materialName = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+            pos += materialNameVarLen + materialNameLen;
          }
 
-         if (materialNameLen > 4096000) {
-            throw ProtocolException.stringTooLong("MaterialName", materialNameLen, 4096000);
-         }
-
-         int materialNameVarLen = VarInt.length(buf, pos);
-         obj.materialName = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += materialNameVarLen + materialNameLen;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -84,10 +93,88 @@ public class StairConnectedBlockRuleSet {
       int pos = offset + 21;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 21L;
+   }
+
+   public static int getStraightBlockId(MemorySegment mem) {
+      return getStraightBlockId(mem, 0);
+   }
+
+   public static int getStraightBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 1));
+   }
+
+   public static int getCornerLeftBlockId(MemorySegment mem) {
+      return getCornerLeftBlockId(mem, 0);
+   }
+
+   public static int getCornerLeftBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 5));
+   }
+
+   public static int getCornerRightBlockId(MemorySegment mem) {
+      return getCornerRightBlockId(mem, 0);
+   }
+
+   public static int getCornerRightBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 9));
+   }
+
+   public static int getInvertedCornerLeftBlockId(MemorySegment mem) {
+      return getInvertedCornerLeftBlockId(mem, 0);
+   }
+
+   public static int getInvertedCornerLeftBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 13));
+   }
+
+   public static int getInvertedCornerRightBlockId(MemorySegment mem) {
+      return getInvertedCornerRightBlockId(mem, 0);
+   }
+
+   public static int getInvertedCornerRightBlockId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 17));
+   }
+
+   @Nullable
+   public static String getMaterialName(MemorySegment mem) {
+      return getMaterialName(mem, 0);
+   }
+
+   @Nullable
+   public static String getMaterialName(MemorySegment mem, int offset) {
+      return hasMaterialName(mem, offset) ? PacketIO.readVarString("MaterialName", mem, offset + 21, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasMaterialName(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static StairConnectedBlockRuleSet toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static StairConnectedBlockRuleSet toObject(MemorySegment mem, int offset) {
+      if (offset + 21 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("StairConnectedBlockRuleSet", offset + 21, (int)mem.byteSize());
+      } else {
+         return new StairConnectedBlockRuleSet(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 5)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 9)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 13)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 17)),
+            hasMaterialName(mem, offset) ? PacketIO.readVarString("MaterialName", mem, offset + 21, 4096000, PacketIO.UTF8) : null
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -105,6 +192,26 @@ public class StairConnectedBlockRuleSet {
       if (this.materialName != null) {
          PacketIO.writeVarString(buf, this.materialName, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.materialName != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 1), this.straightBlockId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 5), this.cornerLeftBlockId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 9), this.cornerRightBlockId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 13), this.invertedCornerLeftBlockId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 17), this.invertedCornerRightBlockId);
+      int varOffset = offset + 21;
+      if (this.materialName != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.materialName, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {
@@ -132,7 +239,7 @@ public class StairConnectedBlockRuleSet {
                return ValidationResult.error("MaterialName exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(materialNameLen);
             pos += materialNameLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading MaterialName");

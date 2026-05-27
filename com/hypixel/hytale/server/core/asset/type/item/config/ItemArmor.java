@@ -12,6 +12,7 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.Cosmetic;
 import com.hypixel.hytale.protocol.ItemArmorSlot;
 import com.hypixel.hytale.protocol.Modifier;
+import com.hypixel.hytale.protocol.ResistanceModifier;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
@@ -44,7 +45,16 @@ public class ItemArmor implements NetworkSerializable<com.hypixel.hytale.protoco
       .addValidator(Validators.nonNull())
       .add()
       .<Map>append(
-         new KeyedCodec<>("DamageResistance", new MapCodec<>(new ArrayCodec<>(StaticModifier.CODEC, StaticModifier[]::new), HashMap::new)),
+         new KeyedCodec<>(
+            "DamageResistance",
+            new MapCodec<>(
+               new ArrayCodec<>(
+                  com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier.CODEC,
+                  com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier[]::new
+               ),
+               HashMap::new
+            )
+         ),
          (itemArmor, map) -> itemArmor.damageResistanceValuesRaw = map,
          itemArmor -> itemArmor.damageResistanceValuesRaw
       )
@@ -115,9 +125,9 @@ public class ItemArmor implements NetworkSerializable<com.hypixel.hytale.protoco
    @Nonnull
    protected ItemArmorSlot armorSlot = ItemArmorSlot.Head;
    @Nullable
-   protected Map<String, StaticModifier[]> damageResistanceValuesRaw;
+   protected Map<String, com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier[]> damageResistanceValuesRaw;
    @Nullable
-   protected Map<DamageCause, StaticModifier[]> damageResistanceValues;
+   protected Map<DamageCause, com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier[]> damageResistanceValues;
    @Nullable
    protected Map<String, StaticModifier[]> damageEnhancementValuesRaw;
    @Nullable
@@ -165,13 +175,15 @@ public class ItemArmor implements NetworkSerializable<com.hypixel.hytale.protoco
       packet.statModifiers = EntityStatMap.toPacket(this.statModifiers);
       packet.baseDamageResistance = this.baseDamageResistance;
       if (this.damageResistanceValues != null && !this.damageResistanceValues.isEmpty()) {
-         Map<String, Modifier[]> damageResistanceMap = new Object2ObjectOpenHashMap();
+         Map<String, ResistanceModifier[]> damageResistanceMap = new Object2ObjectOpenHashMap();
 
-         for (Entry<DamageCause, StaticModifier[]> entry : this.damageResistanceValues.entrySet()) {
+         for (Entry<DamageCause, com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier[]> entry : this.damageResistanceValues.entrySet()) {
             if (entry.getKey() != null && entry.getValue() != null) {
-               Modifier[] modifiers = new Modifier[((StaticModifier[])entry.getValue()).length];
+               ResistanceModifier[] modifiers = new ResistanceModifier[(
+                  (com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier[])entry.getValue()
+               ).length];
 
-               for (int i = 0; i < ((StaticModifier[])entry.getValue()).length; i++) {
+               for (int i = 0; i < ((com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier[])entry.getValue()).length; i++) {
                   modifiers[i] = entry.getValue()[i].toPacket();
                }
 
@@ -240,7 +252,7 @@ public class ItemArmor implements NetworkSerializable<com.hypixel.hytale.protoco
    }
 
    @Nullable
-   public Map<DamageCause, StaticModifier[]> getDamageResistanceValues() {
+   public Map<DamageCause, com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier[]> getDamageResistanceValues() {
       return this.damageResistanceValues;
    }
 

@@ -21,6 +21,8 @@ import com.hypixel.hytale.server.core.asset.type.ambiencefx.AmbienceFXPacketGene
 import com.hypixel.hytale.server.core.asset.type.ambiencefx.config.AmbienceFX;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.AudioCategoryPacketGenerator;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategory;
+import com.hypixel.hytale.server.core.asset.type.audiostate.AudioStatePacketGenerator;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
 import com.hypixel.hytale.server.core.asset.type.blockbreakingdecal.BlockBreakingDecalPacketGenerator;
 import com.hypixel.hytale.server.core.asset.type.blockbreakingdecal.config.BlockBreakingDecal;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
@@ -71,10 +73,15 @@ import com.hypixel.hytale.server.core.asset.type.itemsound.config.ItemSoundSet;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.modelvfx.ModelVFXPacketGenerator;
 import com.hypixel.hytale.server.core.asset.type.modelvfx.config.ModelVFX;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.MusicContainerPacketGenerator;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.SingleTrackMusicContainer;
 import com.hypixel.hytale.server.core.asset.type.particle.ParticleSpawnerPacketGenerator;
 import com.hypixel.hytale.server.core.asset.type.particle.ParticleSystemPacketGenerator;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSpawner;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
+import com.hypixel.hytale.server.core.asset.type.physicalmaterial.PhysicalMaterialPacketGenerator;
+import com.hypixel.hytale.server.core.asset.type.physicalmaterial.config.PhysicalMaterial;
 import com.hypixel.hytale.server.core.asset.type.portalworld.PortalType;
 import com.hypixel.hytale.server.core.asset.type.projectile.config.Projectile;
 import com.hypixel.hytale.server.core.asset.type.responsecurve.config.ExponentialResponseCurve;
@@ -332,6 +339,20 @@ public class AssetRegistryLoader {
 
    static {
       AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                                    MusicContainer.class, new IndexedAssetMap()
+                                 )
+                                 .setPath("Audio/MusicContainers"))
+                              .setCodec(MusicContainer.CODEC))
+                           .setKeyFunction(MusicContainer::getId))
+                        .setReplaceOnRemove(id -> new SingleTrackMusicContainer(id)))
+                     .setPacketGenerator(new MusicContainerPacketGenerator())
+                     .loadsBefore(AmbienceFX.class))
+                  .loadsAfter(AudioCategory.class, AudioState.class))
+               .preLoadAssets(Collections.singletonList(MusicContainer.EMPTY)))
+            .build()
+      );
+      AssetRegistry.register(
          ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
                                  AmbienceFX.class, new IndexedAssetMap()
                               )
@@ -349,7 +370,9 @@ public class AssetRegistryLoader {
                      TagPattern.class,
                      AudioCategory.class,
                      ReverbEffect.class,
-                     EqualizerEffect.class
+                     EqualizerEffect.class,
+                     PhysicalMaterial.class,
+                     AudioState.class
                   ))
                .preLoadAssets(Collections.singletonList(AmbienceFX.EMPTY)))
             .build()
@@ -389,6 +412,18 @@ public class AssetRegistryLoader {
                   .setPacketGenerator(new BlockSoundSetPacketGenerator())
                   .loadsAfter(SoundEvent.class))
                .preLoadAssets(Collections.singletonList(BlockSoundSet.EMPTY_BLOCK_SOUND_SET)))
+            .build()
+      );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                              PhysicalMaterial.class, new IndexedLookupTableAssetMap<>(PhysicalMaterial[]::new)
+                           )
+                           .setPath("Item/Block/PhysicalMaterials"))
+                        .setCodec(PhysicalMaterial.CODEC))
+                     .setKeyFunction(PhysicalMaterial::getId))
+                  .setReplaceOnRemove(PhysicalMaterial::new))
+               .setPacketGenerator(new PhysicalMaterialPacketGenerator())
+               .preLoadAssets(Collections.singletonList(PhysicalMaterial.EMPTY_PHYSICAL_MATERIAL)))
             .build()
       );
       AssetRegistry.register(
@@ -445,6 +480,7 @@ public class AssetRegistryLoader {
                         .loadsAfter(
                            BlockBoundingBoxes.class,
                            BlockSoundSet.class,
+                           PhysicalMaterial.class,
                            SoundEvent.class,
                            AmbienceFX.class,
                            BlockParticleSet.class,
@@ -732,7 +768,7 @@ public class AssetRegistryLoader {
                   DamageCause.class,
                   RepulsionConfig.class,
                   ParticleSystem.class,
-                  AmbienceFX.class
+                  MusicContainer.class
                ))
             .build()
       );
@@ -746,7 +782,7 @@ public class AssetRegistryLoader {
                      .setReplaceOnRemove(SoundEvent::new))
                   .setPacketGenerator(new SoundEventPacketGenerator())
                   .preLoadAssets(Collections.singletonList(SoundEvent.EMPTY_SOUND_EVENT)))
-               .loadsAfter(AudioCategory.class))
+               .loadsAfter(AudioCategory.class, AudioState.class))
             .build()
       );
       AssetRegistry.register(
@@ -764,14 +800,27 @@ public class AssetRegistryLoader {
       );
       AssetRegistry.register(
          ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
-                              AudioCategory.class, new IndexedLookupTableAssetMap<>(AudioCategory[]::new)
+                              AudioState.class, new IndexedLookupTableAssetMap<>(AudioState[]::new)
                            )
-                           .setPath("Audio/AudioCategories"))
-                        .setCodec(AudioCategory.CODEC))
-                     .setKeyFunction(AudioCategory::getId))
-                  .setReplaceOnRemove(AudioCategory::new))
-               .setPacketGenerator(new AudioCategoryPacketGenerator())
-               .preLoadAssets(Collections.singletonList(AudioCategory.EMPTY_AUDIO_CATEGORY)))
+                           .setPath("Audio/AudioStates"))
+                        .setCodec(AudioState.CODEC))
+                     .setKeyFunction(AudioState::getId))
+                  .setReplaceOnRemove(AudioState::new))
+               .setPacketGenerator(new AudioStatePacketGenerator())
+               .preLoadAssets(Collections.singletonList(AudioState.EMPTY_AUDIO_STATE)))
+            .build()
+      );
+      AssetRegistry.register(
+         ((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)((HytaleAssetStore.Builder)HytaleAssetStore.builder(
+                                 AudioCategory.class, new IndexedLookupTableAssetMap<>(AudioCategory[]::new)
+                              )
+                              .setPath("Audio/AudioCategories"))
+                           .setCodec(AudioCategory.CODEC))
+                        .setKeyFunction(AudioCategory::getId))
+                     .setReplaceOnRemove(AudioCategory::new))
+                  .setPacketGenerator(new AudioCategoryPacketGenerator())
+                  .preLoadAssets(AudioCategory.PRELOAD_ORDER))
+               .loadsAfter(AudioState.class))
             .build()
       );
       AssetRegistry.register(

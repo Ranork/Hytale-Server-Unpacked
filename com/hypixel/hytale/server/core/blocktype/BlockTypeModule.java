@@ -11,10 +11,6 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.component.dependency.Dependency;
-import com.hypixel.hytale.component.dependency.Order;
-import com.hypixel.hytale.component.dependency.RootDependency;
-import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
@@ -30,7 +26,6 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Structur
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.item.ItemModule;
-import com.hypixel.hytale.server.core.modules.migrations.ChunkColumnMigrationSystem;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -42,12 +37,10 @@ import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
-import com.hypixel.hytale.server.core.universe.world.chunk.systems.ChunkSystems;
 import com.hypixel.hytale.server.core.universe.world.events.ChunkPreLoadProcessEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import java.util.Arrays;
-import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -84,7 +77,6 @@ public class BlockTypeModule extends JavaPlugin {
       Bench.CODEC.register(BenchType.DiagramCrafting, DiagramCraftingBench.class, DiagramCraftingBench.CODEC);
       Bench.CODEC.register(BenchType.StructuralCrafting, StructuralCraftingBench.class, StructuralCraftingBench.CODEC);
       this.blockPhysicsComponentType = this.getChunkStoreRegistry().registerComponent(BlockPhysics.class, "BlockPhysics", BlockPhysics.CODEC);
-      this.getChunkStoreRegistry().registerSystem(new BlockTypeModule.MigrateLegacySections());
    }
 
    public ComponentType<ChunkStore, BlockPhysics> getBlockPhysicsComponentType() {
@@ -410,59 +402,6 @@ public class BlockTypeModule extends JavaPlugin {
       public void onEntityRemove(
          @Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-      }
-   }
-
-   @Deprecated(forRemoval = true)
-   private static class MigrateLegacySections extends ChunkColumnMigrationSystem {
-      private final Query<ChunkStore> QUERY = Query.and(ChunkColumn.getComponentType(), BlockChunk.getComponentType());
-      private final Set<Dependency<ChunkStore>> DEPENDENCIES = Set.of(
-         new SystemDependency<>(Order.BEFORE, LegacyModule.MigrateLegacySections.class),
-         new SystemDependency<>(Order.AFTER, ChunkSystems.OnNewChunk.class),
-         RootDependency.first()
-      );
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
-         ChunkColumn column = holder.getComponent(ChunkColumn.getComponentType());
-
-         assert column != null;
-
-         BlockChunk blockChunk = holder.getComponent(BlockChunk.getComponentType());
-
-         assert blockChunk != null;
-
-         Holder<ChunkStore>[] sections = column.getSectionHolders();
-         BlockSection[] legacySections = blockChunk.getMigratedSections();
-         if (legacySections != null) {
-            for (int i = 0; i < sections.length; i++) {
-               Holder<ChunkStore> section = sections[i];
-               BlockSection paletteSection = legacySections[i];
-               if (section != null && paletteSection != null) {
-                  BlockPhysics phys = paletteSection.takeMigratedDecoBlocks();
-                  if (phys != null) {
-                     section.putComponent(BlockPhysics.getComponentType(), phys);
-                     blockChunk.markNeedsSaving();
-                  }
-               }
-            }
-         }
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<ChunkStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<ChunkStore> getQuery() {
-         return this.QUERY;
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<ChunkStore>> getDependencies() {
-         return this.DEPENDENCIES;
       }
    }
 }

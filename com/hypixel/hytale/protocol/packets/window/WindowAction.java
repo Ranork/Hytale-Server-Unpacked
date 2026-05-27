@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public abstract class WindowAction {
@@ -12,7 +13,7 @@ public abstract class WindowAction {
    @Nonnull
    public static WindowAction deserialize(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return (WindowAction)(switch (typeId) {
          case 0 -> CraftRecipeAction.deserialize(buf, offset + typeIdLen);
@@ -28,9 +29,31 @@ public abstract class WindowAction {
       });
    }
 
+   public static WindowAction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static WindowAction toObject(MemorySegment mem, int offset) {
+      int typeId = VarInt.get(mem, offset);
+      int typeIdLen = VarInt.size(typeId);
+
+      return (WindowAction)(switch (typeId) {
+         case 0 -> CraftRecipeAction.toObject(mem, offset + typeIdLen);
+         case 1 -> TierUpgradeAction.toObject(mem, offset + typeIdLen);
+         case 2 -> SelectSlotAction.toObject(mem, offset + typeIdLen);
+         case 3 -> ChangeBlockAction.toObject(mem, offset + typeIdLen);
+         case 4 -> SetActiveAction.toObject(mem, offset + typeIdLen);
+         case 5 -> CraftItemAction.toObject(mem, offset + typeIdLen);
+         case 6 -> UpdateCategoryAction.toObject(mem, offset + typeIdLen);
+         case 7 -> CancelCraftingAction.toObject(mem, offset + typeIdLen);
+         case 8 -> SortItemsAction.toObject(mem, offset + typeIdLen);
+         default -> throw ProtocolException.unknownPolymorphicType("WindowAction", typeId);
+      });
+   }
+
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return typeIdLen + switch (typeId) {
          case 0 -> CraftRecipeAction.computeBytesConsumed(buf, offset + typeIdLen);
@@ -72,6 +95,8 @@ public abstract class WindowAction {
 
    public abstract int serialize(@Nonnull ByteBuf var1);
 
+   public abstract int serialize(@Nonnull MemorySegment var1, int var2);
+
    public abstract int computeSize();
 
    public int serializeWithTypeId(@Nonnull ByteBuf buf) {
@@ -81,13 +106,18 @@ public abstract class WindowAction {
       return buf.writerIndex() - startPos;
    }
 
+   public int serializeWithTypeId(@Nonnull MemorySegment mem, int offset) {
+      int len = VarInt.set(mem, offset, this.getTypeId());
+      return len + this.serialize(mem, offset + len);
+   }
+
    public int computeSizeWithTypeId() {
       return VarInt.size(this.getTypeId()) + this.computeSize();
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
       int typeId = VarInt.peek(buffer, offset);
-      int typeIdLen = VarInt.length(buffer, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return switch (typeId) {
          case 0 -> CraftRecipeAction.validateStructure(buffer, offset + typeIdLen);

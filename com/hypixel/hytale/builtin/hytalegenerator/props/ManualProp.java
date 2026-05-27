@@ -2,11 +2,11 @@ package com.hypixel.hytale.builtin.hytalegenerator.props;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class ManualProp extends Prop {
    @Nonnull
@@ -32,7 +32,7 @@ public class ManualProp extends Prop {
       Bounds3i bounds = context.materialWriteSpace.getBounds();
 
       for (ManualProp.Block block : this.blocks) {
-         this.rPosition.assign(block.position);
+         this.rPosition.set(block.position);
          this.rPosition.add(context.position);
          if (bounds.contains(this.rPosition)) {
             context.materialWriteSpace.set(block.material, this.rPosition);
@@ -60,7 +60,7 @@ public class ManualProp extends Prop {
 
       public Block(@Nonnull Material material, @Nonnull Vector3i position) {
          this.material = material;
-         this.position = position.clone();
+         this.position = new Vector3i(position);
       }
 
       @Nonnull

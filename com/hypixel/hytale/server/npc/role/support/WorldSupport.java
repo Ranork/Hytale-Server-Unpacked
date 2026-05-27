@@ -8,7 +8,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.attitude.Attitude;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -35,6 +35,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class WorldSupport {
    public static final double ATTITUDE_CACHE_CLEAR_FREQUENCY = 0.1;
@@ -133,12 +134,12 @@ public class WorldSupport {
    }
 
    public void resetCachedSearchRayPosition(int id) {
-      this.searchRayCachedPositions[id].assign(Vector3d.MIN);
+      this.searchRayCachedPositions[id].set(Vector3dUtil.MIN);
    }
 
    public void resetAllCachedSearchRayPositions() {
       for (Vector3d cachedPosition : this.searchRayCachedPositions) {
-         cachedPosition.assign(Vector3d.MIN);
+         cachedPosition.set(Vector3dUtil.MIN);
       }
    }
 

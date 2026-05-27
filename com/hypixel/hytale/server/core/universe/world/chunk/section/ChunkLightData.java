@@ -2,11 +2,18 @@ package com.hypixel.hytale.server.core.universe.world.chunk.section;
 
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.lang.foreign.ValueLayout.OfByte;
+import java.lang.foreign.ValueLayout.OfShort;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ChunkLightData {
+   protected static final OfByte VL_BYTE = ValueLayout.JAVA_BYTE;
+   protected static final OfShort VL_SHORT = ValueLayout.JAVA_SHORT_UNALIGNED;
    public static final ChunkLightData EMPTY = new ChunkLightData(null, (short)0);
    public static final int TREE_SIZE = 8;
    public static final int TREE_MASK = 7;
@@ -27,10 +34,26 @@ public class ChunkLightData {
    public static final int SKY_CHANNEL_BIT = 12;
    public static final int RGB_MASK = -61441;
    protected final short changeId;
-   ByteBuf light;
+   @Nonnull
+   final Arena arena;
+   @Nullable
+   MemorySegment lightData = null;
 
-   public ChunkLightData(ByteBuf light, short changeId) {
-      this.light = light;
+   public ChunkLightData(@Nullable MemorySegment lightData, short changeId) {
+      this.arena = Arena.ofAuto();
+      if (lightData != null) {
+         this.lightData = this.arena.allocate(lightData.byteSize());
+         this.lightData.copyFrom(lightData);
+      }
+
+      this.changeId = changeId;
+   }
+
+   protected ChunkLightData(@Nonnull Arena arena, @Nullable MemorySegment lightData, short changeId) {
+      assert lightData == null || lightData.scope() == arena.scope();
+
+      this.arena = arena;
+      this.lightData = lightData;
       this.changeId = changeId;
    }
 
@@ -43,7 +66,7 @@ public class ChunkLightData {
    }
 
    public byte getRedBlockLight(int index) {
-      return this.light == null ? 0 : this.getLight(index, 0);
+      return this.lightData == null ? 0 : this.getLight(index, 0);
    }
 
    public byte getGreenBlockLight(int x, int y, int z) {
@@ -51,7 +74,7 @@ public class ChunkLightData {
    }
 
    public byte getGreenBlockLight(int index) {
-      return this.light == null ? 0 : this.getLight(index, 1);
+      return this.lightData == null ? 0 : this.getLight(index, 1);
    }
 
    public byte getBlueBlockLight(int x, int y, int z) {
@@ -59,7 +82,7 @@ public class ChunkLightData {
    }
 
    public byte getBlueBlockLight(int index) {
-      return this.light == null ? 0 : this.getLight(index, 2);
+      return this.lightData == null ? 0 : this.getLight(index, 2);
    }
 
    public byte getBlockLightIntensity(int x, int y, int z) {
@@ -67,7 +90,7 @@ public class ChunkLightData {
    }
 
    public byte getBlockLightIntensity(int index) {
-      if (this.light == null) {
+      if (this.lightData == null) {
          return 0;
       } else {
          byte r = this.getLight(index, 0);
@@ -82,7 +105,7 @@ public class ChunkLightData {
    }
 
    public short getBlockLight(int index) {
-      return this.light == null ? 0 : (short)(this.getLightRaw(index) & -61441);
+      return this.lightData == null ? 0 : (short)(this.getLightRaw(index) & -61441);
    }
 
    public byte getSkyLight(int x, int y, int z) {
@@ -90,13 +113,13 @@ public class ChunkLightData {
    }
 
    public byte getSkyLight(int index) {
-      return this.light == null ? 0 : this.getLight(index, 3);
+      return this.lightData == null ? 0 : this.getLight(index, 3);
    }
 
    public byte getLight(int index, int channel) {
       if (channel < 0 || channel >= 4) {
          throw new IllegalArgumentException();
-      } else if (this.light == null) {
+      } else if (this.lightData == null) {
          return 0;
       } else {
          short value = this.getLightRaw(index);
@@ -109,97 +132,112 @@ public class ChunkLightData {
    }
 
    public short getLightRaw(int index) {
-      if (this.light == null) {
+      if (this.lightData == null) {
          return 0;
       } else if (index >= 0 && index < 32768) {
-         return getTraverse(this.light, index, 0, 0);
+         return getTraverse(this.lightData, index, 0, 0);
       } else {
          throw new IllegalArgumentException("Index " + index + " is outside of the bounds!");
       }
    }
 
-   protected static short getTraverse(@Nonnull ByteBuf local, int index, int pointer, int depth) {
+   protected static short getTraverse(@Nonnull MemorySegment local, int index, int pointer, int depth) {
       int loc = -1;
       int result = -1;
 
       try {
          int position = pointer * 17;
-         byte mask = local.getByte(position);
+         byte mask = local.get(VL_BYTE, (long)position);
          int innerIndex = index >> 12 - depth & 7;
          loc = innerIndex * 2 + position + 1;
-         result = local.getUnsignedShort(loc);
+         result = Short.toUnsignedInt(local.get(VL_SHORT, (long)loc));
          return (mask >> innerIndex & 1) == 1 ? getTraverse(local, index, result, depth + 3) : (short)result;
       } catch (Throwable var9) {
          throw new RuntimeException("Failed with " + index + ", " + pointer + ", " + depth + ". Result: " + result + " from " + loc, var9);
       }
    }
 
-   public void serialize(@Nonnull ByteBuf buf) {
-      buf.writeShort(this.changeId);
-      boolean hasLight = this.light != null;
-      buf.writeBoolean(hasLight);
+   public int serialize(@Nonnull MemorySegment data, int offset) {
+      data.set(MemorySegmentUtil.SHORT_BE, (long)offset, this.changeId);
+      boolean hasLight = this.lightData != null;
+      data.set(ValueLayout.JAVA_BOOLEAN, offset + 2, hasLight);
       if (hasLight) {
-         buf.ensureWritable(this.light.readableBytes());
-         int before = buf.writerIndex();
-         buf.writeInt(0);
-         this.serializeOctree(buf, 0);
-         int after = buf.writerIndex();
-         buf.writerIndex(before);
-         buf.writeInt(after - before - 4);
-         buf.writerIndex(after);
+         int headerEnd = offset + 2 + 1 + 4;
+         int size = this.serializeOctree(data, headerEnd, 0);
+         data.set(MemorySegmentUtil.INT_BE, (long)(offset + 2 + 1), size);
+         return 7 + size;
+      } else {
+         return 3;
       }
    }
 
-   private void serializeOctree(@Nonnull ByteBuf buf, int position) {
-      int mask = this.light.getByte(position * 17);
-      buf.writeByte(mask);
+   private int serializeOctree(@Nonnull MemorySegment data, int baseOffset, int position) {
+      int mask = this.lightData.get(VL_BYTE, position * 17L);
+      data.set(ValueLayout.JAVA_BYTE, (long)baseOffset, (byte)mask);
+      int offset = baseOffset + 1;
 
       for (int i = 0; i < 8; i++) {
-         int val = this.light.getUnsignedShort(position * 17 + i * 2 + 1);
+         int val = Short.toUnsignedInt(this.lightData.get(VL_SHORT, (long)(position * 17) + i * 2 + 1L));
          if ((mask >> i & 1) == 1) {
-            this.serializeOctree(buf, val);
+            offset += this.serializeOctree(data, offset, val);
          } else {
-            buf.writeShort(val);
+            data.set(MemorySegmentUtil.SHORT_BE, (long)offset, (short)val);
+            offset += 2;
          }
       }
+
+      return offset - baseOffset;
    }
 
-   public void serializeForPacket(@Nonnull ByteBuf buf) {
-      boolean hasLight = this.light != null;
-      buf.writeBoolean(hasLight);
-      if (hasLight) {
-         buf.ensureWritable(this.light.readableBytes());
-         this.serializeOctreeForPacket(buf, 0);
-      }
+   private int octreeSerializedSize() {
+      return 15 * (int)(this.lightData.byteSize() / 17L) + 2;
    }
 
-   private void serializeOctreeForPacket(@Nonnull ByteBuf buf, int position) {
-      int mask = this.light.getByte(position * 17);
-      buf.writeByte(mask);
+   public int serializedByteSize() {
+      return this.lightData == null ? 3 : 7 + this.octreeSerializedSize();
+   }
+
+   public int serializedForPacketByteSize() {
+      return this.lightData == null ? 1 : 1 + this.octreeSerializedSize();
+   }
+
+   public int serializeForPacket(@Nonnull MemorySegment data, int offset) {
+      boolean hasLight = this.lightData != null;
+      data.set(ValueLayout.JAVA_BOOLEAN, offset, hasLight);
+      return hasLight ? 1 + this.serializeOctreeForPacket(data, offset + 1, 0) : 1;
+   }
+
+   private int serializeOctreeForPacket(@Nonnull MemorySegment data, int baseOffset, int position) {
+      int mask = this.lightData.get(VL_BYTE, position * 17L);
+      data.set(ValueLayout.JAVA_BYTE, (long)baseOffset, (byte)mask);
+      int offset = baseOffset + 1;
 
       for (int i = 0; i < 8; i++) {
-         int val = this.light.getUnsignedShort(position * 17 + i * 2 + 1);
+         int val = Short.toUnsignedInt(this.lightData.get(VL_SHORT, (long)(position * 17) + i * 2 + 1L));
          if ((mask >> i & 1) == 1) {
-            this.serializeOctreeForPacket(buf, val);
+            offset += this.serializeOctreeForPacket(data, offset, val);
          } else {
-            buf.writeShortLE(val);
+            data.set(MemorySegmentUtil.SHORT_LE, (long)offset, (short)val);
+            offset += 2;
          }
       }
+
+      return offset - baseOffset;
    }
 
    @Nonnull
-   public static ChunkLightData deserialize(@Nonnull ByteBuf buf, int version) {
-      short changeId = buf.readShort();
-      boolean hasLight = buf.readBoolean();
+   public static ChunkLightData deserialize(@Nonnull MemorySegment data, int offset) {
+      short changeId = data.get(MemorySegmentUtil.SHORT_BE, (long)offset);
+      boolean hasLight = data.get(ValueLayout.JAVA_BOOLEAN, (long)(offset + 2));
       ChunkLightData chunkLightData;
       if (hasLight) {
-         int length = buf.readInt();
-         ByteBuf from = buf.readSlice(length);
-         int estSize = length * 23 / 20;
-         ByteBuf buffer = Unpooled.buffer(estSize);
-         buffer.writerIndex(17);
-         deserializeOctree(from, buffer, 0, 0);
-         chunkLightData = new ChunkLightData(buffer.copy(), changeId);
+         int length = data.get(MemorySegmentUtil.INT_BE, (long)(offset + 2 + 1));
+         int from = offset + 2 + 1 + 4;
+         int segments = (length - 2) / 15;
+         Arena arena = Arena.ofAuto();
+         MemorySegment lightData = arena.allocate(segments * 17L);
+         deserializeOctree(data, from, lightData, 0, 0);
+         chunkLightData = new ChunkLightData(arena, lightData, changeId);
       } else {
          chunkLightData = new ChunkLightData(null, changeId);
       }
@@ -207,29 +245,32 @@ public class ChunkLightData {
       return chunkLightData;
    }
 
-   private static int deserializeOctree(@Nonnull ByteBuf from, @Nonnull ByteBuf to, int position, int segmentIndex) {
-      int mask = from.readByte();
-      to.setByte(position * 17, mask);
+   private static long deserializeOctree(@Nonnull MemorySegment from, int baseOffset, @Nonnull MemorySegment to, int position, int segmentIndex) {
+      int mask = from.get(ValueLayout.JAVA_BYTE, (long)baseOffset);
+      int offset = baseOffset + 1;
+      to.set(VL_BYTE, position * 17L, (byte)mask);
 
       for (int i = 0; i < 8; i++) {
          int val;
          if ((mask >> i & 1) == 1) {
-            to.writerIndex((++segmentIndex + 1) * 17);
-            val = segmentIndex;
-            segmentIndex = deserializeOctree(from, to, segmentIndex, segmentIndex);
+            val = ++segmentIndex;
+            long result = deserializeOctree(from, offset, to, segmentIndex, segmentIndex);
+            offset += (int)(result >>> 32);
+            segmentIndex = (int)result;
          } else {
-            val = from.readShort();
+            val = from.get(MemorySegmentUtil.SHORT_BE, (long)offset);
+            offset += 2;
          }
 
-         to.setShort(position * 17 + i * 2 + 1, val);
+         to.set(VL_SHORT, position * 17L + i * 2 + 1L, (short)val);
       }
 
-      return segmentIndex;
+      return (long)(offset - baseOffset) << 32 | segmentIndex & 4294967295L;
    }
 
    @Nonnull
    public String octreeToString() {
-      return this.light == null ? "NULL" : ChunkLightDataBuilder.octreeToString(this.light);
+      return this.lightData == null ? "NULL" : ChunkLightDataBuilder.octreeToString(this.lightData);
    }
 
    public static short combineLightValues(byte red, byte green, byte blue, byte sky) {

@@ -198,7 +198,7 @@ public class RawJsonReader implements AutoCloseable {
          long haveSkipped = 0L;
 
          while (haveSkipped < skip) {
-            long charsInBuffer = this.bufferSize - this.bufferIndex;
+            long charsInBuffer = (long)this.bufferSize - this.bufferIndex;
             long charsToSkip = skip - haveSkipped;
             if (charsToSkip <= charsInBuffer) {
                this.bufferIndex = (int)(this.bufferIndex + charsToSkip);
@@ -223,13 +223,39 @@ public class RawJsonReader implements AutoCloseable {
 
    public int findOffset(int start, char value) throws IOException {
       while (true) {
-         this.ensure();
-         char c = this.buffer[this.bufferIndex + start];
-         if (c == value) {
-            return start;
+         if (this.bufferIndex + start >= this.bufferSize) {
+            if (!this.fillAppend()) {
+               throw this.unexpectedEOF();
+            }
+         } else {
+            char c = this.buffer[this.bufferIndex + start];
+            if (c == value) {
+               return start;
+            }
+
+            start++;
+         }
+      }
+   }
+
+   private boolean fillAppend() throws IOException {
+      if (this.in == null) {
+         return false;
+      } else {
+         if (this.bufferSize >= this.buffer.length) {
+            int newSize = this.buffer.length + 1048576;
+            char[] ncb = new char[newSize];
+            System.arraycopy(this.buffer, 0, ncb, 0, this.bufferSize);
+            this.buffer = ncb;
          }
 
-         start++;
+         int n = this.in.read(this.buffer, this.bufferSize, this.buffer.length - this.bufferSize);
+         if (n > 0) {
+            this.bufferSize += n;
+            return true;
+         } else {
+            return false;
+         }
       }
    }
 

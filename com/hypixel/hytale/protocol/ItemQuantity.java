@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,26 +35,34 @@ public class ItemQuantity {
 
    @Nonnull
    public static ItemQuantity deserialize(@Nonnull ByteBuf buf, int offset) {
-      ItemQuantity obj = new ItemQuantity();
-      byte nullBits = buf.getByte(offset);
-      obj.quantity = buf.getIntLE(offset + 1);
-      int pos = offset + 5;
-      if ((nullBits & 1) != 0) {
-         int itemIdLen = VarInt.peek(buf, pos);
-         if (itemIdLen < 0) {
-            throw ProtocolException.negativeLength("ItemId", itemIdLen);
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("ItemQuantity", 5, buf.readableBytes() - offset);
+      } else {
+         ItemQuantity obj = new ItemQuantity();
+         byte nullBits = buf.getByte(offset);
+         obj.quantity = buf.getIntLE(offset + 1);
+         int pos = offset + 5;
+         if ((nullBits & 1) != 0) {
+            int itemIdLen = VarInt.peek(buf, pos);
+            if (itemIdLen < 0) {
+               throw ProtocolException.invalidVarInt("ItemId");
+            }
+
+            int itemIdVarLen = VarInt.size(itemIdLen);
+            if (itemIdLen > 4096000) {
+               throw ProtocolException.stringTooLong("ItemId", itemIdLen, 4096000);
+            }
+
+            if (pos + itemIdVarLen + itemIdLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("ItemId", pos + itemIdVarLen + itemIdLen, buf.readableBytes());
+            }
+
+            obj.itemId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+            pos += itemIdVarLen + itemIdLen;
          }
 
-         if (itemIdLen > 4096000) {
-            throw ProtocolException.stringTooLong("ItemId", itemIdLen, 4096000);
-         }
-
-         int itemIdVarLen = VarInt.length(buf, pos);
-         obj.itemId = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += itemIdVarLen + itemIdLen;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -61,10 +70,52 @@ public class ItemQuantity {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   @Nullable
+   public static String getItemId(MemorySegment mem) {
+      return getItemId(mem, 0);
+   }
+
+   @Nullable
+   public static String getItemId(MemorySegment mem, int offset) {
+      return hasItemId(mem, offset) ? PacketIO.readVarString("ItemId", mem, offset + 5, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static int getQuantity(MemorySegment mem) {
+      return getQuantity(mem, 0);
+   }
+
+   public static int getQuantity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 1));
+   }
+
+   public static boolean hasItemId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static ItemQuantity toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemQuantity toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemQuantity", offset + 5, (int)mem.byteSize());
+      } else {
+         return new ItemQuantity(
+            hasItemId(mem, offset) ? PacketIO.readVarString("ItemId", mem, offset + 5, 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 1))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -78,6 +129,22 @@ public class ItemQuantity {
       if (this.itemId != null) {
          PacketIO.writeVarString(buf, this.itemId, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.itemId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 1), this.quantity);
+      int varOffset = offset + 5;
+      if (this.itemId != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.itemId, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {
@@ -105,7 +172,7 @@ public class ItemQuantity {
                return ValidationResult.error("ItemId exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(itemIdLen);
             pos += itemIdLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading ItemId");

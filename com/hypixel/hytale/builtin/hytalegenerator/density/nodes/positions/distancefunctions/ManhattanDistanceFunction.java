@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.distancefunctions;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ManhattanDistanceFunction extends DistanceFunction {
    @Override

@@ -3,11 +3,11 @@ package com.hypixel.hytale.server.core.modules.entityui.asset;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.math.vector.Vector2fUtil;
 import com.hypixel.hytale.protocol.CombatTextEntityUIAnimationEventType;
 import com.hypixel.hytale.protocol.CombatTextEntityUIComponentAnimationEvent;
-import com.hypixel.hytale.protocol.Vector2f;
-import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import javax.annotation.Nonnull;
+import org.joml.Vector2f;
 
 public class CombatTextUIComponentPositionAnimationEvent extends CombatTextUIComponentAnimationEvent {
    public static final BuilderCodec<CombatTextUIComponentPositionAnimationEvent> CODEC = BuilderCodec.builder(
@@ -16,7 +16,7 @@ public class CombatTextUIComponentPositionAnimationEvent extends CombatTextUICom
          CombatTextUIComponentAnimationEvent.ABSTRACT_CODEC
       )
       .appendInherited(
-         new KeyedCodec<>("PositionOffset", ProtocolCodecs.VECTOR2F),
+         new KeyedCodec<>("PositionOffset", Vector2fUtil.CODEC),
          (event, f) -> event.positionOffset = f,
          event -> event.positionOffset,
          (parent, event) -> event.positionOffset = parent.positionOffset

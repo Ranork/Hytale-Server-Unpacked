@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PlayerInput implements Component<EntityStore> {
    @Nonnull
@@ -159,7 +159,7 @@ public class PlayerInput implements Component<EntityStore> {
       public void apply(CommandBuffer<EntityStore> commandBuffer, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, int index) {
          TransformComponent transformComponent = archetypeChunk.getComponent(index, TransformComponent.getComponentType());
          if (transformComponent != null) {
-            transformComponent.getRotation().assign(this.direction.pitch, this.direction.yaw, this.direction.roll);
+            transformComponent.getRotation().set(this.direction.pitch, this.direction.yaw, this.direction.roll);
          }
       }
    }
@@ -189,7 +189,7 @@ public class PlayerInput implements Component<EntityStore> {
       public void apply(CommandBuffer<EntityStore> commandBuffer, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk, int index) {
          HeadRotation headRotationComponent = archetypeChunk.getComponent(index, HeadRotation.getComponentType());
          if (headRotationComponent != null) {
-            headRotationComponent.getRotation().assign(this.direction.pitch, this.direction.yaw, this.direction.roll);
+            headRotationComponent.getRotation().set(this.direction.pitch, this.direction.yaw, this.direction.roll);
          }
       }
    }

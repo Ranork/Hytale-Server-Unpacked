@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -21,6 +20,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.BlockPlacementHelper;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ActionPlaceBlock extends ActionBase {
    protected static final ComponentType<EntityStore, BoundingBox> BOUNDING_BOX_COMPONENT_TYPE = BoundingBox.getComponentType();
@@ -57,10 +57,10 @@ public class ActionPlaceBlock extends ActionBase {
                   maxDistance += hitBox.getBoundingBox().getMaximumExtent();
                }
 
-               int x = MathUtil.floor(this.target.getX());
-               int y = MathUtil.floor(this.target.getY());
-               int z = MathUtil.floor(this.target.getZ());
-               if (transformComponent.getPosition().distanceSquaredTo(x, y, z) > maxDistance * maxDistance) {
+               int x = MathUtil.floor(this.target.x());
+               int y = MathUtil.floor(this.target.y());
+               int z = MathUtil.floor(this.target.z());
+               if (transformComponent.getPosition().distanceSquared(x, y, z) > maxDistance * maxDistance) {
                   return false;
                } else if (sensorInfo instanceof CachedPositionProvider && !((CachedPositionProvider)sensorInfo).isFromCache()) {
                   return true;
@@ -77,12 +77,12 @@ public class ActionPlaceBlock extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       World world = store.getExternalData().getWorld();
-      WorldChunk chunk = world.getNonTickingChunk(ChunkUtil.indexChunkFromBlock(this.target.getX(), this.target.getZ()));
+      WorldChunk chunk = world.getNonTickingChunk(ChunkUtil.indexChunkFromBlock(this.target.x(), this.target.z()));
       chunk.setBlock(
-         MathUtil.floor(this.target.getX()), MathUtil.floor(this.target.getY()), MathUtil.floor(this.target.getZ()), role.getWorldSupport().getBlockToPlace()
+         MathUtil.floor(this.target.x()), MathUtil.floor(this.target.y()), MathUtil.floor(this.target.z()), role.getWorldSupport().getBlockToPlace()
       );
       return true;
    }

@@ -18,7 +18,6 @@ import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.entity.EntityRemoveEvent;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -30,10 +29,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Arrays;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
-import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
@@ -43,8 +40,6 @@ public abstract class Entity implements Component<EntityStore> {
    @Nonnull
    public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    public static final int VERSION = 5;
-   @Nonnull
-   public static final KeyedCodec<Model.ModelReference> MODEL = new KeyedCodec<>("Model", Model.ModelReference.CODEC);
    @Nonnull
    public static final KeyedCodec<String> DISPLAY_NAME = new KeyedCodec<>("DisplayName", Codec.STRING);
    @Nonnull
@@ -66,8 +61,6 @@ public abstract class Entity implements Component<EntityStore> {
    protected World world;
    @Nullable
    protected Ref<EntityStore> reference;
-   @Deprecated
-   private TransformComponent transformComponent;
    @Deprecated(forRemoval = true)
    protected String legacyDisplayName;
    @Nonnull
@@ -87,10 +80,13 @@ public abstract class Entity implements Component<EntityStore> {
 
    @Deprecated(forRemoval = true)
    public void markNeedsSave() {
-      if (this.transformComponent != null) {
-         WorldChunk chunk = this.transformComponent.getChunk();
-         if (chunk != null) {
-            chunk.getEntityChunk().markNeedsSaving();
+      if (this.reference != null && this.reference.isValid() && this.world != null && this.world.isInThread()) {
+         TransformComponent transformComponent = this.reference.getStore().getComponent(this.reference, TransformComponent.getComponentType());
+         if (transformComponent != null) {
+            WorldChunk chunk = transformComponent.getChunk();
+            if (chunk != null) {
+               chunk.getEntityChunk().markNeedsSaving();
+            }
          }
       }
    }
@@ -160,36 +156,13 @@ public abstract class Entity implements Component<EntityStore> {
       return this.legacyUuid;
    }
 
-   @Deprecated(forRemoval = true)
-   public void setTransformComponent(TransformComponent transform) {
-      this.transformComponent = transform;
-   }
-
-   @Deprecated(forRemoval = true)
-   public TransformComponent getTransformComponent() {
-      if (this.world == null || this.reference == null) {
-         throw new IllegalStateException("Called before entity was init");
-      } else if (!this.world.isInThread()) {
-         ((HytaleLogger.Api)((HytaleLogger.Api)LOGGER.at(Level.WARNING).atMostEvery(5, TimeUnit.MINUTES)).withCause(new Throwable()))
-            .log("getPositionComponent called async");
-         return this.transformComponent;
-      } else {
-         Store<EntityStore> store = this.world.getEntityStore().getStore();
-         TransformComponent transformComponent = store.getComponent(this.reference, TransformComponent.getComponentType());
-
-         assert transformComponent != null;
-
-         return transformComponent;
-      }
-   }
-
    @Deprecated
    public void moveTo(@Nonnull Ref<EntityStore> ref, double locX, double locY, double locZ, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
 
       assert transformComponent != null;
 
-      transformComponent.getPosition().assign(locX, locY, locZ);
+      transformComponent.getPosition().set(locX, locY, locZ);
    }
 
    @Nullable

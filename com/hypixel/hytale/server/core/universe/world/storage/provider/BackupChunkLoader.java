@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
-import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.longs.LongList;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileSystem;
@@ -96,8 +96,8 @@ public class BackupChunkLoader implements IChunkLoader {
 
    @Nonnull
    @Override
-   public LongSet getIndexes() throws IOException {
-      return LongSet.of();
+   public LongList getIndexes() throws IOException {
+      return LongList.of();
    }
 
    @Override

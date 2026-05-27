@@ -3,10 +3,10 @@ package com.hypixel.hytale.server.npc.movement.steeringforces;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public abstract class SteeringForceWithGroup implements SteeringForce {
    @Nonnull
@@ -14,7 +14,7 @@ public abstract class SteeringForceWithGroup implements SteeringForce {
    protected Vector3d componentSelector;
 
    public void setSelf(@Nonnull Ref<EntityStore> ref, @Nonnull Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      this.selfPosition.assign(position.getX(), position.getY(), position.getZ());
+      this.selfPosition.set(position.x(), position.y(), position.z());
    }
 
    public void setComponentSelector(Vector3d componentSelector) {

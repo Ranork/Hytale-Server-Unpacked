@@ -1,6 +1,6 @@
 package com.hypixel.hytale.server.core.modules.collision;
 
-import com.hypixel.hytale.math.vector.Vector3i;
+import org.joml.Vector3i;
 
 public interface IBlockTracker {
    Vector3i getPosition(int var1);

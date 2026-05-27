@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.function.TriFunction;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ForkedChainId;
 import com.hypixel.hytale.protocol.GameMode;
@@ -19,14 +18,12 @@ import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.RootInteractionSettings;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.protocol.packets.interaction.CancelInteractionChain;
 import com.hypixel.hytale.protocol.packets.interaction.SyncInteractionChain;
 import com.hypixel.hytale.protocol.packets.inventory.SetActiveSlot;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
@@ -63,6 +60,8 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3fc;
+import org.joml.Vector4d;
 
 public class InteractionManager implements Component<EntityStore> {
    public static final double MAX_REACH_DISTANCE = 8.0;
@@ -74,8 +73,8 @@ public class InteractionManager implements Component<EntityStore> {
    private final Int2ObjectMap<InteractionChain> unmodifiableChains = Int2ObjectMaps.unmodifiable(this.chains);
    @Nonnull
    private final CooldownHandler cooldownHandler = new CooldownHandler();
-   @Nonnull
-   private final LivingEntity entity;
+   @Nullable
+   private Ref<EntityStore> ref;
    @Nullable
    private final PlayerRef playerRef;
    private boolean hasRemoteClient;
@@ -98,8 +97,7 @@ public class InteractionManager implements Component<EntityStore> {
    @Nullable
    protected CommandBuffer<EntityStore> commandBuffer;
 
-   public InteractionManager(@Nonnull LivingEntity entity, @Nullable PlayerRef playerRef, @Nonnull IInteractionSimulationHandler simulationHandler) {
-      this.entity = entity;
+   public InteractionManager(@Nullable PlayerRef playerRef, @Nonnull IInteractionSimulationHandler simulationHandler) {
       this.playerRef = playerRef;
       this.hasRemoteClient = playerRef != null;
       this.interactionSimulationHandler = simulationHandler;
@@ -144,47 +142,53 @@ public class InteractionManager implements Component<EntityStore> {
    }
 
    public void tick(@Nonnull Ref<EntityStore> ref, @Nonnull CommandBuffer<EntityStore> commandBuffer, float dt) {
-      this.currentTime = this.currentTime + commandBuffer.getExternalData().getWorld().getTickStepNanos();
-      this.commandBuffer = commandBuffer;
-      this.clearAllGlobalTimeShift(dt);
-      this.cooldownHandler.tick(dt);
-      ObjectListIterator packetQueue = this.chainStartQueue.iterator();
+      if (!ref.isValid()) {
+         throw new IllegalStateException("Attempted to tick Interaction Manager for an invalid entity reference!");
+      } else {
+         this.currentTime = this.currentTime + commandBuffer.getExternalData().getWorld().getTickStepNanos();
+         this.ref = ref;
+         this.commandBuffer = commandBuffer;
+         this.clearAllGlobalTimeShift(dt);
+         this.cooldownHandler.tick(dt);
+         ObjectListIterator packetQueue = this.chainStartQueue.iterator();
 
-      while (packetQueue.hasNext()) {
-         InteractionChain interactionChain = (InteractionChain)packetQueue.next();
-         this.executeChain0(ref, interactionChain);
-      }
+         while (packetQueue.hasNext()) {
+            InteractionChain interactionChain = (InteractionChain)packetQueue.next();
+            this.executeChain0(ref, interactionChain);
+         }
 
-      this.chainStartQueue.clear();
-      Deque<SyncInteractionChain> packetQueuex = null;
-      if (this.playerRef != null) {
-         packetQueuex = ((GamePacketHandler)this.playerRef.getPacketHandler()).getInteractionPacketQueue();
-      }
+         this.chainStartQueue.clear();
+         Deque<SyncInteractionChain> packetQueuex = null;
+         if (this.playerRef != null) {
+            packetQueuex = ((GamePacketHandler)this.playerRef.getPacketHandler()).getInteractionPacketQueue();
+         }
 
-      if (packetQueuex != null && !packetQueuex.isEmpty()) {
-         for (boolean first = true; this.tryConsumePacketQueue(ref, packetQueuex) || first; first = false) {
+         if (packetQueuex != null && !packetQueuex.isEmpty()) {
+            for (boolean first = true; this.tryConsumePacketQueue(ref, packetQueuex) || first; first = false) {
+               if (!this.chains.isEmpty()) {
+                  this.chains.values().removeIf(this.cachedTickChain);
+               }
+
+               float cooldownDt = 0.0F;
+
+               for (float shift : this.globalTimeShift) {
+                  cooldownDt = Math.max(cooldownDt, shift);
+               }
+
+               if (cooldownDt > 0.0F) {
+                  this.cooldownHandler.tick(cooldownDt);
+               }
+            }
+
+            this.commandBuffer = null;
+         } else {
             if (!this.chains.isEmpty()) {
                this.chains.values().removeIf(this.cachedTickChain);
             }
 
-            float cooldownDt = 0.0F;
-
-            for (float shift : this.globalTimeShift) {
-               cooldownDt = Math.max(cooldownDt, shift);
-            }
-
-            if (cooldownDt > 0.0F) {
-               this.cooldownHandler.tick(cooldownDt);
-            }
+            this.ref = null;
+            this.commandBuffer = null;
          }
-
-         this.commandBuffer = null;
-      } else {
-         if (!this.chains.isEmpty()) {
-            this.chains.values().removeIf(this.cachedTickChain);
-         }
-
-         this.commandBuffer = null;
       }
    }
 
@@ -336,19 +340,15 @@ public class InteractionManager implements Component<EntityStore> {
       if (chain.wasPreTicked()) {
          chain.setPreTicked(false);
          return false;
-      } else {
+      } else if (this.ref != null && this.ref.isValid()) {
          if (!this.hasRemoteClient) {
             chain.updateSimulatedState();
          }
 
          chain.getForkedChains().values().removeIf(this.cachedTickChain);
-         Ref<EntityStore> ref = this.entity.getReference();
-
-         assert ref != null;
-
          if (chain.getServerState() != InteractionState.NotFinished) {
             if (chain.requiresClient() && chain.getClientState() == InteractionState.NotFinished) {
-               if (!this.waitingForClient(ref)) {
+               if (!this.waitingForClient(this.ref)) {
                   if (chain.getWaitingForClientFinished() == 0L) {
                      chain.setWaitingForClientFinished(this.currentTime);
                   }
@@ -370,7 +370,7 @@ public class InteractionManager implements Component<EntityStore> {
                return false;
             } else {
                LOGGER.at(Level.FINE).log("Remove Chain: %d, %s", chain.getChainId(), chain);
-               this.handleCancelledChain(ref, chain);
+               this.handleCancelledChain(this.ref, chain);
                chain.onCompletion(this.cooldownHandler, this.hasRemoteClient);
                return chain.getForkedChains().isEmpty();
             }
@@ -378,10 +378,10 @@ public class InteractionManager implements Component<EntityStore> {
             int baseOpIndex = chain.getOperationIndex();
 
             try {
-               this.doTickChain(ref, chain);
-            } catch (InteractionManager.ChainCancelledException var9) {
-               chain.setServerState(var9.state);
-               chain.setClientState(var9.state);
+               this.doTickChain(this.ref, chain);
+            } catch (InteractionManager.ChainCancelledException var8) {
+               chain.setServerState(var8.state);
+               chain.setClientState(var8.state);
                chain.updateServerState();
                if (!this.hasRemoteClient) {
                   chain.updateSimulatedState();
@@ -405,11 +405,11 @@ public class InteractionManager implements Component<EntityStore> {
                      contextx.log("Remove Chain: %d-%s, %s", chain.getChainId(), chain.getForkedChainId(), chain);
                   }
 
-                  this.handleCancelledChain(ref, chain);
+                  this.handleCancelledChain(this.ref, chain);
                   chain.onCompletion(this.cooldownHandler, this.hasRemoteClient);
                   return chain.getForkedChains().isEmpty();
                }
-            } else if (chain.getClientState() != InteractionState.NotFinished && !this.waitingForClient(ref)) {
+            } else if (chain.getClientState() != InteractionState.NotFinished && !this.waitingForClient(this.ref)) {
                if (chain.getWaitingForServerFinished() == 0L) {
                   chain.setWaitingForServerFinished(this.currentTime);
                }
@@ -429,6 +429,8 @@ public class InteractionManager implements Component<EntityStore> {
 
             return false;
          }
+      } else {
+         throw new IllegalStateException("Entity ref was null or invalid during chain tick!");
       }
    }
 
@@ -451,11 +453,11 @@ public class InteractionManager implements Component<EntityStore> {
                }
 
                try {
-                  context.initEntry(chain, entry, this.entity);
+                  context.initEntry(chain, entry, ref);
                   TimeResource timeResource = this.commandBuffer.getResource(TimeResource.getResourceType());
                   operation.handle(ref, false, entry.getTimeInSeconds(this.currentTime) * timeResource.getTimeDilationModifier(), chain.getType(), context);
                } finally {
-                  context.deinitEntry(chain, entry, this.entity);
+                  context.deinitEntry(chain, entry, ref);
                }
 
                chain.setOperationCounter(maxOperations);
@@ -487,6 +489,20 @@ public class InteractionManager implements Component<EntityStore> {
          throw new InteractionManager.ChainCancelledException(chain.getServerState());
       } else {
          while (true) {
+            if (currentOp >= maxOperations) {
+               while (callDepth > 0 && currentOp >= maxOperations) {
+                  chain.popRoot();
+                  callDepth = chain.getCallDepth();
+                  currentOp = chain.getOperationCounter();
+                  root = chain.getRootInteraction();
+                  maxOperations = root.getOperationMax();
+               }
+
+               if (callDepth == 0 && currentOp >= maxOperations) {
+                  break;
+               }
+            }
+
             Operation simOp = !this.hasRemoteClient ? root.getOperation(chain.getSimulatedOperationCounter()) : null;
             WaitForDataFrom simWaitFrom = simOp != null ? simOp.getWaitForDataFrom() : null;
             long tickTime = this.currentTime;
@@ -606,10 +622,10 @@ public class InteractionManager implements Component<EntityStore> {
          time *= tickTimeDilation;
 
          try {
-            context.initEntry(chain, entry, this.entity);
-            operation.tick(ref, this.entity, firstRun, time, chain.getType(), context, this.cooldownHandler);
+            context.initEntry(chain, entry, ref);
+            operation.tick(ref, firstRun, time, chain.getType(), context, this.cooldownHandler);
          } finally {
-            context.deinitEntry(chain, entry, this.entity);
+            context.deinitEntry(chain, entry, ref);
          }
 
          InteractionSyncData serverData = entry.getServerState();
@@ -618,10 +634,10 @@ public class InteractionManager implements Component<EntityStore> {
          }
 
          try {
-            context.initEntry(chain, entry, this.entity);
+            context.initEntry(chain, entry, ref);
             operation.handle(ref, firstRun, time, chain.getType(), context);
          } finally {
-            context.deinitEntry(chain, entry, this.entity);
+            context.deinitEntry(chain, entry, ref);
          }
 
          this.removeInteractionIfFinished(ref, chain, entry);
@@ -703,7 +719,7 @@ public class InteractionManager implements Component<EntityStore> {
          entry.setUseSimulationState(true);
 
          try {
-            context.initEntry(chain, entry, this.entity);
+            context.initEntry(chain, entry, ref);
             float time = entry.getTimeInSeconds(tickTime);
             boolean firstRun = false;
             if (entry.getTimestamp() == 0L) {
@@ -715,9 +731,9 @@ public class InteractionManager implements Component<EntityStore> {
             TimeResource timeResource = this.commandBuffer.getResource(TimeResource.getResourceType());
             float tickTimeDilation = timeResource.getTimeDilationModifier();
             time *= tickTimeDilation;
-            operation.simulateTick(ref, this.entity, firstRun, time, chain.getType(), context, this.cooldownHandler);
+            operation.simulateTick(ref, firstRun, time, chain.getType(), context, this.cooldownHandler);
          } finally {
-            context.deinitEntry(chain, entry, this.entity);
+            context.deinitEntry(chain, entry, ref);
             entry.setUseSimulationState(false);
          }
 
@@ -809,133 +825,161 @@ public class InteractionManager implements Component<EntityStore> {
                RootInteraction rootInteraction = RootInteraction.getRootInteractionOrUnknown(rootInteractionId);
                if (rootInteraction == null) {
                   return false;
+               } else if (rootInteraction.getOperationMax() == 0) {
+                  ((HytaleLogger.Api)LOGGER.atWarning())
+                     .log("Root interaction '%s' has no operations, cancelling chain %d (%s)", rootInteractionId, index, type);
+                  this.sendCancelPacket(index, packet.forkedId);
+                  return true;
                } else if (!this.applyRules(context, packet.data, type, rootInteraction)) {
                   return false;
                } else {
-                  Inventory entityInventory = this.entity.getInventory();
-                  ItemStack itemInHand = entityInventory.getActiveHotbarItem();
-                  ItemStack utilityItem = entityInventory.getUtilityItem();
-                  String serverItemInHandId = itemInHand != null ? itemInHand.getItemId() : null;
-                  String serverUtilityItemId = utilityItem != null ? utilityItem.getItemId() : null;
-                  if (packet.activeHotbarSlot != entityInventory.getActiveHotbarSlot()) {
-                     HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
-                     if (ctx.isEnabled()) {
-                        ctx.log(
-                           "Active slot miss match: %d, %d != %d, %s, %s, %s",
-                           index,
-                           entityInventory.getActiveHotbarSlot(),
-                           packet.activeHotbarSlot,
-                           serverItemInHandId,
-                           packet.itemInHandId,
-                           type
-                        );
-                     }
-
-                     this.sendCancelPacket(index, packet.forkedId);
-                     if (this.playerRef != null) {
-                        this.playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, entityInventory.getActiveHotbarSlot()));
-                     }
-
-                     return true;
-                  } else if (packet.activeUtilitySlot != entityInventory.getActiveUtilitySlot()) {
-                     HytaleLogger.Api ctxx = LOGGER.at(Level.FINE);
-                     if (ctxx.isEnabled()) {
-                        ctxx.log(
-                           "Active slot miss match: %d, %d != %d, %s, %s, %s",
-                           index,
-                           entityInventory.getActiveUtilitySlot(),
-                           packet.activeUtilitySlot,
-                           serverItemInHandId,
-                           packet.itemInHandId,
-                           type
-                        );
-                     }
-
-                     this.sendCancelPacket(index, packet.forkedId);
-                     if (this.playerRef != null) {
-                        this.playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-5, entityInventory.getActiveUtilitySlot()));
-                     }
-
-                     return true;
-                  } else if (!Objects.equals(serverItemInHandId, packet.itemInHandId)) {
-                     HytaleLogger.Api ctxxx = LOGGER.at(Level.FINE);
-                     if (ctxxx.isEnabled()) {
-                        ctxxx.log("ItemInHand miss match: %d, %s, %s, %s", index, serverItemInHandId, packet.itemInHandId, type);
-                     }
-
-                     this.sendCancelPacket(index, packet.forkedId);
-                     return true;
-                  } else if (!Objects.equals(serverUtilityItemId, packet.utilityItemId)) {
-                     HytaleLogger.Api ctxxx = LOGGER.at(Level.FINE);
-                     if (ctxxx.isEnabled()) {
-                        ctxxx.log("UtilityItem miss match: %d, %s, %s, %s", index, serverUtilityItemId, packet.utilityItemId, type);
-                     }
-
-                     this.sendCancelPacket(index, packet.forkedId);
-                     return true;
-                  } else if (this.isOnCooldown(ref, type, rootInteraction, true)) {
+                  InventoryComponent.Hotbar hotbarComponent = this.commandBuffer.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+                  if (hotbarComponent == null) {
                      return false;
                   } else {
-                     InteractionChain chain = this.initChain(packet.data, type, context, rootInteraction, null, true);
-                     chain.setChainId(index);
-                     this.sync(ref, chain, packet);
-                     World world = this.commandBuffer.getExternalData().getWorld();
-                     if (packet.data.blockPosition != null) {
-                        BlockPosition targetBlock = world.getBaseBlock(packet.data.blockPosition);
-                        context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK, targetBlock);
-                        context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK_RAW, packet.data.blockPosition);
-                        if (!packet.data.blockPosition.equals(targetBlock)) {
-                           WorldChunk otherChunk = world.getChunkIfInMemory(
-                              ChunkUtil.indexChunkFromBlock(packet.data.blockPosition.x, packet.data.blockPosition.z)
-                           );
-                           if (otherChunk == null) {
-                              HytaleLogger.Api ctxxx = LOGGER.at(Level.FINE);
-                              if (ctxxx.isEnabled()) {
-                                 ctxxx.log("Unloaded chunk interacted with: %d, %s", index, type);
-                              }
-
-                              this.sendCancelPacket(index, packet.forkedId);
-                              return true;
-                           }
-
-                           int blockId = world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z);
-                           int otherBlockId = world.getBlock(packet.data.blockPosition.x, packet.data.blockPosition.y, packet.data.blockPosition.z);
-                           if (blockId != otherBlockId) {
-                              otherChunk.setBlock(
-                                 packet.data.blockPosition.x, packet.data.blockPosition.y, packet.data.blockPosition.z, 0, BlockType.EMPTY, 0, 0, 1052
+                     InventoryComponent.Utility utilityComponent = this.commandBuffer.getComponent(ref, InventoryComponent.Utility.getComponentType());
+                     if (utilityComponent == null) {
+                        return false;
+                     } else {
+                        ItemStack itemInHand = hotbarComponent.getActiveItem();
+                        ItemStack utilityItem = utilityComponent.getActiveItem();
+                        String serverItemInHandId = itemInHand != null ? itemInHand.getItemId() : null;
+                        String serverUtilityItemId = utilityItem != null ? utilityItem.getItemId() : null;
+                        byte activeHotbarSlot = hotbarComponent.getActiveSlot();
+                        byte activeUtilitySlot = utilityComponent.getActiveSlot();
+                        if (packet.activeHotbarSlot != activeHotbarSlot) {
+                           HytaleLogger.Api ctx = LOGGER.at(Level.FINE);
+                           if (ctx.isEnabled()) {
+                              ctx.log(
+                                 "Active slot miss match: %d, %d != %d, %s, %s, %s",
+                                 index,
+                                 activeHotbarSlot,
+                                 packet.activeHotbarSlot,
+                                 serverItemInHandId,
+                                 packet.itemInHandId,
+                                 type
                               );
                            }
+
+                           this.sendCancelPacket(index, packet.forkedId);
+                           if (this.playerRef != null) {
+                              this.playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, activeHotbarSlot));
+                           }
+
+                           return true;
+                        } else if (packet.activeUtilitySlot != activeUtilitySlot) {
+                           HytaleLogger.Api ctxx = LOGGER.at(Level.FINE);
+                           if (ctxx.isEnabled()) {
+                              ctxx.log(
+                                 "Active slot miss match: %d, %d != %d, %s, %s, %s",
+                                 index,
+                                 activeUtilitySlot,
+                                 packet.activeUtilitySlot,
+                                 serverItemInHandId,
+                                 packet.itemInHandId,
+                                 type
+                              );
+                           }
+
+                           this.sendCancelPacket(index, packet.forkedId);
+                           if (this.playerRef != null) {
+                              this.playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-5, activeUtilitySlot));
+                           }
+
+                           return true;
+                        } else if (!Objects.equals(serverItemInHandId, packet.itemInHandId)) {
+                           HytaleLogger.Api ctxxx = LOGGER.at(Level.FINE);
+                           if (ctxxx.isEnabled()) {
+                              ctxxx.log("ItemInHand miss match: %d, %s, %s, %s", index, serverItemInHandId, packet.itemInHandId, type);
+                           }
+
+                           this.sendCancelPacket(index, packet.forkedId);
+                           return true;
+                        } else if (!Objects.equals(serverUtilityItemId, packet.utilityItemId)) {
+                           HytaleLogger.Api ctxxx = LOGGER.at(Level.FINE);
+                           if (ctxxx.isEnabled()) {
+                              ctxxx.log("UtilityItem miss match: %d, %s, %s, %s", index, serverUtilityItemId, packet.utilityItemId, type);
+                           }
+
+                           this.sendCancelPacket(index, packet.forkedId);
+                           return true;
+                        } else if (this.isOnCooldown(ref, type, rootInteraction, true)) {
+                           return false;
+                        } else {
+                           InteractionChain chain = this.initChain(packet.data, type, context, rootInteraction, null, true);
+                           chain.setChainId(index);
+                           this.sync(ref, chain, packet);
+                           World world = this.commandBuffer.getExternalData().getWorld();
+                           if (packet.data.blockPosition != null) {
+                              BlockPosition targetBlock = world.getBaseBlock(packet.data.blockPosition);
+                              context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK, targetBlock);
+                              context.getMetaStore().putMetaObject(Interaction.TARGET_BLOCK_RAW, packet.data.blockPosition);
+                              if (!packet.data.blockPosition.equals(targetBlock)) {
+                                 WorldChunk otherChunk = world.getChunkIfInMemory(
+                                    ChunkUtil.indexChunkFromBlock(packet.data.blockPosition.x, packet.data.blockPosition.z)
+                                 );
+                                 if (otherChunk == null) {
+                                    HytaleLogger.Api ctxxx = LOGGER.at(Level.FINE);
+                                    if (ctxxx.isEnabled()) {
+                                       ctxxx.log("Unloaded chunk interacted with: %d, %s", index, type);
+                                    }
+
+                                    this.sendCancelPacket(index, packet.forkedId);
+                                    return true;
+                                 }
+
+                                 int blockId = world.getBlock(targetBlock.x, targetBlock.y, targetBlock.z);
+                                 int otherBlockId = world.getBlock(packet.data.blockPosition.x, packet.data.blockPosition.y, packet.data.blockPosition.z);
+                                 if (blockId != otherBlockId) {
+                                    int settings = 1036;
+                                    if (blockId != 0) {
+                                       settings |= 16;
+                                    }
+
+                                    otherChunk.setBlock(
+                                       packet.data.blockPosition.x,
+                                       packet.data.blockPosition.y,
+                                       packet.data.blockPosition.z,
+                                       0,
+                                       BlockType.EMPTY,
+                                       0,
+                                       0,
+                                       settings
+                                    );
+                                 }
+                              }
+                           }
+
+                           if (packet.data.entityId >= 0) {
+                              EntityStore entityComponentStore = world.getEntityStore();
+                              Ref<EntityStore> entityReference = entityComponentStore.getRefFromNetworkId(packet.data.entityId);
+                              if (entityReference != null) {
+                                 context.getMetaStore().putMetaObject(Interaction.TARGET_ENTITY, entityReference);
+                              }
+                           }
+
+                           if (packet.data.targetSlot != Integer.MIN_VALUE) {
+                              context.getMetaStore().putMetaObject(Interaction.TARGET_SLOT, packet.data.targetSlot);
+                           }
+
+                           if (packet.data.hitLocation != null) {
+                              Vector3fc hit = packet.data.hitLocation;
+                              context.getMetaStore().putMetaObject(Interaction.HIT_LOCATION, new Vector4d(hit.x(), hit.y(), hit.z(), 1.0));
+                           }
+
+                           if (packet.data.hitDetail != null) {
+                              context.getMetaStore().putMetaObject(Interaction.HIT_DETAIL, packet.data.hitDetail);
+                           }
+
+                           this.lastClientChainId = index;
+                           if (!this.tickChain(chain)) {
+                              chain.setPreTicked(true);
+                              this.chains.put(index, chain);
+                           }
+
+                           return true;
                         }
                      }
-
-                     if (packet.data.entityId >= 0) {
-                        EntityStore entityComponentStore = world.getEntityStore();
-                        Ref<EntityStore> entityReference = entityComponentStore.getRefFromNetworkId(packet.data.entityId);
-                        if (entityReference != null) {
-                           context.getMetaStore().putMetaObject(Interaction.TARGET_ENTITY, entityReference);
-                        }
-                     }
-
-                     if (packet.data.targetSlot != Integer.MIN_VALUE) {
-                        context.getMetaStore().putMetaObject(Interaction.TARGET_SLOT, packet.data.targetSlot);
-                     }
-
-                     if (packet.data.hitLocation != null) {
-                        Vector3f hit = packet.data.hitLocation;
-                        context.getMetaStore().putMetaObject(Interaction.HIT_LOCATION, new Vector4d(hit.x, hit.y, hit.z, 1.0));
-                     }
-
-                     if (packet.data.hitDetail != null) {
-                        context.getMetaStore().putMetaObject(Interaction.HIT_DETAIL, packet.data.hitDetail);
-                     }
-
-                     this.lastClientChainId = index;
-                     if (!this.tickChain(chain)) {
-                        chain.setPreTicked(true);
-                        this.chains.put(index, chain);
-                     }
-
-                     return true;
                   }
                }
             }
@@ -1248,39 +1292,38 @@ public class InteractionManager implements Component<EntityStore> {
    public void tryRunHeldInteraction(
       @Nonnull Ref<EntityStore> ref, @Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull InteractionType type, short equipSlot
    ) {
-      label38: {
-         Inventory inventory = this.entity.getInventory();
-         ItemStack itemStack;
+      ItemStack itemStack = null;
 
-         itemStack = switch (type) {
-            case Held -> inventory.getItemInHand();
-            case HeldOffhand -> inventory.getUtilityItem();
-            case Equipped -> {
-               if (equipSlot == -1) {
-                  throw new IllegalArgumentException();
-               }
-
-               yield inventory.getArmor().getItemStack(equipSlot);
-               if (itemStack != null && !itemStack.isEmpty()) {
-                  String rootId = itemStack.getItem().getInteractions().get(type);
-                  if (rootId == null) {
-                     return;
-                  } else {
-                     RootInteraction root = RootInteraction.getAssetMap().getAsset(rootId);
-                     if (root != null && this.canRun(type, equipSlot, root)) {
-                        InteractionContext context = InteractionContext.forInteraction(this, ref, type, equipSlot, commandBuffer);
-                        this.startChain(ref, commandBuffer, type, context, root);
-                        return;
-                     } else {
-                        return;
-                     }
-                  }
-               } else {
-                  return;
-               }
+      itemStack = switch (type) {
+         case Held -> InventoryComponent.getItemInHand(commandBuffer, ref);
+         case HeldOffhand -> {
+            InventoryComponent.Utility utilityComponent = commandBuffer.getComponent(ref, InventoryComponent.Utility.getComponentType());
+            if (utilityComponent != null) {
+               yield utilityComponent.getActiveItem();
             }
-            default -> throw new IllegalArgumentException();
-         };
+         }
+         case Equipped -> {
+            if (equipSlot == -1) {
+               throw new IllegalArgumentException();
+            }
+
+            InventoryComponent.Armor armorComponent = commandBuffer.getComponent(ref, InventoryComponent.Armor.getComponentType());
+            if (armorComponent != null) {
+               yield armorComponent.getInventory().getItemStack(equipSlot);
+            }
+         }
+         default -> throw new IllegalArgumentException();
+      };
+
+      if (itemStack != null && !itemStack.isEmpty()) {
+         String rootId = itemStack.getItem().getInteractions().get(type);
+         if (rootId != null) {
+            RootInteraction root = RootInteraction.getAssetMap().getAsset(rootId);
+            if (root != null && this.canRun(type, equipSlot, root)) {
+               InteractionContext context = InteractionContext.forInteraction(this, ref, type, equipSlot, commandBuffer);
+               this.startChain(ref, commandBuffer, type, context, root);
+            }
+         }
       }
    }
 
@@ -1487,7 +1530,7 @@ public class InteractionManager implements Component<EntityStore> {
    @Nonnull
    @Override
    public Component<EntityStore> clone() {
-      InteractionManager manager = new InteractionManager(this.entity, this.playerRef, this.interactionSimulationHandler);
+      InteractionManager manager = new InteractionManager(this.playerRef, this.interactionSimulationHandler);
       manager.copyFrom(this);
       return manager;
    }

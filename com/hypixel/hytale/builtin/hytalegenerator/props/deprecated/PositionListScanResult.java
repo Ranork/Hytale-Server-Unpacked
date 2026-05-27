@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.props.deprecated;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PositionListScanResult implements ScanResult {
    private List<Vector3i> positions;

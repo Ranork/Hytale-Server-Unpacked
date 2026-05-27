@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.core.modules.physics.util;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ForceAccumulator {
    public double speed;
@@ -9,9 +9,9 @@ public class ForceAccumulator {
    public final Vector3d resistanceForceLimit = new Vector3d();
 
    public void initialize(@Nonnull PhysicsBodyState state, double mass, double timeStep) {
-      this.force.assign(Vector3d.ZERO);
+      this.force.zero();
       this.speed = state.velocity.length();
-      this.resistanceForceLimit.assign(state.velocity).scale(-mass / timeStep);
+      this.resistanceForceLimit.set(state.velocity).mul(-mass / timeStep);
    }
 
    protected void computeResultingForce(

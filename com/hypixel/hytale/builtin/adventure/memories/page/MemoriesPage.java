@@ -12,11 +12,11 @@ import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesCount;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -45,6 +45,7 @@ import java.util.Set;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEventData> {
    @Nullable
@@ -76,8 +77,10 @@ public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEvent
 
          commandBuilder.set("#MemoriesProgressBar.Value", (float)recordedMemories.size() / totalMemories);
          commandBuilder.set("#MemoriesProgressBarTexture.Value", (float)recordedMemories.size() / totalMemories);
-         commandBuilder.set("#TotalCollected.Text", String.valueOf(recordedMemories.size()));
-         commandBuilder.set("#MemoriesTotal.Text", String.valueOf(totalMemories));
+         commandBuilder.set(
+            "#TotalCollected.TextSpans",
+            Message.translation("server.memories.general.totalCollected").param("current", recordedMemories.size()).param("max", totalMemories)
+         );
          eventBuilder.addEventBinding(
             CustomUIEventBindingType.Activating, "#MemoriesInfoButton", new EventData().append("Action", MemoriesPage.PageAction.MemoriesInfo)
          );
@@ -252,6 +255,11 @@ public class MemoriesPage extends InteractiveCustomUIPage<MemoriesPage.PageEvent
             if (!MemoriesPlugin.get().recordPlayerMemories(playerMemories)) {
                this.rebuild();
                return;
+            }
+
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef != null) {
+               playerRef.getPacketHandler().writeNoCache(new UpdateMemoriesCount(0));
             }
 
             MemoriesGameplayConfig memoriesGameplayConfig = MemoriesGameplayConfig.get(store.getExternalData().getWorld().getGameplayConfig());

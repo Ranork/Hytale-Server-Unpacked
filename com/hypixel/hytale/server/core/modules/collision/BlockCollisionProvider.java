@@ -3,14 +3,14 @@ package com.hypixel.hytale.server.core.modules.collision;
 import com.hypixel.hytale.math.iterator.BoxBlockIterator;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.universe.world.World;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class BlockCollisionProvider implements BoxBlockIterator.BoxIterationConsumer {
    protected final BoxBlockIntersectionEvaluator boxBlockIntersectionEvaluator = new BoxBlockIntersectionEvaluator();

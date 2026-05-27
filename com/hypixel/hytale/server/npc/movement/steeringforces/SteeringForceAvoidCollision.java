@@ -3,7 +3,7 @@ package com.hypixel.hytale.server.npc.movement.steeringforces;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
@@ -16,6 +16,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
    private final Vector3d selfVelocity = new Vector3d();
@@ -68,7 +69,7 @@ public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
       this.selfReference = ref;
       this.otherReference = null;
       if (velocity != null) {
-         this.selfVelocity.assign(velocity);
+         this.selfVelocity.set(velocity);
       } else {
          this.setVelocityFromEntity(this.selfReference, componentAccessor);
       }
@@ -86,7 +87,7 @@ public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
       this.otherReference = null;
       this.canSlowDown = true;
       this.overlap = false;
-      double velocitySquared = this.selfVelocity.squaredLength();
+      double velocitySquared = this.selfVelocity.lengthSquared();
       if (velocitySquared > 0.001) {
          this.velocity = Math.sqrt(velocitySquared);
          this.maxTime = this.maxDistance / velocitySquared;
@@ -98,7 +99,7 @@ public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
 
    @Override
    public boolean compute(@Nonnull Steering output) {
-      this.lastSteeringDirection.assign(Vector3d.ZERO);
+      this.lastSteeringDirection.zero();
       if (this.velocity == 0.0) {
          return false;
       } else {
@@ -123,21 +124,21 @@ public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
                         NPCPlugin.get().getLogger().at(Level.INFO).log("--> Avoidance slowdown=%s dist=%s maxDist=%s", s, distance, this.maxDistance);
                      }
                   } else {
-                     this.tempPos.assign(this.colliderPosition).subtract(this.selfPosition);
+                     this.tempPos.set(this.colliderPosition).sub(this.selfPosition);
                      NPCPhysicsMath.rejection(this.selfVelocity, this.tempPos, this.tempVel);
                      this.tempVel.negate();
-                     if (this.tempVel.squaredLength() < 0.001) {
-                        this.selfVelocity.cross(Vector3d.UP, this.tempVel);
-                        if (this.tempVel.squaredLength() < 0.001) {
-                           this.selfVelocity.cross(Vector3d.RIGHT, this.tempVel);
+                     if (this.tempVel.lengthSquared() < 0.001) {
+                        this.selfVelocity.cross(Vector3dUtil.UP, this.tempVel);
+                        if (this.tempVel.lengthSquared() < 0.001) {
+                           this.selfVelocity.cross(Vector3dUtil.RIGHT, this.tempVel);
                         }
                      }
 
                      double s = Math.pow(1.0 - distance / this.maxDistance, 1.0 / this.falloff);
-                     this.tempVel.setLength(l * s * this.strength).scale(this.componentSelector);
-                     this.lastSteeringDirection.assign(this.tempVel);
+                     this.tempVel.normalize(l * s * this.strength).mul(this.componentSelector);
+                     this.lastSteeringDirection.set(this.tempVel);
                      output.scaleTranslation(1.0 - s);
-                     output.getTranslation().add(this.tempVel).setLength(l);
+                     output.getTranslation().add(this.tempVel).normalize(l);
                      if (this.debug) {
                         NPCPlugin.get().getLogger().at(Level.INFO).log("--> Avoidance dist=%.2f l=%.2f s=%.2f maxDist=%.2f", distance, l, s, this.maxDistance);
                      }
@@ -174,8 +175,8 @@ public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
          assert uuidComponent != null;
 
          UUID uuid = uuidComponent.getUuid();
-         this.tempPos.assign(position);
-         boolean departing = this.tempVel.assign(this.tempPos).subtract(this.selfPosition).dot(this.selfVelocity) <= 0.0;
+         this.tempPos.set(position);
+         boolean departing = this.tempVel.set(this.tempPos).sub(this.selfPosition).dot(this.selfVelocity) <= 0.0;
          if (departing) {
             if (this.debug) {
                NPCPlugin.get().getLogger().at(Level.INFO).log("Avoidance add: Entity %s - Moving away, ignoring", uuid);
@@ -183,7 +184,7 @@ public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
          } else {
             double entityRadius = NPCPhysicsMath.collisionSphereRadius(ref, commandBuffer);
             double sumRadius = this.selfRadius + entityRadius;
-            this.overlap = this.selfPosition.distanceSquaredTo(this.tempPos) <= sumRadius * sumRadius;
+            this.overlap = this.selfPosition.distanceSquared(this.tempPos) <= sumRadius * sumRadius;
             if (this.overlap) {
                this.collisionTime = 0.0;
                this.canSlowDown = true;
@@ -194,7 +195,7 @@ public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
                Velocity velocityComponent = commandBuffer.getComponent(ref, Velocity.getComponentType());
                velocityComponent.assignVelocityTo(this.tempVel);
                int solutions = NPCPhysicsMath.intersectSweptSpheresFootpoint(
-                  this.selfPosition, this.selfVelocity, this.selfRadius, this.tempPos, this.tempVel, entityRadius, Vector3d.ALL_ONES, this.tempTime
+                  this.selfPosition, this.selfVelocity, this.selfRadius, this.tempPos, this.tempVel, entityRadius, Vector3dUtil.ALL_ONES, this.tempTime
                );
                if (this.debug && solutions > 0) {
                   NPCPlugin.get()
@@ -232,7 +233,7 @@ public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
                         );
                   }
 
-                  this.colliderPosition.assign(position);
+                  this.colliderPosition.set(position);
                   this.collisionTime = this.tempTime[0];
                   this.otherReference = ref;
                   this.canSlowDown = !antiParallel && this.otherReference.getIndex() < this.selfReference.getIndex();
@@ -260,7 +261,7 @@ public class SteeringForceAvoidCollision extends SteeringForceWithGroup {
    }
 
    public void setSelfVelocity(@Nonnull Vector3d selfVelocity) {
-      this.selfVelocity.assign(selfVelocity);
+      this.selfVelocity.set(selfVelocity);
    }
 
    @Nonnull

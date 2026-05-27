@@ -7,6 +7,7 @@ import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.Options;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.BsonUtil;
 import java.io.IOException;
@@ -16,6 +17,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
@@ -58,7 +60,7 @@ public class DiskPlayerStorageProvider implements PlayerStorageProvider {
 
       public DiskPlayerStorage(@Nonnull Path path) {
          this.path = path;
-         if (!Options.getOptionSet().has(Options.BARE)) {
+         if (!Options.isBare()) {
             try {
                Files.createDirectories(path);
             } catch (IOException var3) {
@@ -71,21 +73,40 @@ public class DiskPlayerStorageProvider implements PlayerStorageProvider {
       @Override
       public CompletableFuture<Holder<EntityStore>> load(@Nonnull UUID uuid) {
          Path file = this.path.resolve(uuid + ".json");
-         return BsonUtil.readDocument(file).thenApply(bsonDocument -> {
+         return Universe.get().getStorageManager().doLoad(file, () -> BsonUtil.readDocument(file).thenApply(bsonDocument -> {
             if (bsonDocument == null) {
                bsonDocument = new BsonDocument();
             }
 
             return EntityStore.REGISTRY.deserialize(bsonDocument);
-         });
+         }));
       }
 
       @Nonnull
       @Override
-      public CompletableFuture<Void> save(@Nonnull UUID uuid, @Nonnull Holder<EntityStore> holder) {
+      public CompletableFuture<Void> save(@Nonnull UUID uuid, @Nonnull Holder<EntityStore> holder, boolean required) {
          Path file = this.path.resolve(uuid + ".json");
-         BsonDocument document = EntityStore.REGISTRY.serialize(holder);
-         return BsonUtil.writeDocument(file, document);
+         if (!required && Universe.get().getStorageManager().hasQueuedSave(file)) {
+            return CompletableFuture.completedFuture(null);
+         } else {
+            BsonDocument document = EntityStore.REGISTRY.serialize(holder);
+            return Universe.get().getStorageManager().doSave(file, () -> BsonUtil.writeDocument(file, document));
+         }
+      }
+
+      @Nonnull
+      @Override
+      public CompletableFuture<Void> update(@Nonnull UUID uuid, @Nonnull Consumer<Holder<EntityStore>> modifier) {
+         Path file = this.path.resolve(uuid + ".json");
+         return Universe.get().getStorageManager().doSave(file, () -> BsonUtil.readDocument(file).thenApply(bsonDocument -> {
+            if (bsonDocument == null) {
+               bsonDocument = new BsonDocument();
+            }
+
+            Holder<EntityStore> holder = EntityStore.REGISTRY.deserialize(bsonDocument);
+            modifier.accept(holder);
+            return EntityStore.REGISTRY.serialize(holder);
+         }).thenCompose(document -> BsonUtil.writeDocument(file, document)));
       }
 
       @Nonnull

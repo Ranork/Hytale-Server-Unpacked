@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.worldgen.cave.shape.distorted;
 
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.logic.GeneralNoise;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class DistortedPipeShape extends DistortedCylinderShape {
    private final double compensation;

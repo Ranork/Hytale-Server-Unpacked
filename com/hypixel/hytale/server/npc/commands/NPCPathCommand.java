@@ -5,8 +5,7 @@ import com.hypixel.hytale.builtin.path.waypoint.RelativeWaypointDefinition;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -21,6 +20,7 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import java.util.ArrayDeque;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class NPCPathCommand extends AbstractCommandCollection {
    public NPCPathCommand() {
@@ -63,7 +63,7 @@ public class NPCPathCommand extends AbstractCommandCollection {
          assert headRotationComponent != null;
 
          Vector3d position = transformComponent.getPosition();
-         Vector3f headRotation = headRotationComponent.getRotation();
+         Rotation3f headRotation = headRotationComponent.getRotation();
          npc.getPathManager().setTransientPath(TransientPath.buildPath(position, headRotation, instructions, 1.0));
       }
    }

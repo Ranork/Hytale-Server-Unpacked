@@ -10,8 +10,7 @@ import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
@@ -24,6 +23,7 @@ import com.hypixel.hytale.server.npc.role.support.DebugSupport;
 import com.hypixel.hytale.server.npc.util.VisHelper;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class AvoidanceSystem extends SteppableTickingSystem {
    @Nonnull
@@ -82,8 +82,7 @@ public class AvoidanceSystem extends SteppableTickingSystem {
 
          DebugSupport debugSupport = role.getDebugSupport();
          boolean debugVisSteeringPre = debugSupport.isDebugFlagSet(RoleDebugFlags.VisSteeringPre);
-         Vector3d preBlendSteering = debugVisSteeringPre ? role.getBodySteering().getTranslation().clone() : null;
-         role.clearSteeringChanged();
+         Vector3d preBlendSteering = debugVisSteeringPre ? new Vector3d(role.getBodySteering().getTranslation()) : null;
          if (!role.getActiveMotionController().isObstructed()) {
             TransformComponent transformComponent = archetypeChunk.getComponent(index, this.transformComponentType);
 
@@ -91,7 +90,7 @@ public class AvoidanceSystem extends SteppableTickingSystem {
 
             Vector3d position = transformComponent.getPosition();
             World world = commandBuffer.getExternalData().getWorld();
-            Vector3f rotation = transformComponent.getRotation();
+            Rotation3f rotation = transformComponent.getRotation();
             boolean debugVisAvoidance = debugSupport.isDebugFlagSet(RoleDebugFlags.VisAvoidance);
             boolean debugVisSeparation = debugSupport.isDebugFlagSet(RoleDebugFlags.VisSeparation);
             boolean debugVisOrientation = debugSupport.isDebugFlagSet(RoleDebugFlags.VisOrientation) && (debugVisAvoidance || debugVisSeparation);
@@ -105,14 +104,14 @@ public class AvoidanceSystem extends SteppableTickingSystem {
             if (role.isApplySeparation()) {
                role.blendSeparation(npcRef, position, rotation, role.getBodySteering(), this.transformComponentType, commandBuffer);
                if (debugVisSeparation) {
-                  VisHelper.renderDebugVector(position, role.getLastAvoidanceSteering(), VisHelper.DEBUG_COLOR_SEPARATION, world);
+                  VisHelper.renderDebugVector(position, role.getLastSeparationSteering(), VisHelper.DEBUG_COLOR_SEPARATION, world);
                }
             }
 
             if (debugVisOrientation && role.getBodySteering().hasDirectionHint()) {
                Vector3d hint = new Vector3d();
-               PhysicsMath.vectorFromAngles(role.getBodySteering().getDirectionHint().getYaw(), role.getBodySteering().getDirectionHint().getPitch(), hint);
-               hint.scale(0.25);
+               PhysicsMath.vectorFromAngles(role.getBodySteering().getDirectionHint().yaw(), role.getBodySteering().getDirectionHint().pitch(), hint);
+               hint.mul(0.25);
                VisHelper.renderDebugVector(position, hint, DebugUtils.COLOR_CYAN, world);
             }
 

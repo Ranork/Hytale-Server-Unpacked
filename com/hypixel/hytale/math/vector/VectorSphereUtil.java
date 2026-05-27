@@ -12,6 +12,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class VectorSphereUtil {
    public static void forEachVector(Iterable<Vector3d> vectors, double originX, double originY, double originZ, double radius, Consumer<Vector3d> consumer) {
@@ -208,9 +209,9 @@ public class VectorSphereUtil {
    }
 
    public static boolean isInside(double originX, double originY, double originZ, double radiusX, double radiusY, double radiusZ, @Nonnull Vector3d vector) {
-      double x = vector.getX() - originX;
-      double y = vector.getY() - originY;
-      double z = vector.getZ() - originZ;
+      double x = vector.x() - originX;
+      double y = vector.y() - originY;
+      double z = vector.z() - originZ;
       double xRatio = x / radiusX;
       double yRatio = y / radiusY;
       double zRatio = z / radiusZ;

@@ -8,10 +8,10 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class JumpIfBlockTypeOperation extends SequenceBrushOperation {
    public static final BuilderCodec<JumpIfBlockTypeOperation> CODEC = BuilderCodec.builder(JumpIfBlockTypeOperation.class, JumpIfBlockTypeOperation::new)

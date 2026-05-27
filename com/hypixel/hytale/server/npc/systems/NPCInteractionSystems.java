@@ -13,7 +13,7 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -39,9 +39,7 @@ public class NPCInteractionSystems {
 
          assert npcComponent != null;
 
-         holder.addComponent(
-            InteractionModule.get().getInteractionManagerComponent(), new InteractionManager(npcComponent, null, new NPCInteractionSimulationHandler())
-         );
+         holder.addComponent(InteractionModule.get().getInteractionManagerComponent(), new InteractionManager(null, new NPCInteractionSimulationHandler()));
       }
 
       @Override
@@ -77,22 +75,20 @@ public class NPCInteractionSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         NPCEntity npcComponent = archetypeChunk.getComponent(index, this.npcComponentType);
-
-         assert npcComponent != null;
-
          InteractionManager interactionManager = archetypeChunk.getComponent(index, this.interactionManagerComponentType);
 
          assert interactionManager != null;
 
-         Inventory inventory = npcComponent.getInventory();
-         ItemContainer armorInventory = inventory.getArmor();
          Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
          interactionManager.tryRunHeldInteraction(ref, commandBuffer, InteractionType.Held);
          interactionManager.tryRunHeldInteraction(ref, commandBuffer, InteractionType.HeldOffhand);
+         InventoryComponent.Armor armorComponent = archetypeChunk.getComponent(index, InventoryComponent.Armor.getComponentType());
+         if (armorComponent != null) {
+            ItemContainer armorInventory = armorComponent.getInventory();
 
-         for (short i = 0; i < armorInventory.getCapacity(); i++) {
-            interactionManager.tryRunHeldInteraction(ref, commandBuffer, InteractionType.Equipped, i);
+            for (short i = 0; i < armorInventory.getCapacity(); i++) {
+               interactionManager.tryRunHeldInteraction(ref, commandBuffer, InteractionType.Equipped, i);
+            }
          }
       }
 

@@ -2,9 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.noise;
 
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class FastNoiseLite {
    private int mSeed = 1337;

@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -57,30 +60,44 @@ public class CameraShakeConfig {
 
    @Nonnull
    public static CameraShakeConfig deserialize(@Nonnull ByteBuf buf, int offset) {
-      CameraShakeConfig obj = new CameraShakeConfig();
-      byte nullBits = buf.getByte(offset);
-      obj.duration = buf.getFloatLE(offset + 1);
-      obj.startTime = buf.getFloatLE(offset + 5);
-      obj.continuous = buf.getByte(offset + 9) != 0;
-      if ((nullBits & 1) != 0) {
-         obj.easeIn = EasingConfig.deserialize(buf, offset + 10);
-      }
+      if (buf.readableBytes() - offset < 28) {
+         throw ProtocolException.bufferTooSmall("CameraShakeConfig", 28, buf.readableBytes() - offset);
+      } else {
+         CameraShakeConfig obj = new CameraShakeConfig();
+         byte nullBits = buf.getByte(offset);
+         obj.duration = buf.getFloatLE(offset + 1);
+         obj.startTime = buf.getFloatLE(offset + 5);
+         obj.continuous = buf.getByte(offset + 9) != 0;
+         if ((nullBits & 1) != 0) {
+            obj.easeIn = EasingConfig.deserialize(buf, offset + 10);
+         }
 
-      if ((nullBits & 2) != 0) {
-         obj.easeOut = EasingConfig.deserialize(buf, offset + 15);
-      }
+         if ((nullBits & 2) != 0) {
+            obj.easeOut = EasingConfig.deserialize(buf, offset + 15);
+         }
 
-      if ((nullBits & 4) != 0) {
-         int varPos0 = offset + 28 + buf.getIntLE(offset + 20);
-         obj.offset = OffsetNoise.deserialize(buf, varPos0);
-      }
+         if ((nullBits & 4) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 20);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 28) {
+               throw ProtocolException.invalidOffset("Offset", varPosBase0, buf.readableBytes());
+            }
 
-      if ((nullBits & 8) != 0) {
-         int varPos1 = offset + 28 + buf.getIntLE(offset + 24);
-         obj.rotation = RotationNoise.deserialize(buf, varPos1);
-      }
+            int varPos0 = offset + 28 + varPosBase0;
+            obj.offset = OffsetNoise.deserialize(buf, varPos0);
+         }
 
-      return obj;
+         if ((nullBits & 8) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 24);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 28) {
+               throw ProtocolException.invalidOffset("Rotation", varPosBase1, buf.readableBytes());
+            }
+
+            int varPos1 = offset + 28 + varPosBase1;
+            obj.rotation = RotationNoise.deserialize(buf, varPos1);
+         }
+
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -88,6 +105,10 @@ public class CameraShakeConfig {
       int maxEnd = 28;
       if ((nullBits & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 20);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 28) {
+            throw ProtocolException.invalidOffset("Offset", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 28 + fieldOffset0;
          pos0 += OffsetNoise.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -97,6 +118,10 @@ public class CameraShakeConfig {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 24);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 28) {
+            throw ProtocolException.invalidOffset("Rotation", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 28 + fieldOffset1;
          pos1 += RotationNoise.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -105,6 +130,123 @@ public class CameraShakeConfig {
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 28L;
+   }
+
+   public static float getDuration(MemorySegment mem) {
+      return getDuration(mem, 0);
+   }
+
+   public static float getDuration(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 1));
+   }
+
+   public static float getStartTime(MemorySegment mem) {
+      return getStartTime(mem, 0);
+   }
+
+   public static float getStartTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 5));
+   }
+
+   public static boolean getContinuous(MemorySegment mem) {
+      return getContinuous(mem, 0);
+   }
+
+   public static boolean getContinuous(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 9));
+   }
+
+   @Nullable
+   public static EasingConfig getEaseIn(MemorySegment mem) {
+      return getEaseIn(mem, 0);
+   }
+
+   @Nullable
+   public static EasingConfig getEaseIn(MemorySegment mem, int offset) {
+      return hasEaseIn(mem, offset) ? EasingConfig.toObject(mem, offset + 10) : null;
+   }
+
+   @Nullable
+   public static EasingConfig getEaseOut(MemorySegment mem) {
+      return getEaseOut(mem, 0);
+   }
+
+   @Nullable
+   public static EasingConfig getEaseOut(MemorySegment mem, int offset) {
+      return hasEaseOut(mem, offset) ? EasingConfig.toObject(mem, offset + 15) : null;
+   }
+
+   @Nullable
+   public static OffsetNoise getOffset(MemorySegment mem) {
+      return getOffset(mem, 0);
+   }
+
+   @Nullable
+   public static OffsetNoise getOffset(MemorySegment mem, int offset) {
+      return hasOffset(mem, offset) ? OffsetNoise.toObject(mem, offset + getValidatedOffset(mem, offset, 20, 28, "Offset")) : null;
+   }
+
+   @Nullable
+   public static RotationNoise getRotation(MemorySegment mem) {
+      return getRotation(mem, 0);
+   }
+
+   @Nullable
+   public static RotationNoise getRotation(MemorySegment mem, int offset) {
+      return hasRotation(mem, offset) ? RotationNoise.toObject(mem, offset + getValidatedOffset(mem, offset, 24, 28, "Rotation")) : null;
+   }
+
+   public static boolean hasEaseIn(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasEaseOut(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasOffset(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasRotation(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static CameraShakeConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CameraShakeConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 28 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CameraShakeConfig", offset + 28, (int)mem.byteSize());
+      } else {
+         return new CameraShakeConfig(
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 5)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 9)),
+            hasEaseIn(mem, offset) ? EasingConfig.toObject(mem, offset + 10) : null,
+            hasEaseOut(mem, offset) ? EasingConfig.toObject(mem, offset + 15) : null,
+            hasOffset(mem, offset) ? OffsetNoise.toObject(mem, offset + getValidatedOffset(mem, offset, 20, 28, "Offset")) : null,
+            hasRotation(mem, offset) ? RotationNoise.toObject(mem, offset + getValidatedOffset(mem, offset, 24, 28, "Rotation")) : null
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -162,6 +304,58 @@ public class CameraShakeConfig {
       }
    }
 
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.easeIn != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.easeOut != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.offset != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.rotation != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 1), this.duration);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 5), this.startTime);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.continuous);
+      if (this.easeIn != null) {
+         this.easeIn.serialize(mem, offset + 10);
+      } else {
+         mem.asSlice(offset + 10, 5L).fill((byte)0);
+      }
+
+      if (this.easeOut != null) {
+         this.easeOut.serialize(mem, offset + 15);
+      } else {
+         mem.asSlice(offset + 15, 5L).fill((byte)0);
+      }
+
+      int varOffset = offset + 28;
+      if (this.offset != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 20), varOffset - offset - 28);
+         varOffset += this.offset.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 20), -1);
+      }
+
+      if (this.rotation != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 24), varOffset - offset - 28);
+         varOffset += this.rotation.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 24), -1);
+      }
+
+      return varOffset - offset;
+   }
+
    public int computeSize() {
       int size = 28;
       if (this.offset != null) {
@@ -182,15 +376,11 @@ public class CameraShakeConfig {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 4) != 0) {
             int offsetOffset = buffer.getIntLE(offset + 20);
-            if (offsetOffset < 0) {
+            if (offsetOffset < 0 || offsetOffset > buffer.writerIndex() - offset - 28) {
                return ValidationResult.error("Invalid offset for Offset");
             }
 
             int pos = offset + 28 + offsetOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Offset");
-            }
-
             ValidationResult offsetResult = OffsetNoise.validateStructure(buffer, pos);
             if (!offsetResult.isValid()) {
                return ValidationResult.error("Invalid Offset: " + offsetResult.error());
@@ -201,21 +391,17 @@ public class CameraShakeConfig {
 
          if ((nullBits & 8) != 0) {
             int rotationOffset = buffer.getIntLE(offset + 24);
-            if (rotationOffset < 0) {
+            if (rotationOffset < 0 || rotationOffset > buffer.writerIndex() - offset - 28) {
                return ValidationResult.error("Invalid offset for Rotation");
             }
 
-            int posx = offset + 28 + rotationOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Rotation");
-            }
-
-            ValidationResult rotationResult = RotationNoise.validateStructure(buffer, posx);
+            int pos = offset + 28 + rotationOffset;
+            ValidationResult rotationResult = RotationNoise.validateStructure(buffer, pos);
             if (!rotationResult.isValid()) {
                return ValidationResult.error("Invalid Rotation: " + rotationResult.error());
             }
 
-            posx += RotationNoise.computeBytesConsumed(buffer, posx);
+            pos += RotationNoise.computeBytesConsumed(buffer, pos);
          }
 
          return ValidationResult.OK;

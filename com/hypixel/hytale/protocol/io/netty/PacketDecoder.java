@@ -6,8 +6,12 @@ import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.PacketStatsRecorder;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.quic.QuicChannel;
+import io.netty.handler.codec.quic.QuicTransportError;
 import io.netty.handler.timeout.ReadTimeoutException;
 import java.time.Duration;
 import java.util.List;
@@ -80,15 +84,15 @@ public class PacketDecoder extends ByteToMessageDecoder {
             PacketRegistry.PacketInfo packetInfo = PacketRegistry.getToServerPacketById(packetId);
             if (packetInfo == null) {
                in.skipBytes(in.readableBytes());
-               ProtocolUtil.closeConnection(ctx.channel());
+               closeConnection(ctx.channel());
             } else if (payloadLength > packetInfo.maxSize()) {
                in.skipBytes(in.readableBytes());
-               ProtocolUtil.closeConnection(ctx.channel());
+               closeConnection(ctx.channel());
             } else {
                NetworkChannel channelVal = (NetworkChannel)ctx.channel().attr(ProtocolUtil.STREAM_CHANNEL_KEY).get();
                if (channelVal != null && channelVal != packetInfo.channel()) {
                   in.skipBytes(in.readableBytes());
-                  ProtocolUtil.closeConnection(ctx.channel());
+                  closeConnection(ctx.channel());
                } else if (in.readableBytes() < payloadLength) {
                   in.resetReaderIndex();
                } else {
@@ -98,21 +102,32 @@ public class PacketDecoder extends ByteToMessageDecoder {
                   }
 
                   try {
-                     out.add(PacketIO.readFramedPacketWithInfo(in, payloadLength, packetInfo, statsRecorder));
+                     out.add(PacketIO.readFramedPacketWithInfo(in, payloadLength, ctx.alloc(), packetInfo, statsRecorder));
                      this.lastPacketTimeNanos = System.nanoTime();
                   } catch (ProtocolException var10) {
                      in.skipBytes(in.readableBytes());
-                     ProtocolUtil.closeConnection(ctx.channel());
+                     closeConnection(ctx.channel());
                   } catch (IndexOutOfBoundsException var11) {
                      in.skipBytes(in.readableBytes());
-                     ProtocolUtil.closeConnection(ctx.channel());
+                     closeConnection(ctx.channel());
                   }
                }
             }
          } else {
             in.skipBytes(in.readableBytes());
-            ProtocolUtil.closeConnection(ctx.channel());
+            closeConnection(ctx.channel());
          }
+      }
+   }
+
+   private static void closeConnection(@Nonnull Channel channel) {
+      int errorCode = (int)QuicTransportError.PROTOCOL_VIOLATION.code();
+      if (channel instanceof QuicChannel quicChannel) {
+         quicChannel.close(false, errorCode, Unpooled.EMPTY_BUFFER);
+      } else if (channel.parent() instanceof QuicChannel quicChannel) {
+         quicChannel.close(false, errorCode, Unpooled.EMPTY_BUFFER);
+      } else {
+         channel.close();
       }
    }
 }

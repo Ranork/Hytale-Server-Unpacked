@@ -3,6 +3,8 @@ package com.hypixel.hytale.server.core.modules.singleplayer;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.event.IEventDispatcher;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.io.ServerListener;
 import com.hypixel.hytale.protocol.packets.serveraccess.Access;
 import com.hypixel.hytale.protocol.packets.serveraccess.RequestServerAccess;
 import com.hypixel.hytale.server.core.Constants;
@@ -10,18 +12,19 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.ShutdownReason;
-import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
+import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.io.ServerManager;
 import com.hypixel.hytale.server.core.modules.accesscontrol.AccessControlModule;
 import com.hypixel.hytale.server.core.modules.accesscontrol.provider.ClientDelegatingProvider;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.modules.singleplayer.commands.PlayCommand;
+import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.util.ProcessUtil;
-import io.netty.channel.Channel;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.UUID;
@@ -60,6 +63,10 @@ public class SingleplayerModule extends JavaPlugin {
 
    @Override
    protected void start() {
+      if (Constants.SINGLEPLAYER) {
+         this.getEventRegistry().register(PlayerConnectEvent.class, this::onPlayerConnect);
+      }
+
       Integer pid = (Integer)Options.getOptionSet().valueOf(Options.CLIENT_PID);
       if (pid != null) {
          this.getLogger().at(Level.INFO).log("Client PID: %d", pid);
@@ -102,7 +109,7 @@ public class SingleplayerModule extends JavaPlugin {
                ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var8)).log("Failed to get bound port");
             }
          } else {
-            for (Channel channel : serverManager.getListeners()) {
+            for (ServerListener channel : serverManager.getListeners()) {
                if (channel.localAddress() instanceof InetSocketAddress inetSocketAddress && inetSocketAddress.getAddress().isAnyLocalAddress()) {
                   serverManager.unbind(channel);
                }
@@ -139,6 +146,20 @@ public class SingleplayerModule extends JavaPlugin {
       this.access = access;
    }
 
+   private void onPlayerConnect(@Nonnull PlayerConnectEvent event) {
+      World world = event.getWorld();
+      if (world != null && world.getWorldConfig().getGameMode() == GameMode.Creative) {
+         PlayerRef playerRef = event.getPlayerRef();
+         PermissionsModule perms = PermissionsModule.get();
+         UUID uuid = playerRef.getUuid();
+         if (isOwner(playerRef)) {
+            perms.setUserGroup(uuid, "hytale:Admin");
+         } else {
+            perms.setUserGroup(uuid, "hytale:Builder");
+         }
+      }
+   }
+
    public static void checkClientPid() {
       if (!ProcessUtil.isProcessRunning((Integer)Options.getOptionSet().valueOf(Options.CLIENT_PID))) {
          HytaleServer.get().shutdownServer(ShutdownReason.CLIENT_GONE);
@@ -154,10 +175,10 @@ public class SingleplayerModule extends JavaPlugin {
    }
 
    public static boolean isOwner(@Nonnull PlayerRef player) {
-      return isOwner(player.getPacketHandler().getAuth(), player.getUuid());
+      return isOwner(player.getUuid());
    }
 
-   public static boolean isOwner(PlayerAuthentication playerAuth, @Nonnull UUID playerUuid) {
+   public static boolean isOwner(@Nonnull UUID playerUuid) {
       return playerUuid.equals(getUuid());
    }
 }

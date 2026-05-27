@@ -10,12 +10,9 @@ import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.spatial.KDTree;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.ProjectileComponent;
 import com.hypixel.hytale.server.core.modules.collision.commands.HitboxCommand;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
@@ -24,6 +21,7 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.projectile.component.Projectile;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
@@ -32,6 +30,9 @@ import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class CollisionModule extends JavaPlugin {
    @Nonnull
@@ -156,7 +157,7 @@ public class CollisionModule extends JavaPlugin {
       }
 
       if (result.isCheckingForCharacterCollisions()) {
-         findCharacterCollisions(pos, v, result, componentAccessor);
+         findCharacterCollisions(collider, pos, v, result, componentAccessor);
       }
 
       result.process();
@@ -170,7 +171,10 @@ public class CollisionModule extends JavaPlugin {
          result.getLogger()
             .at(Level.INFO)
             .log(
-               ">>>>>> Start findBlockCollisionIterative collider=[%s] pos=%s dir=%s", collider, Vector3d.formatShortString(pos), Vector3d.formatShortString(v)
+               ">>>>>> Start findBlockCollisionIterative collider=[%s] pos=%s dir=%s",
+               collider,
+               Vector3dUtil.formatShortString(pos),
+               Vector3dUtil.formatShortString(v)
             );
       }
 
@@ -184,44 +188,43 @@ public class CollisionModule extends JavaPlugin {
       result.acquireCollisionModule();
       collider.forEachBlock(pos, 1.0E-5, result, (x, y, z, aResult) -> aResult.accept(x, y, z));
       if (result.shouldLog()) {
-         result.getLogger().at(Level.INFO).log(">>>> line collider=[%s] dir=%s len=%s", collider, Vector3d.formatShortString(v), v.length());
+         result.getLogger().at(Level.INFO).log(">>>> line collider=[%s] dir=%s len=%s", collider, Vector3dUtil.formatShortString(v), v.length());
       }
 
-      result.iterateBlocks(collider, pos, v, v.length(), stopOnCollisionFound);
+      result.iterateBlocks(collider, pos, v, v.length(), stopOnCollisionFound, 1.0E-5);
       coll.clear();
    }
 
    public static void findCharacterCollisions(
-      @Nonnull Vector3d pos, @Nonnull Vector3d v, @Nonnull CollisionResult result, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Box collider,
+      @Nonnull Vector3d pos,
+      @Nonnull Vector3d v,
+      @Nonnull CollisionResult result,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (!isBelowMovementThreshold(v)) {
-         Vector3d coll = new Vector3d();
+         Vector3d sourcePos = new Vector3d();
          Vector2d minMax = new Vector2d();
-         List<Entity> collisionEntities = result.getCollisionEntities();
+         Box tempBox = new Box();
+         List<Ref<EntityStore>> collisionEntities = result.getCollisionEntities();
 
          for (int i = 0; i < collisionEntities.size(); i++) {
-            Entity entity = collisionEntities.get(i);
-            Ref<EntityStore> ref = entity.getReference();
-
-            assert ref != null;
-
-            Archetype<EntityStore> archetype = componentAccessor.getArchetype(ref);
-            boolean isProjectile = archetype.contains(Projectile.getComponentType()) || archetype.contains(ProjectileComponent.getComponentType());
-            if (!isProjectile) {
-               if (archetype.contains(DeathComponent.getComponentType())) {
-                  return;
-               }
-
-               TransformComponent entityTransformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
-               if (entityTransformComponent != null) {
-                  BoundingBox entityBoundingBoxComponent = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
-                  if (entityBoundingBoxComponent != null) {
-                     Vector3d position = entityTransformComponent.getPosition();
-                     Box boundingBox = entityBoundingBoxComponent.getBoundingBox();
-                     if (boundingBox != null
-                        && CollisionMath.intersectVectorAABB(pos, v, position.getX(), position.getY(), position.getZ(), boundingBox, minMax)) {
-                        coll.assign(pos).addScaled(v, minMax.x);
-                        result.allocCharacterCollision().assign(coll, minMax.x, entity.getReference(), entity instanceof Player);
+            Ref<EntityStore> ref = collisionEntities.get(i);
+            if (ref.isValid()) {
+               Archetype<EntityStore> archetype = componentAccessor.getArchetype(ref);
+               boolean isProjectile = archetype.contains(Projectile.getComponentType()) || archetype.contains(ProjectileComponent.getComponentType());
+               if (!isProjectile && !archetype.contains(DeathComponent.getComponentType())) {
+                  TransformComponent entityTransformComponent = componentAccessor.getComponent(ref, TransformComponent.getComponentType());
+                  if (entityTransformComponent != null) {
+                     BoundingBox entityBoundingBoxComponent = componentAccessor.getComponent(ref, BoundingBox.getComponentType());
+                     if (entityBoundingBoxComponent != null) {
+                        Vector3d position = entityTransformComponent.getPosition();
+                        Box boundingBox = entityBoundingBoxComponent.getBoundingBox();
+                        if (CollisionMath.intersectSweptAABBs(pos, v, collider, position, boundingBox, minMax, tempBox) && minMax.x <= 1.0) {
+                           boolean isPlayer = componentAccessor.getComponent(ref, PlayerRef.getComponentType()) != null;
+                           sourcePos.set(pos).fma(minMax.x, v);
+                           result.allocCharacterCollision().assign(sourcePos, position, minMax.x, ref, isPlayer);
+                        }
                      }
                   }
                }
@@ -342,7 +345,7 @@ public class CollisionModule extends JavaPlugin {
                      "++ Short: Sliding block start=%s end=%s normal=%s",
                      boxBlockIntersectionEvaluator.getCollisionStart(),
                      boxBlockIntersectionEvaluator.getCollisionEnd(),
-                     Vector3d.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
+                     Vector3dUtil.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
                   );
             }
 
@@ -356,7 +359,7 @@ public class CollisionModule extends JavaPlugin {
                   "?? Short: Sliding block is unwalkable start=%s end=%s normal=%s",
                   boxBlockIntersectionEvaluator.getCollisionStart(),
                   boxBlockIntersectionEvaluator.getCollisionEnd(),
-                  Vector3d.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
+                  Vector3dUtil.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
                );
          }
       }
@@ -370,7 +373,7 @@ public class CollisionModule extends JavaPlugin {
                   "++ Short: Collision with block start=%s end=%s normal=%s",
                   boxBlockIntersectionEvaluator.getCollisionStart(),
                   boxBlockIntersectionEvaluator.getCollisionEnd(),
-                  Vector3d.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
+                  Vector3dUtil.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
                );
          }
       }
@@ -383,7 +386,7 @@ public class CollisionModule extends JavaPlugin {
                   "++ Short: Trigger block start=%s end=%s normal=%s",
                   boxBlockIntersectionEvaluator.getCollisionStart(),
                   boxBlockIntersectionEvaluator.getCollisionEnd(),
-                  Vector3d.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
+                  Vector3dUtil.formatShortString(boxBlockIntersectionEvaluator.getCollisionNormal())
                );
          }
 
@@ -444,7 +447,7 @@ public class CollisionModule extends JavaPlugin {
       }
    }
 
-   public int validatePosition(@Nonnull World world, @Nonnull Box collider, @Nonnull Vector3d pos, @Nonnull CollisionResult result) {
+   public int validatePosition(@Nonnull World world, @Nonnull Box collider, @Nonnull Vector3dc pos, @Nonnull CollisionResult result) {
       return this.isDisabled()
          ? 0
          : this.validatePosition(world, collider, pos, null, (_this, collisionCode, collision, collisionConfig) -> true, false, result);
@@ -453,7 +456,7 @@ public class CollisionModule extends JavaPlugin {
    public <T> int validatePosition(
       @Nonnull World world,
       @Nonnull Box collider,
-      @Nonnull Vector3d pos,
+      @Nonnull Vector3dc pos,
       int invalidBlockMaterials,
       @Nullable T t,
       @Nonnull CollisionFilter<BoxBlockIntersectionEvaluator, T> predicate,
@@ -473,7 +476,7 @@ public class CollisionModule extends JavaPlugin {
    private <T> int validatePosition(
       @Nonnull World world,
       @Nonnull Box collider,
-      @Nonnull Vector3d pos,
+      @Nonnull Vector3dc pos,
       @Nullable T t,
       @Nullable CollisionFilter<BoxBlockIntersectionEvaluator, T> predicate,
       boolean disableDamageBlocks,
@@ -589,7 +592,7 @@ public class CollisionModule extends JavaPlugin {
    }
 
    public static boolean isBelowMovementThreshold(@Nonnull Vector3d v) {
-      return v.squaredLength() < 1.0000000000000002E-10;
+      return v.lengthSquared() < 1.0000000000000002E-10;
    }
 
    private static void logOverlap(
@@ -604,7 +607,7 @@ public class CollisionModule extends JavaPlugin {
             (intersectType & 16) != 0 ? "Y" : "",
             (intersectType & 32) != 0 ? "Z" : "",
             index,
-            Vector3d.formatShortString(pos),
+            Vector3dUtil.formatShortString(pos),
             x + config.getBoundingBoxOffsetX(),
             y + config.getBoundingBoxOffsetY(),
             z + config.getBoundingBoxOffsetZ(),
@@ -613,8 +616,8 @@ public class CollisionModule extends JavaPlugin {
             new Object[]{
                config.blockType != null ? config.blockType.getId() : "none",
                collider,
-               Vector3d.formatShortString(hitBox.min),
-               Vector3d.formatShortString(hitBox.max)
+               Vector3dUtil.formatShortString(hitBox.min),
+               Vector3dUtil.formatShortString(hitBox.max)
             }
          );
    }

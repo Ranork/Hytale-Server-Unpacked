@@ -12,12 +12,12 @@ import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.WindowVoxelSpace;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3i;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class ClusterProp extends Prop {
    @Nonnull
@@ -131,7 +131,7 @@ public class ClusterProp extends Prop {
                Prop pickedProp = this.propWeightedMap.pick(random);
                if (materialWriteSpace.getBounds().contains(x, writeBounds_voxelGrid.min.y, z)) {
                   columnWriteSpace.setBounds(x, writeBounds_voxelGrid.min.y, z, x + 1, writeBounds_voxelGrid.max.y, z + 1);
-                  this.rChildContext.position.assign(x, position.y, z);
+                  this.rChildContext.position.set(x, position.y, z);
                   pickedProp.generate(this.rChildContext);
                }
             }

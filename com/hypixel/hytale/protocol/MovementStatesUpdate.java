@@ -1,7 +1,9 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -27,13 +29,41 @@ public class MovementStatesUpdate extends ComponentUpdate {
 
    @Nonnull
    public static MovementStatesUpdate deserialize(@Nonnull ByteBuf buf, int offset) {
-      MovementStatesUpdate obj = new MovementStatesUpdate();
-      obj.movementStates = MovementStates.deserialize(buf, offset + 0);
-      return obj;
+      if (buf.readableBytes() - offset < 23) {
+         throw ProtocolException.bufferTooSmall("MovementStatesUpdate", 23, buf.readableBytes() - offset);
+      } else {
+         MovementStatesUpdate obj = new MovementStatesUpdate();
+         obj.movementStates = MovementStates.deserialize(buf, offset + 0);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 23;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 23L;
+   }
+
+   public static MovementStates getMovementStates(MemorySegment mem) {
+      return getMovementStates(mem, 0);
+   }
+
+   public static MovementStates getMovementStates(MemorySegment mem, int offset) {
+      return MovementStates.toObject(mem, offset + 0);
+   }
+
+   public static MovementStatesUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MovementStatesUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 23 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MovementStatesUpdate", offset + 23, (int)mem.byteSize());
+      } else {
+         return new MovementStatesUpdate(MovementStates.toObject(mem, offset + 0));
+      }
    }
 
    @Override
@@ -41,6 +71,12 @@ public class MovementStatesUpdate extends ComponentUpdate {
       int startPos = buf.writerIndex();
       this.movementStates.serialize(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      this.movementStates.serialize(mem, offset + 0);
+      return 23;
    }
 
    @Override

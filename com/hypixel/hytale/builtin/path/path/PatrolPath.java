@@ -5,7 +5,7 @@ import com.hypixel.hytale.builtin.path.PathPlugin;
 import com.hypixel.hytale.builtin.path.entities.PatrolPathMarkerEntity;
 import com.hypixel.hytale.builtin.path.waypoint.IPrefabPathWaypoint;
 import com.hypixel.hytale.component.ComponentAccessor;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collections;
@@ -16,6 +16,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class PatrolPath implements IPrefabPath {
    private final UUID id;
@@ -183,14 +185,14 @@ public class PatrolPath implements IPrefabPath {
    }
 
    @Override
-   public Vector3d getNearestWaypointPosition(@Nonnull Vector3d origin, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      Vector3d nearest = Vector3d.MAX;
+   public Vector3dc getNearestWaypointPosition(@Nonnull Vector3d origin, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      Vector3dc nearest = Vector3dUtil.MAX;
       double minDist2 = Double.MAX_VALUE;
 
       for (int i = 0; i < this.length.get(); i++) {
          IPrefabPathWaypoint wp = this.waypoints.get(i);
          if (wp != null) {
-            double dist2 = origin.distanceSquaredTo(wp.getWaypointPosition(componentAccessor));
+            double dist2 = origin.distanceSquared(wp.getWaypointPosition(componentAccessor));
             if (dist2 < minDist2) {
                nearest = wp.getWaypointPosition(componentAccessor);
                minDist2 = dist2;

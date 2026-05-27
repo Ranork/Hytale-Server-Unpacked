@@ -40,6 +40,7 @@ public class BiomeAsset implements JsonAssetWithMap<String, DefaultAssetMap<Stri
    @Nonnull
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(BiomeAsset::getAssetStore));
    private static AssetStore<String, BiomeAsset, DefaultAssetMap<String, BiomeAsset>> STORE;
+   public static final String NAME_KEY = "Name";
    @Nonnull
    public static final AssetBuilderCodec<String, BiomeAsset> CODEC = AssetBuilderCodec.builder(
          BiomeAsset.class,
@@ -105,6 +106,10 @@ public class BiomeAsset implements JsonAssetWithMap<String, DefaultAssetMap<Stri
    }
 
    private BiomeAsset() {
+   }
+
+   public void setId(@Nonnull String id) {
+      this.id = id;
    }
 
    @Override

@@ -7,8 +7,9 @@ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class DecimalBounds3dAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, DecimalBounds3dAsset>> {
    @Nonnull
@@ -21,9 +22,9 @@ public class DecimalBounds3dAsset implements JsonAssetWithMap<String, DefaultAss
          (config, data) -> config.data = data,
          config -> config.data
       )
-      .append(new KeyedCodec<>("PointA", Vector3d.CODEC, true), (t, value) -> t.pointA = value, t -> t.pointA)
+      .append(new KeyedCodec<>("PointA", Vector3dUtil.CODEC, true), (t, value) -> t.pointA = value, t -> t.pointA)
       .add()
-      .append(new KeyedCodec<>("PointB", Vector3d.CODEC, true), (t, value) -> t.pointB = value, t -> t.pointB)
+      .append(new KeyedCodec<>("PointB", Vector3dUtil.CODEC, true), (t, value) -> t.pointB = value, t -> t.pointB)
       .add()
       .build();
    private String id;

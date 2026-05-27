@@ -4,13 +4,14 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class DirectScanner extends Scanner {
    @Nonnull
-   private static final Bounds3i BOUNDS = new Bounds3i(Vector3i.ZERO, Vector3i.ALL_ONES);
+   private static final Bounds3i BOUNDS = new Bounds3i(Vector3iUtil.ZERO, Vector3iUtil.ALL_ONES);
    @Nonnull
    private final Control rControl = new Control();
 
@@ -18,7 +19,7 @@ public class DirectScanner extends Scanner {
    public void scan(@Nonnull Scanner.Context context) {
       Pattern.Context patternContext = new Pattern.Context(context.position, context.materialSpace);
       if (context.pattern.matches(patternContext)) {
-         context.validPositions_out.add(context.position.clone());
+         context.validPositions_out.add(new Vector3i(context.position));
       }
    }
 

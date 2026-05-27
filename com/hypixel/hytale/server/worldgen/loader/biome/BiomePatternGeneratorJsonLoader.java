@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.worldgen.biome.BiomePatternGenerator;
 import com.hypixel.hytale.server.worldgen.biome.CustomBiome;
 import com.hypixel.hytale.server.worldgen.biome.TileBiome;
 import java.nio.file.Path;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -38,6 +39,10 @@ public class BiomePatternGeneratorJsonLoader extends JsonLoader<SeedStringResour
    @Nullable
    protected IPointGenerator loadPointGenerator(final BiomePatternGeneratorJsonLoader.ISizeModifierProvider sizeModifierProvider) {
       return (new PointGeneratorJsonLoader<SeedStringResource>(this.seed, this.dataFolder, this.get("GridGenerator")) {
+         {
+            Objects.requireNonNull(BiomePatternGeneratorJsonLoader.this);
+         }
+
          @Nonnull
          @Override
          protected PointDistanceFunction loadPointDistanceFunction() {

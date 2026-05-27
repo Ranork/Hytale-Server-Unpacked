@@ -3,9 +3,10 @@ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class ClustersPositionProvider extends PositionProvider {
    @Nonnull
@@ -29,6 +30,10 @@ public class ClustersPositionProvider extends PositionProvider {
    private Control rControl;
    @Nonnull
    private final Pipe.One<Vector3d> rDistributionPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(ClustersPositionProvider.this);
+      }
+
       public void accept(@NonNullDecl Vector3d clusterAnchor, @NonNullDecl Control control) {
          ClustersPositionProvider.this.rClusterBounds.assign(ClustersPositionProvider.this.clusterBounds);
          ClustersPositionProvider.this.rClusterBounds.offset(clusterAnchor);
@@ -43,6 +48,10 @@ public class ClustersPositionProvider extends PositionProvider {
    };
    @Nonnull
    private final Pipe.One<Vector3d> rClusterPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(ClustersPositionProvider.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
          if (control.stop) {
             ClustersPositionProvider.this.rControl.stop = true;

@@ -296,7 +296,7 @@ public class HytaleSentryHandler extends Handler {
    }
 
    static {
-      SentryIntegrationPackageStorage.getInstance().addPackage("maven:io.sentry:sentry-jul", "8.29.0");
+      SentryIntegrationPackageStorage.getInstance().addPackage("maven:io.sentry:sentry-jul", "8.30.0");
    }
 
    private static final class DropSentryFilter implements Filter {

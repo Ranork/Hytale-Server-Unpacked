@@ -6,9 +6,9 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorAuthorization;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorInitialize;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateJsonAsset;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.io.handlers.IPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.SubPacketHandler;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -39,22 +39,16 @@ public class AssetEditorGamePacketHandler implements SubPacketHandler {
       PlayerRef playerRef = this.packetHandler.getPlayerRef();
       Ref<EntityStore> ref = playerRef.getReference();
       if (ref != null && ref.isValid()) {
-         Store<EntityStore> store = ref.getStore();
-         World world = store.getExternalData().getWorld();
-         world.execute(() -> {
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-
-            assert playerComponent != null;
-
-            if (this.lacksPermission(playerComponent, false)) {
-               this.packetHandler.getPlayerRef().getPacketHandler().write(new AssetEditorAuthorization(false));
-            } else {
+         if (this.lacksPermission(playerRef, false)) {
+            this.packetHandler.getPlayerRef().getPacketHandler().write(new AssetEditorAuthorization(false));
+         } else {
+            Store<EntityStore> store = ref.getStore();
+            World world = store.getExternalData().getWorld();
+            world.execute(() -> {
                this.packetHandler.getPlayerRef().getPacketHandler().write(new AssetEditorAuthorization(true));
                AssetEditorPlugin.get().handleInitializeEditor(ref, store);
-            }
-         });
-      } else {
-         throw new RuntimeException("Unable to process AssetEditorInitialize packet. Player ref is invalid!");
+            });
+         }
       }
    }
 
@@ -63,39 +57,25 @@ public class AssetEditorGamePacketHandler implements SubPacketHandler {
       PlayerRef playerRef = this.packetHandler.getPlayerRef();
       Ref<EntityStore> ref = playerRef.getReference();
       if (ref != null && ref.isValid()) {
-         Store<EntityStore> store = ref.getStore();
-         World world = store.getExternalData().getWorld();
-         world.execute(
-            () -> {
-               Player playerComponent = store.getComponent(ref, Player.getComponentType());
-               if (!this.lacksPermission(playerComponent, true)) {
-                  CompletableFuture.runAsync(
-                     () -> {
-                        LOGGER.at(Level.INFO).log("%s updating json asset at %s", this.packetHandler.getPlayerRef().getUsername(), packet.path);
-                        EditorClient mockClient = new EditorClient(playerRef);
-                        AssetEditorPlugin.get()
-                           .handleJsonAssetUpdate(
-                              mockClient,
-                              packet.path != null ? new AssetPath(packet.path) : null,
-                              packet.assetType,
-                              packet.assetIndex,
-                              packet.commands,
-                              packet.token
-                           );
-                     }
-                  );
+         if (!this.lacksPermission(playerRef, true)) {
+            CompletableFuture.runAsync(
+               () -> {
+                  LOGGER.at(Level.INFO).log("%s updating json asset at %s", this.packetHandler.getPlayerRef().getUsername(), packet.path);
+                  EditorClient mockClient = new EditorClient(playerRef);
+                  AssetEditorPlugin.get()
+                     .handleJsonAssetUpdate(
+                        mockClient, packet.path != null ? new AssetPath(packet.path) : null, packet.assetType, packet.assetIndex, packet.commands, packet.token
+                     );
                }
-            }
-         );
-      } else {
-         throw new RuntimeException("Unable to process AssetEditorUpdateJsonAsset packet. Player ref is invalid!");
+            );
+         }
       }
    }
 
-   private boolean lacksPermission(@Nonnull Player player, boolean shouldShowDenialMessage) {
-      if (!player.hasPermission("hytale.editor.asset")) {
+   private boolean lacksPermission(@Nonnull PlayerRef playerRef, boolean shouldShowDenialMessage) {
+      if (!playerRef.hasPermission(HytalePermissions.ASSET_EDITOR)) {
          if (shouldShowDenialMessage) {
-            player.sendMessage(Messages.USAGE_DENIED);
+            playerRef.sendMessage(Messages.USAGE_DENIED);
          }
 
          return true;

@@ -37,7 +37,7 @@ public class ParserContext {
    private int numPreOptSingleValueTokensBeforeListTokens;
    private int subCommandIndex;
    private static final Pattern ARG_NAME_PATTERN = Pattern.compile("--([\\w-]*)");
-   private static final Pattern ARG_NAME_AND_VALUE_PATTERN = Pattern.compile("--(\\w+)=\"*(.*)\"*");
+   private static final Pattern ARG_NAME_AND_VALUE_PATTERN = Pattern.compile("--(\\w+)=(.+)");
 
    public ParserContext(@Nonnull List<String> tokens, @Nonnull String rawInput, @Nonnull ParseResult parseResult) {
       this.inputString = String.join(" ", tokens);
@@ -52,6 +52,19 @@ public class ParserContext {
    @Nonnull
    public static ParserContext of(@Nonnull List<String> tokens, @Nonnull String rawInput, @Nonnull ParseResult parseResult) {
       return new ParserContext(tokens, rawInput, parseResult);
+   }
+
+   @Nonnull
+   private static String stripSurroundingQuotes(@Nonnull String value) {
+      if (value.length() >= 2) {
+         char first = value.charAt(0);
+         char last = value.charAt(value.length() - 1);
+         if (first == '"' && last == '"' || first == '\'' && last == '\'') {
+            return value.substring(1, value.length() - 1);
+         }
+      }
+
+      return value;
    }
 
    private void contextualizeTokens(@Nonnull List<String> tokens, @Nonnull ParseResult parseResult) {
@@ -96,7 +109,8 @@ public class ParserContext {
             this.addNewOptionalArg(argMatcher.group(1));
             argNameAndValueMatcher.reset(token);
             if (argNameAndValueMatcher.matches()) {
-               this.appendOptionalParameter(argNameAndValueMatcher.group(2), parseResult);
+               String value = stripSurroundingQuotes(argNameAndValueMatcher.group(2));
+               this.appendOptionalParameter(value, parseResult);
                if (parseResult.failed()) {
                   return;
                }

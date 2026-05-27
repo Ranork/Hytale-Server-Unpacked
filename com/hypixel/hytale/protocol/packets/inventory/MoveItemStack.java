@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.inventory;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -53,17 +56,83 @@ public class MoveItemStack implements Packet, ToServerPacket {
 
    @Nonnull
    public static MoveItemStack deserialize(@Nonnull ByteBuf buf, int offset) {
-      MoveItemStack obj = new MoveItemStack();
-      obj.fromSectionId = buf.getIntLE(offset + 0);
-      obj.fromSlotId = buf.getIntLE(offset + 4);
-      obj.quantity = buf.getIntLE(offset + 8);
-      obj.toSectionId = buf.getIntLE(offset + 12);
-      obj.toSlotId = buf.getIntLE(offset + 16);
-      return obj;
+      if (buf.readableBytes() - offset < 20) {
+         throw ProtocolException.bufferTooSmall("MoveItemStack", 20, buf.readableBytes() - offset);
+      } else {
+         MoveItemStack obj = new MoveItemStack();
+         obj.fromSectionId = buf.getIntLE(offset + 0);
+         obj.fromSlotId = buf.getIntLE(offset + 4);
+         obj.quantity = buf.getIntLE(offset + 8);
+         obj.toSectionId = buf.getIntLE(offset + 12);
+         obj.toSlotId = buf.getIntLE(offset + 16);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 20;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 20L;
+   }
+
+   public static int getFromSectionId(MemorySegment mem) {
+      return getFromSectionId(mem, 0);
+   }
+
+   public static int getFromSectionId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static int getFromSlotId(MemorySegment mem) {
+      return getFromSlotId(mem, 0);
+   }
+
+   public static int getFromSlotId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 4));
+   }
+
+   public static int getQuantity(MemorySegment mem) {
+      return getQuantity(mem, 0);
+   }
+
+   public static int getQuantity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 8));
+   }
+
+   public static int getToSectionId(MemorySegment mem) {
+      return getToSectionId(mem, 0);
+   }
+
+   public static int getToSectionId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 12));
+   }
+
+   public static int getToSlotId(MemorySegment mem) {
+      return getToSlotId(mem, 0);
+   }
+
+   public static int getToSlotId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 16));
+   }
+
+   public static MoveItemStack toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MoveItemStack toObject(MemorySegment mem, int offset) {
+      if (offset + 20 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MoveItemStack", offset + 20, (int)mem.byteSize());
+      } else {
+         return new MoveItemStack(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 12)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 16))
+         );
+      }
    }
 
    @Override
@@ -73,6 +142,16 @@ public class MoveItemStack implements Packet, ToServerPacket {
       buf.writeIntLE(this.quantity);
       buf.writeIntLE(this.toSectionId);
       buf.writeIntLE(this.toSlotId);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.fromSectionId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 4), this.fromSlotId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 8), this.quantity);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 12), this.toSectionId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 16), this.toSlotId);
+      return 20;
    }
 
    @Override

@@ -39,7 +39,7 @@ public class SteeringForceRotate implements SteeringForce {
 
       assert transformComponent != null;
 
-      this.heading = transformComponent.getRotation().getYaw();
+      this.heading = transformComponent.getRotation().yaw();
    }
 
    public void setTolerance(double tolerance) {

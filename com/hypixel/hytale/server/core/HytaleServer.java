@@ -268,22 +268,34 @@ public class HytaleServer {
          }
       }, "ShutdownHook");
       shutdownHook.setDaemon(false);
-      Runtime.getRuntime().addShutdownHook(shutdownHook);
-      AssetRegistryLoader.init();
-
-      for (PluginManifest manifest : Constants.CORE_PLUGINS) {
-         this.pluginManager.registerCorePlugin(manifest);
-      }
-
-      GCUtil.register(info -> {
-         Universe universe = Universe.get();
-         if (universe != null) {
-            for (World world : universe.getWorlds().values()) {
-               world.markGCHasRun();
+      if (!this.isShuttingDown()) {
+         try {
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+         } catch (IllegalStateException var10) {
+            if (!this.isShuttingDown()) {
+               throw var10;
             }
+
+            return;
          }
-      });
-      this.boot();
+
+         AssetRegistryLoader.init();
+         PluginManifest[] plugins = Constants.BOOTSTRAP ? Constants.BOOTSTRAP_PLUGINS : Constants.CORE_PLUGINS;
+
+         for (PluginManifest manifest : plugins) {
+            this.pluginManager.registerCorePlugin(manifest);
+         }
+
+         GCUtil.register(info -> {
+            Universe universe = Universe.get();
+            if (universe != null) {
+               for (World world : universe.getWorlds().values()) {
+                  world.markGCHasRun();
+               }
+            }
+         });
+         this.boot();
+      }
    }
 
    @Nonnull
@@ -327,21 +339,23 @@ public class HytaleServer {
                return;
             }
 
-            LoadAssetEvent loadAssetEvent = get()
-               .getEventBus()
-               .<Void, LoadAssetEvent>dispatchFor(LoadAssetEvent.class)
-               .dispatch(new LoadAssetEvent(this.bootStart));
-            if (this.isShuttingDown()) {
-               return;
-            }
+            if (!Constants.BOOTSTRAP) {
+               LoadAssetEvent loadAssetEvent = get()
+                  .getEventBus()
+                  .<Void, LoadAssetEvent>dispatchFor(LoadAssetEvent.class)
+                  .dispatch(new LoadAssetEvent(this.bootStart));
+               if (this.isShuttingDown()) {
+                  return;
+               }
 
-            if (loadAssetEvent.isShouldShutdown()) {
-               List<String> reasons = loadAssetEvent.getReasons();
-               String join = String.join("\n", reasons);
-               LOGGER.at(Level.SEVERE).log("Asset validation FAILED with %d reason(s):\n%s", reasons.size(), join);
-               Message reasonMessage = Message.translation("client.disconnection.shutdownReason.validateError.detail").param("detail", join);
-               this.shutdownServer(ShutdownReason.VALIDATE_ERROR.withMessage(reasonMessage));
-               return;
+               if (loadAssetEvent.isShouldShutdown()) {
+                  List<String> reasons = loadAssetEvent.getReasons();
+                  String join = String.join("\n", reasons);
+                  LOGGER.at(Level.SEVERE).log("Asset validation FAILED with %d reason(s):\n%s", reasons.size(), join);
+                  Message reasonMessage = Message.translation("client.disconnection.shutdownReason.validateError.detail").param("detail", join);
+                  this.shutdownServer(ShutdownReason.VALIDATE_ERROR.withMessage(reasonMessage));
+                  return;
+               }
             }
 
             if (Options.getOptionSet().has(Options.SHUTDOWN_AFTER_VALIDATE)) {
@@ -377,7 +391,7 @@ public class HytaleServer {
                return;
             }
 
-            this.sendSingleplayerSignal("-=|Enabled|0");
+            this.reportSingleplayerStatus(Message.translation("client.gameLoadingView.status.enabled"));
          } catch (Throwable var6) {
             ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(var6)).log("Failed to boot HytaleServer!");
             Throwable t = var6;
@@ -405,9 +419,12 @@ public class HytaleServer {
                   ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(var2x)).log("Failed to save server config!");
                }
             }, 1L, 1L, TimeUnit.MINUTES);
-            LOGGER.at(Level.INFO).log("Getting Hytale Universe ready...");
-            Universe.get().getUniverseReady().join();
-            LOGGER.at(Level.INFO).log("Universe ready!");
+            if (!Constants.BOOTSTRAP) {
+               LOGGER.at(Level.INFO).log("Getting Hytale Universe ready...");
+               Universe.get().getUniverseReady().join();
+               LOGGER.at(Level.INFO).log("Universe ready!");
+            }
+
             List<String> tags = new ObjectArrayList();
             if (Constants.SINGLEPLAYER) {
                tags.add("Singleplayer");
@@ -420,7 +437,10 @@ public class HytaleServer {
             }
 
             this.booted.set(true);
-            ServerManager.get().waitForBindComplete();
+            if (!Constants.BOOTSTRAP) {
+               ServerManager.get().waitForBindComplete();
+            }
+
             this.eventBus.dispatch(BootEvent.class);
             List<String> bootCommands = Options.getOptionSet().valuesOf(Options.BOOT_COMMAND);
             if (!bootCommands.isEmpty()) {
@@ -520,13 +540,18 @@ public class HytaleServer {
    public void sendSingleplayerProgress() {
       List<PluginBase> plugins = this.pluginManager.getPlugins();
       if (this.shutdown.get() != null) {
-         this.sendSingleplayerSignal(
-            "-=|Shutdown Modules|" + (plugins.isEmpty() ? 100.0 : MathUtil.round((double)(plugins.size() - this.pluginsProgress) / plugins.size(), 2) * 100.0)
+         this.reportSingleplayerStatus(
+            Message.translation("client.gameLoadingView.status.shuttingDownModules"),
+            plugins.isEmpty() ? 100.0 : MathUtil.round((double)(plugins.size() - this.pluginsProgress) / plugins.size(), 2) * 100.0
          );
       } else if (this.pluginManager.getState() == PluginState.SETUP) {
-         this.sendSingleplayerSignal("-=|Setup|" + MathUtil.round((double)this.pluginsProgress / plugins.size(), 2) * 100.0);
+         this.reportSingleplayerStatus(
+            Message.translation("client.gameLoadingView.status.settingUp"), MathUtil.round((double)this.pluginsProgress / plugins.size(), 2) * 100.0
+         );
       } else if (this.pluginManager.getState() == PluginState.START) {
-         this.sendSingleplayerSignal("-=|Starting|" + MathUtil.round((double)this.pluginsProgress / plugins.size(), 2) * 100.0);
+         this.reportSingleplayerStatus(
+            Message.translation("client.gameLoadingView.status.starting"), MathUtil.round((double)this.pluginsProgress / plugins.size(), 2) * 100.0
+         );
       }
    }
 
@@ -581,7 +606,7 @@ public class HytaleServer {
       if (this.isShuttingDown()) {
          double progress = MathUtil.round((double)saved / total, 2) * 100.0;
          if (Constants.SINGLEPLAYER) {
-            this.sendSingleplayerSignal("-=|Saving world " + world.getName() + " chunks|" + progress);
+            this.reportSingleplayerStatus(Message.translation("client.gameLoadingView.status.savingChunks").param("name", world.getName()), progress);
          } else if (total < 10 || saved % (total / 10) == 0) {
             world.getLogger().at(Level.INFO).log("Saving chunks: %.0f%%", progress);
          }

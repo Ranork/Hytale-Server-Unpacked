@@ -3,6 +3,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.workerindexer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
@@ -114,7 +115,13 @@ public class WorkerIndexer {
    }
 
    public class Session {
-      private int index = 0;
+      private int index;
+
+      public Session() {
+         Objects.requireNonNull(WorkerIndexer.this);
+         super();
+         this.index = 0;
+      }
 
       public WorkerIndexer.Id next() {
          if (this.index >= WorkerIndexer.this.workerCount) {

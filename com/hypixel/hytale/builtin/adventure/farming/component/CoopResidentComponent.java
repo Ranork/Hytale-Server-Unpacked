@@ -5,15 +5,16 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class CoopResidentComponent implements Component<EntityStore> {
    @Nonnull
    public static final BuilderCodec<CoopResidentComponent> CODEC = BuilderCodec.builder(CoopResidentComponent.class, CoopResidentComponent::new)
-      .append(new KeyedCodec<>("CoopLocation", Vector3i.CODEC), (comp, ref) -> comp.coopLocation = ref, comp -> comp.coopLocation)
+      .append(new KeyedCodec<>("CoopLocation", Vector3iUtil.CODEC), (comp, ref) -> comp.coopLocation = ref, comp -> comp.coopLocation)
       .add()
       .append(
          new KeyedCodec<>("MarkedForDespawn", BuilderCodec.BOOLEAN),
@@ -51,7 +52,7 @@ public class CoopResidentComponent implements Component<EntityStore> {
    @Override
    public Component<EntityStore> clone() {
       CoopResidentComponent component = new CoopResidentComponent();
-      component.coopLocation.assign(this.coopLocation);
+      component.coopLocation.set(this.coopLocation);
       component.markedForDespawn = this.markedForDespawn;
       return component;
    }

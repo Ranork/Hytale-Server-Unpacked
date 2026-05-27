@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.core.io.handlers;
 
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
-import io.netty.channel.Channel;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -20,7 +20,7 @@ public abstract class GenericPacketHandler extends PacketHandler {
       return new Consumer[size];
    }
 
-   public GenericPacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion) {
+   public GenericPacketHandler(@Nonnull ChannelConnection channel, @Nonnull ProtocolVersion protocolVersion) {
       super(channel, protocolVersion);
    }
 

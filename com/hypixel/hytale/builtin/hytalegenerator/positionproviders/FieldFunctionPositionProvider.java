@@ -3,11 +3,12 @@ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class FieldFunctionPositionProvider extends PositionProvider {
    @Nonnull
@@ -24,6 +25,10 @@ public class FieldFunctionPositionProvider extends PositionProvider {
    private PositionProvider.Context rContext;
    @Nonnull
    private final Pipe.One<Vector3d> rChildPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(FieldFunctionPositionProvider.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
          FieldFunctionPositionProvider.this.rDensityContext.position = position;
          FieldFunctionPositionProvider.this.rDensityContext.positionsAnchor = FieldFunctionPositionProvider.this.rContext.anchor;

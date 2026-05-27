@@ -8,6 +8,7 @@ import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.schema.metadata.HytaleType;
 import com.hypixel.hytale.codec.schema.metadata.ui.UIDisplayMode;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.protocol.AccumulationMode;
 import com.hypixel.hytale.protocol.ChangeStatBehaviour;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
@@ -30,13 +31,12 @@ import com.hypixel.hytale.protocol.SavedMovementStates;
 import com.hypixel.hytale.protocol.Size;
 import com.hypixel.hytale.protocol.UVMotion;
 import com.hypixel.hytale.protocol.UVMotionCurveType;
-import com.hypixel.hytale.protocol.Vector2f;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.common.BlockyAnimationCache;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetValidator;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.codec.protocol.ColorAlphaCodec;
 import com.hypixel.hytale.server.core.codec.protocol.ColorCodec;
+import org.joml.Vector3f;
 
 public final class ProtocolCodecs {
    public static final BuilderCodec<Direction> DIRECTION = BuilderCodec.builder(Direction.class, Direction::new)
@@ -46,22 +46,6 @@ public final class ProtocolCodecs {
       .appendInherited(new KeyedCodec<>("Pitch", Codec.FLOAT), (o, i) -> o.pitch = i, o -> o.pitch, (o, p) -> o.pitch = p.pitch)
       .add()
       .appendInherited(new KeyedCodec<>("Roll", Codec.FLOAT), (o, i) -> o.roll = i, o -> o.roll, (o, p) -> o.roll = p.roll)
-      .add()
-      .build();
-   public static final BuilderCodec<Vector2f> VECTOR2F = BuilderCodec.builder(Vector2f.class, Vector2f::new)
-      .metadata(UIDisplayMode.COMPACT)
-      .appendInherited(new KeyedCodec<>("X", Codec.FLOAT), (o, i) -> o.x = i, o -> o.x, (o, p) -> o.x = p.x)
-      .add()
-      .appendInherited(new KeyedCodec<>("Y", Codec.FLOAT), (o, i) -> o.y = i, o -> o.y, (o, p) -> o.y = p.y)
-      .add()
-      .build();
-   public static final BuilderCodec<Vector3f> VECTOR3F = BuilderCodec.builder(Vector3f.class, Vector3f::new)
-      .metadata(UIDisplayMode.COMPACT)
-      .appendInherited(new KeyedCodec<>("X", Codec.FLOAT), (o, i) -> o.x = i, o -> o.x, (o, p) -> o.x = p.x)
-      .add()
-      .appendInherited(new KeyedCodec<>("Y", Codec.FLOAT), (o, i) -> o.y = i, o -> o.y, (o, p) -> o.y = p.y)
-      .add()
-      .appendInherited(new KeyedCodec<>("Z", Codec.FLOAT), (o, i) -> o.z = i, o -> o.z, (o, p) -> o.z = p.z)
       .add()
       .build();
    public static final BuilderCodec<ColorLight> COLOR_LIGHT = BuilderCodec.builder(ColorLight.class, ColorLight::new)
@@ -229,19 +213,27 @@ public final class ProtocolCodecs {
       .documentKey(ChangeVelocityType.Add, "Adds the velocity to any existing velocity")
       .documentKey(ChangeVelocityType.Set, "Changes the velocity to the given value. Overriding existing values.");
    public static final BuilderCodec<RailPoint> RAIL_POINT_CODEC = BuilderCodec.builder(RailPoint.class, RailPoint::new)
-      .appendInherited(new KeyedCodec<>("Point", VECTOR3F), (o, v) -> o.point = v, o -> o.point, (o, p) -> o.point = p.point)
+      .appendInherited(
+         new KeyedCodec<>("Point", Vector3fUtil.CODEC),
+         (o, v) -> o.point = v,
+         o -> new Vector3f(o.point.x(), o.point.y(), o.point.z()),
+         (o, p) -> o.point = p.point
+      )
       .addValidator(Validators.nonNull())
       .add()
-      .<Vector3f>appendInherited(new KeyedCodec<>("Normal", VECTOR3F), (o, v) -> o.normal = v, o -> o.normal, (o, p) -> o.normal = p.normal)
+      .<Vector3f>appendInherited(
+         new KeyedCodec<>("Normal", Vector3fUtil.CODEC),
+         (o, v) -> o.normal = v,
+         o -> new Vector3f(o.normal.x(), o.normal.y(), o.normal.z()),
+         (o, p) -> o.normal = p.normal
+      )
       .addValidator(Validators.nonNull())
       .add()
       .afterDecode(o -> {
          if (o.normal != null) {
-            com.hypixel.hytale.math.vector.Vector3f v = new com.hypixel.hytale.math.vector.Vector3f(o.normal.x, o.normal.y, o.normal.z);
-            v = v.normalize();
-            o.normal.x = v.x;
-            o.normal.y = v.y;
-            o.normal.z = v.z;
+            Vector3f v = new Vector3f(o.normal.x(), o.normal.y(), o.normal.z());
+            v.normalize();
+            o.normal = v;
          }
       })
       .build();

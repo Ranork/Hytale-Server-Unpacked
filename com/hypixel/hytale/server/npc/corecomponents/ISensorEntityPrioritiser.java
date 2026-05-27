@@ -2,12 +2,12 @@ package com.hypixel.hytale.server.npc.corecomponents;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.instructions.RoleStateChange;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.IEntityByPriorityFilter;
 import java.util.List;
+import org.joml.Vector3d;
 
 public interface ISensorEntityPrioritiser extends RoleStateChange {
    IEntityByPriorityFilter getNPCPrioritiser();

@@ -7,7 +7,6 @@ import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Interaction;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
@@ -23,6 +22,7 @@ import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class ChangeStateInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -85,7 +85,7 @@ public class ChangeStateInteraction extends SimpleBlockInteraction {
                   settings |= 2;
                }
 
-               chunk.setBlock(targetBlock.getX(), targetBlock.getY(), targetBlock.getZ(), newBlockId, newBlockType, rotation, 0, settings);
+               chunk.setBlock(targetBlock.x(), targetBlock.y(), targetBlock.z(), newBlockId, newBlockType, rotation, 0, settings);
                BlockType interactionStateBlock = current.getBlockForState(newState);
                if (interactionStateBlock == null) {
                   return;

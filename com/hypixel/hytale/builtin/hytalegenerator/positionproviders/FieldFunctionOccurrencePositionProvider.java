@@ -5,9 +5,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class FieldFunctionOccurrencePositionProvider extends PositionProvider {
    public static final double FP_RESOLUTION = 100.0;
@@ -27,6 +28,10 @@ public class FieldFunctionOccurrencePositionProvider extends PositionProvider {
    private final Density.Context rDensityContext;
    @Nonnull
    private final Pipe.One<Vector3d> rChildPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(FieldFunctionOccurrencePositionProvider.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
          FieldFunctionOccurrencePositionProvider.this.rDensityContext.position = position;
          FieldFunctionOccurrencePositionProvider.this.rDensityContext.positionsAnchor = FieldFunctionOccurrencePositionProvider.this.rContext.anchor;

@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.interaction;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -50,16 +53,73 @@ public class MountNPC implements Packet, ToClientPacket {
 
    @Nonnull
    public static MountNPC deserialize(@Nonnull ByteBuf buf, int offset) {
-      MountNPC obj = new MountNPC();
-      obj.anchorX = buf.getFloatLE(offset + 0);
-      obj.anchorY = buf.getFloatLE(offset + 4);
-      obj.anchorZ = buf.getFloatLE(offset + 8);
-      obj.entityId = buf.getIntLE(offset + 12);
-      return obj;
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("MountNPC", 16, buf.readableBytes() - offset);
+      } else {
+         MountNPC obj = new MountNPC();
+         obj.anchorX = buf.getFloatLE(offset + 0);
+         obj.anchorY = buf.getFloatLE(offset + 4);
+         obj.anchorZ = buf.getFloatLE(offset + 8);
+         obj.entityId = buf.getIntLE(offset + 12);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 16;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 16L;
+   }
+
+   public static float getAnchorX(MemorySegment mem) {
+      return getAnchorX(mem, 0);
+   }
+
+   public static float getAnchorX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 0));
+   }
+
+   public static float getAnchorY(MemorySegment mem) {
+      return getAnchorY(mem, 0);
+   }
+
+   public static float getAnchorY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4));
+   }
+
+   public static float getAnchorZ(MemorySegment mem) {
+      return getAnchorZ(mem, 0);
+   }
+
+   public static float getAnchorZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 8));
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 12));
+   }
+
+   public static MountNPC toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MountNPC toObject(MemorySegment mem, int offset) {
+      if (offset + 16 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MountNPC", offset + 16, (int)mem.byteSize());
+      } else {
+         return new MountNPC(
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 12))
+         );
+      }
    }
 
    @Override
@@ -68,6 +128,15 @@ public class MountNPC implements Packet, ToClientPacket {
       buf.writeFloatLE(this.anchorY);
       buf.writeFloatLE(this.anchorZ);
       buf.writeIntLE(this.entityId);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 0), this.anchorX);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 4), this.anchorY);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 8), this.anchorZ);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 12), this.entityId);
+      return 16;
    }
 
    @Override

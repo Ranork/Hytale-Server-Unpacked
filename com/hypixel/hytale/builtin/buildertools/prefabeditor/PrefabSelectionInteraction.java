@@ -5,8 +5,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -15,11 +14,14 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabSelectionInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -49,6 +51,10 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
       Ref<EntityStore> ref = context.getEntity();
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (playerComponent != null) {
+         PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+
+         assert playerRefComponent != null;
+
          if (type == InteractionType.Primary || type == InteractionType.Secondary) {
             UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
 
@@ -58,7 +64,7 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
             PrefabEditSessionManager prefabEditSessionManager = BuilderToolsPlugin.get().getPrefabEditSessionManager();
             PrefabEditSession prefabEditSession = prefabEditSessionManager.getPrefabEditSession(uuid);
             if (prefabEditSession == null) {
-               playerComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_NOT_IN_EDIT_SESSION);
+               playerRefComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_NOT_IN_EDIT_SESSION);
             } else {
                TransformComponent transformComponent = commandBuffer.getComponent(ref, TransformComponent.getComponentType());
 
@@ -67,15 +73,15 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
                Vector3d playerPosition = transformComponent.getPosition();
                PrefabEditingMetadata prefabEditingMetadata = null;
                if (type == InteractionType.Secondary) {
-                  Vector3d playerLocation = playerPosition.clone();
-                  playerLocation.setY(0.0);
+                  Vector3d playerLocation = new Vector3d(playerPosition);
+                  playerLocation.y = 0.0;
                   double distance = 2.147483647E9;
 
                   for (PrefabEditingMetadata value : prefabEditSession.getLoadedPrefabMetadata().values()) {
                      Vector3d centerPoint = new Vector3d(
                         (value.getMaxPoint().x + value.getMinPoint().x) / 2.0, 0.0, (value.getMaxPoint().z + value.getMinPoint().z) / 2.0
                      );
-                     double distanceTo = centerPoint.distanceTo(playerLocation);
+                     double distanceTo = centerPoint.distance(playerLocation);
                      if (distance > distanceTo) {
                         distance = distanceTo;
                         prefabEditingMetadata = value;
@@ -84,7 +90,7 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
                } else {
                   Vector3i targetLocation = getTargetLocation(ref, commandBuffer);
                   if (targetLocation == null) {
-                     playerComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_SELECT_ERROR_NO_TARGET_FOUND);
+                     playerRefComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_SELECT_ERROR_NO_TARGET_FOUND);
                      return;
                   }
 
@@ -98,7 +104,7 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
                }
 
                if (prefabEditingMetadata == null) {
-                  playerComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_SELECT_ERROR_NO_PREFAB_FOUND);
+                  playerRefComponent.sendMessage(MESSAGE_COMMANDS_EDIT_PREFAB_SELECT_ERROR_NO_PREFAB_FOUND);
                } else {
                   prefabEditSession.setSelectedPrefab(ref, prefabEditingMetadata, commandBuffer);
                }
@@ -116,7 +122,7 @@ public class PrefabSelectionInteraction extends SimpleInstantInteraction {
          Ref<EntityStore> targetEntityRef = TargetUtil.getTargetEntity(ref, 50.0F, componentAccessor);
          if (targetEntityRef != null && targetEntityRef.isValid()) {
             TransformComponent entityTransformComponent = componentAccessor.getComponent(targetEntityRef, TransformComponent.getComponentType());
-            return entityTransformComponent == null ? null : entityTransformComponent.getPosition().toVector3i();
+            return entityTransformComponent == null ? null : Vector3dUtil.toVector3i(entityTransformComponent.getPosition());
          } else {
             return null;
          }

@@ -4,12 +4,13 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -20,9 +21,17 @@ import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class NPCMultiSelectCommandBase extends NPCWorldCommandBase {
+   @Nonnull
+   protected static final Message MESSAGE_COMMANDS_ERRORS_PLAYER_OR_ARG = Message.translation("server.commands.errors.playerOrArg").param("option", "entity");
+   @Nonnull
+   protected static final Message MESSAGE_COMMANDS_ERRORS_NO_ENTITY_IN_VIEW = Message.translation("server.commands.errors.no_entity_in_view")
+      .param("option", "entity");
    protected static final float DEFAULT_CONE_ANGLE = 30.0F;
    protected static final float DEFAULT_RANGE = 8.0F;
    protected static final float RANGE_MIN = 0.0F;
@@ -56,6 +65,22 @@ public abstract class NPCMultiSelectCommandBase extends NPCWorldCommandBase {
 
    public NPCMultiSelectCommandBase(@Nonnull String description) {
       super(description);
+   }
+
+   @Nullable
+   protected static NPCEntity ensureIsNPC(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
+      NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
+      if (npcComponent == null) {
+         UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
+
+         assert uuidComponent != null;
+
+         UUID uuid = uuidComponent.getUuid();
+         context.sendMessage(Message.translation("server.commands.errors.not_npc").param("uuid", uuid.toString()));
+         return null;
+      } else {
+         return npcComponent;
+      }
    }
 
    @Override
@@ -134,7 +159,7 @@ public abstract class NPCMultiSelectCommandBase extends NPCWorldCommandBase {
 
                assert npcEntityComponentType != null;
 
-               Vector3d eyePosition;
+               Vector3d eyePosition = new Vector3d();
                if (coneAngleDeg == 0.0F) {
                   Ref<EntityStore> ref = TargetUtil.getTargetEntity(playerRef, range, store);
                   if (ref != null && store.getComponent(ref, npcEntityComponentType) != null) {
@@ -142,14 +167,14 @@ public abstract class NPCMultiSelectCommandBase extends NPCWorldCommandBase {
                      refs.add(ref);
                   }
 
-                  eyePosition = Vector3d.ZERO;
+                  eyePosition.zero();
                } else {
                   TransformComponent playerTransform = store.getComponent(playerRef, TransformComponent.getComponentType());
 
                   assert playerTransform != null;
 
                   Transform viewTransform = TargetUtil.getLook(playerRef, store);
-                  eyePosition = viewTransform.getPosition();
+                  eyePosition.set(viewTransform.getPosition());
                   Vector3d eyeDirection = viewTransform.getDirection();
 
                   assert eyePosition.length() == 1.0;
@@ -169,7 +194,7 @@ public abstract class NPCMultiSelectCommandBase extends NPCWorldCommandBase {
 
                         assert entityTransform != null;
 
-                        Vector3d direction = Vector3d.directionTo(eyePosition, entityTransform.getPosition());
+                        Vector3d direction = Vector3dUtil.directionTo(eyePosition, entityTransform.getPosition());
                         double lengthDirection = direction.length();
                         return lengthDirection < 1.0E-4 ? true : eyeDirection.dot(direction) < cosineConeAngle * lengthDirection;
                      }
@@ -193,7 +218,7 @@ public abstract class NPCMultiSelectCommandBase extends NPCWorldCommandBase {
 
                         assert npcTransform != null;
 
-                        double distanceSq = Vector3d.directionTo(eyePosition, npcTransform.getPosition()).squaredLength();
+                        double distanceSq = eyePosition.distanceSquared(npcTransform.getPosition());
                         if (distanceSq < nearestDistanceSq) {
                            nearestDistanceSq = distanceSq;
                            nearestRef = ref;

@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.decisionmaker.core.Option;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
@@ -66,9 +65,8 @@ public class BasicAttackTargetCombatAction extends CombatActionOption {
       }
 
       Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-      Inventory inventory = npcComponent.getInventory();
-      InventoryHelper.setHotbarSlot(ref, inventory, (byte)this.weaponSlot, commandBuffer);
-      InventoryHelper.setOffHandSlot(ref, inventory, (byte)this.offhandSlot, commandBuffer);
+      InventoryHelper.setHotbarSlot(ref, (byte)this.weaponSlot, commandBuffer);
+      InventoryHelper.setOffHandSlot(ref, (byte)this.offhandSlot, commandBuffer);
       CombatActionEvaluatorConfig.BasicAttacks basicAttacks = evaluator.getCurrentBasicAttackSet();
       if (basicAttacks != null) {
          double range = basicAttacks.getMaxRange() - 0.1;

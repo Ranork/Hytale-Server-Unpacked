@@ -1,13 +1,15 @@
 package com.hypixel.hytale.server.core.modules.collision;
 
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class BoxBlockIntersectionEvaluator extends BlockContactData implements IBlockCollisionEvaluator {
    @Nonnull
    protected Box box = new Box();
-   protected Vector3d worldUp = Vector3d.UP;
+   protected Vector3d worldUp = new Vector3d(Vector3dUtil.UP);
    protected boolean touchCeil;
    protected int resultCode;
 
@@ -24,12 +26,13 @@ public class BoxBlockIntersectionEvaluator extends BlockContactData implements I
       data.setTouchingOverlapping(CollisionMath.isTouching(this.resultCode), CollisionMath.isOverlapping(this.resultCode));
    }
 
-   public Vector3d getWorldUp() {
+   @Nonnull
+   public Vector3dc getWorldUp() {
       return this.worldUp;
    }
 
-   public void setWorldUp(Vector3d worldUp) {
-      this.worldUp = worldUp;
+   public void setWorldUp(@Nonnull Vector3dc worldUp) {
+      this.worldUp.set(worldUp);
    }
 
    @Nonnull
@@ -45,13 +48,13 @@ public class BoxBlockIntersectionEvaluator extends BlockContactData implements I
    }
 
    @Nonnull
-   public BoxBlockIntersectionEvaluator setPosition(@Nonnull Vector3d pos) {
-      this.collisionPoint.assign(pos);
+   public BoxBlockIntersectionEvaluator setPosition(@Nonnull Vector3dc pos) {
+      this.collisionPoint.set(pos);
       return this;
    }
 
    @Nonnull
-   public BoxBlockIntersectionEvaluator setBox(@Nonnull Box box, @Nonnull Vector3d pos) {
+   public BoxBlockIntersectionEvaluator setBox(@Nonnull Box box, @Nonnull Vector3dc pos) {
       return this.setBox(box).setPosition(pos);
    }
 
@@ -77,37 +80,37 @@ public class BoxBlockIntersectionEvaluator extends BlockContactData implements I
       this.resultCode = code;
       this.onGround = false;
       this.touchCeil = false;
-      this.collisionNormal.assign(0.0, 0.0, 0.0);
+      this.collisionNormal.set(0.0, 0.0, 0.0);
       this.overlapping = CollisionMath.isOverlapping(this.resultCode);
       if ((code & 7) != 0) {
          if (this.worldUp.y != 0.0) {
             if ((code & 2) != 0) {
-               this.collisionNormal.assign(0.0, y + otherBox.min.y < this.collisionPoint.y + this.box.min.y ? 1.0 : -1.0, 0.0);
+               this.collisionNormal.set(0.0, y + otherBox.min.y < this.collisionPoint.y + this.box.min.y ? 1.0 : -1.0, 0.0);
                this.onGround = this.collisionNormal.y == this.worldUp.y;
                this.touchCeil = !this.onGround;
             } else if ((code & 1) != 0) {
-               this.collisionNormal.assign(x + otherBox.min.x < this.collisionPoint.x + this.box.min.x ? 1.0 : -1.0, 0.0, 0.0);
+               this.collisionNormal.set(x + otherBox.min.x < this.collisionPoint.x + this.box.min.x ? 1.0 : -1.0, 0.0, 0.0);
             } else {
-               this.collisionNormal.assign(0.0, 0.0, z + otherBox.min.z < this.collisionPoint.z + this.box.min.z ? 1.0 : -1.0);
+               this.collisionNormal.set(0.0, 0.0, z + otherBox.min.z < this.collisionPoint.z + this.box.min.z ? 1.0 : -1.0);
             }
          } else if (this.worldUp.x != 0.0) {
             if ((code & 1) != 0) {
-               this.collisionNormal.assign(x + otherBox.min.x < this.collisionPoint.x + this.box.min.x ? 1.0 : -1.0, 0.0, 0.0);
+               this.collisionNormal.set(x + otherBox.min.x < this.collisionPoint.x + this.box.min.x ? 1.0 : -1.0, 0.0, 0.0);
                this.onGround = this.collisionNormal.x == this.worldUp.x;
                this.touchCeil = !this.onGround;
             } else if ((code & 2) != 0) {
-               this.collisionNormal.assign(0.0, y + otherBox.min.y < this.collisionPoint.y + this.box.min.y ? 1.0 : -1.0, 0.0);
+               this.collisionNormal.set(0.0, y + otherBox.min.y < this.collisionPoint.y + this.box.min.y ? 1.0 : -1.0, 0.0);
             } else {
-               this.collisionNormal.assign(0.0, 0.0, z + otherBox.min.z < this.collisionPoint.z + this.box.min.z ? 1.0 : -1.0);
+               this.collisionNormal.set(0.0, 0.0, z + otherBox.min.z < this.collisionPoint.z + this.box.min.z ? 1.0 : -1.0);
             }
          } else if ((code & 4) != 0) {
-            this.collisionNormal.assign(0.0, 0.0, z + otherBox.min.z < this.collisionPoint.z + this.box.min.z ? 1.0 : -1.0);
+            this.collisionNormal.set(0.0, 0.0, z + otherBox.min.z < this.collisionPoint.z + this.box.min.z ? 1.0 : -1.0);
             this.onGround = this.collisionNormal.z == this.worldUp.z;
             this.touchCeil = !this.onGround;
          } else if ((code & 2) != 0) {
-            this.collisionNormal.assign(0.0, y + otherBox.min.y < this.collisionPoint.y + this.box.min.y ? 1.0 : -1.0, 0.0);
+            this.collisionNormal.set(0.0, y + otherBox.min.y < this.collisionPoint.y + this.box.min.y ? 1.0 : -1.0, 0.0);
          } else {
-            this.collisionNormal.assign(x + otherBox.min.x < this.collisionPoint.x + this.box.min.x ? 1.0 : -1.0, 0.0, 0.0);
+            this.collisionNormal.set(x + otherBox.min.x < this.collisionPoint.x + this.box.min.x ? 1.0 : -1.0, 0.0, 0.0);
          }
       }
 

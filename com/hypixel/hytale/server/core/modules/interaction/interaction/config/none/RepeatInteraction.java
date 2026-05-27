@@ -82,6 +82,8 @@ public class RepeatInteraction extends SimpleInteraction {
                context.getState().state = InteractionState.Failed;
                super.tick0(firstRun, time, type, context, cooldownHandler);
                return;
+            case Skip:
+            case ItemChanged:
          }
       }
 
@@ -115,6 +117,8 @@ public class RepeatInteraction extends SimpleInteraction {
             case Failed:
                context.getState().state = InteractionState.Failed;
                super.simulateTick0(firstRun, time, type, context, cooldownHandler);
+            case Skip:
+            case ItemChanged:
          }
       } else {
          context.getState().state = InteractionState.NotFinished;

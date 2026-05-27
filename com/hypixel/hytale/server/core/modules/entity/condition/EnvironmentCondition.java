@@ -8,7 +8,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -19,6 +18,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class EnvironmentCondition extends Condition {
    @Nonnull
@@ -61,7 +61,7 @@ public class EnvironmentCondition extends Condition {
       Vector3d position = transformComponent.getPosition();
       World world = componentAccessor.getExternalData().getWorld();
       ChunkStore chunkStore = world.getChunkStore();
-      long chunkIndex = ChunkUtil.indexChunkFromBlock(position.getX(), position.getZ());
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(position.x(), position.z());
       Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
       if (chunkRef != null && chunkRef.isValid()) {
          Store<ChunkStore> chunkComponentStore = chunkStore.getStore();

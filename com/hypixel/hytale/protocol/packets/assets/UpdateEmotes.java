@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ProtocolEmote;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -57,36 +59,41 @@ public class UpdateEmotes implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateEmotes deserialize(@Nonnull ByteBuf buf, int offset) {
-      UpdateEmotes obj = new UpdateEmotes();
-      byte nullBits = buf.getByte(offset);
-      obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
-      obj.maxId = buf.getIntLE(offset + 2);
-      int pos = offset + 6;
-      if ((nullBits & 1) != 0) {
-         int emotesCount = VarInt.peek(buf, pos);
-         if (emotesCount < 0) {
-            throw ProtocolException.negativeLength("Emotes", emotesCount);
-         }
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdateEmotes", 6, buf.readableBytes() - offset);
+      } else {
+         UpdateEmotes obj = new UpdateEmotes();
+         byte nullBits = buf.getByte(offset);
+         obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
+         obj.maxId = buf.getIntLE(offset + 2);
+         int pos = offset + 6;
+         if ((nullBits & 1) != 0) {
+            int emotesCount = VarInt.peek(buf, pos);
+            if (emotesCount < 0) {
+               throw ProtocolException.invalidVarInt("Emotes");
+            }
 
-         if (emotesCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("Emotes", emotesCount, 4096000);
-         }
+            int emotesVarLen = VarInt.size(emotesCount);
+            if (emotesCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Emotes", emotesCount, 4096000);
+            }
 
-         pos += VarInt.size(emotesCount);
-         obj.emotes = new HashMap<>(emotesCount);
+            pos += emotesVarLen;
+            obj.emotes = new HashMap<>(emotesCount);
 
-         for (int i = 0; i < emotesCount; i++) {
-            int key = buf.getIntLE(pos);
-            pos += 4;
-            ProtocolEmote val = ProtocolEmote.deserialize(buf, pos);
-            pos += ProtocolEmote.computeBytesConsumed(buf, pos);
-            if (obj.emotes.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("emotes", key);
+            for (int i = 0; i < emotesCount; i++) {
+               int key = buf.getIntLE(pos);
+               pos += 4;
+               ProtocolEmote val = ProtocolEmote.deserialize(buf, pos);
+               pos += ProtocolEmote.computeBytesConsumed(buf, pos);
+               if (obj.emotes.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("emotes", key);
+               }
             }
          }
-      }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -94,7 +101,7 @@ public class UpdateEmotes implements Packet, ToClientPacket {
       int pos = offset + 6;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -103,6 +110,108 @@ public class UpdateEmotes implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   public static int getMaxId(MemorySegment mem) {
+      return getMaxId(mem, 0);
+   }
+
+   public static int getMaxId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 2));
+   }
+
+   @Nullable
+   public static Map<Integer, ProtocolEmote> getEmotes(MemorySegment mem) {
+      return getEmotes(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, ProtocolEmote> getEmotes(MemorySegment mem, int offset) {
+      if (!hasEmotes(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 6;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Emotes", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Emotes", len, 4096000);
+         } else {
+            Map<Integer, ProtocolEmote> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               ProtocolEmote value = ProtocolEmote.toObject(mem, off);
+               off += value.computeSize();
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Emotes", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static boolean hasEmotes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static UpdateEmotes toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateEmotes toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateEmotes", offset + 6, (int)mem.byteSize());
+      } else {
+         Map<Integer, ProtocolEmote> emotes = null;
+         if (hasEmotes(mem, offset)) {
+            int off = offset + 6;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("Emotes", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Emotes", len, 4096000);
+            }
+
+            emotes = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               ProtocolEmote value = ProtocolEmote.toObject(mem, off);
+               off += value.computeSize();
+               if (emotes.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Emotes", key);
+               }
+            }
+         }
+
+         return new UpdateEmotes(
+            UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1))), mem.get(PacketIO.PROTO_INT, (long)(offset + 2)), emotes
+         );
+      }
    }
 
    @Override
@@ -130,6 +239,34 @@ public class UpdateEmotes implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.emotes != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 2), this.maxId);
+      int varOffset = offset + 6;
+      if (this.emotes != null) {
+         if (this.emotes.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Emotes", this.emotes.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.emotes.size());
+
+         for (Entry<Integer, ProtocolEmote> e : this.emotes.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, (long)varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 6;
       if (this.emotes != null) {
@@ -150,30 +287,35 @@ public class UpdateEmotes implements Packet, ToClientPacket {
          return ValidationResult.error("Buffer too small: expected at least 6 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
-         int pos = offset + 6;
-         if ((nullBits & 1) != 0) {
-            int emotesCount = VarInt.peek(buffer, pos);
-            if (emotesCount < 0) {
-               return ValidationResult.error("Invalid dictionary count for Emotes");
-            }
-
-            if (emotesCount > 4096000) {
-               return ValidationResult.error("Emotes exceeds max length 4096000");
-            }
-
-            pos += VarInt.length(buffer, pos);
-
-            for (int i = 0; i < emotesCount; i++) {
-               pos += 4;
-               if (pos > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading key");
+         int v = buffer.getByte(offset + 1) & 255;
+         if (v >= 3) {
+            return ValidationResult.error("Invalid UpdateType value for Type");
+         } else {
+            v = offset + 6;
+            if ((nullBits & 1) != 0) {
+               int emotesCount = VarInt.peek(buffer, v);
+               if (emotesCount < 0) {
+                  return ValidationResult.error("Invalid dictionary count for Emotes");
                }
 
-               pos += ProtocolEmote.computeBytesConsumed(buffer, pos);
-            }
-         }
+               if (emotesCount > 4096000) {
+                  return ValidationResult.error("Emotes exceeds max length 4096000");
+               }
 
-         return ValidationResult.OK;
+               v += VarInt.size(emotesCount);
+
+               for (int i = 0; i < emotesCount; i++) {
+                  v += 4;
+                  if (v > buffer.writerIndex()) {
+                     return ValidationResult.error("Buffer overflow reading key");
+                  }
+
+                  v += ProtocolEmote.computeBytesConsumed(buffer, v);
+               }
+            }
+
+            return ValidationResult.OK;
+         }
       }
    }
 

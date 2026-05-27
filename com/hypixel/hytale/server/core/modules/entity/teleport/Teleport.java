@@ -2,15 +2,16 @@ package com.hypixel.hytale.server.core.modules.entity.teleport;
 
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class Teleport implements Component<EntityStore> {
    @Nullable
@@ -18,9 +19,9 @@ public class Teleport implements Component<EntityStore> {
    @Nonnull
    private final Vector3d position = new Vector3d();
    @Nonnull
-   private final Vector3f rotation = new Vector3f();
+   private final Rotation3f rotation = new Rotation3f();
    @Nullable
-   private Vector3f headRotation;
+   private Rotation3f headRotation;
    private boolean resetVelocity = true;
    private CompletableFuture<Void> onComplete;
 
@@ -29,34 +30,34 @@ public class Teleport implements Component<EntityStore> {
       return EntityModule.get().getTeleportComponentType();
    }
 
-   public Teleport(@Nullable World world, @Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public Teleport(@Nullable World world, @Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
       this.world = world;
-      this.position.assign(position);
-      this.rotation.assign(rotation);
+      this.position.set(position);
+      this.rotation.set(rotation);
    }
 
-   public Teleport(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public Teleport(@Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
       this.world = null;
-      this.position.assign(position);
-      this.rotation.assign(rotation);
+      this.position.set(position);
+      this.rotation.set(rotation);
    }
 
    @Nonnull
    public static Teleport createForPlayer(@Nullable World world, @Nonnull Transform transform) {
-      Vector3f headRotation = transform.getRotation();
-      Vector3f bodyRotation = new Vector3f(0.0F, headRotation.getYaw(), 0.0F);
+      Rotation3f headRotation = transform.getRotation();
+      Rotation3f bodyRotation = new Rotation3f(0.0F, headRotation.yaw(), 0.0F);
       return new Teleport(world, transform.getPosition(), bodyRotation).setHeadRotation(headRotation);
    }
 
    @Nonnull
-   public static Teleport createForPlayer(@Nullable World world, @Nonnull Vector3d position, @Nonnull Vector3f rotation) {
-      Vector3f headRotation = rotation.clone();
-      Vector3f bodyRotation = new Vector3f(0.0F, headRotation.getYaw(), 0.0F);
+   public static Teleport createForPlayer(@Nullable World world, @Nonnull Vector3d position, @Nonnull Rotation3fc rotation) {
+      Rotation3f headRotation = new Rotation3f(rotation);
+      Rotation3f bodyRotation = new Rotation3f(0.0F, headRotation.yaw(), 0.0F);
       return new Teleport(world, position, bodyRotation).setHeadRotation(headRotation);
    }
 
    @Nonnull
-   public static Teleport createForPlayer(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public static Teleport createForPlayer(@Nonnull Vector3d position, @Nonnull Rotation3fc rotation) {
       return createForPlayer(null, position, rotation);
    }
 
@@ -66,26 +67,26 @@ public class Teleport implements Component<EntityStore> {
    }
 
    @Nonnull
-   public static Teleport createExact(@Nonnull Vector3d position, @Nonnull Vector3f bodyRotation, @Nonnull Vector3f headRotation) {
+   public static Teleport createExact(@Nonnull Vector3d position, @Nonnull Rotation3f bodyRotation, @Nonnull Rotation3f headRotation) {
       return new Teleport(position, bodyRotation).setHeadRotation(headRotation);
    }
 
    @Nonnull
-   public static Teleport createExact(@Nonnull Vector3d position, @Nonnull Vector3f bodyRotation) {
+   public static Teleport createExact(@Nonnull Vector3d position, @Nonnull Rotation3f bodyRotation) {
       return new Teleport(position, bodyRotation);
    }
 
    public void setPosition(@Nonnull Vector3d position) {
-      this.position.assign(position);
+      this.position.set(position);
    }
 
-   public void setRotation(@Nonnull Vector3f rotation) {
-      this.rotation.assign(rotation);
+   public void setRotation(@Nonnull Rotation3f rotation) {
+      this.rotation.set(rotation);
    }
 
    @Nonnull
-   public Teleport setHeadRotation(@Nonnull Vector3f headRotation) {
-      this.headRotation = headRotation.clone();
+   public Teleport setHeadRotation(@Nonnull Rotation3f headRotation) {
+      this.headRotation = new Rotation3f(headRotation);
       return this;
    }
 
@@ -113,12 +114,12 @@ public class Teleport implements Component<EntityStore> {
    }
 
    @Nonnull
-   public Vector3f getRotation() {
+   public Rotation3f getRotation() {
       return this.rotation;
    }
 
    @Nullable
-   public Vector3f getHeadRotation() {
+   public Rotation3f getHeadRotation() {
       return this.headRotation;
    }
 

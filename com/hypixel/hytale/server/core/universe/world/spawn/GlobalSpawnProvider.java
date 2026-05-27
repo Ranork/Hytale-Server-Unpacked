@@ -3,10 +3,10 @@ package com.hypixel.hytale.server.core.universe.world.spawn;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class GlobalSpawnProvider implements ISpawnProvider {
    @Nonnull
@@ -27,7 +27,7 @@ public class GlobalSpawnProvider implements ISpawnProvider {
 
    @Override
    public Transform getSpawnPoint(@Nonnull World world, @Nonnull UUID uuid) {
-      return this.spawnPoint.clone();
+      return new Transform(this.spawnPoint);
    }
 
    @Nonnull
@@ -38,6 +38,6 @@ public class GlobalSpawnProvider implements ISpawnProvider {
 
    @Override
    public boolean isWithinSpawnDistance(@Nonnull Vector3d position, double distance) {
-      return position.distanceSquaredTo(this.spawnPoint.getPosition()) < distance * distance;
+      return position.distanceSquared(this.spawnPoint.getPosition()) < distance * distance;
    }
 }

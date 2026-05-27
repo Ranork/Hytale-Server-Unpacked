@@ -3,6 +3,7 @@ package com.hypixel.hytale.server.core.command.commands.utility.net;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.NetworkChannel;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -13,12 +14,12 @@ import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.knockback.KnockbackSystems;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.netty.LatencySimulationHandler;
+import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.modules.entity.player.KnockbackPredictionSystems;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import io.netty.channel.Channel;
-import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamPriority;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -76,9 +77,12 @@ public class NetworkCommand extends AbstractCommandCollection {
             @Nonnull World world,
             @Nonnull Store<EntityStore> store
          ) {
-            Channel channel = playerRef.getPacketHandler().getChannel();
-            LatencySimulationHandler.setLatency(channel, 0L, TimeUnit.MILLISECONDS);
-            context.sendMessage(MESSAGE_COMMANDS_LATENCY_SIMULATION_RESET_SUCCESS);
+            if (playerRef.getPacketHandler().getChannel() instanceof NettyUtil.NettyChannelConnection(Channel var10)) {
+               LatencySimulationHandler.setLatency(var10, 0L, TimeUnit.MILLISECONDS);
+               context.sendMessage(MESSAGE_COMMANDS_LATENCY_SIMULATION_RESET_SUCCESS);
+            } else {
+               context.sendMessage(Message.translation("server.commands.latencySimulation.unsupported"));
+            }
          }
       }
 
@@ -100,9 +104,12 @@ public class NetworkCommand extends AbstractCommandCollection {
             @Nonnull Store<EntityStore> store
          ) {
             int delay = this.delayArg.get(context);
-            Channel channel = playerRef.getPacketHandler().getChannel();
-            LatencySimulationHandler.setLatency(channel, delay, TimeUnit.MILLISECONDS);
-            context.sendMessage(Message.translation("server.commands.latencySimulation.set.success").param("millis", delay));
+            if (playerRef.getPacketHandler().getChannel() instanceof NettyUtil.NettyChannelConnection(Channel var11)) {
+               LatencySimulationHandler.setLatency(var11, delay, TimeUnit.MILLISECONDS);
+               context.sendMessage(Message.translation("server.commands.latencySimulation.set.success").param("millis", delay));
+            } else {
+               context.sendMessage(Message.translation("server.commands.latencySimulation.unsupported"));
+            }
          }
       }
    }
@@ -152,9 +159,9 @@ public class NetworkCommand extends AbstractCommandCollection {
          PacketHandler handler = playerRef.getPacketHandler();
 
          for (Entry<NetworkChannel, QuicStreamPriority> entry : priorities.entrySet()) {
-            if (handler.getChannel(entry.getKey()) instanceof QuicStreamChannel quicStreamChannel) {
-               quicStreamChannel.updatePriority(entry.getValue());
-            }
+            ChannelConnection channel = handler.getChannel(entry.getKey());
+            QuicStreamPriority prio = entry.getValue();
+            channel.updateStreamPriority(prio.urgency(), prio.isIncremental());
          }
       }
 
@@ -274,16 +281,11 @@ public class NetworkCommand extends AbstractCommandCollection {
             NetworkChannel networkChannel = this.channelArg.get(context);
             int priority = this.priorityArg.get(context);
             if (priority >= 0 && priority <= 127) {
-               if (playerRef.getPacketHandler().getChannel(networkChannel) instanceof QuicStreamChannel quicStreamChannel) {
-                  quicStreamChannel.updatePriority(new QuicStreamPriority(priority, true));
-                  context.sendMessage(
-                     Message.translation("server.commands.network.streamPriority.set.success")
-                        .param("channel", networkChannel.name())
-                        .param("priority", priority)
-                  );
-               } else {
-                  context.sendMessage(Message.translation("server.commands.network.streamPriority.set.notQuic").param("channel", networkChannel.name()));
-               }
+               ChannelConnection channel = playerRef.getPacketHandler().getChannel(networkChannel);
+               channel.updateStreamPriority(priority, true);
+               context.sendMessage(
+                  Message.translation("server.commands.network.streamPriority.set.success").param("channel", networkChannel.name()).param("priority", priority)
+               );
             } else {
                context.sendMessage(Message.translation("server.commands.network.streamPriority.set.invalidPriority"));
             }

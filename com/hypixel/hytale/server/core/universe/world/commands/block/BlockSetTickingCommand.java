@@ -9,7 +9,7 @@ import javax.annotation.Nonnull;
 public class BlockSetTickingCommand extends SimpleBlockCommand {
    public BlockSetTickingCommand() {
       super("setticking", "server.commands.block.setticking.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

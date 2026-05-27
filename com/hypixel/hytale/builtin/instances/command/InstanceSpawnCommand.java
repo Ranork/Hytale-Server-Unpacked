@@ -5,9 +5,9 @@ import com.hypixel.hytale.builtin.instances.InstancesPlugin;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -21,6 +21,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class InstanceSpawnCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -31,8 +32,12 @@ public class InstanceSpawnCommand extends AbstractPlayerCommand {
       "position", "server.commands.instances.spawn.arg.position", ArgTypes.RELATIVE_POSITION
    );
    @Nonnull
-   private final DefaultArg<Vector3f> rotationArg = this.withDefaultArg(
-      "rotation", "server.commands.instances.spawn.arg.rotation", ArgTypes.ROTATION, Vector3f.FORWARD, "server.commands.instances.spawn.arg.rotation.default"
+   private final DefaultArg<Rotation3fc> rotationArg = this.withDefaultArg(
+      "rotation",
+      "server.commands.instances.spawn.arg.rotation",
+      ArgTypes.ROTATION,
+      Rotation3f.IDENTITY,
+      "server.commands.instances.spawn.arg.rotation.default"
    );
 
    public InstanceSpawnCommand() {
@@ -40,10 +45,10 @@ public class InstanceSpawnCommand extends AbstractPlayerCommand {
       this.addAliases("sp");
    }
 
-   protected Vector3f getSpawnRotation(
+   protected Rotation3fc getSpawnRotation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull CommandContext context,
-      @Nonnull DefaultArg<Vector3f> rotationArg,
+      @Nonnull DefaultArg<Rotation3fc> rotationArg,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (!rotationArg.provided(context) && context.isPlayer()) {
@@ -51,7 +56,7 @@ public class InstanceSpawnCommand extends AbstractPlayerCommand {
 
          assert headRotationComponent != null;
 
-         return headRotationComponent.getRotation().clone();
+         return new Rotation3f(headRotationComponent.getRotation());
       } else {
          return rotationArg.get(context);
       }
@@ -72,7 +77,7 @@ public class InstanceSpawnCommand extends AbstractPlayerCommand {
          position = this.positionArg.get(context).getRelativePosition(context, world, store);
       }
 
-      Transform returnLocation = new Transform(position.clone(), this.getSpawnRotation(ref, context, this.rotationArg, store).clone());
+      Transform returnLocation = new Transform(new Vector3d(position), new Rotation3f(this.getSpawnRotation(ref, context, this.rotationArg, store)));
       String instanceName = this.instanceNameArg.get(context);
       CompletableFuture<World> instanceWorld = InstancesPlugin.get().spawnInstance(instanceName, world, returnLocation);
       InstancesPlugin.teleportPlayerToLoadingInstance(ref, store, instanceWorld, null);

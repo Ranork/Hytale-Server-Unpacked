@@ -4,9 +4,10 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.hitdetection.MatrixProvider;
-import com.hypixel.hytale.math.matrix.Matrix4d;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
+import org.joml.Vector3d;
 
 public class DirectionViewProvider implements MatrixProvider {
    public static final BuilderCodec<DirectionViewProvider> CODEC = BuilderCodec.builder(DirectionViewProvider.class, DirectionViewProvider::new)
@@ -23,7 +24,7 @@ public class DirectionViewProvider implements MatrixProvider {
       )
       .add()
       .append(
-         new KeyedCodec<>("Up", Vector3d.CODEC), (projectionProvider, vec) -> projectionProvider.up.assign(vec), projectionProvider -> projectionProvider.up
+         new KeyedCodec<>("Up", Vector3dUtil.CODEC), (projectionProvider, vec) -> projectionProvider.up.set(vec), projectionProvider -> projectionProvider.up
       )
       .add()
       .build();
@@ -66,7 +67,7 @@ public class DirectionViewProvider implements MatrixProvider {
 
    @Nonnull
    public DirectionViewProvider setPosition(double x, double y, double z) {
-      this.position.assign(x, y, z);
+      this.position.set(x, y, z);
       this.invalid = true;
       return this;
    }
@@ -89,21 +90,21 @@ public class DirectionViewProvider implements MatrixProvider {
    public DirectionViewProvider setDirection(double yaw, double pitch) {
       yaw += this.yawOffset;
       pitch += this.pitchOffset;
-      this.direction.assign(yaw, pitch);
+      Vector3dUtil.setYawPitch(yaw, pitch, this.direction);
       this.invalid = true;
       return this;
    }
 
    @Nonnull
    public DirectionViewProvider setDirection(double x, double y, double z) {
-      this.direction.assign(x, y, z);
+      this.direction.set(x, y, z);
       this.invalid = true;
       return this;
    }
 
    @Nonnull
    public DirectionViewProvider setUp(double x, double y, double z) {
-      this.up.assign(x, y, z);
+      this.up.set(x, y, z);
       this.invalid = true;
       return this;
    }
@@ -112,9 +113,8 @@ public class DirectionViewProvider implements MatrixProvider {
    public Matrix4d getMatrix() {
       if (this.invalid) {
          this.matrix
-            .viewDirection(
-               this.position.x, this.position.y, this.position.z, this.direction.x, this.direction.y, this.direction.z, this.up.x, this.up.y, this.up.z
-            );
+            .setLookAlong(this.direction.x, this.direction.y, this.direction.z, this.up.x, this.up.y, this.up.z)
+            .translate(-this.position.x, -this.position.y, -this.position.z);
          this.invalid = false;
       }
 

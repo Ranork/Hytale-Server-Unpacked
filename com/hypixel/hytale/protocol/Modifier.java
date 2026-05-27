@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -34,15 +37,63 @@ public class Modifier {
 
    @Nonnull
    public static Modifier deserialize(@Nonnull ByteBuf buf, int offset) {
-      Modifier obj = new Modifier();
-      obj.target = ModifierTarget.fromValue(buf.getByte(offset + 0));
-      obj.calculationType = CalculationType.fromValue(buf.getByte(offset + 1));
-      obj.amount = buf.getFloatLE(offset + 2);
-      return obj;
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("Modifier", 6, buf.readableBytes() - offset);
+      } else {
+         Modifier obj = new Modifier();
+         obj.target = ModifierTarget.fromValue(buf.getByte(offset + 0));
+         obj.calculationType = CalculationType.fromValue(buf.getByte(offset + 1));
+         obj.amount = buf.getFloatLE(offset + 2);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 6;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static ModifierTarget getTarget(MemorySegment mem) {
+      return getTarget(mem, 0);
+   }
+
+   public static ModifierTarget getTarget(MemorySegment mem, int offset) {
+      return ModifierTarget.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0)));
+   }
+
+   public static CalculationType getCalculationType(MemorySegment mem) {
+      return getCalculationType(mem, 0);
+   }
+
+   public static CalculationType getCalculationType(MemorySegment mem, int offset) {
+      return CalculationType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   public static float getAmount(MemorySegment mem) {
+      return getAmount(mem, 0);
+   }
+
+   public static float getAmount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 2));
+   }
+
+   public static Modifier toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Modifier toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Modifier", offset + 6, (int)mem.byteSize());
+      } else {
+         return new Modifier(
+            ModifierTarget.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0))),
+            CalculationType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1))),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 2))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -51,12 +102,29 @@ public class Modifier {
       buf.writeFloatLE(this.amount);
    }
 
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), (byte)this.target.getValue());
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.calculationType.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 2), this.amount);
+      return 6;
+   }
+
    public int computeSize() {
       return 6;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 6 ? ValidationResult.error("Buffer too small: expected at least 6 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 6) {
+         return ValidationResult.error("Buffer too small: expected at least 6 bytes");
+      } else {
+         int v = buffer.getByte(offset + 0) & 255;
+         if (v >= 2) {
+            return ValidationResult.error("Invalid ModifierTarget value for Target");
+         } else {
+            v = buffer.getByte(offset + 1) & 255;
+            return v >= 2 ? ValidationResult.error("Invalid CalculationType value for CalculationType") : ValidationResult.OK;
+         }
+      }
    }
 
    public Modifier clone() {

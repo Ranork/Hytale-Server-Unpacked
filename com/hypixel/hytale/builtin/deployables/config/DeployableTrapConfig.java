@@ -8,7 +8,6 @@ import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.DespawnComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
@@ -20,8 +19,10 @@ import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class DeployableTrapConfig extends DeployableAoeConfig {
    @Nonnull
@@ -114,18 +115,23 @@ public class DeployableTrapConfig extends DeployableAoeConfig {
       float radius,
       @Nonnull final DamageCause damageCause
    ) {
-      World world = store.getExternalData().getWorld();
       var consumer = new Consumer<Ref<EntityStore>>() {
+         {
+            Objects.requireNonNull(DeployableTrapConfig.this);
+         }
+
          public void accept(@Nonnull Ref<EntityStore> ref) {
             if (ref != deployableRef) {
                if (store.getComponent(ref, DeployableComponent.getComponentType()) == null) {
-                  DeployableTrapConfig.this.attackTarget(ref, deployableRef, damageCause, commandBuffer);
-                  if (DeployableTrapConfig.this.destroyOnTriggered && deployableComponent.getFlag(DeployableComponent.DeployableFlag.TRIGGERED) == 0) {
-                     DeployableTrapConfig.this.onTriggered(store, deployableRef);
-                     deployableComponent.setFlag(DeployableComponent.DeployableFlag.TRIGGERED, 1);
-                  }
+                  if (DeployableTrapConfig.this.canAttackEntity(ref, deployableComponent, store)) {
+                     DeployableTrapConfig.this.attackTarget(ref, deployableComponent.getOwner(), damageCause, commandBuffer);
+                     if (DeployableTrapConfig.this.destroyOnTriggered && deployableComponent.getFlag(DeployableComponent.DeployableFlag.TRIGGERED) == 0) {
+                        DeployableTrapConfig.this.onTriggered(store, deployableRef);
+                        deployableComponent.setFlag(DeployableComponent.DeployableFlag.TRIGGERED, 1);
+                     }
 
-                  DeployableTrapConfig.this.applyEffectToTarget(store, ref);
+                     DeployableTrapConfig.this.applyEffectToTarget(store, ref);
+                  }
                }
             }
          }

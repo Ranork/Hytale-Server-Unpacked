@@ -38,7 +38,7 @@ public enum PrefabRootDirectory {
    @Nonnull
    public List<PrefabStore.AssetPackPrefabPath> getAllPrefabPaths() {
       if (this.supportsMultiPack) {
-         return PrefabStore.get().getAllAssetPrefabPaths();
+         return PrefabStore.get().getAllBrowsablePrefabPaths();
       } else {
          List<PrefabStore.AssetPackPrefabPath> result = new ObjectArrayList(1);
          result.add(new PrefabStore.AssetPackPrefabPath(null, this.getPrefabPath()));

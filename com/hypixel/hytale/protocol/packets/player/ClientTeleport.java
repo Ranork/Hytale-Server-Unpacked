@@ -4,8 +4,11 @@ import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -50,19 +53,74 @@ public class ClientTeleport implements Packet, ToClientPacket {
 
    @Nonnull
    public static ClientTeleport deserialize(@Nonnull ByteBuf buf, int offset) {
-      ClientTeleport obj = new ClientTeleport();
-      byte nullBits = buf.getByte(offset);
-      obj.teleportId = buf.getByte(offset + 1);
-      if ((nullBits & 1) != 0) {
-         obj.modelTransform = ModelTransform.deserialize(buf, offset + 2);
-      }
+      if (buf.readableBytes() - offset < 52) {
+         throw ProtocolException.bufferTooSmall("ClientTeleport", 52, buf.readableBytes() - offset);
+      } else {
+         ClientTeleport obj = new ClientTeleport();
+         byte nullBits = buf.getByte(offset);
+         obj.teleportId = buf.getByte(offset + 1);
+         if ((nullBits & 1) != 0) {
+            obj.modelTransform = ModelTransform.deserialize(buf, offset + 2);
+         }
 
-      obj.resetVelocity = buf.getByte(offset + 51) != 0;
-      return obj;
+         obj.resetVelocity = buf.getByte(offset + 51) != 0;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 52;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 52L;
+   }
+
+   public static byte getTeleportId(MemorySegment mem) {
+      return getTeleportId(mem, 0);
+   }
+
+   public static byte getTeleportId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1));
+   }
+
+   @Nullable
+   public static ModelTransform getModelTransform(MemorySegment mem) {
+      return getModelTransform(mem, 0);
+   }
+
+   @Nullable
+   public static ModelTransform getModelTransform(MemorySegment mem, int offset) {
+      return hasModelTransform(mem, offset) ? ModelTransform.toObject(mem, offset + 2) : null;
+   }
+
+   public static boolean getResetVelocity(MemorySegment mem) {
+      return getResetVelocity(mem, 0);
+   }
+
+   public static boolean getResetVelocity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 51));
+   }
+
+   public static boolean hasModelTransform(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static ClientTeleport toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ClientTeleport toObject(MemorySegment mem, int offset) {
+      if (offset + 52 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ClientTeleport", offset + 52, (int)mem.byteSize());
+      } else {
+         return new ClientTeleport(
+            mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)),
+            hasModelTransform(mem, offset) ? ModelTransform.toObject(mem, offset + 2) : null,
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 51))
+         );
+      }
    }
 
    @Override
@@ -84,12 +142,36 @@ public class ClientTeleport implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.modelTransform != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), this.teleportId);
+      if (this.modelTransform != null) {
+         this.modelTransform.serialize(mem, offset + 2);
+      } else {
+         mem.asSlice(offset + 2, 49L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BOOL, offset + 51, this.resetVelocity);
+      return 52;
+   }
+
+   @Override
    public int computeSize() {
       return 52;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 52 ? ValidationResult.error("Buffer too small: expected at least 52 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 52) {
+         return ValidationResult.error("Buffer too small: expected at least 52 bytes");
+      } else {
+         byte nullBits = buffer.getByte(offset);
+         return ValidationResult.OK;
+      }
    }
 
    public ClientTeleport clone() {

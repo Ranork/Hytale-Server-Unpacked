@@ -15,16 +15,15 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.channels.FileChannel.MapMode;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileAttribute;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.StampedLock;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -41,7 +40,7 @@ public class IndexedStorageFile implements Closeable {
       }, Codec.LONG)
       .register("CompressionLevel", file -> file.getCompressionLevel(), Codec.INTEGER)
       .register("BlobCount", file -> file.getBlobCount(), Codec.INTEGER)
-      .register("UsedBlobCount", SneakyThrow.sneakyFunction(file -> file.keys().size()), Codec.INTEGER)
+      .register("UsedBlobCount", SneakyThrow.sneakyFunction(file -> file.usedBlobCount.get()), Codec.INTEGER)
       .register("SegmentSize", file -> file.segmentSize(), Codec.INTEGER)
       .register("SegmentCount", file -> file.segmentCount(), Codec.INTEGER);
    public static final String MAGIC_STRING = "HytaleIndexedStorage";
@@ -75,6 +74,7 @@ public class IndexedStorageFile implements Closeable {
    private int version;
    private int blobCount;
    private int segmentSize;
+   private final AtomicInteger usedBlobCount = new AtomicInteger(0);
    private StampedLock[] indexLocks;
    @Nullable
    private MappedByteBuffer mappedBlobIndexes;
@@ -130,41 +130,14 @@ public class IndexedStorageFile implements Closeable {
             storageFile.readHeader();
             storageFile.memoryMapBlobIndexes();
             if (storageFile.version == 0) {
-               storageFile = migrateV0(path, blobCount, segmentSize, options, attrs, storageFile);
-            } else {
-               storageFile.readUsedSegments();
+               throw new IOException("IndexedStorageFile version 0 is no longer supported");
             }
+
+            storageFile.readUsedSegments();
          }
 
          return storageFile;
       }
-   }
-
-   private static IndexedStorageFile migrateV0(
-      Path path, int blobCount, int segmentSize, Set<? extends OpenOption> options, FileAttribute<?>[] attrs, IndexedStorageFile storageFile
-   ) throws IOException {
-      storageFile.close();
-      Path tempFile = path.resolveSibling(path.getFileName().toString() + ".old");
-      Path tempPath = Files.move(path, tempFile, StandardCopyOption.REPLACE_EXISTING);
-      HashSet<OpenOption> newOptions = new HashSet<>(options);
-      newOptions.add(StandardOpenOption.CREATE);
-      storageFile = new IndexedStorageFile(path, FileChannel.open(path, newOptions, attrs));
-      storageFile.create(blobCount, segmentSize);
-
-      try (IndexedStorageFile_v0 oldStorageFile = new IndexedStorageFile_v0(tempPath, FileChannel.open(tempPath, options, attrs))) {
-         oldStorageFile.open();
-
-         for (int blobIndex = 0; blobIndex < blobCount; blobIndex++) {
-            ByteBuffer blob = oldStorageFile.readBlob(blobIndex);
-            if (blob != null) {
-               storageFile.writeBlob(blobIndex, blob);
-            }
-         }
-      } finally {
-         Files.delete(tempFile);
-      }
-
-      return storageFile;
    }
 
    private IndexedStorageFile(@Nonnull Path path, @Nonnull FileChannel fileChannel) {
@@ -187,6 +160,10 @@ public class IndexedStorageFile implements Closeable {
 
    public int getCompressionLevel() {
       return this.compressionLevel;
+   }
+
+   public int getUsedBlobCount() {
+      return this.usedBlobCount.get();
    }
 
    public void setFlushOnWrite(boolean flushOnWrite) {
@@ -305,6 +282,8 @@ public class IndexedStorageFile implements Closeable {
       long stamp = this.usedSegmentsLock.writeLock();
 
       try {
+         int count = 0;
+
          for (int blobIndex = 0; blobIndex < this.blobCount; blobIndex++) {
             long segmentStamp = this.indexLocks[blobIndex].readLock();
 
@@ -315,6 +294,7 @@ public class IndexedStorageFile implements Closeable {
                if (firstSegmentIndex == 0) {
                   compressedLength = 0;
                } else {
+                  count++;
                   ByteBuffer blobHeaderBuffer = this.readBlobHeader(firstSegmentIndex);
                   compressedLength = blobHeaderBuffer.getInt(COMPRESSED_LENGTH_OFFSET);
                }
@@ -327,6 +307,8 @@ public class IndexedStorageFile implements Closeable {
                this.usedSegments.set(firstSegmentIndex, firstSegmentIndex + segmentsCount);
             }
          }
+
+         this.usedBlobCount.set(count);
       } finally {
          this.usedSegmentsLock.unlockWrite(stamp);
       }
@@ -587,6 +569,10 @@ public class IndexedStorageFile implements Closeable {
             }
 
             this.putBlobIndex(blobIndex, firstSegmentIndex);
+            if (oldFirstSegmentIndex == 0) {
+               this.usedBlobCount.incrementAndGet();
+            }
+
             if (oldSegmentLength > 0) {
                long usedSegmentsStamp = this.usedSegmentsLock.writeLock();
 
@@ -615,6 +601,7 @@ public class IndexedStorageFile implements Closeable {
                int oldCompressedLength = blobHeaderBuffer.getInt(COMPRESSED_LENGTH_OFFSET);
                int oldSegmentLength = this.requiredSegments(BLOB_HEADER_LENGTH + oldCompressedLength);
                this.putBlobIndex(blobIndex, 0);
+               this.usedBlobCount.decrementAndGet();
                long usedSegmentsStamp = this.usedSegmentsLock.writeLock();
 
                try {
@@ -835,6 +822,8 @@ public class IndexedStorageFile implements Closeable {
       private final long[] stamps;
 
       public SegmentRangeWriteLock(int segmentIndex, int count, long[] stamps) {
+         Objects.requireNonNull(IndexedStorageFile.this);
+         super();
          if (segmentIndex == 0) {
             throw new IllegalArgumentException("Invalid segment index!");
          } else if (count == 0) {

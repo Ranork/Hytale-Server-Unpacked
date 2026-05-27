@@ -11,7 +11,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -79,7 +79,7 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
          Player playerComponent = playerEntityRef != null ? store.getComponent(playerEntityRef, Player.getComponentType()) : null;
          ItemContainer playerInventory = null;
          if (playerComponent != null) {
-            playerInventory = playerComponent.getInventory().getCombinedHotbarFirst();
+            playerInventory = InventoryComponent.getCombined(store, playerEntityRef, InventoryComponent.HOTBAR_FIRST);
          }
 
          BarterTrade[] trades = barterState.getResolvedTrades(this.shopAsset, gameTime);
@@ -172,12 +172,11 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
                      if (playerEntityRef != null) {
                         Player playerComponent = store.getComponent(playerEntityRef, Player.getComponentType());
                         if (playerComponent != null) {
-                           Inventory inventory = playerComponent.getInventory();
-                           CombinedItemContainer container = inventory.getCombinedHotbarFirst();
+                           CombinedItemContainer combinedInventory = InventoryComponent.getCombined(store, playerEntityRef, InventoryComponent.HOTBAR_FIRST);
                            int maxQuantity = Math.min(requestedQuantity, currentStock);
 
                            for (BarterItemStack inputStack : trade.getInput()) {
-                              int has = this.countItemsInContainer(container, inputStack.getItemId());
+                              int has = this.countItemsInContainer(combinedInventory, inputStack.getItemId());
                               int canAfford = has / inputStack.getQuantity();
                               maxQuantity = Math.min(maxQuantity, canAfford);
                            }
@@ -187,22 +186,22 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
 
                               for (BarterItemStack inputStack : trade.getInput()) {
                                  int toRemove = inputStack.getQuantity() * quantity;
-                                 this.removeItemsFromContainer(container, inputStack.getItemId(), toRemove);
+                                 this.removeItemsFromContainer(combinedInventory, inputStack.getItemId(), toRemove);
                               }
 
                               BarterItemStack output = trade.getOutput();
                               ItemStack outputStack = new ItemStack(output.getItemId(), output.getQuantity() * quantity);
-                              ItemStackTransaction transaction = container.addItemStack(outputStack);
+                              ItemStackTransaction transaction = combinedInventory.addItemStack(outputStack);
                               ItemStack remainder = transaction.getRemainder();
                               if (remainder != null && !remainder.isEmpty()) {
                                  int addedQty = outputStack.getQuantity() - remainder.getQuantity();
                                  if (addedQty > 0) {
-                                    playerComponent.notifyPickupItem(playerEntityRef, outputStack.withQuantity(addedQty), null, store);
+                                    Player.notifyPickupItem(playerEntityRef, outputStack.withQuantity(addedQty), null, store);
                                  }
 
                                  ItemUtils.dropItem(playerEntityRef, remainder, store);
                               } else {
-                                 playerComponent.notifyPickupItem(playerEntityRef, outputStack, null, store);
+                                 Player.notifyPickupItem(playerEntityRef, outputStack, null, store);
                               }
 
                               barterState.executeTrade(this.shopAsset, tradeIndex, quantity, gameTime);
@@ -228,7 +227,7 @@ public class BarterPage extends InteractiveCustomUIPage<BarterPage.BarterEventDa
       Player playerComponent = playerEntityRef != null ? store.getComponent(playerEntityRef, Player.getComponentType()) : null;
       ItemContainer playerInventory = null;
       if (playerComponent != null) {
-         playerInventory = playerComponent.getInventory().getCombinedHotbarFirst();
+         playerInventory = InventoryComponent.getCombined(store, playerEntityRef, InventoryComponent.HOTBAR_FIRST);
       }
 
       for (int i = 0; i < trades.length; i++) {

@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.npc.blackboard.view.event.block;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.npc.blackboard.view.event.EventView;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BlockEventView extends EventView<BlockEventView, BlockEventType, EventNotification> {
    public BlockEventView(@Nonnull World world) {
@@ -53,7 +53,7 @@ public class BlockEventView extends EventView<BlockEventView, BlockEventType, Ev
          BlockEventType type = BlockEventType.VALUES[i];
          IntSet eventSets = npcComponent.getBlackboardBlockChangeSet(type);
          if (eventSets != null) {
-            this.entityMapsByEventType.get(type).initialiseEntity(npcComponent.getReference(), eventSets);
+            this.entityMapsByEventType.get(type).initialiseEntity(ref, eventSets);
          }
       }
    }

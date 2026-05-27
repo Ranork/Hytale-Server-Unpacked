@@ -2,9 +2,9 @@ package com.hypixel.hytale.server.npc.navigation;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
+import org.joml.Vector3d;
 
 public interface AStarEvaluator {
    boolean isGoalReached(Ref<EntityStore> var1, AStarBase var2, AStarNode var3, MotionController var4, ComponentAccessor<EntityStore> var5);

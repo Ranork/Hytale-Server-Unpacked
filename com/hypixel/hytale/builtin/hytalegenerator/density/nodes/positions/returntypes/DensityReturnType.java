@@ -2,7 +2,6 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.retur
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.math.Range;
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import java.util.Comparator;
@@ -10,6 +9,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class DensityReturnType extends ReturnType {
    @Nonnull
@@ -57,12 +57,12 @@ public class DensityReturnType extends ReturnType {
    ) {
       double distanceFromWall = Double.MAX_VALUE;
       if (closestPoint0 != null && this.calculateDistanceFromWall) {
-         distance0 = this.rScaledSamplePointClone.assign(samplePoint).subtract(closestPoint0).length();
+         distance0 = this.rScaledSamplePointClone.set(samplePoint).sub(closestPoint0).length();
          double fromMaxDistance = Math.abs(super.maxDistance - distance0);
          if (closestPoint1 == null) {
             distanceFromWall = fromMaxDistance;
          } else {
-            distance1 = this.rScaledSamplePointClone.assign(samplePoint).subtract(closestPoint1).length();
+            distance1 = this.rScaledSamplePointClone.set(samplePoint).sub(closestPoint1).length();
             double l = distance1 / this.maxDistance;
             double fromOtherCell = Math.abs(distance1 - distance0) / 2.0;
             distanceFromWall = fromOtherCell;

@@ -2,12 +2,12 @@ package com.hypixel.hytale.server.npc.util;
 
 import com.hypixel.hytale.common.util.StringUtil;
 import com.hypixel.hytale.component.ComponentAccessor;
-import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemArmor;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -61,12 +61,10 @@ public class InventoryHelper {
    public static boolean itemKeyIsBlockType(@Nullable String name) {
       if (name != null && !name.isEmpty()) {
          Item item = Item.getAssetMap().getAsset(name);
-         if (item != null && item.hasBlockType()) {
-            return true;
-         }
+         return item != null && item.hasBlockType();
+      } else {
+         return false;
       }
-
-      return false;
    }
 
    public static boolean itemDropListKeyExists(@Nullable String name) {
@@ -78,11 +76,67 @@ public class InventoryHelper {
       }
    }
 
-   public static byte findHotbarSlotWithItem(@Nonnull Inventory inventory, String name) {
-      ItemContainer hotbar = inventory.getHotbar();
+   public static byte findHotbarSlotWithItem(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull String name) {
+      InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent == null) {
+         return -1;
+      } else {
+         ItemContainer hotbarContainer = hotbarComponent.getInventory();
 
-      for (byte i = 0; i < hotbar.getCapacity(); i++) {
-         if (matchesItem(name, hotbar.getItemStack(i))) {
+         for (byte i = 0; i < hotbarContainer.getCapacity(); i++) {
+            ItemStack itemStack = hotbarContainer.getItemStack(i);
+            if (itemStack != null && matchesItem(name, itemStack)) {
+               return i;
+            }
+         }
+
+         return -1;
+      }
+   }
+
+   public static short findHotbarSlotWithItem(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull List<String> name
+   ) {
+      InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent == null) {
+         return -1;
+      } else {
+         ItemContainer hotbarContainer = hotbarComponent.getInventory();
+
+         for (short i = 0; i < hotbarContainer.getCapacity(); i++) {
+            ItemStack itemStack = hotbarContainer.getItemStack(i);
+            if (itemStack != null && matchesItem(name, itemStack)) {
+               return i;
+            }
+         }
+
+         return -1;
+      }
+   }
+
+   public static byte findHotbarEmptySlot(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent == null) {
+         return -1;
+      } else {
+         ItemContainer hotbarContainer = hotbarComponent.getInventory();
+
+         for (byte i = 0; i < hotbarContainer.getCapacity(); i++) {
+            if (ItemStack.isEmpty(hotbarContainer.getItemStack(i))) {
+               return i;
+            }
+         }
+
+         return -1;
+      }
+   }
+
+   public static short findInventorySlotWithItem(@Nonnull Ref<EntityStore> ref, @Nonnull String name, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      CombinedItemContainer combinedContainer = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
+
+      for (short i = 0; i < combinedContainer.getCapacity(); i++) {
+         ItemStack itemStack = combinedContainer.getItemStack(i);
+         if (itemStack != null && matchesItem(name, itemStack)) {
             return i;
          }
       }
@@ -90,11 +144,14 @@ public class InventoryHelper {
       return -1;
    }
 
-   public static short findHotbarSlotWithItem(@Nonnull Inventory inventory, List<String> name) {
-      ItemContainer hotbar = inventory.getHotbar();
+   public static short findInventorySlotWithItem(
+      @Nonnull Ref<EntityStore> ref, @Nonnull List<String> name, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      CombinedItemContainer combinedContainer = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
 
-      for (short i = 0; i < hotbar.getCapacity(); i++) {
-         if (matchesItem(name, hotbar.getItemStack(i))) {
+      for (short i = 0; i < combinedContainer.getCapacity(); i++) {
+         ItemStack itemStack = combinedContainer.getItemStack(i);
+         if (itemStack != null && matchesItem(name, itemStack)) {
             return i;
          }
       }
@@ -102,49 +159,13 @@ public class InventoryHelper {
       return -1;
    }
 
-   public static byte findHotbarEmptySlot(@Nonnull Inventory inventory) {
-      ItemContainer hotbar = inventory.getHotbar();
-
-      for (byte i = 0; i < hotbar.getCapacity(); i++) {
-         if (ItemStack.isEmpty(hotbar.getItemStack(i))) {
-            return i;
-         }
-      }
-
-      return -1;
-   }
-
-   public static short findInventorySlotWithItem(@Nonnull Inventory inventory, String name) {
-      CombinedItemContainer container = inventory.getCombinedHotbarFirst();
-
-      for (short i = 0; i < container.getCapacity(); i++) {
-         if (matchesItem(name, container.getItemStack(i))) {
-            return i;
-         }
-      }
-
-      return -1;
-   }
-
-   public static short findInventorySlotWithItem(@Nonnull Inventory inventory, List<String> name) {
-      CombinedItemContainer container = inventory.getCombinedHotbarFirst();
-
-      for (short i = 0; i < container.getCapacity(); i++) {
-         if (matchesItem(name, container.getItemStack(i))) {
-            return i;
-         }
-      }
-
-      return -1;
-   }
-
-   public static int countItems(@Nonnull ItemContainer container, List<String> name) {
+   public static int countItems(@Nonnull ItemContainer container, @Nonnull List<String> name) {
       int count = 0;
 
       for (short i = 0; i < container.getCapacity(); i++) {
-         ItemStack item = container.getItemStack(i);
-         if (matchesItem(name, item)) {
-            count += item.getQuantity();
+         ItemStack itemStack = container.getItemStack(i);
+         if (itemStack != null && matchesItem(name, itemStack)) {
+            count += itemStack.getQuantity();
          }
       }
 
@@ -164,161 +185,174 @@ public class InventoryHelper {
       return count;
    }
 
-   public static boolean hotbarContainsItem(@Nonnull Inventory inventory, String name) {
-      return findHotbarSlotWithItem(inventory, name) != -1;
+   public static boolean hotbarContainsItem(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull String name) {
+      return findHotbarSlotWithItem(ref, componentAccessor, name) != -1;
    }
 
-   public static boolean hotbarContainsItem(@Nonnull Inventory inventory, List<String> name) {
-      return findHotbarSlotWithItem(inventory, name) != -1;
-   }
-
-   public static boolean holdsItem(@Nonnull Inventory inventory, String name) {
-      return matchesItem(name, inventory.getItemInHand());
-   }
-
-   public static boolean containsItem(@Nonnull Inventory inventory, String name) {
-      return findInventorySlotWithItem(inventory, name) != -1;
-   }
-
-   public static boolean containsItem(@Nonnull Inventory inventory, List<String> name) {
-      return findInventorySlotWithItem(inventory, name) != -1;
-   }
-
-   public static boolean clearItemInHand(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Inventory inventory, byte slotHint, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   public static boolean hotbarContainsItem(
+      @Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull List<String> name
    ) {
-      if (ItemStack.isEmpty(inventory.getItemInHand())) {
+      return findHotbarSlotWithItem(ref, componentAccessor, name) != -1;
+   }
+
+   public static boolean holdsItem(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull String name) {
+      return matchesItem(name, InventoryComponent.getItemInHand(componentAccessor, ref));
+   }
+
+   public static boolean containsItem(@Nonnull Ref<EntityStore> ref, @Nonnull String name, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return findInventorySlotWithItem(ref, name, componentAccessor) != -1;
+   }
+
+   public static boolean containsItem(@Nonnull Ref<EntityStore> ref, @Nonnull List<String> name, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return findInventorySlotWithItem(ref, name, componentAccessor) != -1;
+   }
+
+   public static boolean clearItemInHand(@Nonnull Ref<EntityStore> ref, byte slotHint, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      if (ItemStack.isEmpty(InventoryComponent.getItemInHand(componentAccessor, ref))) {
          return true;
       } else {
-         byte slot = findHotbarEmptySlot(inventory);
+         byte slot = findHotbarEmptySlot(ref, componentAccessor);
          if (slot >= 0) {
-            inventory.setActiveHotbarSlot(ref, slot, componentAccessor);
+            InventoryUtils.setActiveSlot(ref, -1, slot, componentAccessor);
             return true;
          } else {
             slot = slotHint != -1 ? slotHint : 0;
-            inventory.getHotbar().removeItemStackFromSlot(slot);
-            inventory.setActiveHotbarSlot(ref, slot, componentAccessor);
+            InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+            if (hotbarComponent != null) {
+               hotbarComponent.getInventory().removeItemStackFromSlot(slot);
+            }
+
+            InventoryUtils.setActiveSlot(ref, -1, slot, componentAccessor);
             return true;
          }
       }
    }
 
-   public static void removeItemInHand(@Nonnull Inventory inventory, int count) {
-      if (!ItemStack.isEmpty(inventory.getItemInHand())) {
-         byte activeHotbarSlot = inventory.getActiveHotbarSlot();
-         if (activeHotbarSlot != -1) {
-            inventory.getHotbar().removeItemStackFromSlot(activeHotbarSlot, count);
+   public static void removeItemInHand(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor, int count) {
+      if (!ItemStack.isEmpty(InventoryComponent.getItemInHand(componentAccessor, ref))) {
+         InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent != null) {
+            byte activeHotbarSlot = hotbarComponent.getActiveSlot();
+            if (activeHotbarSlot != -1) {
+               hotbarComponent.getInventory().removeItemStackFromSlot(activeHotbarSlot, count);
+            }
          }
       }
    }
 
-   public static boolean checkHotbarSlot(@Nonnull Inventory inventory, byte slot) {
-      ItemContainer hotbar = inventory.getHotbar();
-      if (slot < hotbar.getCapacity() && slot >= 0) {
+   public static boolean checkHotbarSlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent == null) {
+         return false;
+      } else if (slot < hotbarComponent.getInventory().getCapacity() && slot >= 0) {
          return true;
       } else {
-         NPCPlugin.get().getLogger().at(Level.WARNING).log("Invalid hotbar slot %s. Max is %s", slot, hotbar.getCapacity() - 1);
+         NPCPlugin.get().getLogger().at(Level.WARNING).log("Invalid hotbar slot %s. Max is %s", slot, hotbarComponent.getInventory().getCapacity() - 1);
          return false;
       }
    }
 
-   public static boolean checkOffHandSlot(@Nonnull Inventory inventory, byte slot) {
-      ItemContainer utility = inventory.getUtility();
-      if (slot < utility.getCapacity() && slot >= -1) {
+   public static boolean checkOffHandSlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      InventoryComponent.Utility utilityComponent = componentAccessor.getComponent(ref, InventoryComponent.Utility.getComponentType());
+      if (utilityComponent == null) {
+         return false;
+      } else if (slot < utilityComponent.getInventory().getCapacity() && slot >= -1) {
          return true;
       } else {
-         NPCPlugin.get().getLogger().at(Level.WARNING).log("Invalid utility slot %s. Max is %s, Min is %s", slot, utility.getCapacity() - 1, -1);
+         NPCPlugin.get()
+            .getLogger()
+            .at(Level.WARNING)
+            .log("Invalid utility slot %s. Max is %s, Min is %s", slot, utilityComponent.getInventory().getCapacity() - 1, -1);
          return false;
       }
    }
 
-   public static void setHotbarSlot(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Inventory inventory, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   public static void setHotbarSlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      if (InventoryUtils.getActiveSlot(ref, -1, componentAccessor) != slot) {
+         if (checkHotbarSlot(ref, slot, componentAccessor)) {
+            InventoryUtils.setActiveSlot(ref, -1, slot, componentAccessor);
+         }
+      }
+   }
+
+   public static void setOffHandSlot(@Nonnull Ref<EntityStore> ref, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      if (InventoryUtils.getActiveSlot(ref, -5, componentAccessor) != slot) {
+         if (checkOffHandSlot(ref, slot, componentAccessor)) {
+            InventoryComponent.Utility utilityComponent = componentAccessor.getComponent(ref, InventoryComponent.Utility.getComponentType());
+            if (utilityComponent != null) {
+               utilityComponent.setActiveSlot(slot, ref, componentAccessor);
+            }
+         }
+      }
+   }
+
+   public static boolean setHotbarItem(
+      @Nonnull Ref<EntityStore> ref, @Nullable String name, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (inventory.getActiveHotbarSlot() != slot) {
-         if (checkHotbarSlot(inventory, slot)) {
-            inventory.setActiveHotbarSlot(ref, slot, componentAccessor);
-         }
-      }
-   }
-
-   public static void setOffHandSlot(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Inventory inventory, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      if (inventory.getActiveUtilitySlot() != slot) {
-         if (checkOffHandSlot(inventory, slot)) {
-            inventory.setActiveUtilitySlot(ref, slot, componentAccessor);
-         }
-      }
-   }
-
-   public static void setOffHandSlot(@Nonnull Holder<EntityStore> holder, @Nonnull Inventory inventory, byte slot) {
-      if (inventory.getActiveUtilitySlot() != slot) {
-         if (checkOffHandSlot(inventory, slot)) {
-            inventory.setActiveUtilitySlot(holder, slot);
-         }
-      }
-   }
-
-   public static boolean setHotbarItem(@Nonnull Inventory inventory, @Nullable String name, byte slot) {
       if (name != null && !name.isEmpty() && itemKeyExists(name)) {
-         ItemContainer hotbar = inventory.getHotbar();
-         if (!checkHotbarSlot(inventory, slot)) {
-            return false;
-         } else if (matchesItem(name, hotbar.getItemStack(slot))) {
-            return true;
+         InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent != null && checkHotbarSlot(ref, slot, componentAccessor)) {
+            ItemContainer hotbarContainer = hotbarComponent.getInventory();
+            if (matchesItem(name, hotbarContainer.getItemStack(slot))) {
+               return true;
+            } else {
+               hotbarContainer.setItemStackForSlot(slot, createItem(name));
+               return true;
+            }
          } else {
-            hotbar.setItemStackForSlot(slot, createItem(name));
-            return true;
+            return false;
          }
       } else {
          return false;
       }
    }
 
-   public static boolean setOffHandItem(@Nonnull Inventory inventory, @Nullable String name, byte slot) {
+   public static boolean setOffHandItem(
+      @Nonnull Ref<EntityStore> ref, @Nullable String name, byte slot, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
       if (name != null && !name.isEmpty() && itemKeyExists(name)) {
-         ItemContainer utility = inventory.getUtility();
-         if (!checkOffHandSlot(inventory, slot)) {
-            return false;
-         } else if (matchesItem(name, utility.getItemStack(slot))) {
-            return true;
+         InventoryComponent.Utility utilityComponent = componentAccessor.getComponent(ref, InventoryComponent.Utility.getComponentType());
+         if (utilityComponent != null && checkOffHandSlot(ref, slot, componentAccessor)) {
+            ItemContainer utilityContainer = utilityComponent.getInventory();
+            if (matchesItem(name, utilityContainer.getItemStack(slot))) {
+               return true;
+            } else {
+               utilityContainer.setItemStackForSlot(slot, createItem(name));
+               return true;
+            }
          } else {
-            utility.setItemStackForSlot(slot, createItem(name));
-            return true;
+            return false;
          }
       } else {
          return false;
       }
    }
 
-   public static boolean useItem(
-      @Nonnull Ref<EntityStore> ref,
-      @Nonnull Inventory inventory,
-      @Nullable String name,
-      byte slotHint,
-      @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
+   public static boolean useItem(@Nonnull Ref<EntityStore> ref, @Nullable String name, byte slotHint, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (name == null || name.isEmpty() || !itemKeyExists(name)) {
          return false;
-      } else if (holdsItem(inventory, name)) {
+      } else if (holdsItem(ref, componentAccessor, name)) {
          return true;
       } else {
-         byte slot = findHotbarSlotWithItem(inventory, name);
+         byte slot = findHotbarSlotWithItem(ref, componentAccessor, name);
          if (slot >= 0) {
-            inventory.setActiveHotbarSlot(ref, slot, componentAccessor);
+            InventoryUtils.setActiveSlot(ref, -1, slot, componentAccessor);
             return true;
          } else {
             if (slotHint == -1) {
-               slotHint = findHotbarEmptySlot(inventory);
+               slotHint = findHotbarEmptySlot(ref, componentAccessor);
             }
 
             if (slotHint == -1) {
                slotHint = 0;
             }
 
-            inventory.getHotbar().setItemStackForSlot(slotHint, createItem(name));
-            inventory.setActiveHotbarSlot(ref, slotHint, componentAccessor);
+            InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+            if (hotbarComponent != null) {
+               hotbarComponent.getInventory().setItemStackForSlot(slotHint, createItem(name));
+               hotbarComponent.setActiveSlot(slotHint, ref, componentAccessor);
+            }
+
             return true;
          }
       }
@@ -329,12 +363,8 @@ public class InventoryHelper {
       return !itemKeyExists(name) ? null : new ItemStack(name, 1);
    }
 
-   public static boolean useItem(
-      @Nonnull Ref<EntityStore> ref, @Nonnull Inventory inventory, @Nullable String name, @Nonnull ComponentAccessor<EntityStore> componentAccessor
-   ) {
-      return name != null && !name.isEmpty()
-         ? useItem(ref, inventory, name, (byte)-1, componentAccessor)
-         : clearItemInHand(ref, inventory, (byte)-1, componentAccessor);
+   public static boolean useItem(@Nonnull Ref<EntityStore> ref, @Nullable String name, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return name != null && !name.isEmpty() ? useItem(ref, name, (byte)-1, componentAccessor) : clearItemInHand(ref, (byte)-1, componentAccessor);
    }
 
    public static boolean useArmor(@Nonnull ItemContainer armorInventory, @Nullable String armorItem) {

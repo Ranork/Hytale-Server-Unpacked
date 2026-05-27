@@ -10,9 +10,8 @@ import com.hypixel.hytale.component.NonSerialized;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -42,6 +41,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.PageEventData> {
    @Nonnull
@@ -58,7 +58,7 @@ public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.Pag
    @Nullable
    private Ref<EntityStore> modelPreview;
    private Vector3d position;
-   private Vector3f rotation;
+   private Rotation3f rotation;
    private float scale = 1.0F;
 
    public ChangeModelPage(@Nonnull PlayerRef playerRef) {
@@ -86,7 +86,7 @@ public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.Pag
          UIEventBuilder eventBuilder = new UIEventBuilder();
          this.buildModelList(ref, store, commandBuilder, eventBuilder);
          this.sendUpdate(commandBuilder, eventBuilder, false);
-      } else {
+      } else if (data.type != null) {
          String var9 = data.type;
          switch (var9) {
             case "Select":
@@ -97,9 +97,11 @@ public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.Pag
                }
                break;
             case "UpdateScale":
-               this.scale = data.scale;
-               if (this.modelPreview.isValid()) {
-                  store.putComponent(this.modelPreview, ModelComponent.getComponentType(), new ModelComponent(this.getModel(this.scale)));
+               if (data.scale > 0.0F) {
+                  this.scale = data.scale;
+                  if (this.modelPreview != null && this.modelPreview.isValid()) {
+                     store.putComponent(this.modelPreview, ModelComponent.getComponentType(), new ModelComponent(this.getModel(this.scale)));
+                  }
                }
                break;
             case "ChangeModel":
@@ -193,10 +195,10 @@ public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.Pag
          assert headRotationComponent != null;
 
          Vector3d playerPosition = transformComponent.getPosition();
-         Vector3f headRotation = headRotationComponent.getRotation();
+         Rotation3f headRotation = headRotationComponent.getRotation();
          Vector3d previewPosition = TargetUtil.getTargetLocation(ref, 8.0, store);
          if (previewPosition == null) {
-            previewPosition = playerPosition.clone().add(Transform.getDirection(headRotation.getPitch(), headRotation.getYaw()).scale(4.0));
+            previewPosition = new Vector3d(playerPosition).add(Transform.getDirection(headRotation.pitch(), headRotation.yaw()).mul(4.0));
          }
 
          Vector3d targetGround = TargetUtil.getTargetLocation(
@@ -206,9 +208,9 @@ public class ChangeModelPage extends InteractiveCustomUIPage<ChangeModelPage.Pag
             previewPosition = targetGround;
          }
 
-         Vector3d relativePos = playerPosition.clone().subtract(previewPosition);
-         relativePos.setY(0.0);
-         Vector3f previewRotation = Vector3f.lookAt(relativePos);
+         Vector3d relativePos = new Vector3d(playerPosition).sub(previewPosition);
+         relativePos.y = 0.0;
+         Rotation3f previewRotation = Rotation3f.lookAt(relativePos);
          this.position = previewPosition;
          this.rotation = previewRotation;
          Holder<EntityStore> holder = store.getRegistry().newHolder();

@@ -2,9 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class GradientDensity extends Density {
    private static final double HALF_PI = Math.PI / 2;
@@ -24,7 +24,7 @@ public class GradientDensity extends Density {
       if (slopeRange <= 0.0) {
          throw new IllegalArgumentException();
       } else {
-         this.axis = axis.clone();
+         this.axis = new Vector3d(axis);
          this.slopeRange = slopeRange;
          this.input = input;
          this.rChildContext = new Density.Context();
@@ -38,20 +38,20 @@ public class GradientDensity extends Density {
       if (this.input == null) {
          return 0.0;
       } else {
-         this.rPosition.assign(context.position);
+         this.rPosition.set(context.position);
          this.rChildContext.assign(context);
          this.rChildContext.position = this.rPosition;
          double valueAtOrigin = this.input.process(this.rChildContext);
          double maxX = context.position.x + this.slopeRange;
          double maxY = context.position.y + this.slopeRange;
          double maxZ = context.position.z + this.slopeRange;
-         this.rChildContext.position.assign(maxX, context.position.y, context.position.z);
+         this.rChildContext.position.set(maxX, context.position.y, context.position.z);
          double deltaX = Math.abs(this.input.process(this.rChildContext) - valueAtOrigin);
-         this.rChildContext.position.assign(context.position.x, maxY, context.position.z);
+         this.rChildContext.position.set(context.position.x, maxY, context.position.z);
          double deltaY = Math.abs(this.input.process(this.rChildContext) - valueAtOrigin);
-         this.rChildContext.position.assign(context.position.x, context.position.y, maxZ);
+         this.rChildContext.position.set(context.position.x, context.position.y, maxZ);
          double deltaZ = Math.abs(this.input.process(this.rChildContext) - valueAtOrigin);
-         this.rSlopeDirection.assign(deltaX, deltaY, deltaZ);
+         this.rSlopeDirection.set(deltaX, deltaY, deltaZ);
          double slopeAngle = VectorUtil.angle(this.axis, this.rSlopeDirection);
          if (slopeAngle > Math.PI / 2) {
             slopeAngle = Math.PI - slopeAngle;

@@ -26,6 +26,7 @@ public class GameModeCommand extends AbstractPlayerCommand {
       super("gamemode", "server.commands.gamemode.desc");
       this.addAliases("gm");
       this.requirePermission(HytalePermissions.fromCommand("gamemode.self"));
+      this.setPermissionGroups("hytale:Builder");
       this.addUsageVariant(new GameModeCommand.GameModeOtherCommand());
    }
 
@@ -57,6 +58,7 @@ public class GameModeCommand extends AbstractPlayerCommand {
       GameModeOtherCommand() {
          super("server.commands.gamemode.other.desc");
          this.requirePermission(HytalePermissions.fromCommand("gamemode.other"));
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

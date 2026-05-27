@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -32,21 +35,76 @@ public class AngledWielding {
 
    @Nonnull
    public static AngledWielding deserialize(@Nonnull ByteBuf buf, int offset) {
-      AngledWielding obj = new AngledWielding();
-      obj.angleRad = buf.getFloatLE(offset + 0);
-      obj.angleDistanceRad = buf.getFloatLE(offset + 4);
-      obj.hasModifiers = buf.getByte(offset + 8) != 0;
-      return obj;
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("AngledWielding", 9, buf.readableBytes() - offset);
+      } else {
+         AngledWielding obj = new AngledWielding();
+         obj.angleRad = buf.getFloatLE(offset + 0);
+         obj.angleDistanceRad = buf.getFloatLE(offset + 4);
+         obj.hasModifiers = buf.getByte(offset + 8) != 0;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 9;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   public static float getAngleRad(MemorySegment mem) {
+      return getAngleRad(mem, 0);
+   }
+
+   public static float getAngleRad(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 0));
+   }
+
+   public static float getAngleDistanceRad(MemorySegment mem) {
+      return getAngleDistanceRad(mem, 0);
+   }
+
+   public static float getAngleDistanceRad(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4));
+   }
+
+   public static boolean getHasModifiers(MemorySegment mem) {
+      return getHasModifiers(mem, 0);
+   }
+
+   public static boolean getHasModifiers(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 8));
+   }
+
+   public static AngledWielding toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AngledWielding toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AngledWielding", offset + 9, (int)mem.byteSize());
+      } else {
+         return new AngledWielding(
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 8))
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeFloatLE(this.angleRad);
       buf.writeFloatLE(this.angleDistanceRad);
       buf.writeByte(this.hasModifiers ? 1 : 0);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 0), this.angleRad);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 4), this.angleDistanceRad);
+      mem.set(PacketIO.PROTO_BOOL, offset + 8, this.hasModifiers);
+      return 9;
    }
 
    public int computeSize() {

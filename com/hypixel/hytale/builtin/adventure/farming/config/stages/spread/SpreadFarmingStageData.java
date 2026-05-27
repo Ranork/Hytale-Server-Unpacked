@@ -141,13 +141,6 @@ public class SpreadFarmingStageData extends FarmingStageData {
       }
    }
 
-   @Override
-   public void remove(
-      @Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z
-   ) {
-      super.remove(commandBuffer, sectionRef, blockRef, x, y, z);
-   }
-
    @Nonnull
    @Override
    public String toString() {

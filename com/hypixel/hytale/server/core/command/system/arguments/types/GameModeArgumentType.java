@@ -3,10 +3,13 @@ package com.hypixel.hytale.server.core.command.system.arguments.types;
 import com.hypixel.hytale.common.util.StringUtil;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.CommandUtil;
 import com.hypixel.hytale.server.core.command.system.ParseResult;
+import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionResult;
 import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -32,6 +35,24 @@ public class GameModeArgumentType extends SingleArgumentType<GameMode> {
          );
          return null;
       }
+   }
+
+   @Override
+   public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+      String lowerInput = textAlreadyEntered.toLowerCase();
+      ObjectIterator var6 = GAMEMODE_MAP.keySet().iterator();
+
+      while (var6.hasNext()) {
+         String key = (String)var6.next();
+         if (key.startsWith(lowerInput)) {
+            result.suggest(key);
+         }
+      }
+   }
+
+   @Override
+   public int getSuggestionValueCount() {
+      return GAMEMODE_MAP.size();
    }
 
    static {

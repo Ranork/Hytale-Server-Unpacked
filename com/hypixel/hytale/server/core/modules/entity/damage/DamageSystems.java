@@ -17,16 +17,14 @@ import com.hypixel.hytale.component.dependency.SystemGroupDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.spatial.SpatialStructure;
+import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
-import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.protocol.CombatTextUpdate;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.MovementStates;
@@ -64,6 +62,7 @@ import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.meta.DynamicMetaStore;
 import com.hypixel.hytale.server.core.modules.entity.AllLegacyLivingEntityTypesQuery;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.BreathingComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.CachedStatsComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
@@ -77,7 +76,6 @@ import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsSystems;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
-import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
 import com.hypixel.hytale.server.core.modules.entityui.EntityUIModule;
 import com.hypixel.hytale.server.core.modules.entityui.UIComponentList;
 import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
@@ -107,7 +105,8 @@ import java.util.Map.Entry;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bouncycastle.util.Arrays;
+import org.joml.Vector3d;
+import org.joml.Vector4d;
 
 public class DamageSystems {
    public static final float DEFAULT_DAMAGE_DELAY = 1.0F;
@@ -218,7 +217,7 @@ public class DamageSystems {
                   boolean damageCanBePredicted = damage.getMetaStore().getMetaObject(Damage.CAN_BE_PREDICTED);
                   double particlesViewDistance = particles.getViewDistance();
                   WorldParticle[] worldParticles = particles.getWorldParticles();
-                  if (!Arrays.isNullOrEmpty(worldParticles)) {
+                  if (worldParticles != null && worldParticles.length > 0) {
                      TransformComponent sourceTransformComponent = commandBuffer.getComponent(sourceRef, TransformComponent.getComponentType());
                      if (sourceTransformComponent != null) {
                         float angleBetween = TrigMathUtil.atan2(
@@ -238,7 +237,7 @@ public class DamageSystems {
                   }
 
                   ModelParticle[] modelParticles = particles.getModelParticles();
-                  if (!Arrays.isNullOrEmpty(modelParticles)) {
+                  if (modelParticles != null && modelParticles.length > 0) {
                      com.hypixel.hytale.protocol.ModelParticle[] modelParticlesProtocol = new com.hypixel.hytale.protocol.ModelParticle[modelParticles.length];
 
                      for (int j = 0; j < modelParticles.length; j++) {
@@ -420,10 +419,10 @@ public class DamageSystems {
                Item item = itemStack.getItem();
                ItemArmor itemArmor = item.getArmor();
                if (itemArmor != null) {
-                  Map<DamageCause, StaticModifier[]> resistances = itemArmor.getDamageResistanceValues();
+                  Map<DamageCause, ResistanceModifier[]> resistances = itemArmor.getDamageResistanceValues();
                   double flatResistance = itemArmor.getBaseDamageResistance();
                   if (resistances != null) {
-                     for (Entry<DamageCause, StaticModifier[]> entry : resistances.entrySet()) {
+                     for (Entry<DamageCause, ResistanceModifier[]> entry : resistances.entrySet()) {
                         if (entry.getValue() != null) {
                            calculateResistanceEntryModifications(entry, world, result, canApplyItemStackPenalties, itemStack.isBroken(), flatResistance);
                         }
@@ -438,7 +437,7 @@ public class DamageSystems {
       }
 
       private static void calculateResistanceEntryModifications(
-         @Nonnull Entry<DamageCause, StaticModifier[]> entry,
+         @Nonnull Entry<DamageCause, ResistanceModifier[]> entry,
          @Nonnull World world,
          @Nonnull Map<DamageCause, DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers> result,
          boolean canApplyItemStackPenalties,
@@ -448,11 +447,11 @@ public class DamageSystems {
          DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers mods = result.computeIfAbsent(
             entry.getKey(), key -> new DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers()
          );
-         StaticModifier[] valueArray = entry.getValue();
+         ResistanceModifier[] valueArray = entry.getValue();
 
          for (int x = 0; x < valueArray.length; x++) {
-            StaticModifier entryValue = valueArray[x];
-            if (entryValue.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
+            ResistanceModifier entryValue = valueArray[x];
+            if (entryValue.getCalculationType() == ResistanceModifier.ResistanceCalculationType.FLAT) {
                mods.flatModifier = (int)(mods.flatModifier + entryValue.getAmount());
             } else {
                mods.multiplierModifier = mods.multiplierModifier + entryValue.getAmount();
@@ -483,18 +482,18 @@ public class DamageSystems {
                int entityEffectIndex = (Integer)var2.next();
                EntityEffect entityEffectData = EntityEffect.getAssetMap().getAsset(entityEffectIndex);
                if (entityEffectData != null) {
-                  Map<DamageCause, StaticModifier[]> damageResistanceValues = entityEffectData.getDamageResistanceValues();
+                  Map<DamageCause, ResistanceModifier[]> damageResistanceValues = entityEffectData.getDamageResistanceValues();
                   if (damageResistanceValues != null && !damageResistanceValues.isEmpty()) {
-                     for (Entry<DamageCause, StaticModifier[]> entry : damageResistanceValues.entrySet()) {
+                     for (Entry<DamageCause, ResistanceModifier[]> entry : damageResistanceValues.entrySet()) {
                         DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers modifier = resistanceModifiers.computeIfAbsent(
                            entry.getKey(), damageCause -> new DamageSystems.ArmorDamageReduction.ArmorResistanceModifiers()
                         );
 
-                        for (StaticModifier staticModifier : entry.getValue()) {
-                           if (staticModifier.getCalculationType() == StaticModifier.CalculationType.ADDITIVE) {
-                              modifier.flatModifier = (int)(modifier.flatModifier + staticModifier.getAmount());
-                           } else if (staticModifier.getCalculationType() == StaticModifier.CalculationType.MULTIPLICATIVE) {
-                              modifier.multiplierModifier = modifier.multiplierModifier + staticModifier.getAmount();
+                        for (ResistanceModifier resistanceModifier : entry.getValue()) {
+                           if (resistanceModifier.getCalculationType() == ResistanceModifier.ResistanceCalculationType.FLAT) {
+                              modifier.flatModifier = (int)(modifier.flatModifier + resistanceModifier.getAmount());
+                           } else if (resistanceModifier.getCalculationType() == ResistanceModifier.ResistanceCalculationType.PERCENT) {
+                              modifier.multiplierModifier = modifier.multiplierModifier + resistanceModifier.getAmount();
                            }
                         }
                      }
@@ -583,17 +582,13 @@ public class DamageSystems {
       }
    }
 
-   public static class CanBreathe extends DelayedEntitySystem<EntityStore> {
-      private static final float DAMAGE_AMOUNT_DROWNING = 10.0F;
-      private static final float DAMAGE_AMOUNT_SUFFOCATION = 20.0F;
-      @Nonnull
-      private static final ComponentType<EntityStore, ModelComponent> MODEL_COMPONENT_TYPE = ModelComponent.getComponentType();
+   public static class BreathingSystem extends DelayedEntitySystem<EntityStore> {
       @Nonnull
       private static final Query<EntityStore> QUERY = Query.and(
-         AllLegacyLivingEntityTypesQuery.INSTANCE, EntityStatMap.getComponentType(), TransformComponent.getComponentType(), MODEL_COMPONENT_TYPE
+         BreathingComponent.getComponentType(), TransformComponent.getComponentType(), ModelComponent.getComponentType()
       );
 
-      public CanBreathe() {
+      public BreathingSystem() {
          super(1.0F);
       }
 
@@ -617,29 +612,71 @@ public class DamageSystems {
          @Nonnull Store<EntityStore> store,
          @Nonnull CommandBuffer<EntityStore> commandBuffer
       ) {
-         LivingEntity entity = (LivingEntity)EntityUtils.getEntity(index, archetypeChunk);
+         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+         BreathingComponent breathingComponent = archetypeChunk.getComponent(index, BreathingComponent.getComponentType());
 
-         assert entity != null;
+         assert breathingComponent != null;
 
-         EntityStatMap statMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
+         CachedStatsComponent cachedStatsComponent = archetypeChunk.getComponent(index, CachedStatsComponent.getComponentType());
+         boolean invulnerable = archetypeChunk.getArchetype().contains(Invulnerable.getComponentType());
+         EntityUtils.processEntityBreathing(ref, breathingComponent, cachedStatsComponent, invulnerable, false, commandBuffer);
+      }
 
-         assert statMapComponent != null;
+      @Override
+      public boolean isParallel(int archetypeChunkSize, int taskCount) {
+         return false;
+      }
+   }
 
-         EntityStatValue oxygenStatValue = statMapComponent.get(DefaultEntityStatTypes.getOxygen());
-         if (oxygenStatValue != null) {
-            Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-            long packed = LivingEntity.getPackedMaterialAndFluidAtBreathingHeight(ref, commandBuffer);
-            BlockMaterial material = BlockMaterial.VALUES[MathUtil.unpackLeft(packed)];
-            int fluidId = MathUtil.unpackRight(packed);
-            boolean canBreathe = entity.canBreathe(ref, material, fluidId, commandBuffer);
-            CachedStatsComponent cachedStatsComponent = archetypeChunk.getComponent(index, CachedStatsComponent.getComponentType());
-            if (cachedStatsComponent != null) {
-               cachedStatsComponent.setCanBreathe(canBreathe);
-            }
+   public static class CanBreathe extends DelayedEntitySystem<EntityStore> {
+      private static final float DAMAGE_AMOUNT_DROWNING = 10.0F;
+      private static final float DAMAGE_AMOUNT_SUFFOCATION = 20.0F;
+      @Nonnull
+      private static final Query<EntityStore> QUERY = Query.and(BreathingComponent.getComponentType(), EntityStatMap.getComponentType());
 
-            if (!canBreathe && oxygenStatValue.get() <= oxygenStatValue.getMin()) {
+      public CanBreathe() {
+         super(1.0F);
+      }
+
+      @Nullable
+      @Override
+      public SystemGroup<EntityStore> getGroup() {
+         return DamageModule.get().getGatherDamageGroup();
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return QUERY;
+      }
+
+      @Nonnull
+      @Override
+      public Set<Dependency<EntityStore>> getDependencies() {
+         return Set.of(new SystemDependency<>(Order.AFTER, DamageSystems.BreathingSystem.class));
+      }
+
+      @Override
+      public void tick(
+         float dt,
+         int index,
+         @Nonnull ArchetypeChunk<EntityStore> archetypeChunk,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         BreathingComponent breathingComponent = archetypeChunk.getComponent(index, BreathingComponent.getComponentType());
+
+         assert breathingComponent != null;
+
+         if (breathingComponent.isSuffocating()) {
+            EntityStatMap statMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
+
+            assert statMapComponent != null;
+
+            EntityStatValue oxygenStatValue = statMapComponent.get(DefaultEntityStatTypes.getOxygen());
+            if (oxygenStatValue != null && !(oxygenStatValue.get() > oxygenStatValue.getMin())) {
                Damage damage;
-               if (fluidId != 0) {
+               if (breathingComponent.getLastFluidId() != 0) {
                   assert DamageCause.DROWNING != null;
 
                   damage = new Damage(Damage.NULL_SOURCE, DamageCause.DROWNING, 10.0F);
@@ -683,10 +720,6 @@ public class DamageSystems {
          @Nonnull CommandBuffer<EntityStore> commandBuffer,
          @Nonnull Damage damage
       ) {
-         LivingEntity entity = (LivingEntity)EntityUtils.getEntity(index, archetypeChunk);
-
-         assert entity != null;
-
          Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
          DamageCause damageCause = damage.getCause();
          if (damageCause.isDurabilityLoss()) {
@@ -701,7 +734,7 @@ public class DamageSystems {
                }, armorPartIndexes);
                if (!armorPartIndexes.isEmpty()) {
                   short slot = armorPartIndexes.getShort(RandomExtra.randomRange(armorPartIndexes.size()));
-                  LivingEntity.decreaseItemStackDurability(ref, armor.getItemStack(slot), -3, slot, commandBuffer);
+                  ItemUtils.decreaseItemStackDurability(ref, armor.getItemStack(slot), -3, slot, commandBuffer);
                }
             }
          }
@@ -735,13 +768,12 @@ public class DamageSystems {
             Ref<EntityStore> sourceRef = entitySource.getRef();
             if (sourceRef.isValid()) {
                InventoryComponent.Hotbar hotbarComponent = commandBuffer.getComponent(sourceRef, InventoryComponent.Hotbar.getComponentType());
-
-               assert hotbarComponent != null;
-
-               byte activeHotbarSlot = hotbarComponent.getActiveSlot();
-               if (activeHotbarSlot != -1) {
-                  ItemStack itemInHand = InventoryComponent.getItemInHand(commandBuffer, sourceRef);
-                  LivingEntity.decreaseItemStackDurability(sourceRef, itemInHand, -1, activeHotbarSlot, commandBuffer);
+               if (hotbarComponent != null) {
+                  byte activeHotbarSlot = hotbarComponent.getActiveSlot();
+                  if (activeHotbarSlot != -1) {
+                     ItemStack itemInHand = InventoryComponent.getItemInHand(commandBuffer, sourceRef);
+                     ItemUtils.decreaseItemStackDurability(sourceRef, itemInHand, -1, activeHotbarSlot, commandBuffer);
+                  }
                }
             }
          }
@@ -907,7 +939,7 @@ public class DamageSystems {
 
             assert velocityComponent != null;
 
-            double yVelocity = Math.abs(velocityComponent.getVelocity().getY());
+            double yVelocity = Math.abs(velocityComponent.getVelocity().y());
             World world = commandBuffer.getExternalData().getWorld();
             int movementConfigIndex = world.getGameplayConfig().getPlayerConfig().getMovementConfigIndex();
             MovementConfig movementConfig = MovementConfig.getAssetMap().getAsset(movementConfigIndex);
@@ -1007,7 +1039,7 @@ public class DamageSystems {
 
          assert velocityComponent != null;
 
-         double yVelocity = Math.abs(velocityComponent.getClientVelocity().getY());
+         double yVelocity = Math.abs(velocityComponent.getClientVelocity().y());
          World world = commandBuffer.getExternalData().getWorld();
          PlayerConfig worldPlayerConfig = world.getGameplayConfig().getPlayerConfig();
          List<PlayerInput.InputUpdate> queue = playerInputComponent.getMovementUpdateQueue();
@@ -1028,19 +1060,18 @@ public class DamageSystems {
                      MovementConfig movementConfig = MovementConfig.getAssetMap().getAsset(movementConfigIndex);
                      float minFallSpeedToEngageRoll = movementConfig.getMinFallSpeedToEngageRoll();
                      if (yVelocity > minFallSpeedToEngageRoll && !movementStatesEntry.movementStates().inFluid) {
-                        double damagePercentagex = Math.pow(0.58F * (yVelocity - minFallSpeedToEngageRoll), 2.0) + 10.0;
-                        EntityStatValue healthStatValuex = entityStatMapComponent.get(DefaultEntityStatTypes.getHealth());
+                        EntityStatMap entityStatMapComponent = archetypeChunk.getComponent(index, EntityStatMap.getComponentType());
 
-                        assert healthStatValuex != null;
+                        assert entityStatMapComponent != null;
 
-                        double damagePercentagex = Math.pow(0.58F * (yVelocity - minFallSpeedToEngageRoll), 2.0) + 10.0;
-                        EntityStatValue healthStatValuex = entityStatMapComponent.get(DefaultEntityStatTypes.getHealth());
+                        double damagePercentage = Math.pow(0.58F * (yVelocity - minFallSpeedToEngageRoll), 2.0) + 10.0;
+                        EntityStatValue healthStatValue = entityStatMapComponent.get(DefaultEntityStatTypes.getHealth());
 
-                        assert healthStatValuex != null;
+                        assert healthStatValue != null;
 
-                        float maxHealth = healthStatValuex.getMax();
+                        float maxHealth = healthStatValue.getMax();
                         double healthModifier = maxHealth / 100.0;
-                        int damageInt = (int)Math.floor(healthModifier * damagePercentagex);
+                        int damageInt = (int)Math.floor(healthModifier * damagePercentage);
                         if (movementStatesEntry.movementStates().rolling) {
                            if (yVelocity <= movementConfig.getMaxFallSpeedRollFullMitigation()) {
                               damageInt = 0;
@@ -1257,6 +1288,70 @@ public class DamageSystems {
       }
    }
 
+   public static class InvulnerableBreathing extends RefChangeSystem<EntityStore, Invulnerable> {
+      @Nonnull
+      private final ComponentType<EntityStore, Invulnerable> invulnerableComponentType;
+      @Nonnull
+      private final ComponentType<EntityStore, BreathingComponent> breathingComponentType;
+
+      public InvulnerableBreathing(
+         @Nonnull ComponentType<EntityStore, Invulnerable> invulnerableComponentType,
+         @Nonnull ComponentType<EntityStore, BreathingComponent> breathingComponentType
+      ) {
+         this.invulnerableComponentType = invulnerableComponentType;
+         this.breathingComponentType = breathingComponentType;
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return Query.and(this.invulnerableComponentType, this.breathingComponentType);
+      }
+
+      @Nonnull
+      @Override
+      public ComponentType<EntityStore, Invulnerable> componentType() {
+         return this.invulnerableComponentType;
+      }
+
+      public void onComponentAdded(
+         @Nonnull Ref<EntityStore> ref, @Nonnull Invulnerable component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         BreathingComponent breathingComponent = commandBuffer.getComponent(ref, BreathingComponent.getComponentType());
+
+         assert breathingComponent != null;
+
+         CachedStatsComponent cachedStatsComponent = commandBuffer.getComponent(ref, CachedStatsComponent.getComponentType());
+         EntityUtils.processEntityBreathing(ref, breathingComponent, cachedStatsComponent, true, true, commandBuffer);
+      }
+
+      public void onComponentSet(
+         @Nonnull Ref<EntityStore> ref,
+         Invulnerable oldComponent,
+         @Nonnull Invulnerable newComponent,
+         @Nonnull Store<EntityStore> store,
+         @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         BreathingComponent breathingComponent = commandBuffer.getComponent(ref, BreathingComponent.getComponentType());
+
+         assert breathingComponent != null;
+
+         CachedStatsComponent cachedStatsComponent = commandBuffer.getComponent(ref, CachedStatsComponent.getComponentType());
+         EntityUtils.processEntityBreathing(ref, breathingComponent, cachedStatsComponent, true, true, commandBuffer);
+      }
+
+      public void onComponentRemoved(
+         @Nonnull Ref<EntityStore> ref, @Nonnull Invulnerable component, @Nonnull Store<EntityStore> store, @Nonnull CommandBuffer<EntityStore> commandBuffer
+      ) {
+         BreathingComponent breathingComponent = commandBuffer.getComponent(ref, BreathingComponent.getComponentType());
+
+         assert breathingComponent != null;
+
+         CachedStatsComponent cachedStatsComponent = commandBuffer.getComponent(ref, CachedStatsComponent.getComponentType());
+         EntityUtils.processEntityBreathing(ref, breathingComponent, cachedStatsComponent, false, true, commandBuffer);
+      }
+   }
+
    public static class OutOfWorldDamage extends DelayedEntitySystem<EntityStore> {
       @Nonnull
       private static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
@@ -1288,7 +1383,7 @@ public class DamageSystems {
 
          assert transformComponent != null;
 
-         double posY = transformComponent.getPosition().getY();
+         double posY = transformComponent.getPosition().y();
          if (!(posY >= 0.0)) {
             boolean belowMinimum = posY < -32.0;
             Damage damage = new Damage(Damage.NULL_SOURCE, DamageCause.OUT_OF_WORLD, belowMinimum ? 2.1474836E9F : 50.0F);
@@ -1386,9 +1481,7 @@ public class DamageSystems {
                      playerRefComponent.getPacketHandler()
                         .writeNoCache(
                            new DamageInfo(
-                              new com.hypixel.hytale.protocol.Vector3d(position.getX(), position.getY(), position.getZ()),
-                              damage.getAmount(),
-                              damageCause.toPacket()
+                              new com.hypixel.hytale.protocol.Vector3d(position.x(), position.y(), position.z()), damage.getAmount(), damageCause.toPacket()
                            )
                         );
                   }
@@ -1566,7 +1659,7 @@ public class DamageSystems {
             assert transformComponent != null;
 
             Vector3d targetPosition = transformComponent.getPosition();
-            Vector3f targetRotation = transformComponent.getRotation();
+            Rotation3f targetRotation = transformComponent.getRotation();
             if (damage.getSource() instanceof Damage.EntitySource entitySource) {
                Ref<EntityStore> sourceRef = entitySource.getRef();
                if (sourceRef.isValid()) {
@@ -1597,7 +1690,7 @@ public class DamageSystems {
                         if (angledWieldingDamageModifiers.containsKey(damageCauseIndex)) {
                            Vector3d sourcePosition = sourceTransformComponent.getPosition();
                            float angleBetween = TrigMathUtil.atan2(sourcePosition.x - targetPosition.x, sourcePosition.z - targetPosition.z);
-                           angleBetween = MathUtil.wrapAngle(angleBetween + (float) Math.PI - targetRotation.getYaw());
+                           angleBetween = MathUtil.wrapAngle(angleBetween + (float) Math.PI - targetRotation.yaw());
                            if (Math.abs(MathUtil.compareAngle(angleBetween, angledWielding.getAngleRad())) < angledWielding.getAngleDistanceRad()) {
                               angledWieldingModifier = angledWieldingDamageModifiers.getOrDefault(damageCauseIndex, 1.0F);
                               DamageEffects wieldingBlockedEffectsx = wielding.getBlockedEffects();
@@ -1702,7 +1795,7 @@ public class DamageSystems {
                               Vector3d targetPos = transformComponent.getPosition();
                               Vector3d attackerPos = sourceTransformComponent.getPosition();
                               float angleBetween = TrigMathUtil.atan2(attackerPos.x - targetPos.x, attackerPos.z - targetPos.z);
-                              angleBetween = MathUtil.wrapAngle(angleBetween + (float) Math.PI - transformComponent.getRotation().getYaw());
+                              angleBetween = MathUtil.wrapAngle(angleBetween + (float) Math.PI - transformComponent.getRotation().yaw());
                               if (Math.abs(MathUtil.compareAngle(angleBetween, angledWielding.getAngleRad())) < angledWielding.getAngleDistanceRad()) {
                                  angledWieldingModifier = angledWieldingKnockbackModifiers.getOrDefault(damageCauseIndex, 1.0);
                               }

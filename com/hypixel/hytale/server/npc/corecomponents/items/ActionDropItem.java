@@ -4,7 +4,8 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.entity.ItemUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -21,6 +22,8 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.AimingHelper;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ActionDropItem extends ActionWithDelay {
    protected final String item;
@@ -54,12 +57,12 @@ public class ActionDropItem extends ActionWithDelay {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       return super.canExecute(ref, role, sensorInfo, dt, store) && !this.isDelaying();
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       this.prepareDelay();
       this.startDelay(role.getEntitySupport());
@@ -101,10 +104,11 @@ public class ActionDropItem extends ActionWithDelay {
       if (headRotationComponent != null) {
          direction = headRotationComponent.getDirection();
       } else {
-         direction = transformComponent.getRotation().toVector3d();
+         Rotation3f rotation = transformComponent.getRotation();
+         direction = Vector3dUtil.setYawPitch(rotation.yaw(), rotation.pitch(), new Vector3d());
       }
 
-      this.dropDirection.assign(direction);
+      this.dropDirection.set(direction);
       this.dropDirection.rotateY(RandomExtra.randomRange(this.dropSectorStart, this.dropSectorEnd));
       if (!AimingHelper.computePitch(distance, height, this.throwSpeed, 32.0, this.pitch)) {
          throw new IllegalStateException(

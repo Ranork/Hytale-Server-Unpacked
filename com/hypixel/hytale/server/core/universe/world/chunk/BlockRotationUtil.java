@@ -88,4 +88,10 @@ public class BlockRotationUtil {
          case Z -> rotation.rotateZ(filler);
       };
    }
+
+   public static int getRotatedFiller(int filler, @Nonnull RotationTuple rotation) {
+      filler = getRotatedFiller(filler, Axis.Z, rotation.roll());
+      filler = getRotatedFiller(filler, Axis.X, rotation.pitch());
+      return getRotatedFiller(filler, Axis.Y, rotation.yaw());
+   }
 }

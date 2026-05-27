@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.core.universe.world.chunk.environment;
 
-import com.hypixel.hytale.function.consumer.IntObjectConsumer;
-import io.netty.buffer.ByteBuf;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import java.util.function.ToIntFunction;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -173,49 +173,55 @@ public class EnvironmentColumn {
       this.values = new IntArrayList(values);
    }
 
-   public void serialize(@Nonnull ByteBuf buf, @Nonnull IntObjectConsumer<ByteBuf> valueSerializer) {
+   public int serialize(@Nonnull MemorySegment data, int baseOffset) {
       int n = this.maxYs.size();
-      buf.writeInt(n);
-
-      for (int i = 0; i < n; i++) {
-         buf.writeInt(this.maxYs.getInt(i));
-      }
-
-      for (int i = 0; i <= n; i++) {
-         valueSerializer.accept(this.values.getInt(i), buf);
-      }
+      data.set(MemorySegmentUtil.INT_BE, (long)baseOffset, n);
+      int offset = baseOffset + 4;
+      MemorySegment.copy(this.maxYs.elements(), 0, data, MemorySegmentUtil.INT_BE, offset, n);
+      offset += 4 * n;
+      MemorySegment.copy(this.values.elements(), 0, data, MemorySegmentUtil.INT_BE, offset, n + 1);
+      offset += 4 * (n + 1);
+      return offset - baseOffset;
    }
 
-   public void serializeProtocol(@Nonnull ByteBuf buf) {
+   public int serializeProtocol(@Nonnull MemorySegment data, int baseOffset) {
       int n = this.maxYs.size();
-      buf.writeShortLE(n + 1);
+      data.set(MemorySegmentUtil.SHORT_LE, (long)baseOffset, (short)(n + 1));
+      int offset = baseOffset + 2;
       int min = Integer.MIN_VALUE;
 
       for (int i = 0; i < n; i++) {
-         buf.writeShortLE(min);
-         buf.writeShortLE(this.values.getInt(i));
+         data.set(MemorySegmentUtil.SHORT_LE, (long)offset, (short)min);
+         offset += 2;
+         data.set(MemorySegmentUtil.SHORT_LE, (long)offset, (short)this.values.getInt(i));
+         offset += 2;
          int max = this.maxYs.getInt(i);
          min = max + 1;
       }
 
-      buf.writeShortLE(min);
-      buf.writeShortLE(this.values.getInt(n));
+      data.set(MemorySegmentUtil.SHORT_LE, (long)offset, (short)min);
+      offset += 2;
+      data.set(MemorySegmentUtil.SHORT_LE, (long)offset, (short)this.values.getInt(n));
+      offset += 2;
+      return offset - baseOffset;
    }
 
-   public void deserialize(@Nonnull ByteBuf buf, @Nonnull ToIntFunction<ByteBuf> valueDeserializer) {
+   public int deserialize(@Nonnull MemorySegment data, int baseOffset, @Nonnull Int2IntMap idMapping) {
       this.maxYs.clear();
       this.values.clear();
-      int n = buf.readInt();
-      this.maxYs.ensureCapacity(n);
+      int n = data.get(MemorySegmentUtil.INT_BE, (long)baseOffset);
+      int offset = baseOffset + 4;
+      this.maxYs.size(n);
       this.values.ensureCapacity(n + 1);
-
-      for (int i = 0; i < n; i++) {
-         this.maxYs.add(buf.readInt());
-      }
+      MemorySegment.copy(data, MemorySegmentUtil.INT_BE, offset, this.maxYs.elements(), 0, n);
+      offset += 4 * n;
 
       for (int i = 0; i <= n; i++) {
-         this.values.add(valueDeserializer.applyAsInt(buf));
+         this.values.add(idMapping.get(data.get(MemorySegmentUtil.INT_BE, (long)offset)));
+         offset += 4;
       }
+
+      return offset - baseOffset;
    }
 
    public void copyFrom(@Nonnull EnvironmentColumn other) {

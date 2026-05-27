@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class PlayerCommand extends AbstractCommandCollection {
    public PlayerCommand() {
       super("player", "server.commands.player.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new PlayerResetCommand());
       this.addSubCommand(new PlayerStatsSubCommand());
       this.addSubCommand(new PlayerEffectSubCommand());

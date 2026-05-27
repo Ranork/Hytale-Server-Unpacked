@@ -1,12 +1,10 @@
 package com.hypixel.hytale.server.core.prefab.selection.buffer.impl;
 
-import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.modules.prefabspawner.PrefabSpawnerBlock;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
@@ -14,9 +12,7 @@ import com.hypixel.hytale.server.core.prefab.PrefabWeights;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferCall;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
@@ -24,10 +20,13 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.util.List;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PrefabBuffer {
    public static final float DEFAULT_CHANCE = 1.0F;
@@ -41,18 +40,14 @@ public class PrefabBuffer {
    private final Int2ObjectMap<PrefabBufferColumn> columns;
    @Nonnull
    private final PrefabBuffer.ChildPrefab[] childPrefabs;
-   @Nullable
-   private ByteBuf buf;
 
    private PrefabBuffer(
-      @Nonnull ByteBuf buf,
       @Nonnull Vector3i anchor,
       @Nonnull Vector3i min,
       @Nonnull Vector3i max,
       @Nonnull Int2ObjectMap<PrefabBufferColumn> columns,
       @Nonnull PrefabBuffer.ChildPrefab[] childPrefabs
    ) {
-      this.buf = buf;
       this.anchor = anchor;
       this.min = min;
       this.max = max;
@@ -66,33 +61,20 @@ public class PrefabBuffer {
    }
 
    public int getAnchorX() {
-      return this.anchor.getX();
+      return this.anchor.x();
    }
 
    public int getAnchorY() {
-      return this.anchor.getY();
+      return this.anchor.y();
    }
 
    public int getAnchorZ() {
-      return this.anchor.getZ();
+      return this.anchor.z();
    }
 
    @Nonnull
    public PrefabBuffer.PrefabBufferAccessor newAccess() {
-      this.checkReleased();
       return new PrefabBuffer.PrefabBufferAccessor(this);
-   }
-
-   public void release() {
-      this.checkReleased();
-      this.buf.release();
-      this.buf = null;
-   }
-
-   private void checkReleased() {
-      if (this.buf == null) {
-         throw new IllegalStateException("PrefabBuffer has already been released!");
-      }
    }
 
    public interface BlockMaskConstants {
@@ -230,16 +212,16 @@ public class PrefabBuffer {
    }
 
    public static class Builder {
-      private final ByteBuf buf = Unpooled.buffer();
       @Nonnull
-      private final Vector3i min = new Vector3i(Vector3i.MAX);
+      private final Vector3i min = new Vector3i(Vector3iUtil.MAX);
       @Nonnull
-      private final Vector3i max = new Vector3i(Vector3i.MIN);
+      private final Vector3i max = new Vector3i(Vector3iUtil.MIN);
       @Nonnull
-      private final Int2ObjectMap<PrefabBufferColumn> columns = new Int2ObjectOpenHashMap();
+      private final Int2ObjectMap<PrefabBuffer.BuilderColumn> builderColumns = new Int2ObjectOpenHashMap();
       @Nonnull
       private final List<PrefabBuffer.ChildPrefab> childPrefabs = new ObjectArrayList(0);
-      private Vector3i anchor = Vector3i.ZERO;
+      private Vector3i anchor = new Vector3i();
+      private int requiredMemory;
 
       private Builder() {
       }
@@ -257,105 +239,42 @@ public class PrefabBuffer {
             throw new IllegalArgumentException("z is smaller than -32768. Given: " + z);
          } else if (z > 32767) {
             throw new IllegalArgumentException("z is larger than 32767. Given: " + z);
-         } else {
-            int columnIndex = MathUtil.packInt((short)x, (short)z);
-            if (this.columns.containsKey(columnIndex)) {
-               throw new IllegalStateException("Column is already set! Given: " + x + ", " + z);
+         } else if (entries.length != 0) {
+            int columnIndex = MathUtil.packInt(x, z);
+            if (this.builderColumns.put(columnIndex, new PrefabBuffer.BuilderColumn(x, z, entries, entityHolders)) != null) {
+               throw new IllegalArgumentException("Duplicate column");
             } else {
-               int blockCount = entries.length;
-               Int2ObjectOpenHashMap<Holder<ChunkStore>> holderMap = new Int2ObjectOpenHashMap();
-               if (blockCount != 0 || entityHolders != null && entityHolders.length != 0) {
-                  int readerIndex = this.buf.writerIndex();
-                  this.buf.writeInt(blockCount);
-                  if (blockCount > 0) {
-                     int offset = entries[0].y;
-                     if (offset < this.min.y) {
-                        this.min.y = offset;
-                     }
+               int size = 4;
+               int lastY = Integer.MIN_VALUE;
 
-                     this.buf.writeInt(offset - 1);
-                     offset = Integer.MIN_VALUE;
-
-                     for (int i = 0; i < blockCount; i++) {
-                        PrefabBufferBlockEntry entry = entries[i];
-                        int y = entry.y;
-                        int blockId = entry.blockId;
-                        float chance = entry.chance;
-                        Holder<ChunkStore> holder = entry.state;
-                        int fluidId = entry.fluidId;
-                        byte fluidLevel = entry.fluidLevel;
-                        if (y <= offset) {
-                           throw new IllegalArgumentException("Y Values are not sequential. " + offset + " -> " + y);
-                        }
-
-                        int offsetx = i == 0 ? 0 : y - offset;
-                        if (offsetx > 65535) {
-                           throw new IllegalArgumentException("Offset is larger than 65535. Given: " + offsetx);
-                        }
-
-                        boolean hasChance = chance < 1.0F;
-                        int blockBytes = MathUtil.byteCount(blockId);
-                        int offsetBytes = offsetx == 1 ? 0 : MathUtil.byteCount(offsetx);
-                        int fluidBytes = MathUtil.byteCount(fluidId);
-                        int mask = PrefabBuffer.BlockMaskConstants.getBlockMask(
-                           blockBytes, fluidBytes, hasChance, offsetBytes, holder, entry.supportValue, entry.rotation, entry.filler
-                        );
-                        this.buf.writeShort(mask);
-                        ByteBufUtil.writeNumber(this.buf, blockBytes, blockId);
-                        ByteBufUtil.writeNumber(this.buf, offsetBytes, offsetx);
-                        if (hasChance) {
-                           this.buf.writeFloat(chance);
-                        }
-
-                        if (entry.rotation != 0) {
-                           this.buf.writeByte(entry.rotation);
-                        }
-
-                        if (entry.filler != 0) {
-                           this.buf.writeShort(entry.filler);
-                        }
-
-                        if (fluidId != 0) {
-                           ByteBufUtil.writeNumber(this.buf, fluidBytes, fluidId);
-                           this.buf.writeByte(fluidLevel);
-                        }
-
-                        if (holder != null) {
-                           holderMap.put(y, holder);
-                           this.handleBlockComponents(entry.rotation, x, y, z, holder);
-                        }
-
-                        offset = y;
-                     }
-
-                     if (offset > this.max.y) {
-                        this.max.y = offset;
-                     }
+               for (int i = 0; i < entries.length; i++) {
+                  PrefabBufferBlockEntry entry = entries[i];
+                  int y = entry.y;
+                  int blockId = entry.blockId;
+                  float chance = entry.chance;
+                  Holder<ChunkStore> holder = entry.state;
+                  int fluidId = entry.fluidId;
+                  if (y <= lastY) {
+                     throw new IllegalArgumentException("Y Values are not sequential. " + lastY + " -> " + y);
                   }
 
-                  if (x < this.min.x) {
-                     this.min.x = x;
+                  int offset = i == 0 ? 0 : y - lastY;
+                  if (offset > 65535) {
+                     throw new IllegalArgumentException("Offset is larger than 65535. Given: " + offset);
                   }
 
-                  if (x > this.max.x) {
-                     this.max.x = x;
-                  }
-
-                  if (z < this.min.z) {
-                     this.min.z = z;
-                  }
-
-                  if (z > this.max.z) {
-                     this.max.z = z;
-                  }
-
-                  if (holderMap.isEmpty()) {
-                     holderMap = null;
-                  }
-
-                  PrefabBufferColumn column = new PrefabBufferColumn(readerIndex, entityHolders, holderMap);
-                  this.columns.put(columnIndex, column);
+                  boolean hasChance = chance < 1.0F;
+                  int blockBytes = MathUtil.byteCount(blockId);
+                  int offsetBytes = offset == 1 ? 0 : MathUtil.byteCount(offset);
+                  int fluidBytes = MathUtil.byteCount(fluidId);
+                  int mask = PrefabBuffer.BlockMaskConstants.getBlockMask(
+                     blockBytes, fluidBytes, hasChance, offsetBytes, holder, entry.supportValue, entry.rotation, entry.filler
+                  );
+                  size += 2 + PrefabBuffer.BlockMaskConstants.getSkipBytes(mask);
+                  lastY = y;
                }
+
+               this.requiredMemory += size;
             }
          }
       }
@@ -396,18 +315,131 @@ public class PrefabBuffer {
          return new PrefabBufferBlockEntry(y);
       }
 
+      private int buildColumn(Int2ObjectMap<PrefabBufferColumn> columns, PrefabBuffer.BuilderColumn column, MemorySegment data, int offset) {
+         PrefabBufferBlockEntry[] entries = column.entries;
+         int blockCount = entries.length;
+         Int2ObjectOpenHashMap<Holder<ChunkStore>> holderMap = new Int2ObjectOpenHashMap();
+         if (blockCount != 0 || column.entityHolders != null && column.entityHolders.length != 0) {
+            int writeOffset = offset;
+            if (blockCount > 0) {
+               int initialY = entries[0].y;
+               if (initialY < this.min.y) {
+                  this.min.y = initialY;
+               }
+
+               data.set(ValueLayout.JAVA_INT_UNALIGNED, (long)offset, initialY - 1);
+               writeOffset = offset + 4;
+               initialY = Integer.MIN_VALUE;
+
+               for (int i = 0; i < blockCount; i++) {
+                  PrefabBufferBlockEntry entry = entries[i];
+                  int y = entry.y;
+                  int blockId = entry.blockId;
+                  float chance = entry.chance;
+                  Holder<ChunkStore> holder = entry.state;
+                  int fluidId = entry.fluidId;
+                  byte fluidLevel = entry.fluidLevel;
+                  int yOffset = i == 0 ? 0 : y - initialY;
+                  boolean hasChance = chance < 1.0F;
+                  int blockBytes = MathUtil.byteCount(blockId);
+                  int offsetBytes = yOffset == 1 ? 0 : MathUtil.byteCount(yOffset);
+                  int fluidBytes = MathUtil.byteCount(fluidId);
+                  int mask = PrefabBuffer.BlockMaskConstants.getBlockMask(
+                     blockBytes, fluidBytes, hasChance, offsetBytes, holder, entry.supportValue, entry.rotation, entry.filler
+                  );
+                  data.set(ValueLayout.JAVA_SHORT_UNALIGNED, (long)writeOffset, (short)mask);
+                  writeOffset += 2;
+                  MemorySegmentUtil.writeNumber(data, writeOffset, blockBytes, blockId);
+                  writeOffset += blockBytes;
+                  MemorySegmentUtil.writeNumber(data, writeOffset, offsetBytes, yOffset);
+                  writeOffset += offsetBytes;
+                  if (hasChance) {
+                     data.set(ValueLayout.JAVA_FLOAT_UNALIGNED, (long)writeOffset, chance);
+                     writeOffset += 4;
+                  }
+
+                  if (entry.rotation != 0) {
+                     data.set(ValueLayout.JAVA_BYTE, (long)writeOffset, (byte)entry.rotation);
+                     writeOffset++;
+                  }
+
+                  if (entry.filler != 0) {
+                     data.set(ValueLayout.JAVA_SHORT_UNALIGNED, (long)writeOffset, (short)entry.filler);
+                     writeOffset += 2;
+                  }
+
+                  if (fluidId != 0) {
+                     MemorySegmentUtil.writeNumber(data, writeOffset, fluidBytes, fluidId);
+                     writeOffset += fluidBytes;
+                     data.set(ValueLayout.JAVA_BYTE, (long)writeOffset, fluidLevel);
+                     writeOffset++;
+                  }
+
+                  if (holder != null) {
+                     holderMap.put(y, holder);
+                     this.handleBlockComponents(entry.rotation, column.x, y, column.z, holder);
+                  }
+
+                  initialY = y;
+               }
+
+               if (initialY > this.max.y) {
+                  this.max.y = initialY;
+               }
+            }
+
+            if (column.x < this.min.x) {
+               this.min.x = column.x;
+            }
+
+            if (column.x > this.max.x) {
+               this.max.x = column.x;
+            }
+
+            if (column.z < this.min.z) {
+               this.min.z = column.z;
+            }
+
+            if (column.z > this.max.z) {
+               this.max.z = column.z;
+            }
+
+            if (holderMap.isEmpty()) {
+               holderMap = null;
+            }
+
+            int size = writeOffset - offset;
+            PrefabBufferColumn newColumn = new PrefabBufferColumn(blockCount, data.asSlice(offset, size), column.entityHolders, holderMap);
+            columns.put(MathUtil.packInt(column.x, column.z), newColumn);
+            return size;
+         } else {
+            return 0;
+         }
+      }
+
       @Nonnull
       public PrefabBuffer build() {
-         ByteBuf buffer = Unpooled.copiedBuffer(this.buf);
-         this.buf.release();
-         PrefabBuffer.ChildPrefab[] childPrefabArray = this.childPrefabs.toArray(PrefabBuffer.ChildPrefab[]::new);
-         if (this.columns.isEmpty()) {
-            this.min.assign(0);
-            this.max.assign(0);
+         Int2ObjectOpenHashMap<PrefabBufferColumn> columns = new Int2ObjectOpenHashMap();
+         MemorySegment memorySegment = MemorySegment.ofArray(new byte[this.requiredMemory]);
+         int offset = 0;
+         ObjectIterator childPrefabArray = this.builderColumns.values().iterator();
+
+         while (childPrefabArray.hasNext()) {
+            PrefabBuffer.BuilderColumn e = (PrefabBuffer.BuilderColumn)childPrefabArray.next();
+            offset += this.buildColumn(columns, e, memorySegment, offset);
          }
 
-         return new PrefabBuffer(buffer, this.anchor, this.min, this.max, this.columns, childPrefabArray);
+         PrefabBuffer.ChildPrefab[] childPrefabArrayx = this.childPrefabs.toArray(PrefabBuffer.ChildPrefab[]::new);
+         if (this.builderColumns.isEmpty()) {
+            this.min.zero();
+            this.max.zero();
+         }
+
+         return new PrefabBuffer(this.anchor, this.min, this.max, columns, childPrefabArrayx);
       }
+   }
+
+   private record BuilderColumn(int x, int z, @Nonnull PrefabBufferBlockEntry[] entries, @Nullable Holder<EntityStore>[] entityHolders) {
    }
 
    public static class ChildPrefab {
@@ -489,11 +521,8 @@ public class PrefabBuffer {
    public static class PrefabBufferAccessor implements IPrefabBuffer {
       @Nonnull
       private final PrefabBuffer prefabBuffer;
-      @Nullable
-      private ByteBuf buffer;
 
       private PrefabBufferAccessor(@Nonnull PrefabBuffer prefabBuffer) {
-         this.buffer = prefabBuffer.buf.retainedDuplicate();
          this.prefabBuffer = prefabBuffer;
       }
 
@@ -514,49 +543,39 @@ public class PrefabBuffer {
 
       @Override
       public int getMinX(@Nonnull PrefabRotation rotation) {
-         this.prefabBuffer.checkReleased();
          return Math.min(
-            rotation.getX(this.prefabBuffer.min.getX(), this.prefabBuffer.min.getZ()),
-            rotation.getX(this.prefabBuffer.max.getX(), this.prefabBuffer.max.getZ())
+            rotation.getX(this.prefabBuffer.min.x(), this.prefabBuffer.min.z()), rotation.getX(this.prefabBuffer.max.x(), this.prefabBuffer.max.z())
          );
       }
 
       @Override
       public int getMinY() {
-         this.prefabBuffer.checkReleased();
-         return this.prefabBuffer.min.getY();
+         return this.prefabBuffer.min.y();
       }
 
       @Override
       public int getMinZ(@Nonnull PrefabRotation rotation) {
-         this.prefabBuffer.checkReleased();
          return Math.min(
-            rotation.getZ(this.prefabBuffer.min.getX(), this.prefabBuffer.min.getZ()),
-            rotation.getZ(this.prefabBuffer.max.getX(), this.prefabBuffer.max.getZ())
+            rotation.getZ(this.prefabBuffer.min.x(), this.prefabBuffer.min.z()), rotation.getZ(this.prefabBuffer.max.x(), this.prefabBuffer.max.z())
          );
       }
 
       @Override
       public int getMaxX(@Nonnull PrefabRotation rotation) {
-         this.prefabBuffer.checkReleased();
          return Math.max(
-            rotation.getX(this.prefabBuffer.min.getX(), this.prefabBuffer.min.getZ()),
-            rotation.getX(this.prefabBuffer.max.getX(), this.prefabBuffer.max.getZ())
+            rotation.getX(this.prefabBuffer.min.x(), this.prefabBuffer.min.z()), rotation.getX(this.prefabBuffer.max.x(), this.prefabBuffer.max.z())
          );
       }
 
       @Override
       public int getMaxY() {
-         this.prefabBuffer.checkReleased();
-         return this.prefabBuffer.max.getY();
+         return this.prefabBuffer.max.y();
       }
 
       @Override
       public int getMaxZ(@Nonnull PrefabRotation rotation) {
-         this.prefabBuffer.checkReleased();
          return Math.max(
-            rotation.getZ(this.prefabBuffer.min.getX(), this.prefabBuffer.min.getZ()),
-            rotation.getZ(this.prefabBuffer.max.getX(), this.prefabBuffer.max.getZ())
+            rotation.getZ(this.prefabBuffer.min.x(), this.prefabBuffer.min.z()), rotation.getZ(this.prefabBuffer.max.x(), this.prefabBuffer.max.z())
          );
       }
 
@@ -573,65 +592,57 @@ public class PrefabBuffer {
 
       @Override
       public int getMinYAt(@Nonnull PrefabRotation rotation, int x, int z) {
-         this.prefabBuffer.checkReleased();
          int rotatedX = rotation.getX(x, z);
          int rotatedZ = rotation.getZ(x, z);
          int columnIndex = MathUtil.packInt(rotatedX, rotatedZ);
          PrefabBufferColumn columnData = (PrefabBufferColumn)this.prefabBuffer.columns.get(columnIndex);
-         if (columnData != null) {
-            this.buffer.readerIndex(columnData.getReaderIndex());
-            int blockCount = this.buffer.readInt();
-            if (blockCount > 0) {
-               return this.buffer.readInt() + 1;
-            }
-         }
-
-         return -1;
+         return columnData != null && columnData.getBlockCount() > 0 ? columnData.getMemorySegment().get(ValueLayout.JAVA_INT_UNALIGNED, 0L) + 1 : -1;
       }
 
       @Override
       public int getMaxYAt(@Nonnull PrefabRotation rotation, int x, int z) {
-         this.prefabBuffer.checkReleased();
          int rotatedX = rotation.getX(x, z);
          int rotatedZ = rotation.getZ(x, z);
          int columnIndex = MathUtil.packInt(rotatedX, rotatedZ);
          PrefabBufferColumn column = (PrefabBufferColumn)this.prefabBuffer.columns.get(columnIndex);
          if (column == null) {
             return -1;
-         } else {
-            this.buffer.readerIndex(column.getReaderIndex());
-            int blockCount = this.buffer.readInt();
-            if (blockCount > 0) {
-               int y = this.buffer.readInt();
+         } else if (column.getBlockCount() > 0) {
+            int offset = 0;
+            MemorySegment data = column.getMemorySegment();
+            int y = data.get(ValueLayout.JAVA_INT_UNALIGNED, (long)offset);
+            offset += 4;
 
-               for (int i = 0; i < blockCount; i++) {
-                  int mask = this.buffer.readUnsignedShort();
-                  if (PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask) > 0) {
-                     this.buffer.skipBytes(PrefabBuffer.BlockMaskConstants.getBlockBytes(mask));
-                     y += ByteBufUtil.readNumber(this.buffer, PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask));
-                     if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
-                        this.buffer.skipBytes(4);
-                     }
-
-                     if (PrefabBuffer.BlockMaskConstants.hasRotation(mask)) {
-                        this.buffer.skipBytes(1);
-                     }
-
-                     if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
-                        this.buffer.skipBytes(2);
-                     }
-
-                     this.buffer.skipBytes(PrefabBuffer.BlockMaskConstants.getFluidBytes(mask));
-                  } else {
-                     this.buffer.skipBytes(PrefabBuffer.BlockMaskConstants.getSkipBytes(mask));
-                     y++;
+            for (int i = 0; i < column.getBlockCount(); i++) {
+               int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+               offset += 2;
+               if (PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask) > 0) {
+                  offset += PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
+                  int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
+                  y += MemorySegmentUtil.readNumber(data, offset, offsetBytes);
+                  offset += offsetBytes;
+                  if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
+                     offset += 4;
                   }
-               }
 
-               return y;
-            } else {
-               return -1;
+                  if (PrefabBuffer.BlockMaskConstants.hasRotation(mask)) {
+                     offset++;
+                  }
+
+                  if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
+                     offset += 2;
+                  }
+
+                  offset += PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
+               } else {
+                  offset += PrefabBuffer.BlockMaskConstants.getSkipBytes(mask);
+                  y++;
+               }
             }
+
+            return y;
+         } else {
+            return -1;
          }
       }
 
@@ -643,7 +654,6 @@ public class PrefabBuffer {
          @Nullable IPrefabBuffer.ChildConsumer<T> childConsumer,
          @Nonnull T t
       ) {
-         this.prefabBuffer.checkReleased();
          this.prefabBuffer.columns.int2ObjectEntrySet().forEach(entry -> {
             int columnIndex = entry.getIntKey();
             int cx = MathUtil.unpackLeft(columnIndex);
@@ -651,24 +661,29 @@ public class PrefabBuffer {
             int xx = t.rotation.getX(cx, cz);
             int zx = t.rotation.getZ(cx, cz);
             PrefabBufferColumn column = (PrefabBufferColumn)entry.getValue();
-            this.buffer.readerIndex(column.getReaderIndex());
-            int blockCount = this.buffer.readInt();
+            MemorySegment data = column.getMemorySegment();
+            int blockCount = column.getBlockCount();
             if (columnPredicate.test(xx, zx, blockCount, t)) {
-               BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
                if (blockCount > 0) {
-                  int y = this.buffer.readInt();
+                  int offset = 0;
+                  int y = data.get(ValueLayout.JAVA_INT_UNALIGNED, (long)offset);
+                  offset += 4;
 
                   for (int i = 0; i < blockCount; i++) {
-                     int mask = this.buffer.readUnsignedShort();
+                     int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+                     offset += 2;
                      int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                     int blockId = ByteBufUtil.readNumber(this.buffer, blockBytes);
+                     int blockId = MemorySegmentUtil.readNumber(data, offset, blockBytes);
+                     offset += blockBytes;
                      int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                     y += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(this.buffer, offsetBytes);
+                     y += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
+                     offset += offsetBytes;
                      if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
-                        float chance = this.buffer.readFloat();
+                        float chance = data.get(ValueLayout.JAVA_FLOAT_UNALIGNED, (long)offset);
+                        offset += 4;
                         if (chance < t.random.nextFloat()) {
-                           this.buffer.skipBytes(2);
-                           this.buffer.skipBytes(PrefabBuffer.BlockMaskConstants.getFluidBytes(mask));
+                           offset += 2;
+                           offset += PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                            continue;
                         }
                      }
@@ -677,21 +692,25 @@ public class PrefabBuffer {
                      int supportValue = PrefabBuffer.BlockMaskConstants.getSupportValue(mask);
                      int rotation = 0;
                      if (PrefabBuffer.BlockMaskConstants.hasRotation(mask)) {
-                        rotation = this.buffer.readUnsignedByte();
+                        rotation = Byte.toUnsignedInt(data.get(ValueLayout.JAVA_BYTE, (long)offset));
+                        offset++;
                      }
 
                      rotation = t.rotation.getRotation(rotation);
                      int filler = 0;
                      if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
-                        filler = t.rotation.getFiller(this.buffer.readUnsignedShort());
+                        filler = t.rotation.getFiller(Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset)));
+                        offset += 2;
                      }
 
                      int fluidBytes = PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                      int fluidId = 0;
                      int fluidLevel = 0;
                      if (fluidBytes != 0) {
-                        fluidId = ByteBufUtil.readNumber(this.buffer, fluidBytes - 1);
-                        fluidLevel = this.buffer.readByte();
+                        fluidId = MemorySegmentUtil.readNumber(data, offset, fluidBytes - 1);
+                        offset += fluidBytes - 1;
+                        fluidLevel = data.get(ValueLayout.JAVA_BYTE, (long)offset);
+                        offset++;
                      }
 
                      blockConsumer.accept(xx, y, zx, blockId, holder, supportValue, rotation, filler, t, fluidId, fluidLevel);
@@ -725,6 +744,20 @@ public class PrefabBuffer {
       }
 
       @Override
+      public <T> void forEachEntity(@Nonnull IPrefabBuffer.EntityConsumer<T> entityConsumer, @Nullable T t) {
+         this.prefabBuffer.columns.int2ObjectEntrySet().forEach(entry -> {
+            int columnIndex = entry.getIntKey();
+            int x = MathUtil.unpackLeft(columnIndex);
+            int z = MathUtil.unpackRight(columnIndex);
+            PrefabBufferColumn column = (PrefabBufferColumn)entry.getValue();
+            Holder<EntityStore>[] entityHolders = column.getEntityHolders();
+            if (entityConsumer != null) {
+               entityConsumer.accept(x, z, entityHolders, t);
+            }
+         });
+      }
+
+      @Override
       public <T> void forEachRaw(
          @Nonnull IPrefabBuffer.ColumnPredicate<T> columnPredicate,
          @Nonnull IPrefabBuffer.RawBlockConsumer<T> blockConsumer,
@@ -732,47 +765,56 @@ public class PrefabBuffer {
          @Nullable IPrefabBuffer.EntityConsumer<T> entityConsumer,
          @Nullable T t
       ) {
-         this.prefabBuffer.checkReleased();
          this.prefabBuffer.columns.int2ObjectEntrySet().forEach(entry -> {
             int columnIndex = entry.getIntKey();
             int x = MathUtil.unpackLeft(columnIndex);
             int z = MathUtil.unpackRight(columnIndex);
             PrefabBufferColumn column = (PrefabBufferColumn)entry.getValue();
-            this.buffer.readerIndex(column.getReaderIndex());
-            int blockCount = this.buffer.readInt();
+            MemorySegment data = column.getMemorySegment();
+            int blockCount = column.getBlockCount();
             if (columnPredicate.test(x, z, blockCount, t)) {
                if (blockCount > 0) {
-                  int y = this.buffer.readInt();
+                  int offset = 0;
+                  int y = data.get(ValueLayout.JAVA_INT_UNALIGNED, (long)offset);
+                  offset += 4;
 
                   for (int i = 0; i < blockCount; i++) {
-                     int mask = this.buffer.readUnsignedShort();
+                     int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+                     offset += 2;
                      int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                     int blockId = ByteBufUtil.readNumber(this.buffer, blockBytes);
+                     int blockId = MemorySegmentUtil.readNumber(data, offset, blockBytes);
+                     offset += blockBytes;
                      int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                     y += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(this.buffer, offsetBytes);
-                     float chance = PrefabBuffer.BlockMaskConstants.hasChance(mask) ? this.buffer.readFloat() : 1.0F;
+                     y += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
+                     offset += offsetBytes;
+                     float chance = 1.0F;
+                     if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
+                        chance = data.get(ValueLayout.JAVA_FLOAT_UNALIGNED, (long)offset);
+                        offset += 4;
+                     }
+
                      Holder<ChunkStore> holder = PrefabBuffer.BlockMaskConstants.hasComponents(mask) ? (Holder)column.getBlockComponents().get(y) : null;
                      int supportValue = PrefabBuffer.BlockMaskConstants.getSupportValue(mask);
                      int rotation = 0;
                      if (PrefabBuffer.BlockMaskConstants.hasRotation(mask)) {
-                        rotation = this.buffer.readUnsignedByte();
+                        rotation = Byte.toUnsignedInt(data.get(ValueLayout.JAVA_BYTE, (long)offset));
+                        offset++;
                      }
 
                      int filler = 0;
                      if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
-                        filler = this.buffer.readUnsignedShort();
+                        filler = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+                        offset += 2;
                      }
 
-                     int position = this.buffer.readerIndex();
                      blockConsumer.accept(x, y, z, mask, blockId, chance, holder, supportValue, rotation, filler, t);
-                     this.buffer.readerIndex(position);
                      int fluidBytes = PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                      if (fluidBytes != 0) {
-                        int fluidId = ByteBufUtil.readNumber(this.buffer, fluidBytes - 1);
-                        byte fluidLevel = this.buffer.readByte();
-                        position = this.buffer.readerIndex();
+                        int fluidId = MemorySegmentUtil.readNumber(data, offset, fluidBytes - 1);
+                        offset += fluidBytes - 1;
+                        byte fluidLevel = data.get(ValueLayout.JAVA_BYTE, (long)offset);
+                        offset++;
                         fluidConsumer.accept(x, y, z, fluidId, fluidLevel, t);
-                        this.buffer.readerIndex(position);
                      }
                   }
                }
@@ -793,7 +835,6 @@ public class PrefabBuffer {
          @Nullable IPrefabBuffer.EntityPredicate<T> entityPredicate,
          @Nullable T t
       ) {
-         this.prefabBuffer.checkReleased();
          ObjectIterator var6 = this.prefabBuffer.columns.int2ObjectEntrySet().iterator();
 
          while (var6.hasNext()) {
@@ -802,42 +843,59 @@ public class PrefabBuffer {
             int x = MathUtil.unpackLeft(columnIndex);
             int z = MathUtil.unpackRight(columnIndex);
             PrefabBufferColumn column = (PrefabBufferColumn)entry.getValue();
-            this.buffer.readerIndex(column.getReaderIndex());
-            int blockCount = this.buffer.readInt();
+            MemorySegment data = column.getMemorySegment();
+            int blockCount = column.getBlockCount();
             if (!columnPredicate.test(x, z, blockCount, t)) {
                return false;
             }
 
             if (blockCount > 0) {
-               int y = this.buffer.readInt();
+               int offset = 0;
+               int y = data.get(ValueLayout.JAVA_INT_UNALIGNED, (long)offset);
+               offset += 4;
 
                for (int i = 0; i < blockCount; i++) {
-                  int mask = this.buffer.readUnsignedShort();
+                  int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+                  offset += 2;
                   int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                  int blockId = ByteBufUtil.readNumber(this.buffer, blockBytes);
+                  int blockId = MemorySegmentUtil.readNumber(data, offset, blockBytes);
+                  offset += blockBytes;
                   int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                  y += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(this.buffer, offsetBytes);
-                  float chance = PrefabBuffer.BlockMaskConstants.hasChance(mask) ? this.buffer.readFloat() : 1.0F;
+                  y += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
+                  offset += offsetBytes;
+                  float chance = 1.0F;
+                  if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
+                     chance = data.get(ValueLayout.JAVA_FLOAT_UNALIGNED, (long)offset);
+                     offset += 4;
+                  }
+
                   Holder<ChunkStore> holder = PrefabBuffer.BlockMaskConstants.hasComponents(mask) ? (Holder)column.getBlockComponents().get(y) : null;
-                  short rotation = PrefabBuffer.BlockMaskConstants.hasRotation(mask) ? this.buffer.readUnsignedByte() : 0;
-                  int filler = PrefabBuffer.BlockMaskConstants.hasFiller(mask) ? this.buffer.readUnsignedShort() : 0;
+                  int rotation = 0;
+                  if (PrefabBuffer.BlockMaskConstants.hasRotation(mask)) {
+                     rotation = Byte.toUnsignedInt(data.get(ValueLayout.JAVA_BYTE, (long)offset));
+                     offset++;
+                  }
+
+                  int filler = 0;
+                  if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
+                     filler = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+                     offset += 2;
+                  }
+
                   int supportValue = PrefabBuffer.BlockMaskConstants.getSupportValue(mask);
-                  int position = this.buffer.readerIndex();
                   if (!blockPredicate.test(x, y, z, blockId, chance, holder, supportValue, rotation, filler, t)) {
                      return false;
                   }
 
-                  this.buffer.readerIndex(position);
                   int fluidBytes = PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                   if (fluidBytes != 0) {
-                     int fluidId = ByteBufUtil.readNumber(this.buffer, fluidBytes - 1);
-                     byte fluidLevel = this.buffer.readByte();
-                     position = this.buffer.readerIndex();
+                     int fluidId = MemorySegmentUtil.readNumber(data, offset, fluidBytes - 1);
+                     offset += fluidBytes - 1;
+                     byte fluidLevel = data.get(ValueLayout.JAVA_BYTE, (long)offset);
+                     offset++;
                      if (!fluidPredicate.test(x, y, z, fluidId, fluidLevel, t)) {
                         return false;
                      }
-
-                     this.buffer.readerIndex(position);
                   }
                }
             }
@@ -852,12 +910,6 @@ public class PrefabBuffer {
       }
 
       @Override
-      public void release() {
-         this.buffer.release();
-         this.buffer = null;
-      }
-
-      @Override
       public <T extends PrefabBufferCall> boolean compare(
          @Nonnull IPrefabBuffer.BlockComparingPrefabPredicate<T> blockComparingIterator, @Nonnull T t, @Nonnull IPrefabBuffer otherPrefab
       ) {
@@ -868,8 +920,6 @@ public class PrefabBuffer {
             IntOpenHashSet columnIndexes = new IntOpenHashSet(this.prefabBuffer.columns.size() + secondPrefabColumns.size());
             columnIndexes.addAll(this.prefabBuffer.columns.keySet());
             columnIndexes.addAll(secondPrefabColumns.keySet());
-            this.prefabBuffer.checkReleased();
-            BlockTypeAssetMap assetMap = BlockType.getAssetMap();
             IntIterator columnIterator = columnIndexes.iterator();
 
             while (columnIterator.hasNext()) {
@@ -880,19 +930,29 @@ public class PrefabBuffer {
                int z = t.rotation.getZ(cx, cz);
                PrefabBufferColumn firstColumn = (PrefabBufferColumn)this.prefabBuffer.columns.get(columnIndex);
                PrefabBufferColumn secondColumn = (PrefabBufferColumn)secondPrefabColumns.get(columnIndex);
-               if (firstColumn != null) {
-                  this.buffer.readerIndex(firstColumn.getReaderIndex());
-               }
-
-               if (secondColumn != null) {
-                  secondPrefab.buffer.readerIndex(secondColumn.getReaderIndex());
-               }
-
-               int firstColumnBlockCount = firstColumn != null ? this.buffer.readInt() : 0;
-               int secondColumnBlockCount = secondColumn != null ? secondPrefab.buffer.readInt() : 0;
+               MemorySegment firstData = firstColumn != null ? firstColumn.getMemorySegment() : null;
+               MemorySegment secondData = secondColumn != null ? secondColumn.getMemorySegment() : null;
+               int firstColumnBlockCount = firstColumn != null ? firstColumn.getBlockCount() : 0;
+               int secondColumnBlockCount = secondColumn != null ? secondColumn.getBlockCount() : 0;
                if (firstColumnBlockCount != 0 || secondColumnBlockCount != 0) {
-                  int firstColumnY = firstColumnBlockCount > 0 ? this.buffer.readInt() : Integer.MAX_VALUE;
-                  int secondColumnY = secondColumnBlockCount > 0 ? secondPrefab.buffer.readInt() : Integer.MAX_VALUE;
+                  int firstOffset = 0;
+                  int firstColumnY;
+                  if (firstColumnBlockCount > 0) {
+                     firstColumnY = firstData.get(ValueLayout.JAVA_INT_UNALIGNED, (long)firstOffset);
+                     firstOffset += 4;
+                  } else {
+                     firstColumnY = Integer.MAX_VALUE;
+                  }
+
+                  int secondOffset = 0;
+                  int secondColumnY;
+                  if (secondColumnBlockCount > 0) {
+                     secondColumnY = secondData.get(ValueLayout.JAVA_INT_UNALIGNED, (long)secondOffset);
+                     secondOffset += 4;
+                  } else {
+                     secondColumnY = Integer.MAX_VALUE;
+                  }
+
                   int firstColumnBlockId = Integer.MIN_VALUE;
                   float firstColumnChance = 1.0F;
                   int firstColumnRotation = 0;
@@ -909,39 +969,78 @@ public class PrefabBuffer {
                   while (firstColumnBlocksRead < firstColumnBlockCount || secondColumnBlocksRead < secondColumnBlockCount) {
                      int oldFirstColumnY = firstColumnY;
                      int oldSecondColumnY = secondColumnY;
-                     int oldFirstColumnReaderIndex = firstColumnBlocksRead < firstColumnBlockCount ? this.buffer.readerIndex() : -1;
-                     int oldSecondColumnReaderIndex = secondColumnBlocksRead < secondColumnBlockCount ? secondPrefab.buffer.readerIndex() : -1;
+                     int oldFirstOffset = firstOffset;
+                     int oldSecondOffset = secondOffset;
                      if (firstColumnBlocksRead < firstColumnBlockCount) {
-                        int mask = this.buffer.readUnsignedShort();
+                        int mask = Short.toUnsignedInt(firstData.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)firstOffset));
+                        firstOffset += 2;
                         int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                        firstColumnBlockId = ByteBufUtil.readNumber(this.buffer, blockBytes);
+                        firstColumnBlockId = MemorySegmentUtil.readNumber(firstData, firstOffset, blockBytes);
+                        firstOffset += blockBytes;
                         int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                        firstColumnY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(this.buffer, offsetBytes);
-                        firstColumnChance = PrefabBuffer.BlockMaskConstants.hasChance(mask) ? this.buffer.readFloat() : 1.0F;
-                        firstColumnRotation = t.rotation.getRotation(PrefabBuffer.BlockMaskConstants.hasRotation(mask) ? this.buffer.readUnsignedByte() : 0);
-                        firstColumnFiller = PrefabBuffer.BlockMaskConstants.hasFiller(mask) ? t.rotation.getFiller(this.buffer.readUnsignedShort()) : 0;
+                        firstColumnY += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(firstData, firstOffset, offsetBytes);
+                        firstOffset += offsetBytes;
+                        if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
+                           firstColumnChance = firstData.get(ValueLayout.JAVA_FLOAT_UNALIGNED, (long)firstOffset);
+                           firstOffset += 4;
+                        } else {
+                           firstColumnChance = 1.0F;
+                        }
+
+                        if (PrefabBuffer.BlockMaskConstants.hasRotation(mask)) {
+                           firstColumnRotation = t.rotation.getRotation(Byte.toUnsignedInt(firstData.get(ValueLayout.JAVA_BYTE, (long)firstOffset)));
+                           firstOffset++;
+                        } else {
+                           firstColumnRotation = t.rotation.getRotation(0);
+                        }
+
+                        if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
+                           firstColumnFiller = t.rotation.getFiller(Short.toUnsignedInt(firstData.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)firstOffset)));
+                           firstOffset += 2;
+                        } else {
+                           firstColumnFiller = 0;
+                        }
+
                         firstColumnComponents = PrefabBuffer.BlockMaskConstants.hasComponents(mask)
                            ? (Holder)firstColumn.getBlockComponents().get(firstColumnY)
                            : null;
-                        this.buffer.skipBytes(PrefabBuffer.BlockMaskConstants.getFluidBytes(mask));
+                        firstOffset += PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                      }
 
                      if (secondColumnBlocksRead < secondColumnBlockCount) {
-                        int mask = secondPrefab.buffer.readUnsignedShort();
-                        int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                        secondColumnBlockId = ByteBufUtil.readNumber(secondPrefab.buffer, blockBytes);
-                        int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                        secondColumnY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(secondPrefab.buffer, offsetBytes);
-                        secondColumnChance = PrefabBuffer.BlockMaskConstants.hasChance(mask) ? secondPrefab.buffer.readFloat() : 1.0F;
-                        secondColumnRotation = t.rotation
-                           .getRotation(PrefabBuffer.BlockMaskConstants.hasRotation(mask) ? secondPrefab.buffer.readUnsignedByte() : 0);
-                        secondColumnFiller = PrefabBuffer.BlockMaskConstants.hasFiller(mask)
-                           ? t.rotation.getFiller(secondPrefab.buffer.readUnsignedShort())
-                           : 0;
-                        secondColumnComponents = PrefabBuffer.BlockMaskConstants.hasComponents(mask)
+                        int maskx = Short.toUnsignedInt(secondData.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)secondOffset));
+                        secondOffset += 2;
+                        int blockBytesx = PrefabBuffer.BlockMaskConstants.getBlockBytes(maskx);
+                        secondColumnBlockId = MemorySegmentUtil.readNumber(secondData, secondOffset, blockBytesx);
+                        secondOffset += blockBytesx;
+                        int offsetBytesx = PrefabBuffer.BlockMaskConstants.getOffsetBytes(maskx);
+                        secondColumnY += offsetBytesx == 0 ? 1 : MemorySegmentUtil.readNumber(secondData, secondOffset, offsetBytesx);
+                        secondOffset += offsetBytesx;
+                        if (PrefabBuffer.BlockMaskConstants.hasChance(maskx)) {
+                           secondColumnChance = secondData.get(ValueLayout.JAVA_FLOAT_UNALIGNED, (long)secondOffset);
+                           secondOffset += 4;
+                        } else {
+                           secondColumnChance = 1.0F;
+                        }
+
+                        if (PrefabBuffer.BlockMaskConstants.hasRotation(maskx)) {
+                           secondColumnRotation = t.rotation.getRotation(Byte.toUnsignedInt(secondData.get(ValueLayout.JAVA_BYTE, (long)secondOffset)));
+                           secondOffset++;
+                        } else {
+                           secondColumnRotation = t.rotation.getRotation(0);
+                        }
+
+                        if (PrefabBuffer.BlockMaskConstants.hasFiller(maskx)) {
+                           secondColumnFiller = t.rotation.getFiller(Short.toUnsignedInt(secondData.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)secondOffset)));
+                           secondOffset += 2;
+                        } else {
+                           secondColumnFiller = 0;
+                        }
+
+                        secondColumnComponents = PrefabBuffer.BlockMaskConstants.hasComponents(maskx)
                            ? (Holder)secondColumn.getBlockComponents().get(secondColumnY)
                            : null;
-                        secondPrefab.buffer.skipBytes(PrefabBuffer.BlockMaskConstants.getFluidBytes(mask));
+                        secondOffset += PrefabBuffer.BlockMaskConstants.getFluidBytes(maskx);
                      }
 
                      if (firstColumnY == secondColumnY) {
@@ -970,10 +1069,7 @@ public class PrefabBuffer {
                         && secondColumnBlocksRead < secondColumnBlockCount) {
                         secondColumnBlocksRead++;
                         firstColumnY = oldFirstColumnY;
-                        if (oldFirstColumnReaderIndex != -1) {
-                           this.buffer.readerIndex(oldFirstColumnReaderIndex);
-                        }
-
+                        firstOffset = oldFirstOffset;
                         boolean test = blockComparingIterator.test(
                            x,
                            secondColumnY,
@@ -996,10 +1092,7 @@ public class PrefabBuffer {
                      } else {
                         firstColumnBlocksRead++;
                         secondColumnY = oldSecondColumnY;
-                        if (oldSecondColumnReaderIndex != -1) {
-                           secondPrefab.buffer.readerIndex(oldSecondColumnReaderIndex);
-                        }
-
+                        secondOffset = oldSecondOffset;
                         boolean test = blockComparingIterator.test(
                            x,
                            firstColumnY,
@@ -1030,42 +1123,45 @@ public class PrefabBuffer {
 
       @Override
       public int getBlockId(int x, int y, int z) {
-         this.prefabBuffer.checkReleased();
          PrefabBufferColumn column = (PrefabBufferColumn)this.prefabBuffer.columns.get(MathUtil.packInt(x, z));
          if (column == null) {
             return 0;
          } else {
-            this.buffer.readerIndex(column.getReaderIndex());
-            int blockCount = this.buffer.readInt();
+            int blockCount = column.getBlockCount();
             if (blockCount <= 0) {
                return 0;
             } else {
-               int blockY = this.buffer.readInt();
+               MemorySegment data = column.getMemorySegment();
+               int offset = 0;
+               int blockY = data.get(ValueLayout.JAVA_INT_UNALIGNED, (long)offset);
+               offset += 4;
 
                for (int i = 0; i < blockCount; i++) {
-                  int mask = this.buffer.readUnsignedShort();
+                  int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+                  offset += 2;
                   int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                  int blockId = ByteBufUtil.readNumber(this.buffer, blockBytes);
+                  int blockId = MemorySegmentUtil.readNumber(data, offset, blockBytes);
+                  offset += blockBytes;
                   int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                  blockY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(this.buffer, offsetBytes);
+                  blockY += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
+                  offset += offsetBytes;
                   if (blockY > y) {
                      return 0;
                   }
 
                   if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
-                     this.buffer.readFloat();
+                     offset += 4;
                   }
 
                   if (PrefabBuffer.BlockMaskConstants.hasRotation(mask)) {
-                     this.buffer.readUnsignedByte();
+                     offset++;
                   }
 
                   if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
-                     this.buffer.readUnsignedShort();
+                     offset += 2;
                   }
 
-                  int fluidBytes = PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
-                  this.buffer.skipBytes(fluidBytes);
+                  offset += PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                   if (blockY == y) {
                      if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
                         throw new UnsupportedOperationException("Unable to access block with chance!");
@@ -1082,43 +1178,47 @@ public class PrefabBuffer {
 
       @Override
       public int getFiller(int x, int y, int z) {
-         this.prefabBuffer.checkReleased();
          PrefabBufferColumn column = (PrefabBufferColumn)this.prefabBuffer.columns.get(MathUtil.packInt(x, z));
          if (column == null) {
             return 0;
          } else {
-            this.buffer.readerIndex(column.getReaderIndex());
-            int blockCount = this.buffer.readInt();
+            int blockCount = column.getBlockCount();
             if (blockCount <= 0) {
                return 0;
             } else {
-               int blockY = this.buffer.readInt();
+               MemorySegment data = column.getMemorySegment();
+               int offset = 0;
+               int blockY = data.get(ValueLayout.JAVA_INT_UNALIGNED, (long)offset);
+               offset += 4;
 
                for (int i = 0; i < blockCount; i++) {
-                  int mask = this.buffer.readUnsignedShort();
+                  int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+                  offset += 2;
                   int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                  int blockId = ByteBufUtil.readNumber(this.buffer, blockBytes);
+                  MemorySegmentUtil.readNumber(data, offset, blockBytes);
+                  offset += blockBytes;
                   int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                  blockY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(this.buffer, offsetBytes);
+                  blockY += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
+                  offset += offsetBytes;
                   if (blockY > y) {
                      return 0;
                   }
 
                   if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
-                     this.buffer.readFloat();
+                     offset += 4;
                   }
 
                   if (PrefabBuffer.BlockMaskConstants.hasRotation(mask)) {
-                     this.buffer.readUnsignedByte();
+                     offset++;
                   }
 
                   int filler = 0;
                   if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
-                     filler = this.buffer.readUnsignedShort();
+                     filler = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+                     offset += 2;
                   }
 
-                  int fluidBytes = PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
-                  this.buffer.skipBytes(fluidBytes);
+                  offset += PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                   if (blockY == y) {
                      if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
                         throw new UnsupportedOperationException("Unable to access block with chance!");
@@ -1135,43 +1235,47 @@ public class PrefabBuffer {
 
       @Override
       public int getRotationIndex(int x, int y, int z) {
-         this.prefabBuffer.checkReleased();
          PrefabBufferColumn column = (PrefabBufferColumn)this.prefabBuffer.columns.get(MathUtil.packInt(x, z));
          if (column == null) {
             return 0;
          } else {
-            this.buffer.readerIndex(column.getReaderIndex());
-            int blockCount = this.buffer.readInt();
+            int blockCount = column.getBlockCount();
             if (blockCount <= 0) {
                return 0;
             } else {
-               int blockY = this.buffer.readInt();
+               MemorySegment data = column.getMemorySegment();
+               int offset = 0;
+               int blockY = data.get(ValueLayout.JAVA_INT_UNALIGNED, (long)offset);
+               offset += 4;
 
                for (int i = 0; i < blockCount; i++) {
-                  int mask = this.buffer.readUnsignedShort();
+                  int mask = Short.toUnsignedInt(data.get(ValueLayout.JAVA_SHORT_UNALIGNED, (long)offset));
+                  offset += 2;
                   int blockBytes = PrefabBuffer.BlockMaskConstants.getBlockBytes(mask);
-                  int blockId = ByteBufUtil.readNumber(this.buffer, blockBytes);
+                  MemorySegmentUtil.readNumber(data, offset, blockBytes);
+                  offset += blockBytes;
                   int offsetBytes = PrefabBuffer.BlockMaskConstants.getOffsetBytes(mask);
-                  blockY += offsetBytes == 0 ? 1 : ByteBufUtil.readNumber(this.buffer, offsetBytes);
+                  blockY += offsetBytes == 0 ? 1 : MemorySegmentUtil.readNumber(data, offset, offsetBytes);
+                  offset += offsetBytes;
                   if (blockY > y) {
                      return 0;
                   }
 
                   if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
-                     this.buffer.readFloat();
+                     offset += 4;
                   }
 
                   int rotation = 0;
                   if (PrefabBuffer.BlockMaskConstants.hasRotation(mask)) {
-                     rotation = this.buffer.readUnsignedByte();
+                     rotation = Byte.toUnsignedInt(data.get(ValueLayout.JAVA_BYTE, (long)offset));
+                     offset++;
                   }
 
                   if (PrefabBuffer.BlockMaskConstants.hasFiller(mask)) {
-                     this.buffer.readUnsignedShort();
+                     offset += 2;
                   }
 
-                  int fluidBytes = PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
-                  this.buffer.skipBytes(fluidBytes);
+                  offset += PrefabBuffer.BlockMaskConstants.getFluidBytes(mask);
                   if (blockY == y) {
                      if (PrefabBuffer.BlockMaskConstants.hasChance(mask)) {
                         throw new UnsupportedOperationException("Unable to access block with chance!");

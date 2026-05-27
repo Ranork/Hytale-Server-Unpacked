@@ -5,8 +5,11 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.Vector3d;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -52,20 +55,24 @@ public class DamageInfo implements Packet, ToClientPacket {
 
    @Nonnull
    public static DamageInfo deserialize(@Nonnull ByteBuf buf, int offset) {
-      DamageInfo obj = new DamageInfo();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         obj.damageSourcePosition = Vector3d.deserialize(buf, offset + 1);
-      }
+      if (buf.readableBytes() - offset < 29) {
+         throw ProtocolException.bufferTooSmall("DamageInfo", 29, buf.readableBytes() - offset);
+      } else {
+         DamageInfo obj = new DamageInfo();
+         byte nullBits = buf.getByte(offset);
+         if ((nullBits & 1) != 0) {
+            obj.damageSourcePosition = Vector3d.deserialize(buf, offset + 1);
+         }
 
-      obj.damageAmount = buf.getFloatLE(offset + 25);
-      int pos = offset + 29;
-      if ((nullBits & 2) != 0) {
-         obj.damageCause = DamageCause.deserialize(buf, pos);
-         pos += DamageCause.computeBytesConsumed(buf, pos);
-      }
+         obj.damageAmount = buf.getFloatLE(offset + 25);
+         int pos = offset + 29;
+         if ((nullBits & 2) != 0) {
+            obj.damageCause = DamageCause.deserialize(buf, pos);
+            pos += DamageCause.computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -76,6 +83,64 @@ public class DamageInfo implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 29L;
+   }
+
+   @Nullable
+   public static Vector3d getDamageSourcePosition(MemorySegment mem) {
+      return getDamageSourcePosition(mem, 0);
+   }
+
+   @Nullable
+   public static Vector3d getDamageSourcePosition(MemorySegment mem, int offset) {
+      return hasDamageSourcePosition(mem, offset) ? Vector3d.toObject(mem, offset + 1) : null;
+   }
+
+   public static float getDamageAmount(MemorySegment mem) {
+      return getDamageAmount(mem, 0);
+   }
+
+   public static float getDamageAmount(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 25));
+   }
+
+   @Nullable
+   public static DamageCause getDamageCause(MemorySegment mem) {
+      return getDamageCause(mem, 0);
+   }
+
+   @Nullable
+   public static DamageCause getDamageCause(MemorySegment mem, int offset) {
+      return hasDamageCause(mem, offset) ? DamageCause.toObject(mem, offset + 29) : null;
+   }
+
+   public static boolean hasDamageSourcePosition(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasDamageCause(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static DamageInfo toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static DamageInfo toObject(MemorySegment mem, int offset) {
+      if (offset + 29 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DamageInfo", offset + 29, (int)mem.byteSize());
+      } else {
+         return new DamageInfo(
+            hasDamageSourcePosition(mem, offset) ? Vector3d.toObject(mem, offset + 1) : null,
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 25)),
+            hasDamageCause(mem, offset) ? DamageCause.toObject(mem, offset + 29) : null
+         );
+      }
    }
 
    @Override
@@ -100,6 +165,33 @@ public class DamageInfo implements Packet, ToClientPacket {
       if (this.damageCause != null) {
          this.damageCause.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.damageSourcePosition != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.damageCause != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      if (this.damageSourcePosition != null) {
+         this.damageSourcePosition.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 24L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 25), this.damageAmount);
+      int varOffset = offset + 29;
+      if (this.damageCause != null) {
+         varOffset += this.damageCause.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

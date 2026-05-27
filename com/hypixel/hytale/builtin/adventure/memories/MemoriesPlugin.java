@@ -33,6 +33,8 @@ import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesCount;
 import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesFeatureStatus;
 import com.hypixel.hytale.protocol.packets.window.WindowType;
 import com.hypixel.hytale.server.core.Constants;
@@ -47,6 +49,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.ser
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.BsonUtil;
 import com.hypixel.hytale.server.core.util.Config;
@@ -56,7 +59,6 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleMaps;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectRBTreeMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collections;
@@ -65,9 +67,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.bson.BsonDocument;
 
 public class MemoriesPlugin extends JavaPlugin {
    @Nonnull
@@ -145,16 +150,29 @@ public class MemoriesPlugin extends JavaPlugin {
    @Override
    protected void shutdown() {
       if (this.hasInitializedMemories) {
+         this.saveMemories().join();
+      }
+   }
+
+   @Nonnull
+   private CompletableFuture<Void> saveMemories() {
+      Path path = Constants.UNIVERSE_PATH.resolve("memories.json");
+      return Universe.get().getStorageManager().doSave(path, () -> {
          this.recordedMemories.lock.readLock().lock();
 
+         CompletableFuture var3;
          try {
-            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
-         } catch (IOException var5) {
-            throw new RuntimeException(var5);
+            BsonDocument document = MemoriesPlugin.RecordedMemories.CODEC.encode(this.recordedMemories).asDocument();
+            var3 = BsonUtil.writeDocument(path, document);
          } finally {
             this.recordedMemories.lock.readLock().unlock();
          }
-      }
+
+         return var3;
+      }).exceptionally(e -> {
+         ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(e)).log("Failed to save memories");
+         return null;
+      });
    }
 
    private void onAssetsLoad() {
@@ -223,11 +241,9 @@ public class MemoriesPlugin extends JavaPlugin {
 
       try {
          if (playerMemories.takeMemories(this.recordedMemories.memories)) {
-            BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
+            this.saveMemories();
             return true;
          }
-      } catch (IOException var6) {
-         throw new RuntimeException(var6);
       } finally {
          this.recordedMemories.lock.writeLock().unlock();
       }
@@ -254,9 +270,7 @@ public class MemoriesPlugin extends JavaPlugin {
 
       try {
          this.recordedMemories.memories.clear();
-         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
-      } catch (IOException var5) {
-         throw new RuntimeException(var5);
+         this.saveMemories();
       } finally {
          this.recordedMemories.lock.writeLock().unlock();
       }
@@ -270,9 +284,7 @@ public class MemoriesPlugin extends JavaPlugin {
             this.recordedMemories.memories.addAll(entry.getValue());
          }
 
-         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
-      } catch (IOException var6) {
-         throw new RuntimeException(var6);
+         this.saveMemories();
       } finally {
          this.recordedMemories.lock.writeLock().unlock();
       }
@@ -285,7 +297,7 @@ public class MemoriesPlugin extends JavaPlugin {
 
       this.recordedMemories.lock.writeLock().lock();
 
-      int var12;
+      int var10;
       try {
          this.recordedMemories.memories.clear();
          List<Memory> allAvailableMemories = new ObjectArrayList();
@@ -300,15 +312,13 @@ public class MemoriesPlugin extends JavaPlugin {
             this.recordedMemories.memories.add(allAvailableMemories.get(i));
          }
 
-         BsonUtil.writeSync(Constants.UNIVERSE_PATH.resolve("memories.json"), MemoriesPlugin.RecordedMemories.CODEC, this.recordedMemories, this.getLogger());
-         var12 = actualCount;
-      } catch (IOException var8) {
-         throw new RuntimeException(var8);
+         this.saveMemories();
+         var10 = actualCount;
       } finally {
          this.recordedMemories.lock.writeLock().unlock();
       }
 
-      return var12;
+      return var10;
    }
 
    public static class MemoriesPluginConfig {
@@ -382,6 +392,8 @@ public class MemoriesPlugin extends JavaPlugin {
          boolean isFeatureUnlockedByPlayer = playerMemoriesComponent != null;
          PacketHandler playerConnection = playerRefComponent.getPacketHandler();
          playerConnection.writeNoCache(new UpdateMemoriesFeatureStatus(isFeatureUnlockedByPlayer));
+         int memoriesCount = playerMemoriesComponent != null ? playerMemoriesComponent.getRecordedMemories().size() : 0;
+         playerConnection.writeNoCache(new UpdateMemoriesCount(memoriesCount));
       }
 
       @Override

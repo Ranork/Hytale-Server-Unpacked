@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -68,6 +69,10 @@ public class MetaRegistry<K> implements IMetaRegistry<K> {
    @Override
    public void forEachMetaEntry(@Nonnull IMetaStore<K> store, @Nonnull final IMetaRegistry.MetaEntryConsumer consumer) {
       store.forEachMetaObject(new IMetaStore.MetaEntryConsumer() {
+         {
+            Objects.requireNonNull(MetaRegistry.this);
+         }
+
          @Override
          public <T> void accept(int id, T value) {
             MetaRegistry<K>.MetaRegistryEntry<T> entry = MetaRegistry.this.suppliers.get(id);
@@ -88,6 +93,8 @@ public class MetaRegistry<K> implements IMetaRegistry<K> {
       private final MetaKey<T> key;
 
       public MetaRegistryEntry(Function<K, T> function, MetaKey<T> key) {
+         Objects.requireNonNull(MetaRegistry.this);
+         super();
          this.function = function;
          this.key = key;
       }

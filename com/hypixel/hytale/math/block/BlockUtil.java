@@ -1,7 +1,8 @@
 package com.hypixel.hytale.math.block;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class BlockUtil {
    public static final float RADIUS_ADJUST = 0.41F;
@@ -18,6 +19,10 @@ public class BlockUtil {
 
    public static long pack(@Nonnull Vector3i val) {
       return pack(val.x, val.y, val.z);
+   }
+
+   public static long pack(@Nonnull Vector3ic val) {
+      return pack(val.x(), val.y(), val.z());
    }
 
    public static long pack(int x, int y, int z) {

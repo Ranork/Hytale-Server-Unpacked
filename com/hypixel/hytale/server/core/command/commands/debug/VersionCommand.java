@@ -9,6 +9,7 @@ import javax.annotation.Nonnull;
 public class VersionCommand extends CommandBase {
    public VersionCommand() {
       super("version", "server.commands.version.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

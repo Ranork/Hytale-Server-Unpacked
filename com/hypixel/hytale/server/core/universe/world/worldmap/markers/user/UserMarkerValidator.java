@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.universe.world.worldmap.markers.user;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.packets.worldmap.CreateUserMarker;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.worldmap.UserMapMarkerConfig;
@@ -15,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.worldstore.WorldMarkersResource;
 import java.util.Collection;
 import java.util.UUID;
+import org.joml.Vector3d;
 
 public final class UserMarkerValidator {
    private static final int NAME_LENGTH_LIMIT = 24;
@@ -71,7 +71,7 @@ public final class UserMarkerValidator {
       Player player = store.getComponent(ref, Player.getComponentType());
       Transform transform = store.getComponent(ref, TransformComponent.getComponentType()).getTransform();
       Vector3d playerPosition = transform.getPosition();
-      double distanceToMarker = playerPosition.distanceSquaredTo(markerX, playerPosition.y, markerZ);
+      double distanceToMarker = playerPosition.distanceSquared(markerX, playerPosition.y, markerZ);
       return distanceToMarker > getMaxRemovalDistanceSquared(player);
    }
 

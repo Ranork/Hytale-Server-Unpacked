@@ -10,6 +10,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -70,39 +71,68 @@ public class Notification implements Packet, ToClientPacket {
 
    @Nonnull
    public static Notification deserialize(@Nonnull ByteBuf buf, int offset) {
-      Notification obj = new Notification();
-      byte nullBits = buf.getByte(offset);
-      obj.style = NotificationStyle.fromValue(buf.getByte(offset + 1));
-      if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 18 + buf.getIntLE(offset + 2);
-         obj.message = FormattedMessage.deserialize(buf, varPos0);
-      }
+      if (buf.readableBytes() - offset < 18) {
+         throw ProtocolException.bufferTooSmall("Notification", 18, buf.readableBytes() - offset);
+      } else {
+         Notification obj = new Notification();
+         byte nullBits = buf.getByte(offset);
+         obj.style = NotificationStyle.fromValue(buf.getByte(offset + 1));
+         if ((nullBits & 1) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 2);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 18) {
+               throw ProtocolException.invalidOffset("Message", varPosBase0, buf.readableBytes());
+            }
 
-      if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 18 + buf.getIntLE(offset + 6);
-         obj.secondaryMessage = FormattedMessage.deserialize(buf, varPos1);
-      }
-
-      if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 18 + buf.getIntLE(offset + 10);
-         int iconLen = VarInt.peek(buf, varPos2);
-         if (iconLen < 0) {
-            throw ProtocolException.negativeLength("Icon", iconLen);
+            int varPos0 = offset + 18 + varPosBase0;
+            obj.message = FormattedMessage.deserialize(buf, varPos0);
          }
 
-         if (iconLen > 4096000) {
-            throw ProtocolException.stringTooLong("Icon", iconLen, 4096000);
+         if ((nullBits & 2) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 6);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 18) {
+               throw ProtocolException.invalidOffset("SecondaryMessage", varPosBase1, buf.readableBytes());
+            }
+
+            int varPos1 = offset + 18 + varPosBase1;
+            obj.secondaryMessage = FormattedMessage.deserialize(buf, varPos1);
          }
 
-         obj.icon = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
-      }
+         if ((nullBits & 4) != 0) {
+            int varPosBase2 = buf.getIntLE(offset + 10);
+            if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 18) {
+               throw ProtocolException.invalidOffset("Icon", varPosBase2, buf.readableBytes());
+            }
 
-      if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 18 + buf.getIntLE(offset + 14);
-         obj.item = ItemWithAllMetadata.deserialize(buf, varPos3);
-      }
+            int varPos2 = offset + 18 + varPosBase2;
+            int iconLen = VarInt.peek(buf, varPos2);
+            if (iconLen < 0) {
+               throw ProtocolException.invalidVarInt("Icon");
+            }
 
-      return obj;
+            int iconVarIntLen = VarInt.size(iconLen);
+            if (iconLen > 4096000) {
+               throw ProtocolException.stringTooLong("Icon", iconLen, 4096000);
+            }
+
+            if (varPos2 + iconVarIntLen + iconLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Icon", varPos2 + iconVarIntLen + iconLen, buf.readableBytes());
+            }
+
+            obj.icon = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
+         }
+
+         if ((nullBits & 8) != 0) {
+            int varPosBase3 = buf.getIntLE(offset + 14);
+            if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 18) {
+               throw ProtocolException.invalidOffset("Item", varPosBase3, buf.readableBytes());
+            }
+
+            int varPos3 = offset + 18 + varPosBase3;
+            obj.item = ItemWithAllMetadata.deserialize(buf, varPos3);
+         }
+
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -110,6 +140,10 @@ public class Notification implements Packet, ToClientPacket {
       int maxEnd = 18;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Message", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 18 + fieldOffset0;
          pos0 += FormattedMessage.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -119,6 +153,10 @@ public class Notification implements Packet, ToClientPacket {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("SecondaryMessage", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 18 + fieldOffset1;
          pos1 += FormattedMessage.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -128,9 +166,13 @@ public class Notification implements Packet, ToClientPacket {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 10);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Icon", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 18 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -138,6 +180,10 @@ public class Notification implements Packet, ToClientPacket {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 14);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 18) {
+            throw ProtocolException.invalidOffset("Item", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 18 + fieldOffset3;
          pos3 += ItemWithAllMetadata.computeBytesConsumed(buf, pos3);
          if (pos3 - offset > maxEnd) {
@@ -146,6 +192,107 @@ public class Notification implements Packet, ToClientPacket {
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 18L;
+   }
+
+   @Nullable
+   public static FormattedMessage getMessage(MemorySegment mem) {
+      return getMessage(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getMessage(MemorySegment mem, int offset) {
+      return hasMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 2, 18, "Message")) : null;
+   }
+
+   @Nullable
+   public static FormattedMessage getSecondaryMessage(MemorySegment mem) {
+      return getSecondaryMessage(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getSecondaryMessage(MemorySegment mem, int offset) {
+      return hasSecondaryMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 6, 18, "SecondaryMessage")) : null;
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem) {
+      return getIcon(mem, 0);
+   }
+
+   @Nullable
+   public static String getIcon(MemorySegment mem, int offset) {
+      return hasIcon(mem, offset)
+         ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 10, 18, "Icon"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static ItemWithAllMetadata getItem(MemorySegment mem) {
+      return getItem(mem, 0);
+   }
+
+   @Nullable
+   public static ItemWithAllMetadata getItem(MemorySegment mem, int offset) {
+      return hasItem(mem, offset) ? ItemWithAllMetadata.toObject(mem, offset + getValidatedOffset(mem, offset, 14, 18, "Item")) : null;
+   }
+
+   public static NotificationStyle getStyle(MemorySegment mem) {
+      return getStyle(mem, 0);
+   }
+
+   public static NotificationStyle getStyle(MemorySegment mem, int offset) {
+      return NotificationStyle.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   public static boolean hasMessage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSecondaryMessage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasIcon(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasItem(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Notification toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Notification toObject(MemorySegment mem, int offset) {
+      if (offset + 18 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Notification", offset + 18, (int)mem.byteSize());
+      } else {
+         return new Notification(
+            hasMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 2, 18, "Message")) : null,
+            hasSecondaryMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + getValidatedOffset(mem, offset, 6, 18, "SecondaryMessage")) : null,
+            hasIcon(mem, offset) ? PacketIO.readVarString("Icon", mem, offset + getValidatedOffset(mem, offset, 10, 18, "Icon"), 4096000, PacketIO.UTF8) : null,
+            hasItem(mem, offset) ? ItemWithAllMetadata.toObject(mem, offset + getValidatedOffset(mem, offset, 14, 18, "Item")) : null,
+            NotificationStyle.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)))
+         );
+      }
    }
 
    @Override
@@ -209,6 +356,59 @@ public class Notification implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.message != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.secondaryMessage != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.icon != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.item != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.style.getValue());
+      int varOffset = offset + 18;
+      if (this.message != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 2), varOffset - offset - 18);
+         varOffset += this.message.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 2), -1);
+      }
+
+      if (this.secondaryMessage != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 6), varOffset - offset - 18);
+         varOffset += this.secondaryMessage.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 6), -1);
+      }
+
+      if (this.icon != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 10), varOffset - offset - 18);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.icon, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 10), -1);
+      }
+
+      if (this.item != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 14), varOffset - offset - 18);
+         varOffset += this.item.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 14), -1);
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 18;
       if (this.message != null) {
@@ -235,91 +435,80 @@ public class Notification implements Packet, ToClientPacket {
          return ValidationResult.error("Buffer too small: expected at least 18 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
-         if ((nullBits & 1) != 0) {
-            int messageOffset = buffer.getIntLE(offset + 2);
-            if (messageOffset < 0) {
-               return ValidationResult.error("Invalid offset for Message");
+         int v = buffer.getByte(offset + 1) & 255;
+         if (v >= 4) {
+            return ValidationResult.error("Invalid NotificationStyle value for Style");
+         } else {
+            if ((nullBits & 1) != 0) {
+               v = buffer.getIntLE(offset + 2);
+               if (v < 0 || v > buffer.writerIndex() - offset - 18) {
+                  return ValidationResult.error("Invalid offset for Message");
+               }
+
+               int pos = offset + 18 + v;
+               ValidationResult messageResult = FormattedMessage.validateStructure(buffer, pos);
+               if (!messageResult.isValid()) {
+                  return ValidationResult.error("Invalid Message: " + messageResult.error());
+               }
+
+               pos += FormattedMessage.computeBytesConsumed(buffer, pos);
             }
 
-            int pos = offset + 18 + messageOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Message");
+            if ((nullBits & 2) != 0) {
+               v = buffer.getIntLE(offset + 6);
+               if (v < 0 || v > buffer.writerIndex() - offset - 18) {
+                  return ValidationResult.error("Invalid offset for SecondaryMessage");
+               }
+
+               int pos = offset + 18 + v;
+               ValidationResult secondaryMessageResult = FormattedMessage.validateStructure(buffer, pos);
+               if (!secondaryMessageResult.isValid()) {
+                  return ValidationResult.error("Invalid SecondaryMessage: " + secondaryMessageResult.error());
+               }
+
+               pos += FormattedMessage.computeBytesConsumed(buffer, pos);
             }
 
-            ValidationResult messageResult = FormattedMessage.validateStructure(buffer, pos);
-            if (!messageResult.isValid()) {
-               return ValidationResult.error("Invalid Message: " + messageResult.error());
+            if ((nullBits & 4) != 0) {
+               v = buffer.getIntLE(offset + 10);
+               if (v < 0 || v > buffer.writerIndex() - offset - 18) {
+                  return ValidationResult.error("Invalid offset for Icon");
+               }
+
+               int pos = offset + 18 + v;
+               int iconLen = VarInt.peek(buffer, pos);
+               if (iconLen < 0) {
+                  return ValidationResult.error("Invalid string length for Icon");
+               }
+
+               if (iconLen > 4096000) {
+                  return ValidationResult.error("Icon exceeds max length 4096000");
+               }
+
+               pos += VarInt.size(iconLen);
+               pos += iconLen;
+               if (pos > buffer.writerIndex()) {
+                  return ValidationResult.error("Buffer overflow reading Icon");
+               }
             }
 
-            pos += FormattedMessage.computeBytesConsumed(buffer, pos);
+            if ((nullBits & 8) != 0) {
+               v = buffer.getIntLE(offset + 14);
+               if (v < 0 || v > buffer.writerIndex() - offset - 18) {
+                  return ValidationResult.error("Invalid offset for Item");
+               }
+
+               int posx = offset + 18 + v;
+               ValidationResult itemResult = ItemWithAllMetadata.validateStructure(buffer, posx);
+               if (!itemResult.isValid()) {
+                  return ValidationResult.error("Invalid Item: " + itemResult.error());
+               }
+
+               posx += ItemWithAllMetadata.computeBytesConsumed(buffer, posx);
+            }
+
+            return ValidationResult.OK;
          }
-
-         if ((nullBits & 2) != 0) {
-            int secondaryMessageOffset = buffer.getIntLE(offset + 6);
-            if (secondaryMessageOffset < 0) {
-               return ValidationResult.error("Invalid offset for SecondaryMessage");
-            }
-
-            int posx = offset + 18 + secondaryMessageOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for SecondaryMessage");
-            }
-
-            ValidationResult secondaryMessageResult = FormattedMessage.validateStructure(buffer, posx);
-            if (!secondaryMessageResult.isValid()) {
-               return ValidationResult.error("Invalid SecondaryMessage: " + secondaryMessageResult.error());
-            }
-
-            posx += FormattedMessage.computeBytesConsumed(buffer, posx);
-         }
-
-         if ((nullBits & 4) != 0) {
-            int iconOffset = buffer.getIntLE(offset + 10);
-            if (iconOffset < 0) {
-               return ValidationResult.error("Invalid offset for Icon");
-            }
-
-            int posxx = offset + 18 + iconOffset;
-            if (posxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Icon");
-            }
-
-            int iconLen = VarInt.peek(buffer, posxx);
-            if (iconLen < 0) {
-               return ValidationResult.error("Invalid string length for Icon");
-            }
-
-            if (iconLen > 4096000) {
-               return ValidationResult.error("Icon exceeds max length 4096000");
-            }
-
-            posxx += VarInt.length(buffer, posxx);
-            posxx += iconLen;
-            if (posxx > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading Icon");
-            }
-         }
-
-         if ((nullBits & 8) != 0) {
-            int itemOffset = buffer.getIntLE(offset + 14);
-            if (itemOffset < 0) {
-               return ValidationResult.error("Invalid offset for Item");
-            }
-
-            int posxxx = offset + 18 + itemOffset;
-            if (posxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Item");
-            }
-
-            ValidationResult itemResult = ItemWithAllMetadata.validateStructure(buffer, posxxx);
-            if (!itemResult.isValid()) {
-               return ValidationResult.error("Invalid Item: " + itemResult.error());
-            }
-
-            posxxx += ItemWithAllMetadata.computeBytesConsumed(buffer, posxxx);
-         }
-
-         return ValidationResult.OK;
       }
    }
 

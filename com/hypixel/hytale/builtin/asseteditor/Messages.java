@@ -29,6 +29,8 @@ public class Messages {
    @Nonnull
    public static final Message PACK_CREATION_FAILED = Message.translation("server.assetEditor.messages.packCreationFailed");
    @Nonnull
+   public static final Message INVALID_SERVER_VERSION = Message.translation("server.assetEditor.messages.invalidServerVersion");
+   @Nonnull
    public static final Message UNKNOWN_ASSET_INDEX = Message.translation("server.assetEditor.messages.unknownAssetIndex");
    @Nonnull
    public static final Message DIRECTORY_OUTSIDE_ROOT = Message.translation("server.assetEditor.messages.directoryOutsideRoot");
@@ -92,4 +94,8 @@ public class Messages {
    public static final Message PACK_ALREADY_EXISTS = Message.translation("server.assetEditor.messages.packAlreadyExists");
    @Nonnull
    public static final Message INVALID_TARGET_DIRECTORY = Message.translation("server.assetEditor.messages.invalidTargetDirectory");
+   @Nonnull
+   public static final Message PACK_DELETED = Message.translation("server.assetEditor.messages.packDeleted");
+   @Nonnull
+   public static final Message PACK_DELETION_FAILED = Message.translation("server.assetEditor.messages.packDeletionFailed");
 }

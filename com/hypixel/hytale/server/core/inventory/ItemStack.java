@@ -7,7 +7,9 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.protocol.ItemQuantity;
 import com.hypixel.hytale.protocol.ItemWithAllMetadata;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.metadata.ItemDisplayMetadata;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -310,6 +312,18 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       }
    }
 
+   @Nonnull
+   public Message getDisplayName() {
+      ItemDisplayMetadata displayMeta = this.getFromMetadataOrNull(ItemDisplayMetadata.KEYED_CODEC);
+      return displayMeta != null && displayMeta.getName() != null ? displayMeta.getName() : this.getItem().getTranslationMessage();
+   }
+
+   @Nonnull
+   public Message getDisplayDescription() {
+      ItemDisplayMetadata displayMeta = this.getFromMetadataOrNull(ItemDisplayMetadata.KEYED_CODEC);
+      return displayMeta != null && displayMeta.getDescription() != null ? displayMeta.getDescription() : this.getItem().getDescriptionTranslationMessage();
+   }
+
    @Override
    public boolean equals(@Nullable Object o) {
       if (this == o) {
@@ -363,7 +377,7 @@ public class ItemStack implements NetworkSerializable<ItemWithAllMetadata> {
       return itemFrom == null || itemFrom.isEmpty();
    }
 
-   public static boolean isStackableWith(@Nullable ItemStack a, ItemStack b) {
+   public static boolean isStackableWith(@Nullable ItemStack a, @Nullable ItemStack b) {
       return a == b || a != null && a.isStackableWith(b);
    }
 

@@ -29,6 +29,8 @@ import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 public class BasicWorldStructureAsset extends WorldStructureAsset {
+   public static final String BIOMES_KEY = "Biomes";
+   public static final String DEFAULT_BIOME_KEY = "DefaultBiome";
    @Nonnull
    public static final BuilderCodec<BasicWorldStructureAsset> CODEC = BuilderCodec.builder(
          BasicWorldStructureAsset.class, BasicWorldStructureAsset::new, WorldStructureAsset.ABSTRACT_CODEC
@@ -109,7 +111,7 @@ public class BasicWorldStructureAsset extends WorldStructureAsset {
             DoubleRange range = asset.getRange();
             BiomeAsset biomeAsset = asset.getBiomeAsset();
             if (biomeAsset == null) {
-               LoggerUtil.getLogger().warning("Couldn't find biome asset with name " + asset.getBiomeAssetId());
+               LoggerUtil.getLogger().warning("Couldn't find Biome asset with name " + asset.getBiomeAssetId());
             } else {
                Biome biome;
                if (biomeAssetToBiomeType.containsKey(biomeAsset)) {

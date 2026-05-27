@@ -12,12 +12,13 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.math.range.IntRange;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class FarmingCoopAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, FarmingCoopAsset>> {
    @Nonnull
@@ -39,8 +40,8 @@ public class FarmingCoopAsset implements JsonAssetWithMap<String, DefaultAssetMa
       .addValidator(ItemDropList.VALIDATOR_CACHE.getMapValueValidator())
       .add()
       .<Vector3d>append(
-         new KeyedCodec<>("ResidentSpawnOffset", Vector3d.CODEC),
-         (asset, residentSpawnOffset) -> asset.residentSpawnOffset.assign(residentSpawnOffset),
+         new KeyedCodec<>("ResidentSpawnOffset", Vector3dUtil.CODEC),
+         (asset, residentSpawnOffset) -> asset.residentSpawnOffset.set(residentSpawnOffset),
          asset -> asset.residentSpawnOffset
       )
       .addValidator(Validators.nonNull())

@@ -354,9 +354,6 @@ public class BuilderCodec<T> implements Codec<T>, DirectDecodeCodec<T>, RawJsonC
                   reader.reset();
                   this.readUnknownField(reader, extraInfo);
                }
-               break;
-            default:
-               throw new IllegalArgumentException("Unknown field entry type: " + keyEntry.getType());
          }
       } else {
          reader.reset();

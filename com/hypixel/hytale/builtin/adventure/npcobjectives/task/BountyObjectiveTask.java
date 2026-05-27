@@ -17,10 +17,10 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
@@ -34,6 +34,8 @@ import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class BountyObjectiveTask extends ObjectiveTask implements KillTask {
    @Nonnull
@@ -80,13 +82,16 @@ public class BountyObjectiveTask extends ObjectiveTask implements KillTask {
          if (objectivePosition == null) {
             return null;
          } else {
-            Vector3i spawnPosition = this.getAsset().getWorldLocationProvider().runCondition(world, objectivePosition.clone().floor().toVector3i());
+            Vector3i spawnPosition = this.getAsset()
+               .getWorldLocationProvider()
+               .runCondition(world, Vector3dUtil.toVector3i(new Vector3d(objectivePosition).floor()));
             if (spawnPosition == null) {
                return null;
             } else {
                TransactionRecord[] transactionRecords = new TransactionRecord[2];
                String npcId = this.getAsset().getNpcId();
-               Pair<Ref<EntityStore>, INonPlayerCharacter> npcPair = NPCPlugin.get().spawnNPC(store, npcId, null, spawnPosition.toVector3d(), Vector3f.ZERO);
+               Pair<Ref<EntityStore>, INonPlayerCharacter> npcPair = NPCPlugin.get()
+                  .spawnNPC(store, npcId, null, Vector3iUtil.toVector3d(spawnPosition), Rotation3f.IDENTITY);
                if (npcPair == null) {
                   return null;
                } else {

@@ -8,9 +8,13 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.PlaneDensity;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.codec.validation.LegacyValidator;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.codec.schema.SchemaContext;
+import com.hypixel.hytale.codec.schema.config.Schema;
+import com.hypixel.hytale.codec.validation.ValidationResults;
+import com.hypixel.hytale.codec.validation.Validator;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PlaneDensityAsset extends DensityAsset {
    @Nonnull
@@ -21,12 +25,18 @@ public class PlaneDensityAsset extends DensityAsset {
       .add()
       .append(new KeyedCodec<>("IsAnchored", Codec.BOOLEAN, false), (t, k) -> t.isAnchored = k, k -> k.isAnchored)
       .add()
-      .<Vector3d>append(new KeyedCodec<>("PlaneNormal", Vector3d.CODEC, false), (t, k) -> t.planeNormal = k, k -> k.planeNormal)
-      .addValidator((LegacyValidator<? super Vector3d>)((v, r) -> {
-         if (v.length() == 0.0) {
-            r.fail("Plane normal can't be a zero vector.");
+      .<Vector3d>append(new KeyedCodec<>("PlaneNormal", Vector3dUtil.CODEC, false), (t, k) -> t.planeNormal = k, k -> k.planeNormal)
+      .addValidator(new Validator<Vector3d>() {
+         public void accept(Vector3d v, ValidationResults r) {
+            if (v.length() == 0.0) {
+               r.fail("Plane normal can't be a zero vector.");
+            }
          }
-      }))
+
+         @Override
+         public void updateSchema(SchemaContext context, Schema target) {
+         }
+      })
       .add()
       .build();
    private CurveAsset distanceCurveAsset = new ConstantCurveAsset();

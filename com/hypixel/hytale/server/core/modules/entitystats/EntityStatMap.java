@@ -451,6 +451,8 @@ public class EntityStatMap implements Component<EntityStore> {
             return false;
          case Remove:
             updates.add(new EntityStatUpdate(op, isPredictable, 0.0F, null, null, null));
+         case PutModifier:
+         case RemoveModifier:
          default:
             return false;
          case Add:

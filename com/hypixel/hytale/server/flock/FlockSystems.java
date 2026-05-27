@@ -13,8 +13,6 @@ import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.group.EntityGroup;
@@ -28,6 +26,8 @@ import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class FlockSystems {
    public static class EntityRemoved extends RefSystem<EntityStore> {
@@ -61,6 +61,7 @@ public class FlockSystems {
          Flock flock = store.getComponent(ref, this.flockComponentType);
          switch (reason) {
             case REMOVE:
+            case BUILDER_TOOLS_UNDO:
                entityGroup.setDissolved(true);
 
                for (Ref<EntityStore> memberRef : entityGroup.getMemberList()) {
@@ -146,7 +147,7 @@ public class FlockSystems {
                assert uuidComponent != null;
 
                World world = store.getExternalData().getWorld();
-               int colorIndex = Math.abs(uuidComponent.getUuid().hashCode()) % DebugUtils.INDEXED_COLORS.length;
+               int colorIndex = Math.floorMod(uuidComponent.getUuid().hashCode(), DebugUtils.INDEXED_COLORS.length);
                Vector3f color = DebugUtils.INDEXED_COLORS[colorIndex];
                Ref<EntityStore> leaderRef = entityGroup.getLeaderRef();
                if (leaderRef != null && leaderRef.isValid()) {

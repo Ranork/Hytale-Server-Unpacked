@@ -7,13 +7,13 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.dependency.Dependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ComputeVelocitySystem extends SteppableTickingSystem {
    @Nonnull
@@ -71,9 +71,9 @@ public class ComputeVelocitySystem extends SteppableTickingSystem {
 
       Vector3d position = transformComponent.getPosition();
       Vector3d oldPosition = npcComponent.getOldPosition();
-      double x = (position.getX() - oldPosition.getX()) / dt;
-      double y = (position.getY() - oldPosition.getY()) / dt;
-      double z = (position.getZ() - oldPosition.getZ()) / dt;
+      double x = (position.x() - oldPosition.x()) / dt;
+      double y = (position.y() - oldPosition.y()) / dt;
+      double z = (position.z() - oldPosition.z()) / dt;
       velocityComponent.set(x, y, z);
    }
 

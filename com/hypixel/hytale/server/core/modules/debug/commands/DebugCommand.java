@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class DebugCommand extends AbstractCommandCollection {
    public DebugCommand() {
       super("debug", "server.commands.debug.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new DebugShapeSubCommand());
    }
 }

@@ -8,8 +8,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -29,6 +28,8 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Comparator;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class BlockRowCommand extends AbstractPlayerCommand {
    private final RequiredArg<String> queryArg = this.withRequiredArg("wildcard block query", "server.commands.block.row.arg.desc", ArgTypes.STRING);
@@ -73,17 +74,16 @@ public class BlockRowCommand extends AbstractPlayerCommand {
       int step = 25;
 
       for (int x = 0; x < blockTypes.size(); x += step) {
-         double distance = 1.0;
+         int distance = 1;
 
          for (int i = 0; i < step; i++) {
             BlockType blockType = blockTypes.get(i + x);
             Box boundingBox = boundingBoxes.getAsset(blockType.getHitboxTypeIndex()).get(0).getBoundingBox();
             double dimension = Math.ceil(boundingBox.dimension(axis));
-            distance += Math.floor(dimension) + 1.0;
-            Vector3i blockPos = origin.clone()
-               .add(direction.clone().scale(distance))
-               .add(Rotation.Ninety.rotateY(direction, new Vector3i()).scale(x / step * 2))
-               .toVector3i();
+            distance += (int)(Math.floor(dimension) + 1.0);
+            Vector3i blockPos = new Vector3i(MathUtil.floor(origin.x), MathUtil.floor(origin.y), MathUtil.floor(origin.z))
+               .add(new Vector3i(direction).mul(distance))
+               .add(Rotation.Ninety.rotateY(direction, new Vector3i()).mul(x / step * 2));
             long chunkIndex = ChunkUtil.indexChunkFromBlock(blockPos.x, blockPos.z);
             world.getChunkAsync(chunkIndex).thenAccept(chunk -> {
                int settings = 196;

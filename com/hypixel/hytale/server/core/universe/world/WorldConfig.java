@@ -16,7 +16,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.shape.Box2D;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector2d;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.asset.type.gameplay.DeathConfig;
@@ -48,6 +47,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
+import org.joml.Vector2d;
 
 public class WorldConfig {
    public static final int VERSION = 4;
@@ -144,6 +144,9 @@ public class WorldConfig {
       .add()
       .<GameMode>append(new KeyedCodec<>("GameMode", ProtocolCodecs.GAMEMODE), (o, i) -> o.gameMode = i, o -> o.gameMode)
       .documentation("Sets the default gamemode for this world.")
+      .add()
+      .<String>append(new KeyedCodec<>("DefaultPermissionGroup", Codec.STRING), (o, i) -> o.defaultPermissionGroup = i, o -> o.defaultPermissionGroup)
+      .documentation("The default permission group assigned to new players joining this world.")
       .add()
       .<Boolean>append(new KeyedCodec<>("IsSpawningNPC", Codec.BOOLEAN), (o, i) -> o.isSpawningNPC = i, o -> o.isSpawningNPC)
       .documentation("Whether NPCs can spawn in this world or not.")
@@ -260,6 +263,8 @@ public class WorldConfig {
    private ClientEffectWorldSettings clientEffects = new ClientEffectWorldSettings();
    private Map<PluginIdentifier, SemverRange> requiredPlugins = Collections.emptyMap();
    private GameMode gameMode;
+   @Nullable
+   private String defaultPermissionGroup;
    private boolean isSpawningNPC = true;
    private boolean isSpawnMarkersEnabled = true;
    private boolean isAllNPCFrozen = false;
@@ -336,7 +341,9 @@ public class WorldConfig {
 
    @Nonnull
    public static String formatDisplayName(@Nonnull String name) {
-      return name.replaceAll("([a-z])([A-Z])", "$1 $2").replaceAll("([A-Za-z])([0-9])", "$1 $2").replaceAll("_", " ");
+      int slashLastIndex = name.lastIndexOf(47);
+      String substring = slashLastIndex >= 0 ? name.substring(slashLastIndex + 1) : name;
+      return substring.replaceAll("([a-z])([A-Z])", "$1 $2").replaceAll("([A-Za-z])([0-9])", "$1 $2").replaceAll("_", " ");
    }
 
    public long getSeed() {
@@ -482,6 +489,15 @@ public class WorldConfig {
 
    public void setGameMode(GameMode gameMode) {
       this.gameMode = gameMode;
+   }
+
+   @Nonnull
+   public String getDefaultPermissionGroup() {
+      return this.defaultPermissionGroup != null ? this.defaultPermissionGroup : "hytale:Adventurer";
+   }
+
+   public void setDefaultPermissionGroup(@Nullable String defaultPermissionGroup) {
+      this.defaultPermissionGroup = defaultPermissionGroup;
    }
 
    public boolean isSpawningNPC() {

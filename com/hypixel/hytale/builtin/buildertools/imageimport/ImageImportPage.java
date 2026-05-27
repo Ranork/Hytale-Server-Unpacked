@@ -10,7 +10,6 @@ import com.hypixel.hytale.common.util.StringUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -41,6 +40,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.imageio.ImageIO;
+import org.joml.Vector3i;
 
 public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.PageData> {
    private static final int DEFAULT_MAX_SIZE = 128;
@@ -425,7 +425,7 @@ public class ImageImportPage extends InteractiveCustomUIPage<ImageImportPage.Pag
                               .param("depth", sizeZ)
                         );
                         playerComponent.getPageManager().setPage(r, store, Page.None);
-                        PasteToolUtil.switchToPasteTool(r, playerComponent, playerRefComponent, componentAccessor);
+                        PasteToolUtil.switchToPasteTool(r, playerRefComponent, componentAccessor);
                      } catch (Exception var39) {
                         ((HytaleLogger.Api)BuilderToolsPlugin.get().getLogger().at(Level.WARNING).withCause(var39)).log("Image import error");
                         this.setError(Message.translation("server.builderTools.imageImport.error").param("message", var39.getMessage()));

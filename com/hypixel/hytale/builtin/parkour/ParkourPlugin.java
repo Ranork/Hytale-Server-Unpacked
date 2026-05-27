@@ -6,10 +6,10 @@ import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -69,12 +69,11 @@ public class ParkourPlugin extends JavaPlugin {
       this.parkourCheckpointComponentType = this.getEntityStoreRegistry()
          .registerComponent(ParkourCheckpoint.class, "ParkourCheckpoint", ParkourCheckpoint.CODEC);
       EntityModule entityModule = EntityModule.get();
-      ComponentType<EntityStore, Player> playerComponentType = entityModule.getPlayerComponentType();
       ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent = entityModule.getPlayerSpatialResourceType();
       this.getEntityStoreRegistry().registerSystem(new ParkourCheckpointSystems.EnsureNetworkSendable());
       this.getEntityStoreRegistry().registerSystem(new ParkourCheckpointSystems.Init(this.parkourCheckpointComponentType));
       this.getEntityStoreRegistry()
-         .registerSystem(new ParkourCheckpointSystems.Ticking(this.parkourCheckpointComponentType, playerComponentType, playerSpatialComponent));
+         .registerSystem(new ParkourCheckpointSystems.Ticking(this.parkourCheckpointComponentType, PlayerRef.getComponentType(), playerSpatialComponent));
       this.getCommandRegistry().registerCommand(new ParkourCommand());
    }
 

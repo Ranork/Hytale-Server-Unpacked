@@ -4,8 +4,8 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.hitdetection.MatrixProvider;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
 
 public class FrustumProjectionProvider implements MatrixProvider {
    public static final BuilderCodec<FrustumProjectionProvider> CODEC = BuilderCodec.builder(FrustumProjectionProvider.class, FrustumProjectionProvider::new)
@@ -101,10 +101,10 @@ public class FrustumProjectionProvider implements MatrixProvider {
    @Override
    public Matrix4d getMatrix() {
       if (this.invalid) {
-         this.matrix.projectionFrustum(this.left, this.right, this.bottom, this.top, this.near, this.far);
-         this.matrix.rotateAxis(this.pitch, 1.0, 0.0, 0.0, this.rotMatrix);
-         this.matrix.rotateAxis(this.yaw, 0.0, 1.0, 0.0, this.rotMatrix);
-         this.matrix.rotateAxis(this.roll, 0.0, 0.0, 1.0, this.rotMatrix);
+         this.matrix.setFrustum(-this.left, this.right, -this.bottom, this.top, this.near, this.far);
+         this.matrix.rotate(-this.pitch, 1.0, 0.0, 0.0);
+         this.matrix.rotate(-this.yaw, 0.0, 1.0, 0.0);
+         this.matrix.rotate(-this.roll, 0.0, 0.0, 1.0);
          this.invalid = false;
       }
 

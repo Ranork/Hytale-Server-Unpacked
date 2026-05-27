@@ -20,9 +20,8 @@ import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.InteractionState;
@@ -46,6 +45,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.RespawnPage;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
@@ -80,6 +80,7 @@ import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class DeathSystems {
    private static void playDeathAnimation(
@@ -309,7 +310,7 @@ public class DeathSystems {
             List<ItemStack> itemsToDrop = null;
             switch (component.getItemsLossMode()) {
                case ALL:
-                  itemsToDrop = playerComponent.getInventory().dropAllItemStacks();
+                  itemsToDrop = InventoryUtils.dropAllItemStacks(ref, store);
                   break;
                case CONFIGURED:
                   double itemsAmountLossPercentage = component.getItemsAmountLossPercentage();
@@ -345,8 +346,8 @@ public class DeathSystems {
 
                assert headRotationComponent != null;
 
-               Vector3f headRotation = headRotationComponent.getRotation();
-               Holder<EntityStore>[] drops = ItemComponent.generateItemDrops(store, itemsToDrop, position.clone().add(0.0, 1.0, 0.0), headRotation);
+               Rotation3f headRotation = headRotationComponent.getRotation();
+               Holder<EntityStore>[] drops = ItemComponent.generateItemDrops(store, itemsToDrop, new Vector3d(position).add(0.0, 1.0, 0.0), headRotation);
                commandBuffer.addEntities(drops, AddReason.SPAWN);
                component.setItemsLostOnDeath(itemsToDrop);
             }
@@ -453,7 +454,7 @@ public class DeathSystems {
             assert transformComponent != null;
 
             Vector3d position = transformComponent.getPosition();
-            Transform transform = new Transform(position.getX(), position.getY(), position.getZ(), 0.0F, 0.0F, 0.0F);
+            Transform transform = new Transform(position.x(), position.y(), position.z(), 0.0F, 0.0F, 0.0F);
             WorldTimeResource worldTimeResource = commandBuffer.getResource(WorldTimeResource.getResourceType());
             Instant gameTime = worldTimeResource.getGameTime();
             int daysSinceWorldStart = (int)WorldTimeResource.ZERO_YEAR.until(gameTime, ChronoUnit.DAYS);
@@ -540,7 +541,7 @@ public class DeathSystems {
             if (deathInfo != null && deathInfo.getSource() instanceof Damage.EntitySource entitySource) {
                Ref<EntityStore> sourceRef = entitySource.getRef();
                if (sourceRef.isValid()) {
-                  Player attacker = store.getComponent(sourceRef, Player.getComponentType());
+                  PlayerRef attacker = store.getComponent(sourceRef, PlayerRef.getComponentType());
                   if (attacker != null) {
                      attacker.sendMessage(Message.translation("server.general.killedEntity").param("entityName", nameplateComponent.getText()));
                   }

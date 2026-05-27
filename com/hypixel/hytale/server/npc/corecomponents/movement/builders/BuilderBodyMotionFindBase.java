@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderDescriptorState;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.holder.BooleanHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
+import com.hypixel.hytale.server.npc.asset.builder.holder.EnumSetHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.IntHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.NumberArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleRangeValidator;
@@ -15,11 +16,14 @@ import com.hypixel.hytale.server.npc.asset.builder.validators.IntSingleValidator
 import com.hypixel.hytale.server.npc.corecomponents.builders.BuilderBodyMotionBase;
 import com.hypixel.hytale.server.npc.corecomponents.movement.BodyMotionFindBase;
 import com.hypixel.hytale.server.npc.instructions.BodyMotion;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import java.util.EnumSet;
 import javax.annotation.Nonnull;
 
 public abstract class BuilderBodyMotionFindBase extends BuilderBodyMotionBase implements Builder<BodyMotion> {
    protected static final double[] THROTTLE_DELAY = new double[]{3.0, 5.0};
+   private static final String[] AVOID_OR_RELAXED_ATTRIBUTES = new String[]{"AvoidBlockDamage", "RelaxedConstraints"};
+   private static final String[] LEGACY_OR_RELAXED_ATTRIBUTES = new String[]{"RelaxedMoveConstraints", "RelaxedConstraints"};
    @Nonnull
    protected EnumSet<BodyMotionFindBase.DebugFlags> parsedDebugFlags = EnumSet.noneOf(BodyMotionFindBase.DebugFlags.class);
    protected String debugFlags;
@@ -37,7 +41,8 @@ public abstract class BuilderBodyMotionFindBase extends BuilderBodyMotionBase im
    protected final DoubleHolder rejectionWeight = new DoubleHolder();
    protected final DoubleHolder blendHeading = new DoubleHolder();
    protected final BooleanHolder isAvoidingBlockDamage = new BooleanHolder();
-   protected final BooleanHolder isRelaxedMoveConstraints = new BooleanHolder();
+   protected final BooleanHolder isLegacyRelaxedMoveConstraints = new BooleanHolder();
+   protected final EnumSetHolder<RelaxedConstraint> relaxedConstraints = new EnumSetHolder<>();
    protected final NumberArrayHolder throttleDelayRangeHolder = new NumberArrayHolder();
    protected final IntHolder throttleIgnoreCount = new IntHolder();
    protected final BooleanHolder useSteering = new BooleanHolder();
@@ -45,6 +50,8 @@ public abstract class BuilderBodyMotionFindBase extends BuilderBodyMotionBase im
    protected final BooleanHolder skipSteering = new BooleanHolder();
    protected final DoubleHolder minPathLength = new DoubleHolder();
    protected final DoubleHolder desiredAltitudeWeight = new DoubleHolder();
+   private final boolean[] avoidOrRelaxedPresent = new boolean[2];
+   private final boolean[] legacyOrRelaxedPresent = new boolean[2];
    protected final boolean enableSteering;
 
    public BuilderBodyMotionFindBase() {
@@ -111,18 +118,31 @@ public abstract class BuilderBodyMotionFindBase extends BuilderBodyMotionBase im
       this.getBoolean(
          data, "BuildOptimisedPath", this.buildOptimisedPath, true, BuilderDescriptorState.Stable, "Try to reduce number of nodes of generated path", null
       );
-      this.getBoolean(
-         data, "AvoidBlockDamage", this.isAvoidingBlockDamage, true, BuilderDescriptorState.Stable, "Should avoid environmental damage from blocks", null
+      this.avoidOrRelaxedPresent[0] = this.getBoolean(
+         data, "AvoidBlockDamage", this.isAvoidingBlockDamage, true, BuilderDescriptorState.Deprecated, "Should avoid environmental damage from blocks", null
       );
-      this.getBoolean(
+      this.legacyOrRelaxedPresent[0] = this.getBoolean(
          data,
          "RelaxedMoveConstraints",
-         this.isRelaxedMoveConstraints,
+         this.isLegacyRelaxedMoveConstraints,
          true,
-         BuilderDescriptorState.Stable,
+         BuilderDescriptorState.Deprecated,
          "NPC can do movements like wading (depends on motion controller type)",
          null
       );
+      this.avoidOrRelaxedPresent[1] = this.getEnumSet(
+         data,
+         "RelaxedConstraints",
+         this.relaxedConstraints,
+         RelaxedConstraint.class,
+         EnumSet.noneOf(RelaxedConstraint.class),
+         BuilderDescriptorState.Stable,
+         "List of constraints to relax for this motion (new mode; empty = no relaxed constraints)",
+         null
+      );
+      this.legacyOrRelaxedPresent[1] = this.avoidOrRelaxedPresent[1];
+      this.validateOneOrNonePresent(AVOID_OR_RELAXED_ATTRIBUTES, this.avoidOrRelaxedPresent);
+      this.validateOneOrNonePresent(LEGACY_OR_RELAXED_ATTRIBUTES, this.legacyOrRelaxedPresent);
       this.getDouble(
          data,
          "BlendHeading",
@@ -280,8 +300,17 @@ public abstract class BuilderBodyMotionFindBase extends BuilderBodyMotionBase im
       return this.isAvoidingBlockDamage.get(support.getExecutionContext());
    }
 
-   public boolean isRelaxedMoveConstraints(@Nonnull BuilderSupport support) {
-      return this.isRelaxedMoveConstraints.get(support.getExecutionContext());
+   public boolean isLegacyRelaxedMoveConstraints(@Nonnull BuilderSupport support) {
+      return this.isLegacyRelaxedMoveConstraints.get(support.getExecutionContext());
+   }
+
+   @Nonnull
+   public EnumSet<RelaxedConstraint> getRelaxedConstraints(@Nonnull BuilderSupport support) {
+      return this.relaxedConstraints.get(support.getExecutionContext());
+   }
+
+   public boolean isRelaxedConstraintsPresent() {
+      return this.avoidOrRelaxedPresent[1];
    }
 
    public double[] getThrottleDelayRange(@Nonnull BuilderSupport support) {

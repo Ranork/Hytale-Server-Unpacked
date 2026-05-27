@@ -11,8 +11,7 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -26,6 +25,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.HiddenFromAdventurePlayers;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
@@ -48,6 +48,8 @@ import java.time.Instant;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class LegacySpawnBeaconEntity extends Entity {
    @Nonnull
@@ -200,8 +202,8 @@ public class LegacySpawnBeaconEntity extends Entity {
       this.spawnAttempts++;
    }
 
-   public void notifySpawn(@Nonnull Player target, @Nonnull Ref<EntityStore> spawnedEntity, @Nonnull Store<EntityStore> store) {
-      this.processSpawn(spawnedEntity, target, store);
+   public void notifySpawn(@Nonnull Ref<EntityStore> targetRef, @Nonnull Ref<EntityStore> spawnedEntity, @Nonnull Store<EntityStore> store) {
+      this.processSpawn(spawnedEntity, targetRef, store);
       FlockMembership flockMembershipComponent = store.getComponent(spawnedEntity, FlockMembership.getComponentType());
       Ref<EntityStore> flockReference = flockMembershipComponent != null ? flockMembershipComponent.getFlockRef() : null;
       if (flockReference != null && flockReference.isValid()) {
@@ -210,7 +212,7 @@ public class LegacySpawnBeaconEntity extends Entity {
             if (store.getArchetype(member).contains(NPCEntity.getComponentType())) {
                beacon.processSpawn(member, player, store);
             }
-         }, spawnedEntity, this, target);
+         }, spawnedEntity, this, targetRef);
       }
 
       this.spawnController.onJobFinished(store);
@@ -292,12 +294,15 @@ public class LegacySpawnBeaconEntity extends Entity {
       if (!floodFillPositionSelectorComponent.hasPositionsForRole(roleIndex)) {
          this.markNPCUnspawnable(roleIndex);
          return false;
+      } else if (!floodFillPositionSelectorComponent.hasValidMovementModeWeights(roleIndex, spawningContext)) {
+         this.markNPCUnspawnable(roleIndex);
+         return false;
       } else {
          return floodFillPositionSelectorComponent.prepareSpawnContext(playerPosition, spawnsThisRound, roleIndex, spawningContext, this.spawnWrapper);
       }
    }
 
-   private void processSpawn(@Nonnull Ref<EntityStore> ref, @Nonnull Player target, @Nonnull Store<EntityStore> store) {
+   private void processSpawn(@Nonnull Ref<EntityStore> ref, @Nonnull Ref<EntityStore> targetRef, @Nonnull Store<EntityStore> store) {
       SpawnBeaconReference spawnBeaconReference = store.ensureAndGetComponent(ref, SpawnBeaconReference.getComponentType());
       spawnBeaconReference.getReference().setEntity(this.reference, store);
       spawnBeaconReference.refreshTimeoutCounter();
@@ -308,7 +313,7 @@ public class LegacySpawnBeaconEntity extends Entity {
 
       Role role = npcComponent.getRole();
       BeaconNPCSpawn spawn = this.spawnWrapper.getSpawn();
-      role.getMarkedEntitySupport().setMarkedEntity(spawn.getTargetSlot(), target.getReference());
+      role.getMarkedEntitySupport().setMarkedEntity(spawn.getTargetSlot(), targetRef);
       String spawnState = spawn.getNpcSpawnState();
       if (spawnState != null) {
          role.getStateSupport().setState(ref, spawnState, spawn.getNpcSpawnSubState(), store);
@@ -318,8 +323,8 @@ public class LegacySpawnBeaconEntity extends Entity {
    @Nonnull
    public static Pair<Ref<EntityStore>, LegacySpawnBeaconEntity> create(
       @Nonnull BeaconSpawnWrapper spawnWrapper,
-      @Nonnull Vector3d position,
-      @Nonnull Vector3f rotation,
+      @Nonnull Vector3dc position,
+      @Nonnull Rotation3fc rotation,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       Holder<EntityStore> holder = createHolder(spawnWrapper, position, rotation);
@@ -328,12 +333,12 @@ public class LegacySpawnBeaconEntity extends Entity {
       return Pair.of(ref, legacySpawnBeaconComponent);
    }
 
-   public static Holder<EntityStore> createHolder(@Nonnull BeaconSpawnWrapper spawnWrapper, @Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public static Holder<EntityStore> createHolder(@Nonnull BeaconSpawnWrapper spawnWrapper, @Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
       LegacySpawnBeaconEntity entity = new LegacySpawnBeaconEntity();
-      entity.setSpawnConfiguration(spawnWrapper);
+      entity.spawnWrapper = spawnWrapper;
       BeaconNPCSpawn spawn = spawnWrapper.getSpawn();
       String spawnConfigId = spawn.getId();
-      entity.setSpawnConfigId(spawnConfigId);
+      entity.spawnConfigId = spawnConfigId;
       String modelName = spawn.getModel();
       ModelAsset modelAsset = null;
       if (modelName != null && !modelName.isEmpty()) {
@@ -353,8 +358,9 @@ public class LegacySpawnBeaconEntity extends Entity {
       holder.ensureComponent(UUIDComponent.getComponentType());
       holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));
       holder.addComponent(PersistentModel.getComponentType(), new PersistentModel(model.toReference()));
-      DisplayNameComponent displayNameComponent = new DisplayNameComponent(Message.raw(spawnConfigId));
-      holder.addComponent(DisplayNameComponent.getComponentType(), displayNameComponent);
+      Message displayNameMessage = Message.raw(spawnConfigId);
+      holder.addComponent(PersistentDisplayName.getComponentType(), new PersistentDisplayName(displayNameMessage));
+      holder.addComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(displayNameMessage));
       holder.addComponent(Nameplate.getComponentType(), new Nameplate(spawnConfigId));
       double[] initialSpawnDelay = spawn.getInitialSpawnDelay();
       if (initialSpawnDelay != null) {

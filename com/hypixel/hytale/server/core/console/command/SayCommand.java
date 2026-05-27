@@ -34,7 +34,7 @@ public class SayCommand extends CommandBase {
          }
       } else {
          result = Message.translation("server.chat.broadcastMessage")
-            .param("username", context.sender().getDisplayName())
+            .param("username", context.sender().getUsername())
             .param("message", rawMessage)
             .color(SAY_COMMAND_COLOR);
       }

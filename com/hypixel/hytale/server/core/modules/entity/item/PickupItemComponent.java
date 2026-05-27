@@ -3,11 +3,11 @@ package com.hypixel.hytale.server.core.modules.entity.item;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PickupItemComponent implements Component<EntityStore> {
    public static final float PICKUP_TRAVEL_TIME_DEFAULT = 0.15F;

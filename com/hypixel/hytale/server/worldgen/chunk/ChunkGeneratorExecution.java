@@ -123,6 +123,16 @@ public class ChunkGeneratorExecution {
       this.blockPriorityModifier = blockPriorityModifier;
    }
 
+   public int getHeight(int seed, int worldX, int worldZ) {
+      if (ChunkUtil.isInsideChunk(this.getX(), this.getZ(), worldX, worldZ)) {
+         int cx = worldX & 31;
+         int cz = worldZ & 31;
+         return this.interpolator.tableEntry(cx, cz).height;
+      } else {
+         return this.chunkGenerator.getHeight(seed, worldX, worldZ);
+      }
+   }
+
    private void generateTintMapping(int seed) {
       int radius = 4;
       int[] rawTint = new int[(32 + radius * 2) * (32 + radius * 2)];

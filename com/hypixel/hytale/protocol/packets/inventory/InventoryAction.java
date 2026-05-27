@@ -4,8 +4,11 @@ import com.hypixel.hytale.protocol.InventoryActionType;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -49,15 +52,63 @@ public class InventoryAction implements Packet, ToServerPacket {
 
    @Nonnull
    public static InventoryAction deserialize(@Nonnull ByteBuf buf, int offset) {
-      InventoryAction obj = new InventoryAction();
-      obj.inventorySectionId = buf.getIntLE(offset + 0);
-      obj.inventoryActionType = InventoryActionType.fromValue(buf.getByte(offset + 4));
-      obj.actionData = buf.getByte(offset + 5);
-      return obj;
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("InventoryAction", 6, buf.readableBytes() - offset);
+      } else {
+         InventoryAction obj = new InventoryAction();
+         obj.inventorySectionId = buf.getIntLE(offset + 0);
+         obj.inventoryActionType = InventoryActionType.fromValue(buf.getByte(offset + 4));
+         obj.actionData = buf.getByte(offset + 5);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 6;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static int getInventorySectionId(MemorySegment mem) {
+      return getInventorySectionId(mem, 0);
+   }
+
+   public static int getInventorySectionId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static InventoryActionType getInventoryActionType(MemorySegment mem) {
+      return getInventoryActionType(mem, 0);
+   }
+
+   public static InventoryActionType getInventoryActionType(MemorySegment mem, int offset) {
+      return InventoryActionType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 4)));
+   }
+
+   public static byte getActionData(MemorySegment mem) {
+      return getActionData(mem, 0);
+   }
+
+   public static byte getActionData(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, (long)(offset + 5));
+   }
+
+   public static InventoryAction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static InventoryAction toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("InventoryAction", offset + 6, (int)mem.byteSize());
+      } else {
+         return new InventoryAction(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 0)),
+            InventoryActionType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 4))),
+            mem.get(PacketIO.PROTO_BYTE, (long)(offset + 5))
+         );
+      }
    }
 
    @Override
@@ -68,12 +119,25 @@ public class InventoryAction implements Packet, ToServerPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.inventorySectionId);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 4), (byte)this.inventoryActionType.getValue());
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 5), this.actionData);
+      return 6;
+   }
+
+   @Override
    public int computeSize() {
       return 6;
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      return buffer.readableBytes() - offset < 6 ? ValidationResult.error("Buffer too small: expected at least 6 bytes") : ValidationResult.OK;
+      if (buffer.readableBytes() - offset < 6) {
+         return ValidationResult.error("Buffer too small: expected at least 6 bytes");
+      } else {
+         int v = buffer.getByte(offset + 4) & 255;
+         return v >= 4 ? ValidationResult.error("Invalid InventoryActionType value for InventoryActionType") : ValidationResult.OK;
+      }
    }
 
    public InventoryAction clone() {

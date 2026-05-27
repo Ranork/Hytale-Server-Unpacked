@@ -1,10 +1,10 @@
 package com.hypixel.hytale.server.core.command.system;
 
 import com.hypixel.hytale.common.util.CompletableFutureUtil;
-import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
+import com.hypixel.hytale.protocol.packets.interface_.ArgCacheInvalidation;
+import com.hypixel.hytale.protocol.packets.interface_.CommandTreeSync;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.particle.commands.ParticleCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.AssetsCommand;
@@ -21,10 +21,10 @@ import com.hypixel.hytale.server.core.command.commands.debug.StopNetworkChunkSen
 import com.hypixel.hytale.server.core.command.commands.debug.TagPatternCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.VersionCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.component.hitboxcollision.HitboxCollisionCommand;
+import com.hypixel.hytale.server.core.command.commands.debug.component.knockback.KnockbackCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.component.repulsion.RepulsionCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.packs.PacksCommand;
 import com.hypixel.hytale.server.core.command.commands.debug.server.ServerCommand;
-import com.hypixel.hytale.server.core.command.commands.debug.stresstest.StressTestCommand;
 import com.hypixel.hytale.server.core.command.commands.player.DamageCommand;
 import com.hypixel.hytale.server.core.command.commands.player.GameModeCommand;
 import com.hypixel.hytale.server.core.command.commands.player.HideCommand;
@@ -61,11 +61,14 @@ import com.hypixel.hytale.server.core.command.commands.world.SpawnBlockCommand;
 import com.hypixel.hytale.server.core.command.commands.world.chunk.ChunkCommand;
 import com.hypixel.hytale.server.core.command.commands.world.entity.EntityCommand;
 import com.hypixel.hytale.server.core.command.commands.world.worldgen.WorldGenCommand;
+import com.hypixel.hytale.server.core.command.system.arguments.system.AbstractOptionalArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.Argument;
+import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
+import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
 import com.hypixel.hytale.server.core.command.system.exceptions.CommandException;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.universe.PlayerRef;
-import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.universe.Universe;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Deque;
 import java.util.HashSet;
@@ -86,6 +89,8 @@ public class CommandManager implements CommandOwner {
    private static CommandManager instance;
    private final Map<String, AbstractCommand> commandRegistration = new Object2ObjectOpenHashMap();
    private final Map<String, String> aliases = new Object2ObjectOpenHashMap();
+   private final Map<String, ArgumentType<?>> argTypeRegistry = new Object2ObjectOpenHashMap();
+   private final CommandTreeBuilder commandTreeBuilder = new CommandTreeBuilder();
 
    public static CommandManager get() {
       return instance;
@@ -97,6 +102,17 @@ public class CommandManager implements CommandOwner {
 
    public void shutdown() {
       this.aliases.clear();
+   }
+
+   @Nullable
+   public ArgumentType<?> getArgTypeById(@Nonnull String typeId) {
+      return this.argTypeRegistry.get(typeId);
+   }
+
+   public void broadcastArgCacheInvalidation(@Nonnull String... argTypeIds) {
+      ArgCacheInvalidation packet = new ArgCacheInvalidation();
+      packet.argTypeIds = argTypeIds;
+      Universe.get().broadcastPacket(packet);
    }
 
    @Nonnull
@@ -115,12 +131,12 @@ public class CommandManager implements CommandOwner {
       this.registerSystemCommand(new AssetsCommand());
       this.registerSystemCommand(new PacksCommand());
       this.registerSystemCommand(new ServerCommand());
-      this.registerSystemCommand(new StressTestCommand());
       this.registerSystemCommand(new HitboxCollisionCommand());
       this.registerSystemCommand(new DebugPlayerPositionCommand());
       this.registerSystemCommand(new MessageTranslationTestCommand());
       this.registerSystemCommand(new HudManagerTestCommand());
       this.registerSystemCommand(new RepulsionCommand());
+      this.registerSystemCommand(new KnockbackCommand());
       this.registerSystemCommand(new StopNetworkChunkSendingCommand());
       this.registerSystemCommand(new ShowBuilderToolsHudCommand());
       this.registerSystemCommand(new VersionCommand());
@@ -167,7 +183,7 @@ public class CommandManager implements CommandOwner {
 
       for (AbstractCommand command : this.commandRegistration.values()) {
          for (Entry<String, Set<String>> entry : command.getPermissionGroupsRecursive().entrySet()) {
-            Set<String> permissionsForGroup = permissionsByGroup.computeIfAbsent(entry.getKey(), k -> new HashSet<>());
+            Set<String> permissionsForGroup = permissionsByGroup.computeIfAbsent(entry.getKey(), groupName -> new HashSet<>());
             permissionsForGroup.addAll(entry.getValue());
          }
       }
@@ -206,6 +222,7 @@ public class CommandManager implements CommandOwner {
             this.aliases.put(alias, name);
          }
 
+         this.registerArgTypes(command);
          return new CommandRegistration(command, () -> true, () -> {
             AbstractCommand remove = this.commandRegistration.remove(name);
             if (remove != null) {
@@ -219,16 +236,39 @@ public class CommandManager implements CommandOwner {
       }
    }
 
-   @Nonnull
-   public CompletableFuture<Void> handleCommand(@Nonnull PlayerRef playerRef, @Nonnull String command) {
-      Ref<EntityStore> ref = playerRef.getReference();
-      if (ref == null) {
-         return new CompletableFuture<>();
-      } else {
-         Store<EntityStore> store = ref.getStore();
-         Player playerComponent = store.getComponent(ref, Player.getComponentType());
-         return this.handleCommand(playerComponent, command);
+   private void registerArgTypes(@Nonnull AbstractCommand command) {
+      for (RequiredArg<?> arg : command.getRequiredArguments()) {
+         ArgumentType<?> type = arg.getArgumentType();
+         this.argTypeRegistry.putIfAbsent(type.getSuggestionTypeId(), type);
       }
+
+      for (Entry<String, AbstractOptionalArg<?, ?>> entry : command.getOptionalArguments().entrySet()) {
+         AbstractOptionalArg<? extends Argument<?, ?>, ?> arg = (AbstractOptionalArg<? extends Argument<?, ?>, ?>)entry.getValue();
+         if (!(arg instanceof FlagArg)) {
+            ArgumentType<?> type = arg.getArgumentType();
+            this.argTypeRegistry.putIfAbsent(type.getSuggestionTypeId(), type);
+         }
+      }
+
+      List<AbstractCommand.SuggestionOverrideEntry> overrides = command.getSuggestionOverrides();
+      if (overrides != null) {
+         for (AbstractCommand.SuggestionOverrideEntry override : overrides) {
+            this.argTypeRegistry.putIfAbsent(override.argTypeId(), override.overrideType());
+         }
+      }
+
+      for (AbstractCommand variant : command.getVariantCommands()) {
+         this.registerArgTypes(variant);
+      }
+
+      for (AbstractCommand subcommand : command.getSubCommands().values()) {
+         this.registerArgTypes(subcommand);
+      }
+   }
+
+   @Nonnull
+   public CommandTreeSync buildCommandTree(@Nonnull CommandSender sender) {
+      return this.commandTreeBuilder.build(sender, this.commandRegistration.values());
    }
 
    @Nonnull
@@ -242,7 +282,7 @@ public class CommandManager implements CommandOwner {
          thread.setName(oldName + " -- Running: " + commandString);
 
          try {
-            LOGGER.at(Level.FINE).log("%s sent command: %s", commandSender.getDisplayName(), commandString);
+            LOGGER.at(Level.FINE).log("%s sent command: %s", commandSender.getUsername(), commandString);
             int endIndex = commandString.indexOf(32);
             String commandName = (endIndex < 0 ? commandString : commandString.substring(0, endIndex)).toLowerCase();
             AbstractCommand command = this.commandRegistration.get(commandName);
@@ -271,7 +311,7 @@ public class CommandManager implements CommandOwner {
       @Nonnull CommandSender commandSender, @Nonnull String commandInput, @Nonnull AbstractCommand abstractCommand, @Nonnull CompletableFuture<Void> future
    ) {
       try {
-         LOGGER.at(Level.INFO).log("%s executed command: %s", commandSender.getDisplayName(), commandInput);
+         LOGGER.at(Level.INFO).log("%s executed command: %s", commandSender.getUsername(), commandInput);
          ParseResult parseResult = new ParseResult();
          List<String> tokens = Tokenizer.parseArguments(commandInput, parseResult);
          if (parseResult.failed()) {
@@ -300,7 +340,7 @@ public class CommandManager implements CommandOwner {
                   if (throwable != null) {
                      if (!CompletableFutureUtil.isCanceled(throwable) && !isInternalException(throwable)) {
                         ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(new SkipSentryException(throwable)))
-                           .log("Failed to execute command %s for %s", commandInput, commandSender.getDisplayName());
+                           .log("Failed to execute command %s for %s", commandInput, commandSender.getUsername());
                         commandSender.sendMessage(
                            Message.translation("server.modules.command.error").param("cmd", commandInput).param("msg", throwable.getMessage())
                         );
@@ -319,8 +359,7 @@ public class CommandManager implements CommandOwner {
          if (var9 instanceof CommandException commandException) {
             commandException.sendTranslatedMessage(commandSender);
          } else {
-            ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(var9))
-               .log("Failed to execute command %s for %s", commandInput, commandSender.getDisplayName());
+            ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(var9)).log("Failed to execute command %s for %s", commandInput, commandSender.getUsername());
             Message errorMsg = var9.getMessage() == null
                ? Message.translation("server.modules.command.noProvidedExceptionMessage")
                : Message.raw(var9.getMessage());

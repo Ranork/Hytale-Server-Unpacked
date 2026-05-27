@@ -5,7 +5,9 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 public enum BrushOrigin {
    Center(0),
    Bottom(1),
-   Top(2);
+   Top(2),
+   Lowest(3),
+   Highest(4);
 
    public static final BrushOrigin[] VALUES = values();
    private final int value;

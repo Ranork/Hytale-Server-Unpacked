@@ -86,7 +86,6 @@ public class FluidPlugin extends JavaPlugin {
       ComponentType<ChunkStore, BlockChunk> blockChunkComponentType = BlockChunk.getComponentType();
       ComponentType<ChunkStore, WorldChunk> worldChunkComponentType = WorldChunk.getComponentType();
       chunkStoreRegistry.registerSystem(new FluidSystems.EnsureFluidSection(chunkSectionComponentType, fluidSectionComponentType));
-      chunkStoreRegistry.registerSystem(new FluidSystems.MigrateFromColumn(chunkColumnComponentType, blockChunkComponentType, fluidSectionComponentType));
       chunkStoreRegistry.registerSystem(new FluidSystems.SetupSection(chunkSectionComponentType, fluidSectionComponentType));
       chunkStoreRegistry.registerSystem(new FluidSystems.LoadPacketGenerator(chunkColumnComponentType, fluidSectionComponentType));
       chunkStoreRegistry.registerSystem(new FluidSystems.ReplicateChanges(chunkSectionComponentType, fluidSectionComponentType, worldChunkComponentType));

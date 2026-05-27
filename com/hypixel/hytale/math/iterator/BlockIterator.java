@@ -1,8 +1,8 @@
 package com.hypixel.hytale.math.iterator;
 
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public final class BlockIterator {
    private BlockIterator() {

@@ -9,10 +9,13 @@ import com.hypixel.hytale.builtin.hytalegenerator.math.NodeFunction;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import com.hypixel.hytale.codec.validation.LegacyValidator;
-import com.hypixel.hytale.math.vector.Vector2d;
+import com.hypixel.hytale.codec.schema.SchemaContext;
+import com.hypixel.hytale.codec.schema.config.Schema;
+import com.hypixel.hytale.codec.validation.ValidationResults;
+import com.hypixel.hytale.codec.validation.Validator;
 import java.util.HashSet;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class NodeFunctionYOutAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, NodeFunctionYOutAsset>>, Cleanable {
    @Nonnull
@@ -26,18 +29,24 @@ public class NodeFunctionYOutAsset implements JsonAssetWithMap<String, DefaultAs
          config -> config.data
       )
       .append(new KeyedCodec<>("Points", new ArrayCodec<>(PointYOutAsset.CODEC, PointYOutAsset[]::new), true), (t, k) -> t.nodes = k, t -> t.nodes)
-      .addValidator((LegacyValidator<? super PointYOutAsset[]>)((v, r) -> {
-         HashSet<Double> ySet = new HashSet<>(v.length);
+      .addValidator(new Validator<PointYOutAsset[]>() {
+         public void accept(PointYOutAsset[] v, ValidationResults r) {
+            HashSet<Double> ySet = new HashSet<>(v.length);
 
-         for (PointYOutAsset point : v) {
-            if (ySet.contains(point.getY())) {
-               r.fail("More than one point with Y value: " + point.getY());
-               return;
+            for (PointYOutAsset point : v) {
+               if (ySet.contains(point.getY())) {
+                  r.fail("More than one point with Y value: " + point.getY());
+                  return;
+               }
+
+               ySet.add(point.getY());
             }
-
-            ySet.add(point.getY());
          }
-      }))
+
+         @Override
+         public void updateSchema(SchemaContext context, Schema target) {
+         }
+      })
       .add()
       .build();
    private String id;

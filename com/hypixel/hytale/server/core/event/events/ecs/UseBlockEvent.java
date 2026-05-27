@@ -2,11 +2,11 @@ package com.hypixel.hytale.server.core.event.events.ecs;
 
 import com.hypixel.hytale.component.system.EcsEvent;
 import com.hypixel.hytale.component.system.ICancellableEcsEvent;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public abstract class UseBlockEvent extends EcsEvent {
    @Nonnull

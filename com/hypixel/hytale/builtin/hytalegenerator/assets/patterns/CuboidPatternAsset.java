@@ -5,8 +5,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.patterns.CuboidPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class CuboidPatternAsset extends PatternAsset {
    @Nonnull
@@ -15,9 +16,9 @@ public class CuboidPatternAsset extends PatternAsset {
       )
       .append(new KeyedCodec<>("SubPattern", PatternAsset.CODEC, true), (t, k) -> t.subPatternAsset = k, k -> k.subPatternAsset)
       .add()
-      .append(new KeyedCodec<>("Min", Vector3i.CODEC, true), (t, k) -> t.min = k, k -> k.min)
+      .append(new KeyedCodec<>("Min", Vector3iUtil.CODEC, true), (t, k) -> t.min = k, k -> k.min)
       .add()
-      .append(new KeyedCodec<>("Max", Vector3i.CODEC, true), (t, k) -> t.max = k, k -> k.max)
+      .append(new KeyedCodec<>("Max", Vector3iUtil.CODEC, true), (t, k) -> t.max = k, k -> k.max)
       .add()
       .build();
    private PatternAsset subPatternAsset = new ConstantPatternAsset();

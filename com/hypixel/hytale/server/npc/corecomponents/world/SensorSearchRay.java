@@ -4,8 +4,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
 import com.hypixel.hytale.server.npc.util.RayBlockHitTest;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SensorSearchRay extends SensorBase {
    protected final int id;
@@ -63,9 +64,9 @@ public class SensorSearchRay extends SensorBase {
          assert headRotationComponent != null;
 
          Vector3d position = transformComponent.getPosition();
-         Vector3f headRotation = headRotationComponent.getRotation();
+         Rotation3f headRotation = headRotationComponent.getRotation();
          Vector3d cachedPosition = role.getWorldSupport().getCachedSearchRayPosition(this.id);
-         if (!cachedPosition.equals(Vector3d.MIN)) {
+         if (!cachedPosition.equals(Vector3dUtil.MIN)) {
             WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(cachedPosition.x, cachedPosition.z));
             if (chunk != null) {
                BlockSection section = chunk.getBlockChunk().getSectionAtBlockY(MathUtil.floor(cachedPosition.y));
@@ -74,34 +75,34 @@ public class SensorSearchRay extends SensorBase {
                   return true;
                }
 
-               cachedPosition.assign(Vector3d.MIN);
+               cachedPosition.set(Vector3dUtil.MIN);
                this.positionProvider.clear();
             }
          } else if ((this.throttleTimeRemaining -= dt) > 0.0
-            && Math.abs(headRotation.getYaw() - this.lastCheckedYaw) <= this.minRetestAngle
-            && position.distanceSquaredTo(this.lastCheckedPosition) <= this.minRetestMoveSquared) {
+            && Math.abs(headRotation.yaw() - this.lastCheckedYaw) <= this.minRetestAngle
+            && position.distanceSquared(this.lastCheckedPosition) <= this.minRetestMoveSquared) {
             this.positionProvider.clear();
             return false;
          }
 
          RayBlockHitTest blockRaySearch = RayBlockHitTest.THREAD_LOCAL.get();
          if (!blockRaySearch.init(ref, this.blockSet, this.angle, store)) {
-            cachedPosition.assign(Vector3d.MIN);
+            cachedPosition.set(Vector3dUtil.MIN);
             this.positionProvider.clear();
             blockRaySearch.clear();
             return false;
          } else {
-            this.lastCheckedPosition.assign(position);
-            this.lastCheckedYaw = headRotation.getYaw();
+            this.lastCheckedPosition.set(position);
+            this.lastCheckedYaw = headRotation.yaw();
             this.throttleTimeRemaining = this.throttleTime;
             boolean result = blockRaySearch.run(this.range);
             if (result) {
                this.lastBlockRevision = blockRaySearch.getLastBlockRevision();
                Vector3d targetPosition = blockRaySearch.getHitPosition();
-               cachedPosition.assign(targetPosition.x + 0.5, targetPosition.y + 0.5, targetPosition.z + 0.5);
+               cachedPosition.set(targetPosition.x + 0.5, targetPosition.y + 0.5, targetPosition.z + 0.5);
                this.positionProvider.setTarget(cachedPosition);
             } else {
-               cachedPosition.assign(Vector3d.MIN);
+               cachedPosition.set(Vector3dUtil.MIN);
                this.positionProvider.clear();
             }
 

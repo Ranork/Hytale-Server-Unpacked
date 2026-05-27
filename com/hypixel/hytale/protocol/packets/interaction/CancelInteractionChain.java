@@ -4,8 +4,11 @@ import com.hypixel.hytale.protocol.ForkedChainId;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,16 +50,20 @@ public class CancelInteractionChain implements Packet, ToClientPacket {
 
    @Nonnull
    public static CancelInteractionChain deserialize(@Nonnull ByteBuf buf, int offset) {
-      CancelInteractionChain obj = new CancelInteractionChain();
-      byte nullBits = buf.getByte(offset);
-      obj.chainId = buf.getIntLE(offset + 1);
-      int pos = offset + 5;
-      if ((nullBits & 1) != 0) {
-         obj.forkedId = ForkedChainId.deserialize(buf, pos);
-         pos += ForkedChainId.computeBytesConsumed(buf, pos);
-      }
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("CancelInteractionChain", 5, buf.readableBytes() - offset);
+      } else {
+         CancelInteractionChain obj = new CancelInteractionChain();
+         byte nullBits = buf.getByte(offset);
+         obj.chainId = buf.getIntLE(offset + 1);
+         int pos = offset + 5;
+         if ((nullBits & 1) != 0) {
+            obj.forkedId = ForkedChainId.deserialize(buf, pos);
+            pos += ForkedChainId.computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -67,6 +74,47 @@ public class CancelInteractionChain implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   public static int getChainId(MemorySegment mem) {
+      return getChainId(mem, 0);
+   }
+
+   public static int getChainId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 1));
+   }
+
+   @Nullable
+   public static ForkedChainId getForkedId(MemorySegment mem) {
+      return getForkedId(mem, 0);
+   }
+
+   @Nullable
+   public static ForkedChainId getForkedId(MemorySegment mem, int offset) {
+      return hasForkedId(mem, offset) ? ForkedChainId.toObject(mem, offset + 5) : null;
+   }
+
+   public static boolean hasForkedId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static CancelInteractionChain toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CancelInteractionChain toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CancelInteractionChain", offset + 5, (int)mem.byteSize());
+      } else {
+         return new CancelInteractionChain(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 1)), hasForkedId(mem, offset) ? ForkedChainId.toObject(mem, offset + 5) : null
+         );
+      }
    }
 
    @Override
@@ -81,6 +129,23 @@ public class CancelInteractionChain implements Packet, ToClientPacket {
       if (this.forkedId != null) {
          this.forkedId.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.forkedId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 1), this.chainId);
+      int varOffset = offset + 5;
+      if (this.forkedId != null) {
+         varOffset += this.forkedId.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

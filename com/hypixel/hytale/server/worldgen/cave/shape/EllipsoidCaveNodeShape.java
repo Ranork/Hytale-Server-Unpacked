@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.worldgen.cave.shape;
 
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.supplier.IDoubleRange;
 import com.hypixel.hytale.server.worldgen.cave.CaveNodeType;
 import com.hypixel.hytale.server.worldgen.cave.CaveType;
@@ -9,6 +8,7 @@ import com.hypixel.hytale.server.worldgen.cave.element.CaveNode;
 import com.hypixel.hytale.server.worldgen.util.bounds.IWorldBounds;
 import java.util.Random;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class EllipsoidCaveNodeShape extends AbstractCaveNodeShape implements IWorldBounds {
    private final CaveType caveType;
@@ -41,7 +41,7 @@ public class EllipsoidCaveNodeShape extends AbstractCaveNodeShape implements IWo
    @Nonnull
    @Override
    public Vector3d getStart() {
-      return this.o.clone();
+      return new Vector3d(this.o);
    }
 
    @Nonnull

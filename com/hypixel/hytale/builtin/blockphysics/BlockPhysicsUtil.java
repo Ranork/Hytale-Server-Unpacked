@@ -1,11 +1,11 @@
 package com.hypixel.hytale.builtin.blockphysics;
 
+import com.hypixel.hytale.builtin.fallingblocks.FallingBlock;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockFace;
@@ -25,6 +25,8 @@ import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class BlockPhysicsUtil {
    public static final int DOESNT_SATISFY = 0;
@@ -92,7 +94,7 @@ public class BlockPhysicsUtil {
                int blockHeight = Math.max(maxY - minY, 1);
                int blockDepth = Math.max(maxZ - minZ, 1);
 
-               label136:
+               label137:
                for (int x = 0; x < blockWidth; x++) {
                   for (int y = 0; y < blockHeight; y++) {
                      for (int z = 0; z < blockDepth; z++) {
@@ -138,7 +140,7 @@ public class BlockPhysicsUtil {
                               case Any:
                                  if (fillerSupportDistance == -2) {
                                     supportDistance = -2;
-                                    break label136;
+                                    break label137;
                                  }
 
                                  if (fillerSupportDistance == 0) {
@@ -150,7 +152,7 @@ public class BlockPhysicsUtil {
                               case All:
                                  if (fillerSupportDistance == 0) {
                                     supportDistance = 0;
-                                    break label136;
+                                    break label137;
                                  }
 
                                  if (fillerSupportDistance == -2) {
@@ -181,6 +183,9 @@ public class BlockPhysicsUtil {
                   BlockHarvestUtils.naturallyRemoveBlockByPhysics(
                      new Vector3i(blockX, blockY, blockZ), blockType, filler, 2304, chunkReference, componentAccessor, chunkStore
                   );
+                  break;
+               case FALL:
+                  FallingBlock.fallBlock(world, componentAccessor.getExternalData().getStore(), blockX, blockY, blockZ);
             }
 
             return BlockPhysicsUtil.Result.INVALID;
@@ -244,14 +249,14 @@ public class BlockPhysicsUtil {
                RequiredBlockFaceSupport[] requiredBlockFaceSupports = requiredBlockFaceSupportMap.get(blockFace);
                if (requiredBlockFaceSupports != null && requiredBlockFaceSupports.length != 0) {
                   BlockFace[] connectingFaces = blockFace.getConnectingFaces();
-                  Vector3i[] connectingFaceOffsets = blockFace.getConnectingFaceOffsets();
+                  Vector3ic[] connectingFaceOffsets = blockFace.getConnectingFaceOffsets();
 
                   for (int i = 0; i < connectingFaces.length; i++) {
                      BlockFace neighbourBlockFace = connectingFaces[i];
-                     Vector3i neighbourDirection = connectingFaceOffsets[i];
-                     int neighbourX = blockX + neighbourDirection.x;
-                     int neighbourY = blockY + neighbourDirection.y;
-                     int neighbourZ = blockZ + neighbourDirection.z;
+                     Vector3ic neighbourDirection = connectingFaceOffsets[i];
+                     int neighbourX = blockX + neighbourDirection.x();
+                     int neighbourY = blockY + neighbourDirection.y();
+                     int neighbourZ = blockZ + neighbourDirection.z();
                      if (!boundingBox.containsBlock(origin, neighbourX, neighbourY, neighbourZ)) {
                         BlockSection neighbourBlockSection;
                         FluidSection neighbourFluidSection;
@@ -277,63 +282,67 @@ public class BlockPhysicsUtil {
                         int neighbourBlockId = neighbourBlockSection.get(neighbourX, neighbourY, neighbourZ);
                         int neighbourFiller = neighbourBlockSection.getFiller(neighbourX, neighbourY, neighbourZ);
                         int neighbourRotation = neighbourBlockSection.getRotationIndex(neighbourX, neighbourY, neighbourZ);
-                        BlockType neighbourBlockType = BlockType.getAssetMap().getAsset(neighbourBlockId);
-                        Fluid neighbourFluid = Fluid.getAssetMap().getAsset(neighbourFluidId);
-                        neighbourFillerOffset.assign(
-                           FillerBlockUtil.unpackX(neighbourFiller), FillerBlockUtil.unpackY(neighbourFiller), FillerBlockUtil.unpackZ(neighbourFiller)
-                        );
-                        boolean doesSatisfySupport = false;
-                        boolean failedSatisfySupport = false;
+                        if (neighbourFiller == 0
+                           || BlockType.getAssetMap().getAsset(neighbourBlockId) != blockType
+                           || neighbourX - FillerBlockUtil.unpackX(neighbourFiller) != origin.x
+                           || neighbourY - FillerBlockUtil.unpackY(neighbourFiller) != origin.y
+                           || neighbourZ - FillerBlockUtil.unpackZ(neighbourFiller) != origin.z) {
+                           BlockType neighbourBlockType = BlockType.getAssetMap().getAsset(neighbourBlockId);
+                           Fluid neighbourFluid = Fluid.getAssetMap().getAsset(neighbourFluidId);
+                           neighbourFillerOffset.set(
+                              FillerBlockUtil.unpackX(neighbourFiller), FillerBlockUtil.unpackY(neighbourFiller), FillerBlockUtil.unpackZ(neighbourFiller)
+                           );
+                           boolean doesSatisfySupport = false;
+                           boolean failedSatisfySupport = false;
 
-                        for (RequiredBlockFaceSupport requiredBlockFaceSupport : requiredBlockFaceSupports) {
-                           if (requiredBlockFaceSupport.isAppliedToFiller(blockFillerOffset)) {
-                              boolean doesSatisfyRequirements = doesSatisfyRequirements(
-                                 blockType,
-                                 blockFillerOffset,
-                                 neighbourFillerOffset,
-                                 blockFace,
-                                 neighbourBlockFace,
-                                 neighbourBlockId,
-                                 neighbourBlockType,
-                                 neighbourRotation,
-                                 neighbourFluidId,
-                                 neighbourFluid,
-                                 requiredBlockFaceSupport
-                              );
-                              if (doesSatisfyRequirements && requiredSupportDistance > 0 && requiredBlockFaceSupport.allowsSupportPropagation()) {
-                                 int supportDistance = neighbourBlockPhysics != null ? neighbourBlockPhysics.get(neighbourX, neighbourY, neighbourZ) : 0;
-                                 if (supportDistance == 15) {
-                                    lowestSupportDistance = 1;
-                                 } else if (supportDistance < lowestSupportDistance) {
-                                    lowestSupportDistance = supportDistance;
+                           for (RequiredBlockFaceSupport requiredBlockFaceSupport : requiredBlockFaceSupports) {
+                              if (requiredBlockFaceSupport.isAppliedToFiller(blockFillerOffset)) {
+                                 boolean doesSatisfyRequirements = doesSatisfyRequirements(
+                                    blockType,
+                                    blockFillerOffset,
+                                    neighbourFillerOffset,
+                                    blockFace,
+                                    neighbourBlockFace,
+                                    neighbourBlockId,
+                                    neighbourBlockType,
+                                    neighbourRotation,
+                                    neighbourFluidId,
+                                    neighbourFluid,
+                                    requiredBlockFaceSupport
+                                 );
+                                 if (doesSatisfyRequirements && requiredSupportDistance > 0 && requiredBlockFaceSupport.allowsSupportPropagation()) {
+                                    int supportDistance = neighbourBlockPhysics != null ? neighbourBlockPhysics.get(neighbourX, neighbourY, neighbourZ) : 0;
+                                    if (supportDistance == 15) {
+                                       lowestSupportDistance = 1;
+                                    } else if (supportDistance < lowestSupportDistance) {
+                                       lowestSupportDistance = supportDistance;
+                                    }
+                                 }
+
+                                 switch (requiredBlockFaceSupport.getSupport()) {
+                                    case IGNORED:
+                                    default:
+                                       break;
+                                    case REQUIRED:
+                                       if (doesSatisfyRequirements) {
+                                          doesSatisfySupport = true;
+                                       }
+
+                                       hasTestedForSupport = true;
+                                       break;
+                                    case DISALLOWED:
+                                       if (doesSatisfyRequirements) {
+                                          failedSatisfySupport = true;
+                                       }
+
+                                       hasTestedForSupport = true;
                                  }
                               }
-
-                              switch (requiredBlockFaceSupport.getSupport()) {
-                                 case IGNORED:
-                                    break;
-                                 case REQUIRED:
-                                    if (doesSatisfyRequirements) {
-                                       doesSatisfySupport = true;
-                                    }
-
-                                    hasTestedForSupport = true;
-                                    break;
-                                 case DISALLOWED:
-                                    if (doesSatisfyRequirements) {
-                                       failedSatisfySupport = true;
-                                    }
-
-                                    hasTestedForSupport = true;
-                                    break;
-                                 default:
-                                    throw new IllegalArgumentException("Unknown Support Match type: " + requiredBlockFaceSupport.getMatchSelf());
-                              }
                            }
-                        }
 
-                        if (!failedSatisfySupport && doesSatisfySupport) {
-                           return -2;
+                           if (!failedSatisfySupport && doesSatisfySupport) {
+                              return -2;
+                           }
                         }
                      }
                   }
@@ -405,8 +414,6 @@ public class BlockPhysicsUtil {
          hasSupport = doesMatchFaceType(blockFillerOffset, requiredBlockFaceSupport.getSelfFaceType(), blockFace, blockType.getSupporting(neighbourRotation));
       }
       return switch (requiredBlockFaceSupport.getMatchSelf()) {
-         case IGNORED -> {
-         }
          case REQUIRED -> {
             if (hasSupport) {
                yield blockType.getId().equals(neighbourBlockTypeKey);
@@ -417,7 +424,6 @@ public class BlockPhysicsUtil {
                yield !blockType.getId().equals(neighbourBlockTypeKey);
             }
          }
-         default -> throw new IllegalArgumentException("Unknown MatchSelf type: " + requiredBlockFaceSupport.getMatchSelf());
       };
    }
 

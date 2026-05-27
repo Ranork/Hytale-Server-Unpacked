@@ -6,6 +6,7 @@ public class InventoryCommand extends AbstractCommandCollection {
    public InventoryCommand() {
       super("inventory", "server.commands.inventory.desc");
       this.addAliases("inv");
+      this.setPermissionGroups("hytale:Builder");
       this.addSubCommand(new InventoryClearCommand());
       this.addSubCommand(new InventorySeeCommand());
       this.addSubCommand(new InventoryItemCommand());

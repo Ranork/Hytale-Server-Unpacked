@@ -7,7 +7,6 @@ import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.AllLegacyLivingEntityTypesQuery;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.npc.blackboard.view.event.entity.EntityEventTyp
 import com.hypixel.hytale.server.npc.blackboard.view.event.entity.EntityEventView;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class NPCDeathSystems {
    public static class EntityViewSystem extends DeathSystems.OnDeathSystem {
@@ -91,7 +91,7 @@ public class NPCDeathSystems {
 
                   assert transformComponent != null;
 
-                  sourceNpcComponent.getDamageData().onKill(ref, transformComponent.getPosition().clone());
+                  sourceNpcComponent.getDamageData().onKill(ref, new Vector3d(transformComponent.getPosition()));
                }
             }
          }

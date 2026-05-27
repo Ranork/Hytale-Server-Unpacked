@@ -1,18 +1,18 @@
 package com.hypixel.hytale.builtin.hytalegenerator.materialproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.engine.TerrainDensityProvider;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public abstract class MaterialProvider<V> {
-   @Nullable
-   public abstract V getVoxelTypeAt(@Nonnull MaterialProvider.Context var1);
-
    @Nonnull
    public static <V> MaterialProvider<V> noMaterialProvider() {
       return new ConstantMaterialProvider<>(null);
    }
+
+   @Nullable
+   public abstract V getVoxelTypeAt(@Nonnull MaterialProvider.Context var1);
 
    public static class Context {
       @Nonnull

@@ -12,6 +12,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class VectorBoxUtil {
    public static void forEachVector(Iterable<Vector3d> vectors, double originX, double originY, double originZ, double apothem, Consumer<Vector3d> consumer) {
@@ -423,9 +424,9 @@ public class VectorBoxUtil {
    public static boolean isInside(
       double originX, double originY, double originZ, double xMin, double yMin, double zMin, double xMax, double yMax, double zMax, @Nonnull Vector3d vector
    ) {
-      double x = vector.getX() - originX;
-      double y = vector.getY() - originY;
-      double z = vector.getZ() - originZ;
+      double x = vector.x() - originX;
+      double y = vector.y() - originY;
+      double z = vector.z() - originZ;
       return x >= xMin && x <= xMax && y >= yMin && y <= yMax && z >= zMin && z <= zMax;
    }
 }

@@ -12,10 +12,11 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class ManualPropAsset extends PropAsset {
    @Nonnull
@@ -57,7 +58,7 @@ public class ManualPropAsset extends PropAsset {
             (config, data) -> config.data = data,
             config -> config.data
          )
-         .append(new KeyedCodec<>("Position", Vector3i.CODEC, true), (asset, value) -> asset.position = value, asset -> asset.position)
+         .append(new KeyedCodec<>("Position", Vector3iUtil.CODEC, true), (asset, value) -> asset.position = value, asset -> asset.position)
          .add()
          .append(new KeyedCodec<>("Material", MaterialAsset.CODEC, true), (asset, value) -> asset.materialAsset = value, asset -> asset.materialAsset)
          .add()

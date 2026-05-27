@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,26 +35,34 @@ public class BuilderToolBlockArg {
 
    @Nonnull
    public static BuilderToolBlockArg deserialize(@Nonnull ByteBuf buf, int offset) {
-      BuilderToolBlockArg obj = new BuilderToolBlockArg();
-      byte nullBits = buf.getByte(offset);
-      obj.allowPattern = buf.getByte(offset + 1) != 0;
-      int pos = offset + 2;
-      if ((nullBits & 1) != 0) {
-         int defaultValueLen = VarInt.peek(buf, pos);
-         if (defaultValueLen < 0) {
-            throw ProtocolException.negativeLength("Default", defaultValueLen);
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("BuilderToolBlockArg", 2, buf.readableBytes() - offset);
+      } else {
+         BuilderToolBlockArg obj = new BuilderToolBlockArg();
+         byte nullBits = buf.getByte(offset);
+         obj.allowPattern = buf.getByte(offset + 1) != 0;
+         int pos = offset + 2;
+         if ((nullBits & 1) != 0) {
+            int defaultValueLen = VarInt.peek(buf, pos);
+            if (defaultValueLen < 0) {
+               throw ProtocolException.invalidVarInt("Default");
+            }
+
+            int defaultValueVarLen = VarInt.size(defaultValueLen);
+            if (defaultValueLen > 4096000) {
+               throw ProtocolException.stringTooLong("Default", defaultValueLen, 4096000);
+            }
+
+            if (pos + defaultValueVarLen + defaultValueLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Default", pos + defaultValueVarLen + defaultValueLen, buf.readableBytes());
+            }
+
+            obj.defaultValue = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+            pos += defaultValueVarLen + defaultValueLen;
          }
 
-         if (defaultValueLen > 4096000) {
-            throw ProtocolException.stringTooLong("Default", defaultValueLen, 4096000);
-         }
-
-         int defaultValueVarLen = VarInt.length(buf, pos);
-         obj.defaultValue = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += defaultValueVarLen + defaultValueLen;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -61,10 +70,52 @@ public class BuilderToolBlockArg {
       int pos = offset + 2;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   @Nullable
+   public static String getDefault(MemorySegment mem) {
+      return getDefault(mem, 0);
+   }
+
+   @Nullable
+   public static String getDefault(MemorySegment mem, int offset) {
+      return hasDefault(mem, offset) ? PacketIO.readVarString("Default", mem, offset + 2, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean getAllowPattern(MemorySegment mem) {
+      return getAllowPattern(mem, 0);
+   }
+
+   public static boolean getAllowPattern(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1));
+   }
+
+   public static boolean hasDefault(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static BuilderToolBlockArg toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolBlockArg toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolBlockArg", offset + 2, (int)mem.byteSize());
+      } else {
+         return new BuilderToolBlockArg(
+            hasDefault(mem, offset) ? PacketIO.readVarString("Default", mem, offset + 2, 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -78,6 +129,22 @@ public class BuilderToolBlockArg {
       if (this.defaultValue != null) {
          PacketIO.writeVarString(buf, this.defaultValue, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.defaultValue != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.allowPattern);
+      int varOffset = offset + 2;
+      if (this.defaultValue != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.defaultValue, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {
@@ -105,7 +172,7 @@ public class BuilderToolBlockArg {
                return ValidationResult.error("Default exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(defaultLen);
             pos += defaultLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Default");

@@ -190,7 +190,7 @@ public class PrefabEditorCreationSettings
          inputPrefabName = inputPrefabName.replace('/', File.separatorChar);
          inputPrefabName = inputPrefabName.replace('\\', File.separatorChar);
          if (!SingleplayerModule.isOwner(playerRef) && !inputPrefabName.isEmpty() && Path.of(inputPrefabName).isAbsolute()) {
-            this.player.sendMessage(Message.translation("server.commands.editprefab.error.absolutePathNotAllowed"));
+            playerRef.sendMessage(Message.translation("server.commands.editprefab.error.absolutePathNotAllowed"));
             return null;
          }
 
@@ -204,14 +204,14 @@ public class PrefabEditorCreationSettings
                String relativePath = this.getRelativePathForInput(inputPrefabName);
                Path resolvedPath = rootPath.resolve(relativePath);
                if (!SingleplayerModule.isOwner(playerRef) && !PathUtil.isChildOf(rootPath, resolvedPath)) {
-                  this.player.sendMessage(Message.translation("server.commands.editprefab.error.pathTraversal"));
+                  playerRef.sendMessage(Message.translation("server.commands.editprefab.error.pathTraversal"));
                   return null;
                }
 
                this.prefabPaths.add(resolvedPath);
             } catch (Exception var13) {
                var13.printStackTrace();
-               this.player.sendMessage(Message.translation("server.commands.editprefab.finishProcessingError").param("error", var13.getMessage()));
+               playerRef.sendMessage(Message.translation("server.commands.editprefab.finishProcessingError").param("error", var13.getMessage()));
                return null;
             }
          } else {
@@ -219,7 +219,7 @@ public class PrefabEditorCreationSettings
             String relativePath = this.getRelativePathForInput(inputPrefabName);
             Path resolvedDir = rootPath.resolve(relativePath);
             if (!SingleplayerModule.isOwner(playerRef) && !PathUtil.isChildOf(rootPath, resolvedDir)) {
-               this.player.sendMessage(Message.translation("server.commands.editprefab.error.pathTraversal"));
+               playerRef.sendMessage(Message.translation("server.commands.editprefab.error.pathTraversal"));
                return null;
             }
 
@@ -234,8 +234,7 @@ public class PrefabEditorCreationSettings
       if (!creatingNewPrefab) {
          for (Path processedPrefabPath : this.prefabPaths) {
             if (!Files.exists(processedPrefabPath)) {
-               this.player
-                  .sendMessage(Message.translation("server.commands.editprefab.load.error.prefabNotFound").param("path", processedPrefabPath.toString()));
+               playerRef.sendMessage(Message.translation("server.commands.editprefab.load.error.prefabNotFound").param("path", processedPrefabPath.toString()));
                return null;
             }
          }
@@ -249,7 +248,7 @@ public class PrefabEditorCreationSettings
             .map(Path::toString)
             .map(Message::raw)
             .collect(Collectors.toSet());
-         this.player.sendMessage(MessageFormat.list(header, values));
+         playerRef.sendMessage(MessageFormat.list(header, values));
          return null;
       } else {
          return this;

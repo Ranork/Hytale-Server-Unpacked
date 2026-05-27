@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class PacksCommand extends AbstractCommandCollection {
    public PacksCommand() {
       super("packs", "server.commands.packs.desc");
+      this.setPermissionGroups("hytale:ServerEditor");
       this.addSubCommand(new PacksListCommand());
    }
 }

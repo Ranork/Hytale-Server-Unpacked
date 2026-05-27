@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.systems.RoleChangeSystem;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionMount extends ActionBase {
    public static final String EMPTY_ROLE_ID = "Empty_Role";
@@ -38,14 +39,14 @@ public class ActionMount extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       Ref<EntityStore> target = role.getStateSupport().getInteractionIterationTarget();
       boolean targetExists = target != null && !store.getArchetype(target).contains(DeathComponent.getComponentType());
       return super.canExecute(ref, role, sensorInfo, dt, store) && targetExists;
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       ComponentType<EntityStore, NPCMountComponent> mountComponentType = NPCMountComponent.getComponentType();
       NPCMountComponent mountComponent = store.getComponent(ref, mountComponentType);

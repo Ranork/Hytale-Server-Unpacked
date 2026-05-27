@@ -223,14 +223,18 @@ public class BuilderManager {
 
    public void unloadBuilders(AssetPack pack) {
       Path path = pack.getRoot().resolve(NPCPlugin.ROLE_ASSETS_PATH);
-      AssetMonitor assetMonitor = AssetModule.get().getAssetMonitor();
-      if (assetMonitor != null) {
-         assetMonitor.removeMonitorDirectoryFiles(path, pack);
-      }
-
       if (Files.isDirectory(path)) {
+         AssetMonitor assetMonitor = AssetModule.get().getAssetMonitor();
+         if (assetMonitor != null) {
+            assetMonitor.removeMonitorDirectoryFiles(path, pack);
+         }
+
          try {
             Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+               {
+                  Objects.requireNonNull(BuilderManager.this);
+               }
+
                @Nonnull
                public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
                   if (BuilderManager.isJsonFile(file) && !BuilderManager.isIgnoredFile(file)) {
@@ -264,6 +268,10 @@ public class BuilderManager {
          final ObjectArrayList<String> errors = new ObjectArrayList();
          if (Files.isDirectory(path)) {
             Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+               {
+                  Objects.requireNonNull(BuilderManager.this);
+               }
+
                @Nonnull
                public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
                   if (BuilderManager.isJsonFile(file) && !BuilderManager.isIgnoredFile(file)) {
@@ -1178,6 +1186,8 @@ public class BuilderManager {
       private final boolean includeTests;
 
       public BuilderAssetMonitorHandler(AssetPack pack, boolean includeTests) {
+         Objects.requireNonNull(BuilderManager.this);
+         super();
          this.pack = pack;
          this.includeTests = includeTests;
       }

@@ -17,7 +17,11 @@ import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.protocol.BenchType;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<String, CraftingRecipe>> {
    public static final String FIELDCRAFT_REQUIREMENT = "Fieldcraft";
@@ -135,18 +139,20 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
       })
       .afterDecode(CraftingRecipe::processConfig)
       .build();
-   private static final MaterialQuantity[] EMPTY_OUTPUT = new MaterialQuantity[0];
+   private static final MaterialQuantity[] EMPTY_OUTPUT = MaterialQuantity.EMPTY_ARRAY;
    private static AssetStore<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> ASSET_STORE;
    private AssetExtraInfo.Data data;
    protected String id;
    protected MaterialQuantity[] input;
    protected MaterialQuantity[] outputs = EMPTY_OUTPUT;
+   @Nullable
    protected MaterialQuantity primaryOutput;
    protected int primaryOutputQuantity = 1;
    protected BenchRequirement[] benchRequirement;
    protected float timeSeconds;
    protected boolean knowledgeRequired;
    protected int requiredMemoriesLevel = 1;
+   private Set<String> outputItemIds = Collections.emptySet();
 
    public static AssetStore<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> getAssetStore() {
       if (ASSET_STORE == null) {
@@ -162,7 +168,7 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
 
    public CraftingRecipe(
       MaterialQuantity[] input,
-      MaterialQuantity primaryOutput,
+      @Nullable MaterialQuantity primaryOutput,
       MaterialQuantity[] outputs,
       int outputQuantity,
       BenchRequirement[] benchRequirement,
@@ -206,7 +212,7 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
          packet.inputs = ArrayUtil.copyAndMutate(this.input, MaterialQuantity::toPacket, com.hypixel.hytale.protocol.MaterialQuantity[]::new);
       }
 
-      packet.primaryOutput = this.primaryOutput.toPacket();
+      packet.primaryOutput = this.primaryOutput != null ? this.primaryOutput.toPacket() : null;
       if (this.outputs != null && this.outputs.length > 0) {
          packet.outputs = ArrayUtil.copyAndMutate(this.outputs, MaterialQuantity::toPacket, com.hypixel.hytale.protocol.MaterialQuantity[]::new);
       }
@@ -224,6 +230,28 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
    private void processConfig() {
       if ((this.outputs == null || this.outputs.length == 0) && this.primaryOutput != null) {
          this.outputs = new MaterialQuantity[]{this.primaryOutput};
+      }
+
+      Set<String> ids = new HashSet<>();
+      if (this.outputs != null) {
+         for (MaterialQuantity output : this.outputs) {
+            if (output != null && output.getItemId() != null) {
+               ids.add(output.getItemId());
+            }
+         }
+      }
+
+      if (this.primaryOutput != null && this.primaryOutput.getItemId() != null) {
+         ids.add(this.primaryOutput.getItemId());
+      }
+
+      this.outputItemIds = ids.isEmpty() ? Collections.emptySet() : Set.copyOf(ids);
+      if (this.input != null && !this.outputItemIds.isEmpty()) {
+         for (MaterialQuantity ingredient : this.input) {
+            if (ingredient != null && ingredient.getItemId() == null) {
+               ingredient.withExcludedItemIds(this.outputItemIds);
+            }
+         }
       }
    }
 
@@ -251,6 +279,7 @@ public class CraftingRecipe implements JsonAssetWithMap<String, DefaultAssetMap<
       return this.requiredMemoriesLevel;
    }
 
+   @Nullable
    public MaterialQuantity getPrimaryOutput() {
       return this.primaryOutput;
    }

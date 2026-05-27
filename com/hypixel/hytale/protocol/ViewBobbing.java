@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -28,15 +31,19 @@ public class ViewBobbing {
 
    @Nonnull
    public static ViewBobbing deserialize(@Nonnull ByteBuf buf, int offset) {
-      ViewBobbing obj = new ViewBobbing();
-      byte nullBits = buf.getByte(offset);
-      int pos = offset + 1;
-      if ((nullBits & 1) != 0) {
-         obj.firstPerson = CameraShakeConfig.deserialize(buf, pos);
-         pos += CameraShakeConfig.computeBytesConsumed(buf, pos);
-      }
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("ViewBobbing", 1, buf.readableBytes() - offset);
+      } else {
+         ViewBobbing obj = new ViewBobbing();
+         byte nullBits = buf.getByte(offset);
+         int pos = offset + 1;
+         if ((nullBits & 1) != 0) {
+            obj.firstPerson = CameraShakeConfig.deserialize(buf, pos);
+            pos += CameraShakeConfig.computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -49,6 +56,37 @@ public class ViewBobbing {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static CameraShakeConfig getFirstPerson(MemorySegment mem) {
+      return getFirstPerson(mem, 0);
+   }
+
+   @Nullable
+   public static CameraShakeConfig getFirstPerson(MemorySegment mem, int offset) {
+      return hasFirstPerson(mem, offset) ? CameraShakeConfig.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean hasFirstPerson(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static ViewBobbing toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ViewBobbing toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ViewBobbing", offset + 1, (int)mem.byteSize());
+      } else {
+         return new ViewBobbing(hasFirstPerson(mem, offset) ? CameraShakeConfig.toObject(mem, offset + 1) : null);
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       byte nullBits = 0;
       if (this.firstPerson != null) {
@@ -59,6 +97,21 @@ public class ViewBobbing {
       if (this.firstPerson != null) {
          this.firstPerson.serialize(buf);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.firstPerson != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 1;
+      if (this.firstPerson != null) {
+         varOffset += this.firstPerson.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

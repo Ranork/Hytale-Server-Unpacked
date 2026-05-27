@@ -8,11 +8,11 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PickupItemSystem extends EntityTickingSystem<EntityStore> {
    private static final float EYE_HEIGHT_SCALE = 5.0F;
@@ -56,7 +56,7 @@ public class PickupItemSystem extends EntityTickingSystem<EntityStore> {
             Vector3d position = transformComponent.getPosition();
             TransformComponent targetTransformComponent = commandBuffer.getComponent(targetRef, this.transformComponentType);
             if (targetTransformComponent != null) {
-               Vector3d targetPosition = targetTransformComponent.getPosition().clone();
+               Vector3d targetPosition = new Vector3d(targetTransformComponent.getPosition());
                ModelComponent targetModelComponent = commandBuffer.getComponent(targetRef, ModelComponent.getComponentType());
                if (targetModelComponent != null) {
                   float targetModelEyeHeight = targetModelComponent.getModel().getEyeHeight(targetRef, commandBuffer);
@@ -78,10 +78,10 @@ public class PickupItemSystem extends EntityTickingSystem<EntityStore> {
       float originalLifeTime = pickupItemComponent.getOriginalLifeTime();
       float progress = 1.0F - remainingTime / originalLifeTime;
       if (progress >= 1.0F) {
-         current.assign(target);
+         current.set(target);
          return true;
       } else {
-         current.assign(Vector3d.lerp(pickupItemComponent.getStartPosition(), target, progress));
+         pickupItemComponent.getStartPosition().lerp(target, progress, current);
          pickupItemComponent.decreaseLifetime(dt);
          return false;
       }

@@ -4,7 +4,6 @@ import com.hypixel.hytale.builtin.crafting.component.BenchBlock;
 import com.hypixel.hytale.builtin.crafting.component.CraftingManager;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.window.CraftRecipeAction;
 import com.hypixel.hytale.protocol.packets.window.TierUpgradeAction;
@@ -13,24 +12,19 @@ import com.hypixel.hytale.protocol.packets.window.WindowType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.MaterialContainerWindow;
-import com.hypixel.hytale.server.core.entity.entities.player.windows.WindowManager;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SimpleCraftingWindow extends CraftingWindow implements MaterialContainerWindow {
    public SimpleCraftingWindow(int x, int y, int z, int rotationIndex, @Nonnull BlockType blockType, @Nonnull BenchBlock benchBlock) {
       super(WindowType.BasicCrafting, x, y, z, rotationIndex, blockType, benchBlock);
-   }
-
-   @Override
-   public void init(@Nonnull PlayerRef playerRef, @Nonnull WindowManager manager) {
-      super.init(playerRef, manager);
    }
 
    @Override
@@ -51,13 +45,10 @@ public class SimpleCraftingWindow extends CraftingWindow implements MaterialCont
                return;
             }
 
-            Player playerComponent = store.getComponent(ref, Player.getComponentType());
-            if (playerComponent == null) {
-               return;
-            }
-
-            CombinedItemContainer combined = playerComponent.getInventory().getCombinedBackpackStorageHotbar();
-            CombinedItemContainer playerAndContainerInventory = new CombinedItemContainer(combined, this.getExtraResourcesSection().getItemContainer());
+            CombinedItemContainer combinedBackpackStorageHotbar = InventoryComponent.getCombined(store, ref, InventoryComponent.BACKPACK_STORAGE_HOTBAR);
+            CombinedItemContainer playerAndContainerInventory = new CombinedItemContainer(
+               combinedBackpackStorageHotbar, this.getExtraResourcesSection().getItemContainer()
+            );
             boolean accepted;
             if (craftRecipe.getTimeSeconds() > 0.0F) {
                accepted = craftingManager.queueCraft(

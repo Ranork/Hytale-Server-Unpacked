@@ -8,11 +8,14 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.wordlist.WordList;
+import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -20,6 +23,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class Teleporter implements Component<ChunkStore> {
    @Nonnull
@@ -44,6 +49,7 @@ public class Teleporter implements Component<ChunkStore> {
       .documentation("The ID of the Word list to select default warp names from")
       .add()
       .build();
+   public static final String CREATOR_IDENTIFIER = "*Teleporter";
    public static final String ACTIVATE_STATE = "Active";
    public static final String INACTIVE_STATE = "default";
    @Nullable
@@ -158,7 +164,7 @@ public class Teleporter implements Component<ChunkStore> {
    }
 
    @Nullable
-   public Teleport toTeleport(@Nonnull Vector3d currentPosition, @Nonnull Vector3f currentRotation, @Nonnull Vector3i blockPosition) {
+   public Teleport toTeleport(@Nonnull Vector3d currentPosition, @Nonnull Rotation3f currentRotation, @Nonnull Vector3i blockPosition) {
       if (this.warp != null && !this.warp.isEmpty()) {
          Warp targetWarp = TeleportPlugin.get().getWarps().get(this.warp.toLowerCase());
          return targetWarp != null ? targetWarp.toTeleport() : null;
@@ -167,7 +173,7 @@ public class Teleporter implements Component<ChunkStore> {
             World world = Universe.get().getWorld(this.worldUuid);
             if (world != null) {
                if (this.relativeMask != 0) {
-                  Transform teleportTransform = this.transform.clone();
+                  Transform teleportTransform = new Transform(this.transform);
                   Transform.applyMaskedRelativeTransform(teleportTransform, this.relativeMask, currentPosition, currentRotation, blockPosition);
                   return Teleport.createForPlayer(world, teleportTransform);
                }
@@ -177,7 +183,7 @@ public class Teleporter implements Component<ChunkStore> {
          }
 
          if (this.relativeMask != 0) {
-            Transform teleportTransform = this.transform.clone();
+            Transform teleportTransform = new Transform(this.transform);
             Transform.applyMaskedRelativeTransform(teleportTransform, this.relativeMask, currentPosition, currentRotation, blockPosition);
             return Teleport.createForPlayer(teleportTransform);
          } else {
@@ -186,5 +192,45 @@ public class Teleporter implements Component<ChunkStore> {
       } else {
          return null;
       }
+   }
+
+   public static Teleporter.ValidationResult validateWarp(
+      @Nonnull Store<ChunkStore> store, @Nonnull Teleporter teleporter, @Nonnull BlockModule.BlockStateInfo blockstate
+   ) {
+      String ownedWarp = teleporter.getOwnedWarp();
+      if (ownedWarp != null && !ownedWarp.isEmpty()) {
+         TeleportPlugin teleportPlugin = TeleportPlugin.get();
+         String warpId = ownedWarp.toLowerCase();
+         Warp warp = teleportPlugin.getWarps().get(warpId);
+         if (warp != null && warp.getTransform() != null) {
+            if (!warp.getCreator().equals("*Teleporter")) {
+               return Teleporter.ValidationResult.CREATOR_INVALID;
+            } else {
+               Vector3d position = warp.getTransform().getPosition();
+               int x = MathUtil.floor(position.x);
+               int y = MathUtil.floor(position.y);
+               int z = MathUtil.floor(position.z);
+               if (blockstate.getIndex() != ChunkUtil.indexBlockInColumn(x, y, z)) {
+                  return Teleporter.ValidationResult.POSITION_INVALID;
+               } else {
+                  long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+                  Ref<ChunkStore> chunkRef = store.getExternalData().getChunkReference(chunkIndex);
+                  return !blockstate.getChunkRef().equals(chunkRef) ? Teleporter.ValidationResult.POSITION_INVALID : Teleporter.ValidationResult.VALID;
+               }
+            }
+         } else {
+            return Teleporter.ValidationResult.WARP_INVALID;
+         }
+      } else {
+         return Teleporter.ValidationResult.NAME_INVALID;
+      }
+   }
+
+   public static enum ValidationResult {
+      VALID,
+      NAME_INVALID,
+      WARP_INVALID,
+      CREATOR_INVALID,
+      POSITION_INVALID;
    }
 }

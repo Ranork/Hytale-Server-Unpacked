@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class VectorWarpDensity extends Density {
    @Nullable
@@ -36,9 +36,9 @@ public class VectorWarpDensity extends Density {
       } else {
          double warp = this.warpInput.process(context);
          warp *= this.warpFactor;
-         this.rSamplePoint.assign(this.warpVector);
-         this.rSamplePoint.setLength(1.0);
-         this.rSamplePoint.scale(warp);
+         this.rSamplePoint.set(this.warpVector);
+         this.rSamplePoint.normalize(1.0);
+         this.rSamplePoint.mul(warp);
          this.rSamplePoint.add(context.position);
          this.rChildContext.assign(context);
          this.rChildContext.position = this.rSamplePoint;

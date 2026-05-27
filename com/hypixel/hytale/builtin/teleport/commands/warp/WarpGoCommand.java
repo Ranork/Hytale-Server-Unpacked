@@ -19,6 +19,7 @@ public class WarpGoCommand extends AbstractPlayerCommand {
    public WarpGoCommand() {
       super("go", "server.commands.warp.go.desc");
       this.requirePermission(HytalePermissions.fromCommand("warp.go"));
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

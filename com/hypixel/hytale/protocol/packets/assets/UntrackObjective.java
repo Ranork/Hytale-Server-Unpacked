@@ -4,8 +4,10 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -44,18 +46,52 @@ public class UntrackObjective implements Packet, ToClientPacket {
 
    @Nonnull
    public static UntrackObjective deserialize(@Nonnull ByteBuf buf, int offset) {
-      UntrackObjective obj = new UntrackObjective();
-      obj.objectiveUuid = PacketIO.readUUID(buf, offset + 0);
-      return obj;
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("UntrackObjective", 16, buf.readableBytes() - offset);
+      } else {
+         UntrackObjective obj = new UntrackObjective();
+         obj.objectiveUuid = PacketIO.readUUID(buf, offset + 0);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 16;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 16L;
+   }
+
+   public static UUID getObjectiveUuid(MemorySegment mem) {
+      return getObjectiveUuid(mem, 0);
+   }
+
+   public static UUID getObjectiveUuid(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 0);
+   }
+
+   public static UntrackObjective toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UntrackObjective toObject(MemorySegment mem, int offset) {
+      if (offset + 16 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UntrackObjective", offset + 16, (int)mem.byteSize());
+      } else {
+         return new UntrackObjective(PacketIO.readUUID(mem, offset + 0));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       PacketIO.writeUUID(buf, this.objectiveUuid);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      PacketIO.writeUUID(mem, offset + 0, this.objectiveUuid);
+      return 16;
    }
 
    @Override

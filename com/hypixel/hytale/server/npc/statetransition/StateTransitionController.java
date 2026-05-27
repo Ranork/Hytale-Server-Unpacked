@@ -207,7 +207,9 @@ public class StateTransitionController {
       }
 
       @Override
-      public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+      public boolean canExecute(
+         @Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store
+      ) {
          if (this.currentIndex >= this.actionLists.size()) {
             this.currentIndex = 0;
          }
@@ -216,7 +218,7 @@ public class StateTransitionController {
       }
 
       @Override
-      public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+      public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
          StateTransitionController.PrioritisedActionList actionList = this.actionLists.get(this.currentIndex);
          if (!actionList.actionList.canExecute(ref, role, sensorInfo, dt, store)) {
             return false;
@@ -312,12 +314,14 @@ public class StateTransitionController {
 
    private record PrioritisedActionList(int priority, ActionList actionList) implements StateTransitionController.IActionListHolder {
       @Override
-      public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+      public boolean canExecute(
+         @Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store
+      ) {
          return this.actionList.canExecute(ref, role, sensorInfo, dt, store);
       }
 
       @Override
-      public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+      public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
          return this.actionList.execute(ref, role, sensorInfo, dt, store);
       }
 

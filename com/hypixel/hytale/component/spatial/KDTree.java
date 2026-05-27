@@ -1,6 +1,5 @@
 package com.hypixel.hytale.component.spatial;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectListIterator;
 import java.util.Comparator;
@@ -8,6 +7,7 @@ import java.util.List;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class KDTree<T> implements SpatialStructure<T> {
    @Nonnull
@@ -250,7 +250,7 @@ public class KDTree<T> implements SpatialStructure<T> {
          } else {
             int axis = depth % 3;
             int compare = compare(node.vector, vector, axis);
-            double distanceSq = node.vector.distanceSquaredTo(vector);
+            double distanceSq = node.vector.distanceSquared(vector);
             if (distanceSq < closestState.distanceSq) {
                closestState.node = node;
                closestState.distanceSq = distanceSq;
@@ -264,7 +264,7 @@ public class KDTree<T> implements SpatialStructure<T> {
             }
 
             double plane = get(node.vector, axis);
-            double component = get(closestState.node.vector, axis);
+            double component = get(vector, axis);
             double planeDistance = Math.abs(component - plane);
             if (planeDistance * planeDistance < closestState.distanceSq) {
                if (compare < 0) {
@@ -281,7 +281,7 @@ public class KDTree<T> implements SpatialStructure<T> {
       if (node != null) {
          int axis = depth % 3;
          int compare = compare(node.vector, vector, axis);
-         double nodeDistanceSq = node.vector.distanceSquaredTo(vector);
+         double nodeDistanceSq = node.vector.distanceSquared(vector);
          if (nodeDistanceSq < distanceSq) {
             int i = 0;
 
@@ -393,7 +393,7 @@ public class KDTree<T> implements SpatialStructure<T> {
       if (node != null) {
          int axis = depth % 3;
          int compare = compare(node.vector, vector, axis);
-         double nodeDistanceSq = node.vector.distanceSquaredTo(vector);
+         double nodeDistanceSq = node.vector.distanceSquared(vector);
          if (nodeDistanceSq < distanceSq) {
             results.add(new KDTree.OrderedEntry<>(nodeDistanceSq, node.data));
          }
@@ -436,7 +436,7 @@ public class KDTree<T> implements SpatialStructure<T> {
             && node.vector.z >= center.z - zSearchRadius
             && node.vector.z <= center.z + zSearchRadius;
          if (inCuboid) {
-            double nodeDistanceSq = node.vector.distanceSquaredTo(center);
+            double nodeDistanceSq = node.vector.distanceSquared(center);
             results.add(new KDTree.OrderedEntry<>(nodeDistanceSq, node.data));
          }
 

@@ -5,11 +5,11 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class FitToHeightMapSpawnProvider implements ISpawnProvider {
    @Nonnull
@@ -35,12 +35,12 @@ public class FitToHeightMapSpawnProvider implements ISpawnProvider {
    public Transform getSpawnPoint(@Nonnull World world, @Nonnull UUID uuid) {
       Transform spawnPoint = this.spawnProvider.getSpawnPoint(world, uuid);
       Vector3d position = spawnPoint.getPosition();
-      if (position.getY() < 0.0) {
-         WorldChunk worldChunk = world.getNonTickingChunk(ChunkUtil.indexChunkFromBlock(position.getX(), position.getZ()));
+      if (position.y() < 0.0) {
+         WorldChunk worldChunk = world.getNonTickingChunk(ChunkUtil.indexChunkFromBlock(position.x(), position.z()));
          if (worldChunk != null) {
-            int x = MathUtil.floor(position.getX());
-            int z = MathUtil.floor(position.getZ());
-            position.setY(worldChunk.getHeight(x, z) + 1);
+            int x = MathUtil.floor(position.x());
+            int z = MathUtil.floor(position.z());
+            position.y = worldChunk.getHeight(x, z) + 1;
          }
       }
 

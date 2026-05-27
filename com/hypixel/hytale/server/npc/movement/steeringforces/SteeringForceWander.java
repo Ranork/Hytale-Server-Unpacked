@@ -1,10 +1,10 @@
 package com.hypixel.hytale.server.npc.movement.steeringforces;
 
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SteeringForceWander implements SteeringForce {
    private double time;

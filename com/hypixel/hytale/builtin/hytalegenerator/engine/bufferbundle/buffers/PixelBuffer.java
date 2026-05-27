@@ -1,8 +1,8 @@
 package com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public abstract class PixelBuffer<T> extends Buffer {
    public static final int BUFFER_SIZE_BITS = 3;

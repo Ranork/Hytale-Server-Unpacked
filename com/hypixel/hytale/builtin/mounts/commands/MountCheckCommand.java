@@ -20,6 +20,7 @@ public class MountCheckCommand extends AbstractTargetPlayerCommand {
 
    public MountCheckCommand() {
       super("check", "server.commands.check.desc");
+      this.setPermissionGroups("hytale:Adventurer");
    }
 
    @Override

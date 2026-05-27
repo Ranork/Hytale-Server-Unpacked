@@ -19,8 +19,6 @@ import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
 import com.hypixel.hytale.protocol.ComponentUpdateType;
 import com.hypixel.hytale.protocol.RepulsionUpdate;
@@ -38,6 +36,7 @@ import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class RepulsionSystems {
    public static class EntityTrackerRemove extends RefChangeSystem<EntityStore, Repulsion> {
@@ -246,36 +245,36 @@ public class RepulsionSystems {
 
             assert transformComponent != null;
 
-            Vector2d position = new Vector2d(transformComponent.getPosition().x, transformComponent.getPosition().z);
+            Vector3d transformPosition = transformComponent.getPosition();
+            double posX = transformPosition.x;
+            double posZ = transformPosition.z;
             SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.spatialComponent);
             List<Ref<EntityStore>> results = new ReferenceArrayList();
-            spatialResource.getSpatialStructure().ordered(transformComponent.getPosition(), radius, results);
+            spatialResource.getSpatialStructure().ordered(transformPosition, radius, results);
 
             for (Ref<EntityStore> entityRef : results) {
                TransformComponent entityTransformComponent = commandBuffer.getComponent(entityRef, this.transformComponentComponentType);
                if (entityTransformComponent != null) {
-                  Vector2d entityPosition = new Vector2d(entityTransformComponent.getPosition().x, entityTransformComponent.getPosition().z);
-                  if (!entityPosition.equals(position)) {
-                     double distance = position.distanceTo(entityPosition);
-                     if (!(distance < 0.1)) {
-                        double fraction = (radius - distance) / radius;
-                        float maxForce = repulsion.maxForce;
-                        int flip = 1;
-                        if (maxForce < 0.0F) {
-                           flip = -1;
-                           maxForce *= flip;
-                        }
+                  Vector3d entityTransformPosition = entityTransformComponent.getPosition();
+                  double dx = entityTransformPosition.x - posX;
+                  double dz = entityTransformPosition.z - posZ;
+                  double distanceSq = dx * dx + dz * dz;
+                  if (!(distanceSq < 0.01)) {
+                     double distance = Math.sqrt(distanceSq);
+                     double fraction = (radius - distance) / radius;
+                     float maxForce = repulsion.maxForce;
+                     int flip = 1;
+                     if (maxForce < 0.0F) {
+                        flip = -1;
+                        maxForce *= flip;
+                     }
 
-                        double force = Math.max((double)repulsion.minForce, maxForce * fraction);
-                        force *= flip;
-                        Vector2d push = entityPosition.subtract(position);
-                        push.normalize();
-                        push.scale(force);
-                        Velocity entityVelocityComponent = commandBuffer.getComponent(entityRef, Velocity.getComponentType());
-                        if (entityVelocityComponent != null) {
-                           Vector3d addedVelocity = new Vector3d((float)push.x, 0.0, (float)push.y);
-                           entityVelocityComponent.addInstruction(addedVelocity, null, ChangeVelocityType.Add);
-                        }
+                     double force = Math.max((double)repulsion.minForce, maxForce * fraction);
+                     force *= flip;
+                     Velocity entityVelocityComponent = commandBuffer.getComponent(entityRef, Velocity.getComponentType());
+                     if (entityVelocityComponent != null) {
+                        Vector3d addedVelocity = new Vector3d((float)(dx / distance * force), 0.0, (float)(dz / distance * force));
+                        entityVelocityComponent.addInstruction(addedVelocity, null, ChangeVelocityType.Add);
                      }
                   }
                }

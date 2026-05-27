@@ -14,7 +14,6 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -24,6 +23,7 @@ import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ReachLocationTask extends ObjectiveTask {
    @Nonnull
@@ -100,7 +100,7 @@ public class ReachLocationTask extends ObjectiveTask {
             assert closestMarkerReachComponent != null;
 
             Vector3d closestPosition = closestMarkerTransformComponent.getPosition();
-            double shortestDistance = closestPosition.distanceSquaredTo(currentLocation);
+            double shortestDistance = closestPosition.distanceSquared(currentLocation);
             String closestLocationName = closestMarkerReachComponent.getLocationName();
 
             for (int i = 1; i < reachLocationMarkerEntities.size(); i++) {
@@ -114,7 +114,7 @@ public class ReachLocationTask extends ObjectiveTask {
                assert markerReachLocationComponent != null;
 
                Vector3d pos = markerTransformComponent.getPosition();
-               double distance = pos.distanceSquaredTo(currentLocation);
+               double distance = pos.distanceSquared(currentLocation);
                String locationName = markerReachLocationComponent.getLocationName();
                if (distance < shortestDistance && locationName != null) {
                   shortestDistance = distance;

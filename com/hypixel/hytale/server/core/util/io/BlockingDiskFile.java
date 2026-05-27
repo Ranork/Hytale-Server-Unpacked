@@ -37,7 +37,7 @@ public abstract class BlockingDiskFile {
 
          try {
             if (!file.exists()) {
-               if (Options.getOptionSet().has(Options.BARE)) {
+               if (Options.isBare()) {
                   byte[] bytes;
                   try (
                      ByteArrayOutputStream out = new ByteArrayOutputStream();

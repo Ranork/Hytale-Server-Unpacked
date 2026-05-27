@@ -8,12 +8,13 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.spawning.assets.spawns.config.BeaconNPCSpawn;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class KillSpawnBeaconObjectiveTaskAsset extends KillObjectiveTaskAsset {
    @Nonnull
@@ -83,7 +84,7 @@ public class KillSpawnBeaconObjectiveTaskAsset extends KillObjectiveTaskAsset {
          .addValidator(BeaconNPCSpawn.VALIDATOR_CACHE.getValidator())
          .add()
          .append(
-            new KeyedCodec<>("Offset", Vector3d.CODEC),
+            new KeyedCodec<>("Offset", Vector3dUtil.CODEC),
             (objectiveSpawnBeacon, vector3d) -> objectiveSpawnBeacon.offset = vector3d,
             objectiveSpawnBeacon -> objectiveSpawnBeacon.offset
          )

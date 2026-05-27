@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.command.commands.utility.help;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -29,7 +28,7 @@ public class HelpCommand extends AbstractAsyncCommand {
    public HelpCommand() {
       super("help", "server.commands.help.desc");
       this.addAliases("?");
-      this.setPermissionGroup(GameMode.Adventure);
+      this.setPermissionGroups("hytale:Adventurer");
       this.addUsageVariant(new HelpCommand.HelpCommandVariant());
    }
 

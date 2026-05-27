@@ -7,10 +7,12 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleRangeValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.RelationalOperator;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionControllerDive;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
+import java.util.Set;
 import javax.annotation.Nonnull;
 
 public class BuilderMotionControllerDive extends BuilderMotionControllerBase {
@@ -198,6 +200,12 @@ public class BuilderMotionControllerDive extends BuilderMotionControllerBase {
       return MotionController.class;
    }
 
+   @Nonnull
+   @Override
+   public String getType() {
+      return "Dive";
+   }
+
    public double getMinHorizontalSpeed() {
       return this.minHorizontalSpeed;
    }
@@ -273,14 +281,31 @@ public class BuilderMotionControllerDive extends BuilderMotionControllerBase {
    @Nonnull
    @Override
    public SpawnTestResult canSpawn(@Nonnull SpawningContext context) {
-      Model model = context.getModel();
-      double swimDepth = model == null
-         ? 0.5
-         : MotionControllerDive.relativeSwimDepthToHeight(this.getSwimDepth(), model.getBoundingBox(), model.getEyeHeight());
-      if (!context.isInWater((float)swimDepth)) {
+      if (Double.isNaN(context.swimDepth)) {
+         Model model = context.getModel();
+         context.swimDepth = model == null
+            ? 0.5
+            : MotionControllerDive.relativeSwimDepthToHeight(this.getSwimDepth(), model.getBoundingBox(), model.getEyeHeight());
+      }
+
+      if (!context.isInWater((float)context.swimDepth)) {
          return SpawnTestResult.FAIL_NO_POSITION;
       } else {
          return context.validatePosition(20) ? SpawnTestResult.TEST_OK : SpawnTestResult.FAIL_INVALID_POSITION;
+      }
+   }
+
+   @Override
+   public void getMovementModes(
+      @Nonnull SpawningContext context,
+      @Nonnull Set<MovementMode> outSupportedMovementModes,
+      @Nonnull Set<MovementMode> outDefaultMovementModes,
+      @Nonnull Set<MovementMode> outSafeMovementModes
+   ) {
+      outSupportedMovementModes.addAll(MotionControllerDive.SUPPORTED_MOVEMENT_MODES);
+      outDefaultMovementModes.addAll(MotionControllerDive.DEFAULT_SPAWN_MOVEMENT_MODES);
+      if (context.breathesInWater) {
+         outSafeMovementModes.add(MovementMode.DIVE);
       }
    }
 
@@ -288,5 +313,11 @@ public class BuilderMotionControllerDive extends BuilderMotionControllerBase {
    @Override
    public Class<? extends MotionController> getClassType() {
       return MotionControllerDive.class;
+   }
+
+   @Nonnull
+   @Override
+   public Set<MovementMode> getSupportedMovementModes() {
+      return MotionControllerDive.SUPPORTED_MOVEMENT_MODES;
    }
 }

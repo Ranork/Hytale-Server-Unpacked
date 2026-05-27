@@ -4,7 +4,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.entityfunnel.RotationEntityFunnel;
 import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.RotationVoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
@@ -32,8 +32,8 @@ public class StaticRotatorProp extends Prop {
       this.rotationEntityFunnel = new RotationEntityFunnel(rotation);
       this.readBounds = prop.getReadBounds_voxelGrid().clone();
       this.writeBounds = prop.getWriteBounds_voxelGrid().clone();
-      this.readBounds.applyRotationAroundVoxel(rotation, Vector3i.ZERO);
-      this.writeBounds.applyRotationAroundVoxel(rotation, Vector3i.ZERO);
+      this.readBounds.applyRotationAroundVoxel(rotation, Vector3iUtil.ZERO);
+      this.writeBounds.applyRotationAroundVoxel(rotation, Vector3iUtil.ZERO);
       this.rChildContext = new Prop.Context();
    }
 

@@ -195,6 +195,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.positionproviders.Union
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.AssignedPropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.ConstantPropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.ImportedPropDistributionAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.NoPropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.PositionsPropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.PropDistributionAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.propdistribution.UnionPropDistributionAsset;
@@ -204,6 +205,7 @@ import com.hypixel.hytale.builtin.hytalegenerator.assets.props.ColumnPropAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.props.CuboidPropAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.props.DensityPropAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.props.DensitySelectorPropAsset;
+import com.hypixel.hytale.builtin.hytalegenerator.assets.props.EmptyPropAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.props.ImportedPropAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.props.LocatorPropAsset;
 import com.hypixel.hytale.builtin.hytalegenerator.assets.props.ManualPropAsset;
@@ -273,7 +275,7 @@ public class AssetManager {
    private final HashMap<String, PositionProviderAsset> positionProviderAssets;
    @Nonnull
    private final HashMap<String, PropAsset> propAssets;
-   private SettingsAsset settingsAsset;
+   private SettingsAsset settingsAsset = new SettingsAsset();
    @Nonnull
    private final HytaleLogger logger;
    private List<Runnable> reloadListeners;
@@ -301,7 +303,7 @@ public class AssetManager {
    }
 
    private void loadPropAssets(@Nonnull LoadedAssetsEvent<String, PropAsset, DefaultAssetMap<String, PropAsset>> event) {
-      this.blockMaskAssets.clear();
+      this.propAssets.clear();
 
       for (PropAsset value : event.getLoadedAssets().values()) {
          this.propAssets.put(value.getId(), value);
@@ -312,7 +314,7 @@ public class AssetManager {
    }
 
    private void loadPositionProviderAssets(@Nonnull LoadedAssetsEvent<String, PositionProviderAsset, DefaultAssetMap<String, PositionProviderAsset>> event) {
-      this.blockMaskAssets.clear();
+      this.positionProviderAssets.clear();
 
       for (PositionProviderAsset value : event.getLoadedAssets().values()) {
          this.positionProviderAssets.put(value.getId(), value);
@@ -323,7 +325,7 @@ public class AssetManager {
    }
 
    private void loadPropDistributionAssets(@Nonnull LoadedAssetsEvent<String, PropDistributionAsset, DefaultAssetMap<String, PropDistributionAsset>> event) {
-      this.blockMaskAssets.clear();
+      this.propDistributionAssets.clear();
 
       for (PropDistributionAsset value : event.getLoadedAssets().values()) {
          this.propDistributionAssets.put(value.getId(), value);
@@ -376,7 +378,7 @@ public class AssetManager {
    }
 
    private void loadWorldStructureAssets(@Nonnull LoadedAssetsEvent<String, WorldStructureAsset, DefaultAssetMap<String, WorldStructureAsset>> event) {
-      this.biomeAssets.clear();
+      this.worldStructureAssets.clear();
 
       for (WorldStructureAsset value : event.getLoadedAssets().values()) {
          this.worldStructureAssets.put(value.getId(), value);
@@ -640,11 +642,13 @@ public class AssetManager {
       PropAsset.CODEC.register("RandomRotator", RandomRotatorPropAsset.class, RandomRotatorPropAsset.CODEC);
       PropAsset.CODEC.register("Orienter", OrienterPropAsset.class, OrienterPropAsset.CODEC);
       PropAsset.CODEC.register("DensitySelector", DensitySelectorPropAsset.class, DensitySelectorPropAsset.CODEC);
+      PropAsset.CODEC.register("Empty", EmptyPropAsset.class, EmptyPropAsset.CODEC);
       PropDistributionAsset.CODEC.register("Constant", ConstantPropDistributionAsset.class, ConstantPropDistributionAsset.CODEC);
       PropDistributionAsset.CODEC.register("Assigned", AssignedPropDistributionAsset.class, AssignedPropDistributionAsset.CODEC);
       PropDistributionAsset.CODEC.register("Positions", PositionsPropDistributionAsset.class, PositionsPropDistributionAsset.CODEC);
       PropDistributionAsset.CODEC.register("Union", UnionPropDistributionAsset.class, UnionPropDistributionAsset.CODEC);
       PropDistributionAsset.CODEC.register("Imported", ImportedPropDistributionAsset.class, ImportedPropDistributionAsset.CODEC);
+      PropDistributionAsset.CODEC.register("None", NoPropDistributionAsset.class, NoPropDistributionAsset.CODEC);
       DirectionalityAsset.CODEC.register("Imported", ImportedDirectionalityAsset.class, ImportedDirectionalityAsset.CODEC);
       DirectionalityAsset.CODEC.register("Static", StaticDirectionalityAsset.class, StaticDirectionalityAsset.CODEC);
       DirectionalityAsset.CODEC.register("Random", RandomDirectionalityAsset.class, RandomDirectionalityAsset.CODEC);

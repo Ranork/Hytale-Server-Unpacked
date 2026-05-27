@@ -8,7 +8,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
@@ -30,6 +30,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class PlayerProcessMovementSystem extends EntityTickingSystem<EntityStore> {
    @Nonnull
@@ -117,10 +118,10 @@ public class PlayerProcessMovementSystem extends EntityTickingSystem<EntityStore
 
          boolean pendingCollisionCheck = collisionResultComponent.isPendingCollisionCheck();
          collisionResultComponent.getCollisionStartPositionCopy()
-            .assign(pendingCollisionCheck ? collisionResultComponent.getCollisionStartPosition() : transformComponent.getPosition());
-         collisionResultComponent.getCollisionPositionOffsetCopy().assign(collisionResultComponent.getCollisionPositionOffset());
+            .set(pendingCollisionCheck ? collisionResultComponent.getCollisionStartPosition() : transformComponent.getPosition());
+         collisionResultComponent.getCollisionPositionOffsetCopy().set(collisionResultComponent.getCollisionPositionOffset());
          collisionResultComponent.resetLocationChange();
-         if (collisionResultComponent.getCollisionPositionOffsetCopy().squaredLength() >= 100.0) {
+         if (collisionResultComponent.getCollisionPositionOffsetCopy().lengthSquared() >= 100.0) {
             if (playerComponent.getGameMode() == GameMode.Adventure) {
                Entity.LOGGER
                   .at(Level.WARNING)
@@ -158,7 +159,7 @@ public class PlayerProcessMovementSystem extends EntityTickingSystem<EntityStore
 
                assert positionDataComponent != null;
 
-               Vector3i blockPosition = transformComponent.getPosition().toVector3i();
+               Vector3i blockPosition = Vector3dUtil.toVector3i(transformComponent.getPosition());
                positionDataComponent.setInsideBlockTypeId(worldChunkComponent.getBlock(blockPosition));
                positionDataComponent.setStandingOnBlockTypeId(worldChunkComponent.getBlock(blockPosition.x, blockPosition.y - 1, blockPosition.z));
             }

@@ -8,4 +8,5 @@ public class CollisionMaterial {
    public static final int MATERIAL_SET_ANY = 15;
    public static final int MATERIAL_DAMAGE = 16;
    public static final int MATERIAL_SET_NONE = 0;
+   public static final int MATERIAL_INVALID = -1;
 }

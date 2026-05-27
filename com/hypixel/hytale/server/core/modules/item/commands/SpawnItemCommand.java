@@ -4,8 +4,7 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -27,6 +26,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SpawnItemCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -42,6 +42,7 @@ public class SpawnItemCommand extends AbstractPlayerCommand {
 
    public SpawnItemCommand() {
       super("spawnitem", "server.commands.spawnitem.desc");
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override
@@ -61,7 +62,7 @@ public class SpawnItemCommand extends AbstractPlayerCommand {
          float throwSpeed = 6.0F * force;
          if (this.countArg.provided(context)) {
             int count = this.countArg.get(context);
-            Vector3d throwPosition = playerPosition.clone();
+            Vector3d throwPosition = new Vector3d(playerPosition);
             throwPosition.add(0.0, playerModel.getEyeHeight(ref, store), 0.0);
             ThreadLocalRandom random = ThreadLocalRandom.current();
 
@@ -70,7 +71,7 @@ public class SpawnItemCommand extends AbstractPlayerCommand {
                   store,
                   new ItemStack(itemId, quantity),
                   throwPosition,
-                  Vector3f.ZERO,
+                  Rotation3f.IDENTITY,
                   (float)random.nextGaussian() * throwSpeed,
                   0.5F,
                   (float)random.nextGaussian() * throwSpeed

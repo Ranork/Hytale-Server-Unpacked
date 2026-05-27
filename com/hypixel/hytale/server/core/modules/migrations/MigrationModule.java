@@ -18,8 +18,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
 import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkSavingSystems;
-import it.unimi.dsi.fastutil.longs.LongIterator;
-import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.longs.LongList;
+import it.unimi.dsi.fastutil.longs.LongListIterator;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.nio.file.Path;
@@ -97,16 +97,16 @@ public class MigrationModule extends JavaPlugin {
                IChunkLoader loader = chunkComponentStore.getLoader();
                world.execute(
                   () -> {
+                     world.lockSaving();
                      ChunkSavingSystems.Data data = chunkComponentStore.getStore().getResource(ChunkStore.SAVE_RESOURCE);
-                     data.isSaving = false;
                      data.waitForSavingChunks()
                         .whenComplete(
                            (aVoid, throwable) -> {
                               try {
-                                 LongSet chunks = loader.getIndexes();
+                                 LongList chunks = loader.getIndexes();
                                  this.getLogger().at(Level.INFO).log("Found %d chunks in world '%s'. Starting iteration...", chunks.size(), worldName);
                                  List<CompletableFuture<?>> futures = new ObjectArrayList(chunks.size());
-                                 LongIterator iterator = chunks.iterator();
+                                 LongListIterator iterator = chunks.iterator();
 
                                  while (iterator.hasNext()) {
                                     long index = iterator.nextLong();
@@ -146,7 +146,7 @@ public class MigrationModule extends JavaPlugin {
                               } catch (Throwable var21) {
                                  ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var21)).log("Failed to migrate chunks!");
                               } finally {
-                                 data.isSaving = true;
+                                 world.unlockSaving();
                                  this.getLogger().at(Level.INFO).log("%d world(s) left to migrate.", worldsCount.decrementAndGet());
                               }
                            }

@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.modules.entity.player;
 
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.server.core.modules.collision.CollisionResult;
@@ -10,6 +9,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class KnockbackSimulation implements Component<EntityStore> {
    public static final float KNOCKBACK_SIMULATION_TIME = 0.5F;
@@ -65,7 +65,7 @@ public class KnockbackSimulation implements Component<EntityStore> {
          this.requestedVelocityChangeType = ChangeVelocityType.Set;
       }
 
-      this.requestedVelocity.assign(velocity);
+      this.requestedVelocity.set(velocity);
    }
 
    @Nullable
@@ -188,7 +188,7 @@ public class KnockbackSimulation implements Component<EntityStore> {
    @Override
    public Component<EntityStore> clone() {
       KnockbackSimulation simulation = new KnockbackSimulation();
-      simulation.requestedVelocity.assign(this.requestedVelocity);
+      simulation.requestedVelocity.set(this.requestedVelocity);
       return simulation;
    }
 }

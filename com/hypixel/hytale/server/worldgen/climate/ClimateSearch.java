@@ -2,9 +2,9 @@ package com.hypixel.hytale.server.worldgen.climate;
 
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
+import org.joml.Vector2i;
 
 public class ClimateSearch {
    public static final int STEP_SIZE = 100;
@@ -35,7 +35,7 @@ public class ClimateSearch {
                int y = cy + (int)(Math.sin(t) * r);
                double score = collect(seed, x, y, noise, graph, rule);
                if (score > bestScore) {
-                  bestPosition.assign(x, y);
+                  bestPosition.set(x, y);
                   bestScore = score;
                }
             }

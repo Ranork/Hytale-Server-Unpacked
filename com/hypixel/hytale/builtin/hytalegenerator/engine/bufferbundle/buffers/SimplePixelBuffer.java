@@ -3,14 +3,15 @@ package com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers;
 import com.hypixel.hytale.builtin.hytalegenerator.ArrayUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.MemInstrument;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class SimplePixelBuffer<T> extends PixelBuffer<T> {
    @Nonnull
-   private static final Bounds3i bounds = new Bounds3i(Vector3i.ZERO, SIZE);
+   private static final Bounds3i bounds = new Bounds3i(Vector3iUtil.ZERO, SIZE);
    @Nonnull
    private final Class<T> pixelType;
    @Nonnull
@@ -25,6 +26,10 @@ public class SimplePixelBuffer<T> extends PixelBuffer<T> {
       this.state = SimplePixelBuffer.State.EMPTY;
       this.arrayContents = null;
       this.singleValue = null;
+   }
+
+   private static int index(@Nonnull Vector3i position) {
+      return position.y + position.x * SIZE.y + position.z * SIZE.y * SIZE.x;
    }
 
    @Nullable
@@ -106,10 +111,6 @@ public class SimplePixelBuffer<T> extends PixelBuffer<T> {
       this.arrayContents = new SimplePixelBuffer.ArrayContents<>();
       Arrays.fill(this.arrayContents.array, this.singleValue);
       this.singleValue = null;
-   }
-
-   private static int index(@Nonnull Vector3i position) {
-      return position.y + position.x * SIZE.y + position.z * SIZE.y * SIZE.x;
    }
 
    public static class ArrayContents<T> implements MemInstrument {

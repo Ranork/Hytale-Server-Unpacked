@@ -2,12 +2,12 @@ package com.hypixel.hytale.builtin.portals.utils.posqueries.generators;
 
 import com.hypixel.hytale.builtin.portals.utils.posqueries.SpatialQuery;
 import com.hypixel.hytale.builtin.portals.utils.posqueries.SpatialQueryDebug;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SearchCircular implements SpatialQuery {
    private final double minRadius;
@@ -38,7 +38,7 @@ public class SearchCircular implements SpatialQuery {
          ThreadLocalRandom rand = ThreadLocalRandom.current();
          double rad = rand.nextDouble() * Math.PI * 2.0;
          double radius = this.minRadius + rand.nextDouble() * (this.maxRadius - this.minRadius);
-         return origin.clone().add(Math.cos(rad) * radius, 0.0, Math.sin(rad) * radius);
+         return new Vector3d(origin).add(Math.cos(rad) * radius, 0.0, Math.sin(rad) * radius);
       }).limit(this.attempts);
    }
 }

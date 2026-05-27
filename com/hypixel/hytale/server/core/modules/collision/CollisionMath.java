@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.core.modules.collision;
 
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class CollisionMath {
    public static final ThreadLocal<Vector2d> MIN_MAX = ThreadLocal.withInitial(Vector2d::new);
@@ -35,9 +35,9 @@ public class CollisionMath {
       minMax.y = Double.MAX_VALUE;
       Vector3d min = box.getMin();
       Vector3d max = box.getMax();
-      return intersect1D(pos.x, ray.getX(), x + min.x, x + max.x, minMax)
-         && intersect1D(pos.y, ray.getY(), y + min.y, y + max.y, minMax)
-         && intersect1D(pos.z, ray.getZ(), z + min.z, z + max.z, minMax)
+      return intersect1D(pos.x, ray.x(), x + min.x, x + max.x, minMax)
+         && intersect1D(pos.y, ray.y(), y + min.y, y + max.y, minMax)
+         && intersect1D(pos.z, ray.z(), z + min.z, z + max.z, minMax)
          && minMax.x >= 0.0;
    }
 
@@ -57,9 +57,9 @@ public class CollisionMath {
    ) {
       minMax.x = 0.0;
       minMax.y = Double.MAX_VALUE;
-      return intersect1D(pos.x, ray.getX(), x - radius, x + radius, minMax)
-         && intersect1D(pos.y, ray.getY(), y, y + height, minMax)
-         && intersect1D(pos.z, ray.getZ(), z - radius, z + radius, minMax)
+      return intersect1D(pos.x, ray.x(), x - radius, x + radius, minMax)
+         && intersect1D(pos.y, ray.y(), y, y + height, minMax)
+         && intersect1D(pos.z, ray.z(), z - radius, z + radius, minMax)
          && minMax.x >= 0.0;
    }
 

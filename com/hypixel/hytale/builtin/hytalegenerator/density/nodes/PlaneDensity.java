@@ -2,10 +2,10 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PlaneDensity extends Density {
    public static final double ZERO_DELTA = 1.0E-9;
@@ -69,7 +69,7 @@ public class PlaneDensity extends Density {
       if (context == null) {
          return 0.0;
       } else {
-         this.rPosition.assign(x, y, z);
+         this.rPosition.set(x, y, z);
          Vector3d p0 = context.densityAnchor;
          if (p0 == null) {
             return 0.0;
@@ -79,7 +79,7 @@ public class PlaneDensity extends Density {
                distance = Math.abs(p0.y - this.rPosition.y);
             }
 
-            this.rPosition.subtract(p0);
+            this.rPosition.sub(p0);
             VectorUtil.nearestPointOnLine3d(this.rPosition, ZERO_VECTOR, this.planeNormal, this.rVectorFromPlane, this.r0, this.r1, this.r2, this.r3);
             distance = this.rVectorFromPlane.length();
             return this.distanceCurve.get(distance);

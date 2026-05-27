@@ -10,7 +10,6 @@ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
-import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import javax.annotation.Nonnull;
@@ -27,9 +26,7 @@ public class GameModeType implements JsonAssetWithMap<String, DefaultAssetMap<St
          (gmType, data) -> gmType.data = data,
          gmType -> gmType.data
       )
-      .append(new KeyedCodec<>("PermissionGroups", Codec.STRING_ARRAY), (gmType, o) -> gmType.permissionGroups = o, gmType -> gmType.permissionGroups)
-      .add()
-      .<String>append(
+      .append(
          new KeyedCodec<>("InteractionsOnEnter", RootInteraction.CHILD_ASSET_CODEC),
          (gmType, interactions) -> gmType.interactionsOnEnter = interactions,
          gmType -> gmType.interactionsOnEnter
@@ -42,7 +39,6 @@ public class GameModeType implements JsonAssetWithMap<String, DefaultAssetMap<St
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(GameModeType::getAssetStore));
    protected AssetExtraInfo.Data data;
    protected String id;
-   private String[] permissionGroups;
    private String interactionsOnEnter;
 
    @Nonnull
@@ -70,11 +66,6 @@ public class GameModeType implements JsonAssetWithMap<String, DefaultAssetMap<St
    @Nullable
    public String getInteractionsOnEnter() {
       return this.interactionsOnEnter;
-   }
-
-   @Nonnull
-   public String[] getPermissionGroups() {
-      return this.permissionGroups == null ? ArrayUtil.EMPTY_STRING_ARRAY : this.permissionGroups;
    }
 
    public String getId() {

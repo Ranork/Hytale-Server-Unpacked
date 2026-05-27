@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.worldgen.loader.climate;
 
 import com.google.gson.JsonElement;
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
 import com.hypixel.hytale.procedurallib.json.SeedResource;
 import com.hypixel.hytale.procedurallib.json.SeedString;
@@ -11,6 +10,7 @@ import com.hypixel.hytale.server.worldgen.loader.util.ColorUtil;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2i;
 
 public class UniqueClimateJsonLoader<K extends SeedResource> extends JsonLoader<K, UniqueClimateGenerator.Entry> {
    public UniqueClimateJsonLoader(SeedString<K> seed, Path dataFolder, @Nullable JsonElement json) {

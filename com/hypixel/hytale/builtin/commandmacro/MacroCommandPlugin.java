@@ -4,17 +4,21 @@ import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.server.core.asset.HytaleAssetStore;
+import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandRegistration;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nonnull;
 
 public class MacroCommandPlugin extends JavaPlugin {
    private static MacroCommandPlugin instance;
    @Nonnull
-   private final Map<String, CommandRegistration> macroCommandRegistrations = new Object2ObjectOpenHashMap();
+   private final Map<String, CommandRegistration> rootRegistrations = new Object2ObjectOpenHashMap();
 
    public static MacroCommandPlugin get() {
       return instance;
@@ -42,14 +46,47 @@ public class MacroCommandPlugin extends JavaPlugin {
    }
 
    public void loadCommandMacroAsset(@Nonnull LoadedAssetsEvent<String, MacroCommandBuilder, DefaultAssetMap<String, MacroCommandBuilder>> event) {
-      for (MacroCommandBuilder value : event.getLoadedAssets().values()) {
-         if (this.macroCommandRegistrations.containsKey(value.getName())) {
-            this.macroCommandRegistrations.get(value.getName()).unregister();
-         }
+      Collection<MacroCommandBuilder> allMacros = ((DefaultAssetMap)event.getAssetMap()).getAssetMap().values();
+      Set<String> affectedRoots = new HashSet<>();
 
-         CommandRegistration commandRegistration = MacroCommandBuilder.createAndRegisterCommand(value);
-         if (commandRegistration != null) {
-            this.macroCommandRegistrations.put(value.getName(), commandRegistration);
+      for (MacroCommandBuilder changed : event.getLoadedAssets().values()) {
+         String rootToken = MacroCommandTreeBuilder.rootTokenOf(changed);
+         if (rootToken != null) {
+            affectedRoots.add(rootToken);
+         }
+      }
+
+      Set<String> currentRoots = new HashSet<>();
+
+      for (MacroCommandBuilder macro : allMacros) {
+         String rootToken = MacroCommandTreeBuilder.rootTokenOf(macro);
+         if (rootToken != null) {
+            currentRoots.add(rootToken);
+         }
+      }
+
+      for (String existing : this.rootRegistrations.keySet()) {
+         if (!currentRoots.contains(existing)) {
+            affectedRoots.add(existing);
+         }
+      }
+
+      for (String root : affectedRoots) {
+         this.rebuildRoot(root, allMacros);
+      }
+   }
+
+   private void rebuildRoot(@Nonnull String rootToken, @Nonnull Collection<MacroCommandBuilder> allMacros) {
+      CommandRegistration existing = this.rootRegistrations.remove(rootToken);
+      if (existing != null) {
+         existing.unregister();
+      }
+
+      AbstractCommand rootCommand = MacroCommandTreeBuilder.build(rootToken, allMacros);
+      if (rootCommand != null) {
+         CommandRegistration registration = this.getCommandRegistry().registerCommand(rootCommand);
+         if (registration != null) {
+            this.rootRegistrations.put(rootToken, registration);
          }
       }
    }

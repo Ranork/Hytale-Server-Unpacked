@@ -2,15 +2,14 @@ package com.hypixel.hytale.server.core.event.events.player;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.ICancellable;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.MouseButtonEvent;
-import com.hypixel.hytale.protocol.Vector2f;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector2fc;
+import org.joml.Vector3i;
 
 public class PlayerMouseButtonEvent extends PlayerEvent<Void> implements ICancellable {
    @Nonnull
@@ -18,8 +17,8 @@ public class PlayerMouseButtonEvent extends PlayerEvent<Void> implements ICancel
    private final long clientUseTime;
    private final Item itemInHand;
    private final Vector3i targetBlock;
-   private final Entity targetEntity;
-   private final Vector2f screenPoint;
+   private final Ref<EntityStore> targetEntityRef;
+   private final Vector2fc screenPoint;
    private final MouseButtonEvent mouseButton;
    private boolean cancelled;
 
@@ -30,8 +29,8 @@ public class PlayerMouseButtonEvent extends PlayerEvent<Void> implements ICancel
       long clientUseTime,
       @Nonnull Item itemInHand,
       @Nonnull Vector3i targetBlock,
-      @Nonnull Entity targetEntity,
-      @Nonnull Vector2f screenPoint,
+      @Nonnull Ref<EntityStore> targetEntityRef,
+      @Nonnull Vector2fc screenPoint,
       @Nonnull MouseButtonEvent mouseButton
    ) {
       super(ref, player);
@@ -39,7 +38,7 @@ public class PlayerMouseButtonEvent extends PlayerEvent<Void> implements ICancel
       this.clientUseTime = clientUseTime;
       this.itemInHand = itemInHand;
       this.targetBlock = targetBlock;
-      this.targetEntity = targetEntity;
+      this.targetEntityRef = targetEntityRef;
       this.screenPoint = screenPoint;
       this.mouseButton = mouseButton;
    }
@@ -71,11 +70,11 @@ public class PlayerMouseButtonEvent extends PlayerEvent<Void> implements ICancel
       return this.targetBlock;
    }
 
-   public Entity getTargetEntity() {
-      return this.targetEntity;
+   public Ref<EntityStore> getTargetEntityRef() {
+      return this.targetEntityRef;
    }
 
-   public Vector2f getScreenPoint() {
+   public Vector2fc getScreenPoint() {
       return this.screenPoint;
    }
 
@@ -92,8 +91,8 @@ public class PlayerMouseButtonEvent extends PlayerEvent<Void> implements ICancel
          + this.itemInHand
          + ", targetBlock="
          + this.targetBlock
-         + ", targetEntity="
-         + this.targetEntity
+         + ", targetEntityRef="
+         + this.targetEntityRef
          + ", screenPoint="
          + this.screenPoint
          + ", mouseButton="

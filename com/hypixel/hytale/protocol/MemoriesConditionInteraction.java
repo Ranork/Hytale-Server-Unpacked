@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -67,103 +69,137 @@ public class MemoriesConditionInteraction extends Interaction {
 
    @Nonnull
    public static MemoriesConditionInteraction deserialize(@Nonnull ByteBuf buf, int offset) {
-      MemoriesConditionInteraction obj = new MemoriesConditionInteraction();
-      byte nullBits = buf.getByte(offset);
-      obj.waitForDataFrom = WaitForDataFrom.fromValue(buf.getByte(offset + 1));
-      obj.horizontalSpeedMultiplier = buf.getFloatLE(offset + 2);
-      obj.runTime = buf.getFloatLE(offset + 6);
-      obj.cancelOnItemChange = buf.getByte(offset + 10) != 0;
-      obj.failed = buf.getIntLE(offset + 11);
-      if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 39 + buf.getIntLE(offset + 15);
-         obj.effects = InteractionEffects.deserialize(buf, varPos0);
-      }
+      if (buf.readableBytes() - offset < 39) {
+         throw ProtocolException.bufferTooSmall("MemoriesConditionInteraction", 39, buf.readableBytes() - offset);
+      } else {
+         MemoriesConditionInteraction obj = new MemoriesConditionInteraction();
+         byte nullBits = buf.getByte(offset);
+         obj.waitForDataFrom = WaitForDataFrom.fromValue(buf.getByte(offset + 1));
+         obj.horizontalSpeedMultiplier = buf.getFloatLE(offset + 2);
+         obj.runTime = buf.getFloatLE(offset + 6);
+         obj.cancelOnItemChange = buf.getByte(offset + 10) != 0;
+         obj.failed = buf.getIntLE(offset + 11);
+         if ((nullBits & 1) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 15);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 39) {
+               throw ProtocolException.invalidOffset("Effects", varPosBase0, buf.readableBytes());
+            }
 
-      if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 39 + buf.getIntLE(offset + 19);
-         int settingsCount = VarInt.peek(buf, varPos1);
-         if (settingsCount < 0) {
-            throw ProtocolException.negativeLength("Settings", settingsCount);
+            int varPos0 = offset + 39 + varPosBase0;
+            obj.effects = InteractionEffects.deserialize(buf, varPos0);
          }
 
-         if (settingsCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("Settings", settingsCount, 4096000);
-         }
+         if ((nullBits & 2) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 19);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 39) {
+               throw ProtocolException.invalidOffset("Settings", varPosBase1, buf.readableBytes());
+            }
 
-         int varIntLen = VarInt.length(buf, varPos1);
-         obj.settings = new HashMap<>(settingsCount);
-         int dictPos = varPos1 + varIntLen;
+            int varPos1 = offset + 39 + varPosBase1;
+            int settingsCount = VarInt.peek(buf, varPos1);
+            if (settingsCount < 0) {
+               throw ProtocolException.invalidVarInt("Settings");
+            }
 
-         for (int i = 0; i < settingsCount; i++) {
-            GameMode key = GameMode.fromValue(buf.getByte(dictPos));
-            InteractionSettings val = InteractionSettings.deserialize(buf, ++dictPos);
-            dictPos += InteractionSettings.computeBytesConsumed(buf, dictPos);
-            if (obj.settings.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("settings", key);
+            int varIntLen = VarInt.size(settingsCount);
+            if (settingsCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Settings", settingsCount, 4096000);
+            }
+
+            obj.settings = new HashMap<>(settingsCount);
+            int dictPos = varPos1 + varIntLen;
+
+            for (int i = 0; i < settingsCount; i++) {
+               GameMode key = GameMode.fromValue(buf.getByte(dictPos));
+               InteractionSettings val = InteractionSettings.deserialize(buf, ++dictPos);
+               dictPos += InteractionSettings.computeBytesConsumed(buf, dictPos);
+               if (obj.settings.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("settings", key);
+               }
             }
          }
-      }
 
-      if ((nullBits & 4) != 0) {
-         int varPos2 = offset + 39 + buf.getIntLE(offset + 23);
-         obj.rules = InteractionRules.deserialize(buf, varPos2);
-      }
+         if ((nullBits & 4) != 0) {
+            int varPosBase2 = buf.getIntLE(offset + 23);
+            if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 39) {
+               throw ProtocolException.invalidOffset("Rules", varPosBase2, buf.readableBytes());
+            }
 
-      if ((nullBits & 8) != 0) {
-         int varPos3 = offset + 39 + buf.getIntLE(offset + 27);
-         int tagsCount = VarInt.peek(buf, varPos3);
-         if (tagsCount < 0) {
-            throw ProtocolException.negativeLength("Tags", tagsCount);
+            int varPos2 = offset + 39 + varPosBase2;
+            obj.rules = InteractionRules.deserialize(buf, varPos2);
          }
 
-         if (tagsCount > 4096000) {
-            throw ProtocolException.arrayTooLong("Tags", tagsCount, 4096000);
-         }
+         if ((nullBits & 8) != 0) {
+            int varPosBase3 = buf.getIntLE(offset + 27);
+            if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 39) {
+               throw ProtocolException.invalidOffset("Tags", varPosBase3, buf.readableBytes());
+            }
 
-         int varIntLen = VarInt.length(buf, varPos3);
-         if (varPos3 + varIntLen + tagsCount * 4L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Tags", varPos3 + varIntLen + tagsCount * 4, buf.readableBytes());
-         }
+            int varPos3 = offset + 39 + varPosBase3;
+            int tagsCount = VarInt.peek(buf, varPos3);
+            if (tagsCount < 0) {
+               throw ProtocolException.invalidVarInt("Tags");
+            }
 
-         obj.tags = new int[tagsCount];
+            int varIntLen = VarInt.size(tagsCount);
+            if (tagsCount > 4096000) {
+               throw ProtocolException.arrayTooLong("Tags", tagsCount, 4096000);
+            }
 
-         for (int ix = 0; ix < tagsCount; ix++) {
-            obj.tags[ix] = buf.getIntLE(varPos3 + varIntLen + ix * 4);
-         }
-      }
+            if (varPos3 + varIntLen + tagsCount * 4L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Tags", varPos3 + varIntLen + tagsCount * 4, buf.readableBytes());
+            }
 
-      if ((nullBits & 16) != 0) {
-         int varPos4 = offset + 39 + buf.getIntLE(offset + 31);
-         obj.camera = InteractionCameraSettings.deserialize(buf, varPos4);
-      }
+            obj.tags = new int[tagsCount];
 
-      if ((nullBits & 32) != 0) {
-         int varPos5 = offset + 39 + buf.getIntLE(offset + 35);
-         int memoriesNextCount = VarInt.peek(buf, varPos5);
-         if (memoriesNextCount < 0) {
-            throw ProtocolException.negativeLength("MemoriesNext", memoriesNextCount);
-         }
-
-         if (memoriesNextCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("MemoriesNext", memoriesNextCount, 4096000);
-         }
-
-         int varIntLen = VarInt.length(buf, varPos5);
-         obj.memoriesNext = new HashMap<>(memoriesNextCount);
-         int dictPos = varPos5 + varIntLen;
-
-         for (int ix = 0; ix < memoriesNextCount; ix++) {
-            int key = buf.getIntLE(dictPos);
-            dictPos += 4;
-            int val = buf.getIntLE(dictPos);
-            dictPos += 4;
-            if (obj.memoriesNext.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("memoriesNext", key);
+            for (int ix = 0; ix < tagsCount; ix++) {
+               obj.tags[ix] = buf.getIntLE(varPos3 + varIntLen + ix * 4);
             }
          }
-      }
 
-      return obj;
+         if ((nullBits & 16) != 0) {
+            int varPosBase4 = buf.getIntLE(offset + 31);
+            if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 39) {
+               throw ProtocolException.invalidOffset("Camera", varPosBase4, buf.readableBytes());
+            }
+
+            int varPos4 = offset + 39 + varPosBase4;
+            obj.camera = InteractionCameraSettings.deserialize(buf, varPos4);
+         }
+
+         if ((nullBits & 32) != 0) {
+            int varPosBase5 = buf.getIntLE(offset + 35);
+            if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 39) {
+               throw ProtocolException.invalidOffset("MemoriesNext", varPosBase5, buf.readableBytes());
+            }
+
+            int varPos5 = offset + 39 + varPosBase5;
+            int memoriesNextCount = VarInt.peek(buf, varPos5);
+            if (memoriesNextCount < 0) {
+               throw ProtocolException.invalidVarInt("MemoriesNext");
+            }
+
+            int varIntLenx = VarInt.size(memoriesNextCount);
+            if (memoriesNextCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("MemoriesNext", memoriesNextCount, 4096000);
+            }
+
+            obj.memoriesNext = new HashMap<>(memoriesNextCount);
+            int dictPos = varPos5 + varIntLenx;
+
+            for (int ix = 0; ix < memoriesNextCount; ix++) {
+               int key = buf.getIntLE(dictPos);
+               dictPos += 4;
+               int val = buf.getIntLE(dictPos);
+               dictPos += 4;
+               if (obj.memoriesNext.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("memoriesNext", key);
+               }
+            }
+         }
+
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -171,6 +207,10 @@ public class MemoriesConditionInteraction extends Interaction {
       int maxEnd = 39;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 15);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 39) {
+            throw ProtocolException.invalidOffset("Effects", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 39 + fieldOffset0;
          pos0 += InteractionEffects.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -180,9 +220,13 @@ public class MemoriesConditionInteraction extends Interaction {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 19);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 39) {
+            throw ProtocolException.invalidOffset("Settings", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 39 + fieldOffset1;
          int dictLen = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1);
+         pos1 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos1 = ++pos1 + InteractionSettings.computeBytesConsumed(buf, pos1);
@@ -195,6 +239,10 @@ public class MemoriesConditionInteraction extends Interaction {
 
       if ((nullBits & 4) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 23);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 39) {
+            throw ProtocolException.invalidOffset("Rules", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 39 + fieldOffset2;
          pos2 += InteractionRules.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
@@ -204,9 +252,13 @@ public class MemoriesConditionInteraction extends Interaction {
 
       if ((nullBits & 8) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 27);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 39) {
+            throw ProtocolException.invalidOffset("Tags", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 39 + fieldOffset3;
          int arrLen = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + arrLen * 4;
+         pos3 += VarInt.size(arrLen) + arrLen * 4;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -214,6 +266,10 @@ public class MemoriesConditionInteraction extends Interaction {
 
       if ((nullBits & 16) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 31);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 39) {
+            throw ProtocolException.invalidOffset("Camera", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 39 + fieldOffset4;
          pos4 += InteractionCameraSettings.computeBytesConsumed(buf, pos4);
          if (pos4 - offset > maxEnd) {
@@ -223,9 +279,13 @@ public class MemoriesConditionInteraction extends Interaction {
 
       if ((nullBits & 32) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 35);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 39) {
+            throw ProtocolException.invalidOffset("MemoriesNext", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 39 + fieldOffset5;
          int dictLen = VarInt.peek(buf, pos5);
-         pos5 += VarInt.length(buf, pos5);
+         pos5 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos5 += 4;
@@ -238,6 +298,321 @@ public class MemoriesConditionInteraction extends Interaction {
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 39L;
+   }
+
+   public static WaitForDataFrom getWaitForDataFrom(MemorySegment mem) {
+      return getWaitForDataFrom(mem, 0);
+   }
+
+   public static WaitForDataFrom getWaitForDataFrom(MemorySegment mem, int offset) {
+      return WaitForDataFrom.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   @Nullable
+   public static InteractionEffects getEffects(MemorySegment mem) {
+      return getEffects(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionEffects getEffects(MemorySegment mem, int offset) {
+      return hasEffects(mem, offset) ? InteractionEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 15, 39, "Effects")) : null;
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem) {
+      return getHorizontalSpeedMultiplier(mem, 0);
+   }
+
+   public static float getHorizontalSpeedMultiplier(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 2));
+   }
+
+   public static float getRunTime(MemorySegment mem) {
+      return getRunTime(mem, 0);
+   }
+
+   public static float getRunTime(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 6));
+   }
+
+   public static boolean getCancelOnItemChange(MemorySegment mem) {
+      return getCancelOnItemChange(mem, 0);
+   }
+
+   public static boolean getCancelOnItemChange(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 10));
+   }
+
+   @Nullable
+   public static Map<GameMode, InteractionSettings> getSettings(MemorySegment mem) {
+      return getSettings(mem, 0);
+   }
+
+   @Nullable
+   public static Map<GameMode, InteractionSettings> getSettings(MemorySegment mem, int offset) {
+      if (!hasSettings(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 19, 39, "Settings");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Settings", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Settings", len, 4096000);
+         } else {
+            Map<GameMode, InteractionSettings> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               GameMode key = GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)off));
+               InteractionSettings value = InteractionSettings.toObject(mem, ++off);
+               off += value.computeSize();
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Settings", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   @Nullable
+   public static InteractionRules getRules(MemorySegment mem) {
+      return getRules(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionRules getRules(MemorySegment mem, int offset) {
+      return hasRules(mem, offset) ? InteractionRules.toObject(mem, offset + getValidatedOffset(mem, offset, 23, 39, "Rules")) : null;
+   }
+
+   @Nullable
+   public static int[] getTags(MemorySegment mem) {
+      return getTags(mem, 0);
+   }
+
+   @Nullable
+   public static int[] getTags(MemorySegment mem, int offset) {
+      if (!hasTags(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 27, 39, "Tags");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Tags", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Tags", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len * 4L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Tags", off + lenOffset + len * 4, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               int[] data = new int[len];
+               MemorySegment.copy(mem, PacketIO.PROTO_INT, off, data, 0, len);
+               return data;
+            }
+         }
+      }
+   }
+
+   @Nullable
+   public static InteractionCameraSettings getCamera(MemorySegment mem) {
+      return getCamera(mem, 0);
+   }
+
+   @Nullable
+   public static InteractionCameraSettings getCamera(MemorySegment mem, int offset) {
+      return hasCamera(mem, offset) ? InteractionCameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 31, 39, "Camera")) : null;
+   }
+
+   @Nullable
+   public static Map<Integer, Integer> getMemoriesNext(MemorySegment mem) {
+      return getMemoriesNext(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, Integer> getMemoriesNext(MemorySegment mem, int offset) {
+      if (!hasMemoriesNext(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 35, 39, "MemoriesNext");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("MemoriesNext", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MemoriesNext", len, 4096000);
+         } else {
+            Map<Integer, Integer> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               int value = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("MemoriesNext", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static int getFailed(MemorySegment mem) {
+      return getFailed(mem, 0);
+   }
+
+   public static int getFailed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 11));
+   }
+
+   public static boolean hasEffects(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasSettings(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasRules(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTags(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasCamera(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasMemoriesNext(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 32) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static MemoriesConditionInteraction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MemoriesConditionInteraction toObject(MemorySegment mem, int offset) {
+      if (offset + 39 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MemoriesConditionInteraction", offset + 39, (int)mem.byteSize());
+      } else {
+         Map<GameMode, InteractionSettings> settings = null;
+         if (hasSettings(mem, offset)) {
+            int off = offset + getValidatedOffset(mem, offset, 19, 39, "Settings");
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("Settings", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("Settings", len, 4096000);
+            }
+
+            settings = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               GameMode key = GameMode.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)off));
+               InteractionSettings value = InteractionSettings.toObject(mem, ++off);
+               off += value.computeSize();
+               if (settings.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("Settings", key);
+               }
+            }
+         }
+
+         int[] tags = null;
+         if (hasTags(mem, offset)) {
+            int offx = offset + getValidatedOffset(mem, offset, 27, 39, "Tags");
+            long packedx = VarInt.getWithLength(mem, offx);
+            int lenx = (int)packedx;
+            if (lenx < 0) {
+               throw ProtocolException.negativeLength("Tags", lenx);
+            }
+
+            if (lenx > 4096000) {
+               throw ProtocolException.arrayTooLong("Tags", lenx, 4096000);
+            }
+
+            int lenOffset = (int)(packedx >>> 32);
+            if (offx + lenOffset + lenx * 4L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Tags", offx + lenOffset + lenx * 4, (int)mem.byteSize());
+            }
+
+            offx += lenOffset;
+            tags = new int[lenx];
+            MemorySegment.copy(mem, PacketIO.PROTO_INT, offx, tags, 0, lenx);
+         }
+
+         Map<Integer, Integer> memoriesNext = null;
+         if (hasMemoriesNext(mem, offset)) {
+            int offxx = offset + getValidatedOffset(mem, offset, 35, 39, "MemoriesNext");
+            long packedxx = VarInt.getWithLength(mem, offxx);
+            int lenxx = (int)packedxx;
+            if (lenxx < 0) {
+               throw ProtocolException.negativeLength("MemoriesNext", lenxx);
+            }
+
+            if (lenxx > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("MemoriesNext", lenxx, 4096000);
+            }
+
+            memoriesNext = new HashMap<>(lenxx);
+            offxx += (int)(packedxx >>> 32);
+
+            for (int ix = 0; ix < lenxx; ix++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)offxx);
+               offxx += 4;
+               int value = mem.get(PacketIO.PROTO_INT, (long)offxx);
+               offxx += 4;
+               if (memoriesNext.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("MemoriesNext", key);
+               }
+            }
+         }
+
+         return new MemoriesConditionInteraction(
+            WaitForDataFrom.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1))),
+            hasEffects(mem, offset) ? InteractionEffects.toObject(mem, offset + getValidatedOffset(mem, offset, 15, 39, "Effects")) : null,
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 2)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 6)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 10)),
+            settings,
+            hasRules(mem, offset) ? InteractionRules.toObject(mem, offset + getValidatedOffset(mem, offset, 23, 39, "Rules")) : null,
+            tags,
+            hasCamera(mem, offset) ? InteractionCameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 31, 39, "Camera")) : null,
+            memoriesNext,
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 11))
+         );
+      }
    }
 
    @Override
@@ -359,6 +734,111 @@ public class MemoriesConditionInteraction extends Interaction {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.effects != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.settings != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.rules != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.tags != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.camera != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.memoriesNext != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.waitForDataFrom.getValue());
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 2), this.horizontalSpeedMultiplier);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 6), this.runTime);
+      mem.set(PacketIO.PROTO_BOOL, offset + 10, this.cancelOnItemChange);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 11), this.failed);
+      int varOffset = offset + 39;
+      if (this.effects != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 15), varOffset - offset - 39);
+         varOffset += this.effects.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 15), -1);
+      }
+
+      if (this.settings != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 19), varOffset - offset - 39);
+         if (this.settings.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("Settings", this.settings.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.settings.size());
+
+         for (Entry<GameMode, InteractionSettings> e : this.settings.entrySet()) {
+            mem.set(PacketIO.PROTO_BYTE, (long)varOffset, (byte)e.getKey().getValue());
+            varOffset = ++varOffset + e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 19), -1);
+      }
+
+      if (this.rules != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 23), varOffset - offset - 39);
+         varOffset += this.rules.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 23), -1);
+      }
+
+      if (this.tags != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 27), varOffset - offset - 39);
+         if (this.tags.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Tags", this.tags.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.tags.length);
+         MemorySegment.copy(this.tags, 0, mem, PacketIO.PROTO_INT, varOffset, this.tags.length);
+         varOffset += this.tags.length * 4;
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 27), -1);
+      }
+
+      if (this.camera != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 31), varOffset - offset - 39);
+         varOffset += this.camera.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 31), -1);
+      }
+
+      if (this.memoriesNext != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 35), varOffset - offset - 39);
+         if (this.memoriesNext.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("MemoriesNext", this.memoriesNext.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.memoriesNext.size());
+
+         for (Entry<Integer, Integer> e : this.memoriesNext.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, (long)varOffset, e.getKey());
+            varOffset += 4;
+            mem.set(PacketIO.PROTO_INT, (long)varOffset, e.getValue());
+            varOffset += 4;
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 35), -1);
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 39;
       if (this.effects != null) {
@@ -393,154 +873,140 @@ public class MemoriesConditionInteraction extends Interaction {
          return ValidationResult.error("Buffer too small: expected at least 39 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
-         if ((nullBits & 1) != 0) {
-            int effectsOffset = buffer.getIntLE(offset + 15);
-            if (effectsOffset < 0) {
-               return ValidationResult.error("Invalid offset for Effects");
-            }
-
-            int pos = offset + 39 + effectsOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Effects");
-            }
-
-            ValidationResult effectsResult = InteractionEffects.validateStructure(buffer, pos);
-            if (!effectsResult.isValid()) {
-               return ValidationResult.error("Invalid Effects: " + effectsResult.error());
-            }
-
-            pos += InteractionEffects.computeBytesConsumed(buffer, pos);
-         }
-
-         if ((nullBits & 2) != 0) {
-            int settingsOffset = buffer.getIntLE(offset + 19);
-            if (settingsOffset < 0) {
-               return ValidationResult.error("Invalid offset for Settings");
-            }
-
-            int posx = offset + 39 + settingsOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Settings");
-            }
-
-            int settingsCount = VarInt.peek(buffer, posx);
-            if (settingsCount < 0) {
-               return ValidationResult.error("Invalid dictionary count for Settings");
-            }
-
-            if (settingsCount > 4096000) {
-               return ValidationResult.error("Settings exceeds max length 4096000");
-            }
-
-            posx += VarInt.length(buffer, posx);
-
-            for (int i = 0; i < settingsCount; i++) {
-               posx++;
-               posx++;
-            }
-         }
-
-         if ((nullBits & 4) != 0) {
-            int rulesOffset = buffer.getIntLE(offset + 23);
-            if (rulesOffset < 0) {
-               return ValidationResult.error("Invalid offset for Rules");
-            }
-
-            int posxx = offset + 39 + rulesOffset;
-            if (posxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Rules");
-            }
-
-            ValidationResult rulesResult = InteractionRules.validateStructure(buffer, posxx);
-            if (!rulesResult.isValid()) {
-               return ValidationResult.error("Invalid Rules: " + rulesResult.error());
-            }
-
-            posxx += InteractionRules.computeBytesConsumed(buffer, posxx);
-         }
-
-         if ((nullBits & 8) != 0) {
-            int tagsOffset = buffer.getIntLE(offset + 27);
-            if (tagsOffset < 0) {
-               return ValidationResult.error("Invalid offset for Tags");
-            }
-
-            int posxxx = offset + 39 + tagsOffset;
-            if (posxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Tags");
-            }
-
-            int tagsCount = VarInt.peek(buffer, posxxx);
-            if (tagsCount < 0) {
-               return ValidationResult.error("Invalid array count for Tags");
-            }
-
-            if (tagsCount > 4096000) {
-               return ValidationResult.error("Tags exceeds max length 4096000");
-            }
-
-            posxxx += VarInt.length(buffer, posxxx);
-            posxxx += tagsCount * 4;
-            if (posxxx > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading Tags");
-            }
-         }
-
-         if ((nullBits & 16) != 0) {
-            int cameraOffset = buffer.getIntLE(offset + 31);
-            if (cameraOffset < 0) {
-               return ValidationResult.error("Invalid offset for Camera");
-            }
-
-            int posxxxx = offset + 39 + cameraOffset;
-            if (posxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Camera");
-            }
-
-            ValidationResult cameraResult = InteractionCameraSettings.validateStructure(buffer, posxxxx);
-            if (!cameraResult.isValid()) {
-               return ValidationResult.error("Invalid Camera: " + cameraResult.error());
-            }
-
-            posxxxx += InteractionCameraSettings.computeBytesConsumed(buffer, posxxxx);
-         }
-
-         if ((nullBits & 32) != 0) {
-            int memoriesNextOffset = buffer.getIntLE(offset + 35);
-            if (memoriesNextOffset < 0) {
-               return ValidationResult.error("Invalid offset for MemoriesNext");
-            }
-
-            int posxxxxx = offset + 39 + memoriesNextOffset;
-            if (posxxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for MemoriesNext");
-            }
-
-            int memoriesNextCount = VarInt.peek(buffer, posxxxxx);
-            if (memoriesNextCount < 0) {
-               return ValidationResult.error("Invalid dictionary count for MemoriesNext");
-            }
-
-            if (memoriesNextCount > 4096000) {
-               return ValidationResult.error("MemoriesNext exceeds max length 4096000");
-            }
-
-            posxxxxx += VarInt.length(buffer, posxxxxx);
-
-            for (int i = 0; i < memoriesNextCount; i++) {
-               posxxxxx += 4;
-               if (posxxxxx > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading key");
+         int v = buffer.getByte(offset + 1) & 255;
+         if (v >= 3) {
+            return ValidationResult.error("Invalid WaitForDataFrom value for WaitForDataFrom");
+         } else {
+            if ((nullBits & 1) != 0) {
+               v = buffer.getIntLE(offset + 15);
+               if (v < 0 || v > buffer.writerIndex() - offset - 39) {
+                  return ValidationResult.error("Invalid offset for Effects");
                }
 
-               posxxxxx += 4;
-               if (posxxxxx > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading value");
+               int pos = offset + 39 + v;
+               ValidationResult effectsResult = InteractionEffects.validateStructure(buffer, pos);
+               if (!effectsResult.isValid()) {
+                  return ValidationResult.error("Invalid Effects: " + effectsResult.error());
+               }
+
+               pos += InteractionEffects.computeBytesConsumed(buffer, pos);
+            }
+
+            if ((nullBits & 2) != 0) {
+               v = buffer.getIntLE(offset + 19);
+               if (v < 0 || v > buffer.writerIndex() - offset - 39) {
+                  return ValidationResult.error("Invalid offset for Settings");
+               }
+
+               int pos = offset + 39 + v;
+               int settingsCount = VarInt.peek(buffer, pos);
+               if (settingsCount < 0) {
+                  return ValidationResult.error("Invalid dictionary count for Settings");
+               }
+
+               if (settingsCount > 4096000) {
+                  return ValidationResult.error("Settings exceeds max length 4096000");
+               }
+
+               pos += VarInt.size(settingsCount);
+
+               for (int i = 0; i < settingsCount; i++) {
+                  int vx = buffer.getByte(pos) & 255;
+                  if (vx >= 2) {
+                     return ValidationResult.error("Invalid GameMode value for key");
+                  }
+
+                  pos++;
+                  pos++;
                }
             }
-         }
 
-         return ValidationResult.OK;
+            if ((nullBits & 4) != 0) {
+               v = buffer.getIntLE(offset + 23);
+               if (v < 0 || v > buffer.writerIndex() - offset - 39) {
+                  return ValidationResult.error("Invalid offset for Rules");
+               }
+
+               int posx = offset + 39 + v;
+               ValidationResult rulesResult = InteractionRules.validateStructure(buffer, posx);
+               if (!rulesResult.isValid()) {
+                  return ValidationResult.error("Invalid Rules: " + rulesResult.error());
+               }
+
+               posx += InteractionRules.computeBytesConsumed(buffer, posx);
+            }
+
+            if ((nullBits & 8) != 0) {
+               v = buffer.getIntLE(offset + 27);
+               if (v < 0 || v > buffer.writerIndex() - offset - 39) {
+                  return ValidationResult.error("Invalid offset for Tags");
+               }
+
+               int posx = offset + 39 + v;
+               int tagsCount = VarInt.peek(buffer, posx);
+               if (tagsCount < 0) {
+                  return ValidationResult.error("Invalid array count for Tags");
+               }
+
+               if (tagsCount > 4096000) {
+                  return ValidationResult.error("Tags exceeds max length 4096000");
+               }
+
+               posx += VarInt.size(tagsCount);
+               posx += tagsCount * 4;
+               if (posx > buffer.writerIndex()) {
+                  return ValidationResult.error("Buffer overflow reading Tags");
+               }
+            }
+
+            if ((nullBits & 16) != 0) {
+               v = buffer.getIntLE(offset + 31);
+               if (v < 0 || v > buffer.writerIndex() - offset - 39) {
+                  return ValidationResult.error("Invalid offset for Camera");
+               }
+
+               int posxx = offset + 39 + v;
+               ValidationResult cameraResult = InteractionCameraSettings.validateStructure(buffer, posxx);
+               if (!cameraResult.isValid()) {
+                  return ValidationResult.error("Invalid Camera: " + cameraResult.error());
+               }
+
+               posxx += InteractionCameraSettings.computeBytesConsumed(buffer, posxx);
+            }
+
+            if ((nullBits & 32) != 0) {
+               v = buffer.getIntLE(offset + 35);
+               if (v < 0 || v > buffer.writerIndex() - offset - 39) {
+                  return ValidationResult.error("Invalid offset for MemoriesNext");
+               }
+
+               int posxx = offset + 39 + v;
+               int memoriesNextCount = VarInt.peek(buffer, posxx);
+               if (memoriesNextCount < 0) {
+                  return ValidationResult.error("Invalid dictionary count for MemoriesNext");
+               }
+
+               if (memoriesNextCount > 4096000) {
+                  return ValidationResult.error("MemoriesNext exceeds max length 4096000");
+               }
+
+               posxx += VarInt.size(memoriesNextCount);
+
+               for (int i = 0; i < memoriesNextCount; i++) {
+                  posxx += 4;
+                  if (posxx > buffer.writerIndex()) {
+                     return ValidationResult.error("Buffer overflow reading key");
+                  }
+
+                  posxx += 4;
+                  if (posxx > buffer.writerIndex()) {
+                     return ValidationResult.error("Buffer overflow reading value");
+                  }
+               }
+            }
+
+            return ValidationResult.OK;
+         }
       }
    }
 

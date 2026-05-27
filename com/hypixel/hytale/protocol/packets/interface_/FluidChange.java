@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol.packets.interface_;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -38,17 +41,83 @@ public class FluidChange {
 
    @Nonnull
    public static FluidChange deserialize(@Nonnull ByteBuf buf, int offset) {
-      FluidChange obj = new FluidChange();
-      obj.x = buf.getIntLE(offset + 0);
-      obj.y = buf.getIntLE(offset + 4);
-      obj.z = buf.getIntLE(offset + 8);
-      obj.fluidId = buf.getIntLE(offset + 12);
-      obj.fluidLevel = buf.getByte(offset + 16);
-      return obj;
+      if (buf.readableBytes() - offset < 17) {
+         throw ProtocolException.bufferTooSmall("FluidChange", 17, buf.readableBytes() - offset);
+      } else {
+         FluidChange obj = new FluidChange();
+         obj.x = buf.getIntLE(offset + 0);
+         obj.y = buf.getIntLE(offset + 4);
+         obj.z = buf.getIntLE(offset + 8);
+         obj.fluidId = buf.getIntLE(offset + 12);
+         obj.fluidLevel = buf.getByte(offset + 16);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 17;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 17L;
+   }
+
+   public static int getX(MemorySegment mem) {
+      return getX(mem, 0);
+   }
+
+   public static int getX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static int getY(MemorySegment mem) {
+      return getY(mem, 0);
+   }
+
+   public static int getY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 4));
+   }
+
+   public static int getZ(MemorySegment mem) {
+      return getZ(mem, 0);
+   }
+
+   public static int getZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 8));
+   }
+
+   public static int getFluidId(MemorySegment mem) {
+      return getFluidId(mem, 0);
+   }
+
+   public static int getFluidId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 12));
+   }
+
+   public static byte getFluidLevel(MemorySegment mem) {
+      return getFluidLevel(mem, 0);
+   }
+
+   public static byte getFluidLevel(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BYTE, (long)(offset + 16));
+   }
+
+   public static FluidChange toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static FluidChange toObject(MemorySegment mem, int offset) {
+      if (offset + 17 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("FluidChange", offset + 17, (int)mem.byteSize());
+      } else {
+         return new FluidChange(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 12)),
+            mem.get(PacketIO.PROTO_BYTE, (long)(offset + 16))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -57,6 +126,15 @@ public class FluidChange {
       buf.writeIntLE(this.z);
       buf.writeIntLE(this.fluidId);
       buf.writeByte(this.fluidLevel);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.x);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 4), this.y);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 8), this.z);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 12), this.fluidId);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 16), this.fluidLevel);
+      return 17;
    }
 
    public int computeSize() {

@@ -89,7 +89,7 @@ public class PathPlugin extends JavaPlugin {
       DefaultAssetMap<String, ModelAsset> modelAssetMap = ModelAsset.getAssetMap();
       ModelAsset modelAsset = modelAssetMap.getAsset(pathMarkerModelId);
       if (modelAsset == null) {
-         this.getLogger().at(Level.SEVERE).log("Path marker model %s does not exist");
+         this.getLogger().at(Level.SEVERE).log("Path marker model %s does not exist", pathMarkerModelId);
          modelAsset = modelAssetMap.getAsset("NPC_Path_Marker");
          if (modelAsset == null) {
             throw new IllegalStateException(String.format("Default path marker '%s' not found", "NPC_Path_Marker"));

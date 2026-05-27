@@ -4,8 +4,7 @@ import com.hypixel.hytale.builtin.portals.utils.posqueries.PositionPredicate;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
@@ -16,6 +15,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class FitsAPortal implements PositionPredicate {
    @Nonnull
@@ -32,7 +33,7 @@ public class FitsAPortal implements PositionPredicate {
       for (int x : THREES) {
          for (int z : THREES) {
             for (int y = -1; y <= 3; y++) {
-               Vector3i rel = point.toVector3i().add(x, y, z);
+               Vector3i rel = Vector3dUtil.toVector3i(point).add(x, y, z);
                long chunkIndex = ChunkUtil.indexChunkFromBlock(rel.x, rel.z);
                WorldChunk chunk = world.getChunk(chunkIndex);
                if (chunk == null) {

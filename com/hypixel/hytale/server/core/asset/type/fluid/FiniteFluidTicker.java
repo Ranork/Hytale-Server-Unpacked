@@ -4,7 +4,6 @@ import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.server.core.asset.type.blocktick.BlockTickStrategy;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -17,6 +16,7 @@ import java.util.List;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2i;
 
 public class FiniteFluidTicker extends FluidTicker {
    @Nonnull
@@ -212,8 +212,8 @@ public class FiniteFluidTicker extends FluidTicker {
       if (!isOffsetConnected(accessor, blockSection, offset, worldX, worldY, worldZ)) {
          return null;
       } else {
-         int x = offset.getX();
-         int z = offset.getY();
+         int x = offset.x();
+         int z = offset.y();
          int blockX = worldX + x;
          int blockZ = worldZ + z;
          boolean isDifferentSection = !ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, blockX, worldY, blockZ);
@@ -332,8 +332,8 @@ public class FiniteFluidTicker extends FluidTicker {
    private static boolean isOffsetConnected(
       @Nonnull FluidTicker.Accessor accessor, BlockSection blockSection, @Nonnull Vector2i offset, int worldX, int worldY, int worldZ
    ) {
-      int x = offset.getX();
-      int z = offset.getY();
+      int x = offset.x();
+      int z = offset.y();
       if (x != 0 && z != 0) {
          BlockSection section1 = ChunkUtil.isSameChunkSection(worldX, worldY, worldZ, worldX + x, worldY, worldZ)
             ? blockSection

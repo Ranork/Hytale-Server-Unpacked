@@ -1,7 +1,7 @@
 package com.hypixel.hytale.math.shape;
 
-import com.hypixel.hytale.math.vector.Vector2d;
 import java.awt.Graphics2D;
+import org.joml.Vector2d;
 
 public class ViewUtil {
    public static final int INSIDE = 0;

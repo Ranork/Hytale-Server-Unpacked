@@ -19,9 +19,9 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.range.IntRange;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDrop;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -59,6 +59,8 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class CoopBlock implements Component<ChunkStore> {
    @Nonnull
@@ -254,21 +256,21 @@ public class CoopBlock implements Component<ChunkStore> {
             boolean residentDeployed = resident.getDeployedToWorld();
             PersistentRef residentEntityId = resident.getPersistentRef();
             if (!residentDeployed && residentEntityId == null) {
-               Vector3d residentSpawnLocation = new Vector3d().assign(coopLocation).add(spawnOffsetIteration);
+               Vector3d residentSpawnLocation = new Vector3d().set(coopLocation).add(spawnOffsetIteration);
                Builder<Role> roleBuilder = NPCPlugin.get().tryGetCachedValidRole(npcRoleIndex);
                if (roleBuilder != null) {
                   spawningContext.setSpawnable((ISpawnableWithModel)roleBuilder);
                   if (spawningContext.set(world, residentSpawnLocation.x, residentSpawnLocation.y, residentSpawnLocation.z)
                      && spawningContext.canSpawn() == SpawnTestResult.TEST_OK) {
                      Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCPlugin.get()
-                        .spawnEntity(store, npcRoleIndex, spawningContext.newPosition(), Vector3f.ZERO, null, null);
+                        .spawnEntity(store, npcRoleIndex, spawningContext.newPosition(), Rotation3f.IDENTITY, null, null);
                      if (npcPair == null) {
                         resident.setPersistentRef(null);
                         resident.setDeployedToWorld(false);
                      } else {
                         Ref<EntityStore> npcRef = (Ref<EntityStore>)npcPair.first();
                         NPCEntity npcComponent = (NPCEntity)npcPair.second();
-                        npcComponent.getLeashPoint().assign(coopLocation);
+                        npcComponent.getLeashPoint().set(coopLocation);
                         if (npcRef != null && npcRef.isValid()) {
                            UUIDComponent uuidComponent = store.getComponent(npcRef, UUIDComponent.getComponentType());
                            if (uuidComponent == null) {
@@ -276,7 +278,7 @@ public class CoopBlock implements Component<ChunkStore> {
                               resident.setDeployedToWorld(false);
                            } else {
                               CoopResidentComponent coopResidentComponent = new CoopResidentComponent();
-                              coopResidentComponent.setCoopLocation(coopLocation.toVector3i());
+                              coopResidentComponent.setCoopLocation(Vector3dUtil.toVector3i(coopLocation));
                               store.addComponent(npcRef, CoopResidentComponent.getComponentType(), coopResidentComponent);
                               PersistentRef persistentRef = new PersistentRef();
                               persistentRef.setEntity(npcRef, uuidComponent.getUuid());
@@ -412,10 +414,12 @@ public class CoopBlock implements Component<ChunkStore> {
       @Nonnull World world, @Nonnull WorldTimeResource worldTimeResource, @Nonnull Store<EntityStore> store, int blockX, int blockY, int blockZ
    ) {
       Vector3i location = new Vector3i(blockX, blockY, blockZ);
-      world.execute(() -> this.ensureSpawnResidentsInWorld(world, store, location.toVector3d(), new Vector3d().assign(Vector3d.FORWARD)));
+      world.execute(() -> this.ensureSpawnResidentsInWorld(world, store, Vector3iUtil.toVector3d(location), new Vector3d().set(Vector3dUtil.FORWARD)));
       this.generateProduceToInventory(worldTimeResource);
       Vector3d dropPosition = new Vector3d(blockX + 0.5F, blockY, blockZ + 0.5F);
-      Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(store, this.itemContainer.removeAllItemStacks(), dropPosition, Vector3f.ZERO);
+      Holder<EntityStore>[] itemEntityHolders = ItemComponent.generateItemDrops(
+         store, this.itemContainer.removeAllItemStacks(), dropPosition, Rotation3f.IDENTITY
+      );
       if (itemEntityHolders.length > 0) {
          world.execute(() -> store.addEntities(itemEntityHolders, AddReason.SPAWN));
       }

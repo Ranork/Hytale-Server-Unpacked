@@ -9,9 +9,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.consumer.TriIntConsumer;
 import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -19,10 +16,14 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.SelectInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector4d;
 
 public class AOECylinderSelector extends AOECircleSelector {
    @Nonnull
@@ -53,6 +54,11 @@ public class AOECylinderSelector extends AOECircleSelector {
    }
 
    private class RuntimeSelector implements Selector {
+      private RuntimeSelector() {
+         Objects.requireNonNull(AOECylinderSelector.this);
+         super();
+      }
+
       @Override
       public void tick(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Ref<EntityStore> ref, float time, float runTime) {
          if (SelectInteraction.SHOW_VISUAL_DEBUG) {

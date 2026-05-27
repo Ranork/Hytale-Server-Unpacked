@@ -5,7 +5,6 @@ import com.hypixel.hytale.builtin.path.path.IPrefabPath;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.component.ResourceType;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -16,6 +15,7 @@ import java.util.Set;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class WorldPathData implements Resource<EntityStore> {
    private final Int2ObjectMap<PrefabPathCollection> prefabPaths = new Int2ObjectOpenHashMap();

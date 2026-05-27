@@ -2,7 +2,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.props.prefabprop;
 
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.FileVisitResult;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -30,5 +32,10 @@ public class PrefabFileVisitor extends SimpleFileVisitor<Path> {
             return FileVisitResult.CONTINUE;
          }
       }
+   }
+
+   @Nonnull
+   public FileVisitResult visitFileFailed(@Nonnull Path file, @Nonnull IOException exc) throws IOException {
+      return !(exc instanceof NoSuchFileException) && !(exc instanceof AccessDeniedException) ? super.visitFileFailed(file, exc) : FileVisitResult.CONTINUE;
    }
 }

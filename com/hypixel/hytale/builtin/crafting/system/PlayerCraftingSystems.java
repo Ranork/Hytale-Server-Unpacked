@@ -14,7 +14,6 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 
@@ -39,14 +38,6 @@ public class PlayerCraftingSystems {
 
       @Override
       public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
-         World world = store.getExternalData().getWorld();
-         if (world.getWorldConfig().isSavingPlayers()) {
-            Player playerComponent = holder.getComponent(this.playerComponentType);
-
-            assert playerComponent != null;
-
-            playerComponent.saveConfig(world, holder);
-         }
       }
 
       @Nonnull

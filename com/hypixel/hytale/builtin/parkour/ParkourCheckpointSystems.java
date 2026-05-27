@@ -18,13 +18,12 @@ import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.system.PlayerSpatialSystem;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
@@ -33,6 +32,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ParkourCheckpointSystems {
    public static class EnsureNetworkSendable extends HolderSystem<EntityStore> {
@@ -92,7 +92,7 @@ public class ParkourCheckpointSystems {
 
    public static class Ticking extends EntityTickingSystem<EntityStore> {
       private final ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType;
-      private final ComponentType<EntityStore, Player> playerComponentType;
+      private final ComponentType<EntityStore, PlayerRef> playerRefComponentType;
       private final ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent;
       private final ComponentType<EntityStore, TransformComponent> transformComponentType;
       @Nonnull
@@ -104,11 +104,11 @@ public class ParkourCheckpointSystems {
 
       public Ticking(
          ComponentType<EntityStore, ParkourCheckpoint> parkourCheckpointComponentType,
-         ComponentType<EntityStore, Player> playerComponentType,
+         ComponentType<EntityStore, PlayerRef> playerRefComponentType,
          ResourceType<EntityStore, SpatialResource<Ref<EntityStore>, EntityStore>> playerSpatialComponent
       ) {
          this.parkourCheckpointComponentType = parkourCheckpointComponentType;
-         this.playerComponentType = playerComponentType;
+         this.playerRefComponentType = playerRefComponentType;
          this.playerSpatialComponent = playerSpatialComponent;
          this.transformComponentType = TransformComponent.getComponentType();
          this.uuidComponentType = UUIDComponent.getComponentType();
@@ -151,8 +151,8 @@ public class ParkourCheckpointSystems {
                Ref<EntityStore> otherReference = results.get(i);
                UUIDComponent uuidComponent = commandBuffer.getComponent(otherReference, this.uuidComponentType);
                UUID playerUuid = uuidComponent.getUuid();
-               Player player = commandBuffer.getComponent(otherReference, this.playerComponentType);
-               handleCheckpointUpdate(currentCheckpointByPlayerMap, startTimeByPlayerMap, player, playerUuid, parkourCheckpointIndex, lastIndex);
+               PlayerRef playerRef = commandBuffer.getComponent(otherReference, this.playerRefComponentType);
+               handleCheckpointUpdate(currentCheckpointByPlayerMap, startTimeByPlayerMap, playerRef, playerUuid, parkourCheckpointIndex, lastIndex);
             }
          }
       }
@@ -160,7 +160,7 @@ public class ParkourCheckpointSystems {
       private static void handleCheckpointUpdate(
          @Nonnull Object2IntMap<UUID> currentCheckpointByPlayerMap,
          @Nonnull Object2LongMap<UUID> startTimeByPlayerMap,
-         @Nonnull Player player,
+         @Nonnull PlayerRef playerRef,
          UUID playerUuid,
          int checkpointIndex,
          int lastIndex
@@ -173,7 +173,7 @@ public class ParkourCheckpointSystems {
 
             currentCheckpointByPlayerMap.put(playerUuid, 0);
             startTimeByPlayerMap.put(playerUuid, System.nanoTime());
-            player.sendMessage(Message.translation("server.general.parkourRun.started"));
+            playerRef.sendMessage(Message.translation("server.general.parkourRun.started"));
          } else {
             if (currentCheckpoint + 1 != checkpointIndex) {
                return;
@@ -182,13 +182,13 @@ public class ParkourCheckpointSystems {
             if (lastIndex == checkpointIndex) {
                long completionTimeNano = System.nanoTime() - startTimeByPlayerMap.getLong(playerUuid);
                long completionTimeMillis = TimeUnit.NANOSECONDS.toMillis(completionTimeNano);
-               player.sendMessage(Message.translation("server.general.parkourRun.completed").param("seconds", completionTimeMillis / 1000.0));
+               playerRef.sendMessage(Message.translation("server.general.parkourRun.completed").param("seconds", completionTimeMillis / 1000.0));
                currentCheckpointByPlayerMap.remove(playerUuid, currentCheckpoint);
                return;
             }
 
             currentCheckpointByPlayerMap.put(playerUuid, checkpointIndex);
-            player.sendMessage(
+            playerRef.sendMessage(
                Message.translation("server.general.parkourRun.checkpointReached").param("checkpoint", checkpointIndex).param("checkpoints", lastIndex)
             );
          }

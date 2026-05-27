@@ -2,9 +2,15 @@ package com.hypixel.hytale.server.core.cosmetics;
 
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
+import com.hypixel.hytale.codec.Codec;
+import com.hypixel.hytale.codec.EmptyExtraInfo;
+import com.hypixel.hytale.codec.KeyedCodec;
+import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.common.util.ArrayUtil;
 import com.hypixel.hytale.common.util.RandomUtil;
+import com.hypixel.hytale.common.util.StringUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.asset.AssetModule;
@@ -23,6 +29,50 @@ import javax.annotation.Nullable;
 
 public class CosmeticsModule extends JavaPlugin {
    public static final PluginManifest MANIFEST = PluginManifest.corePlugin(CosmeticsModule.class).build();
+   static final BuilderCodec<com.hypixel.hytale.protocol.PlayerSkin> PLAYER_SKIN_CODEC = BuilderCodec.builder(
+         com.hypixel.hytale.protocol.PlayerSkin.class, com.hypixel.hytale.protocol.PlayerSkin::new
+      )
+      .append(new KeyedCodec<>("bodyCharacteristic", Codec.STRING, false, true), (o, v) -> o.bodyCharacteristic = v, o -> o.bodyCharacteristic)
+      .add()
+      .append(new KeyedCodec<>("cape", Codec.STRING, false, true), (o, v) -> o.cape = v, o -> o.cape)
+      .add()
+      .append(new KeyedCodec<>("earAccessory", Codec.STRING, false, true), (o, v) -> o.earAccessory = v, o -> o.earAccessory)
+      .add()
+      .append(new KeyedCodec<>("ears", Codec.STRING, false, true), (o, v) -> o.ears = v, o -> o.ears)
+      .add()
+      .append(new KeyedCodec<>("eyebrows", Codec.STRING, false, true), (o, v) -> o.eyebrows = v, o -> o.eyebrows)
+      .add()
+      .append(new KeyedCodec<>("eyes", Codec.STRING, false, true), (o, v) -> o.eyes = v, o -> o.eyes)
+      .add()
+      .append(new KeyedCodec<>("face", Codec.STRING, false, true), (o, v) -> o.face = v, o -> o.face)
+      .add()
+      .append(new KeyedCodec<>("faceAccessory", Codec.STRING, false, true), (o, v) -> o.faceAccessory = v, o -> o.faceAccessory)
+      .add()
+      .append(new KeyedCodec<>("facialHair", Codec.STRING, false, true), (o, v) -> o.facialHair = v, o -> o.facialHair)
+      .add()
+      .append(new KeyedCodec<>("gloves", Codec.STRING, false, true), (o, v) -> o.gloves = v, o -> o.gloves)
+      .add()
+      .append(new KeyedCodec<>("haircut", Codec.STRING, false, true), (o, v) -> o.haircut = v, o -> o.haircut)
+      .add()
+      .append(new KeyedCodec<>("headAccessory", Codec.STRING, false, true), (o, v) -> o.headAccessory = v, o -> o.headAccessory)
+      .add()
+      .append(new KeyedCodec<>("mouth", Codec.STRING, false, true), (o, v) -> o.mouth = v, o -> o.mouth)
+      .add()
+      .append(new KeyedCodec<>("overpants", Codec.STRING, false, true), (o, v) -> o.overpants = v, o -> o.overpants)
+      .add()
+      .append(new KeyedCodec<>("overtop", Codec.STRING, false, true), (o, v) -> o.overtop = v, o -> o.overtop)
+      .add()
+      .append(new KeyedCodec<>("pants", Codec.STRING, false, true), (o, v) -> o.pants = v, o -> o.pants)
+      .add()
+      .append(new KeyedCodec<>("shoes", Codec.STRING, false, true), (o, v) -> o.shoes = v, o -> o.shoes)
+      .add()
+      .append(new KeyedCodec<>("skinFeature", Codec.STRING, false, true), (o, v) -> o.skinFeature = v, o -> o.skinFeature)
+      .add()
+      .append(new KeyedCodec<>("undertop", Codec.STRING, false, true), (o, v) -> o.undertop = v, o -> o.undertop)
+      .add()
+      .append(new KeyedCodec<>("underwear", Codec.STRING, false, true), (o, v) -> o.underwear = v, o -> o.underwear)
+      .add()
+      .build();
    private static CosmeticsModule INSTANCE;
    private CosmeticRegistry registry;
 
@@ -91,6 +141,17 @@ public class CosmeticsModule extends JavaPlugin {
 
       ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset("Player");
       return Model.createScaledModel(modelAsset, scale, null);
+   }
+
+   @Nullable
+   public com.hypixel.hytale.protocol.PlayerSkin parseSkinFromJson(@Nonnull String json) {
+      try {
+         RawJsonReader reader = RawJsonReader.fromJsonString(json);
+         return PLAYER_SKIN_CODEC.decodeJson(reader, EmptyExtraInfo.EMPTY);
+      } catch (Exception var3) {
+         ((HytaleLogger.Api)this.getLogger().at(Level.WARNING).withCause(var3)).log("Failed to parse skin JSON");
+         return null;
+      }
    }
 
    public void validateSkin(@Nonnull com.hypixel.hytale.protocol.PlayerSkin skin) throws CosmeticsModule.InvalidSkinException {
@@ -195,6 +256,7 @@ public class CosmeticsModule extends JavaPlugin {
                      break;
                   case FullyCovering:
                      return this.isValidAttachment(haircuts, haircutId);
+                  case Simple:
                }
             }
          }
@@ -323,7 +385,12 @@ public class CosmeticsModule extends JavaPlugin {
       }
 
       private static String formatMessage(String partType, @Nullable String partId) {
-         return partId == null ? "Missing required " + partType : "Unknown " + partType + ": " + partId;
+         if (partId == null) {
+            return "Missing required " + partType;
+         } else {
+            partId = StringUtil.sanitizeAsciiString(partId);
+            return "Unknown " + partType + ": " + partId;
+         }
       }
 
       public String getPartType() {

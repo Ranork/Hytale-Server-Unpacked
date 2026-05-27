@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.interface_;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,19 +50,23 @@ public class UpdatePortal implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdatePortal deserialize(@Nonnull ByteBuf buf, int offset) {
-      UpdatePortal obj = new UpdatePortal();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         obj.state = PortalState.deserialize(buf, offset + 1);
-      }
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("UpdatePortal", 6, buf.readableBytes() - offset);
+      } else {
+         UpdatePortal obj = new UpdatePortal();
+         byte nullBits = buf.getByte(offset);
+         if ((nullBits & 1) != 0) {
+            obj.state = PortalState.deserialize(buf, offset + 1);
+         }
 
-      int pos = offset + 6;
-      if ((nullBits & 2) != 0) {
-         obj.definition = PortalDef.deserialize(buf, pos);
-         pos += PortalDef.computeBytesConsumed(buf, pos);
-      }
+         int pos = offset + 6;
+         if ((nullBits & 2) != 0) {
+            obj.definition = PortalDef.deserialize(buf, pos);
+            pos += PortalDef.computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -70,6 +77,54 @@ public class UpdatePortal implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   @Nullable
+   public static PortalState getState(MemorySegment mem) {
+      return getState(mem, 0);
+   }
+
+   @Nullable
+   public static PortalState getState(MemorySegment mem, int offset) {
+      return hasState(mem, offset) ? PortalState.toObject(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static PortalDef getDefinition(MemorySegment mem) {
+      return getDefinition(mem, 0);
+   }
+
+   @Nullable
+   public static PortalDef getDefinition(MemorySegment mem, int offset) {
+      return hasDefinition(mem, offset) ? PortalDef.toObject(mem, offset + 6) : null;
+   }
+
+   public static boolean hasState(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasDefinition(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static UpdatePortal toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdatePortal toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdatePortal", offset + 6, (int)mem.byteSize());
+      } else {
+         return new UpdatePortal(
+            hasState(mem, offset) ? PortalState.toObject(mem, offset + 1) : null, hasDefinition(mem, offset) ? PortalDef.toObject(mem, offset + 6) : null
+         );
+      }
    }
 
    @Override
@@ -93,6 +148,32 @@ public class UpdatePortal implements Packet, ToClientPacket {
       if (this.definition != null) {
          this.definition.serialize(buf);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.state != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.definition != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      if (this.state != null) {
+         this.state.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 5L).fill((byte)0);
+      }
+
+      int varOffset = offset + 6;
+      if (this.definition != null) {
+         varOffset += this.definition.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    @Override

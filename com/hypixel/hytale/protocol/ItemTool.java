@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -33,35 +35,39 @@ public class ItemTool {
 
    @Nonnull
    public static ItemTool deserialize(@Nonnull ByteBuf buf, int offset) {
-      ItemTool obj = new ItemTool();
-      byte nullBits = buf.getByte(offset);
-      obj.speed = buf.getFloatLE(offset + 1);
-      int pos = offset + 5;
-      if ((nullBits & 1) != 0) {
-         int specsCount = VarInt.peek(buf, pos);
-         if (specsCount < 0) {
-            throw ProtocolException.negativeLength("Specs", specsCount);
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("ItemTool", 5, buf.readableBytes() - offset);
+      } else {
+         ItemTool obj = new ItemTool();
+         byte nullBits = buf.getByte(offset);
+         obj.speed = buf.getFloatLE(offset + 1);
+         int pos = offset + 5;
+         if ((nullBits & 1) != 0) {
+            int specsCount = VarInt.peek(buf, pos);
+            if (specsCount < 0) {
+               throw ProtocolException.invalidVarInt("Specs");
+            }
+
+            int specsVarLen = VarInt.size(specsCount);
+            if (specsCount > 4096000) {
+               throw ProtocolException.arrayTooLong("Specs", specsCount, 4096000);
+            }
+
+            if (pos + specsVarLen + specsCount * 9L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Specs", pos + specsVarLen + specsCount * 9, buf.readableBytes());
+            }
+
+            pos += specsVarLen;
+            obj.specs = new ItemToolSpec[specsCount];
+
+            for (int i = 0; i < specsCount; i++) {
+               obj.specs[i] = ItemToolSpec.deserialize(buf, pos);
+               pos += ItemToolSpec.computeBytesConsumed(buf, pos);
+            }
          }
 
-         if (specsCount > 4096000) {
-            throw ProtocolException.arrayTooLong("Specs", specsCount, 4096000);
-         }
-
-         int specsVarLen = VarInt.size(specsCount);
-         if (pos + specsVarLen + specsCount * 9L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Specs", pos + specsVarLen + specsCount * 9, buf.readableBytes());
-         }
-
-         pos += specsVarLen;
-         obj.specs = new ItemToolSpec[specsCount];
-
-         for (int i = 0; i < specsCount; i++) {
-            obj.specs[i] = ItemToolSpec.deserialize(buf, pos);
-            pos += ItemToolSpec.computeBytesConsumed(buf, pos);
-         }
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -69,7 +75,7 @@ public class ItemTool {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += ItemToolSpec.computeBytesConsumed(buf, pos);
@@ -77,6 +83,98 @@ public class ItemTool {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   @Nullable
+   public static ItemToolSpec[] getSpecs(MemorySegment mem) {
+      return getSpecs(mem, 0);
+   }
+
+   @Nullable
+   public static ItemToolSpec[] getSpecs(MemorySegment mem, int offset) {
+      if (!hasSpecs(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 5;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Specs", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Specs", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Specs", off + lenOffset + len, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               ItemToolSpec[] data = new ItemToolSpec[len];
+
+               for (int i = 0; i < len; i++) {
+                  data[i] = ItemToolSpec.toObject(mem, off);
+                  off += data[i].computeSize();
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   public static float getSpeed(MemorySegment mem) {
+      return getSpeed(mem, 0);
+   }
+
+   public static float getSpeed(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 1));
+   }
+
+   public static boolean hasSpecs(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static ItemTool toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ItemTool toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ItemTool", offset + 5, (int)mem.byteSize());
+      } else {
+         ItemToolSpec[] specs = null;
+         if (hasSpecs(mem, offset)) {
+            int off = offset + 5;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("Specs", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.arrayTooLong("Specs", len, 4096000);
+            }
+
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Specs", off + lenOffset + len, (int)mem.byteSize());
+            }
+
+            off += lenOffset;
+            specs = new ItemToolSpec[len];
+
+            for (int i = 0; i < len; i++) {
+               specs[i] = ItemToolSpec.toObject(mem, off);
+               off += specs[i].computeSize();
+            }
+         }
+
+         return new ItemTool(specs, mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 1)));
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -98,6 +196,33 @@ public class ItemTool {
             item.serialize(buf);
          }
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.specs != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 1), this.speed);
+      int varOffset = offset + 5;
+      if (this.specs != null) {
+         if (this.specs.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Specs", this.specs.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.specs.length);
+         int specsValueOffset = 0;
+
+         for (int i = 0; i < this.specs.length; i++) {
+            specsValueOffset += this.specs[i].serialize(mem, varOffset + specsValueOffset);
+         }
+
+         varOffset += specsValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {
@@ -131,7 +256,7 @@ public class ItemTool {
                return ValidationResult.error("Specs exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(specsCount);
 
             for (int i = 0; i < specsCount; i++) {
                ValidationResult structResult = ItemToolSpec.validateStructure(buffer, pos);

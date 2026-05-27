@@ -4,11 +4,14 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.EmptyExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.server.core.HytaleServerConfig;
 import com.hypixel.hytale.server.core.auth.AuthConfig;
+import com.hypixel.hytale.server.core.auth.EncryptedAuthCredentialStore;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
 import com.hypixel.hytale.server.core.config.UpdateConfig;
 import com.hypixel.hytale.server.core.util.ServiceHttpClientFactory;
@@ -22,8 +25,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.HttpClient.Redirect;
 import java.net.http.HttpResponse.BodyHandlers;
+import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.security.CodeSource;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
@@ -131,26 +137,56 @@ public class UpdateService {
    private boolean performDownload(
       @Nonnull UpdateService.VersionManifest manifest, @Nonnull Path stagingDir, @Nullable UpdateService.ProgressCallback progressCallback
    ) throws IOException, InterruptedException {
+      Path tempFile = this.downloadAndVerifyZip(manifest, progressCallback);
+      if (tempFile == null) {
+         return false;
+      } else {
+         boolean var5;
+         try {
+            if (clearStagingDir(stagingDir)) {
+               Files.createDirectories(stagingDir);
+               if (Thread.currentThread().isInterrupted()) {
+                  throw new CancellationException("Update download cancelled");
+               }
+
+               FileUtil.extractZip(tempFile, stagingDir);
+               LOGGER.at(Level.INFO).log("Update %s downloaded and extracted to staging", manifest.version);
+               return true;
+            }
+
+            LOGGER.at(Level.WARNING).log("Failed to clear staging directory before extraction");
+            var5 = false;
+         } finally {
+            Files.deleteIfExists(tempFile);
+         }
+
+         return var5;
+      }
+   }
+
+   @Nullable
+   private Path downloadAndVerifyZip(@Nonnull UpdateService.VersionManifest manifest, @Nullable UpdateService.ProgressCallback progressCallback) throws IOException, InterruptedException {
       ServerAuthManager authManager = ServerAuthManager.getInstance();
       String accessToken = authManager.getOAuthAccessToken();
       if (accessToken == null) {
          LOGGER.at(Level.WARNING).log("Cannot download update - not authenticated");
-         return false;
+         return null;
       } else {
          String signedUrl = this.getSignedUrl(accessToken, manifest.downloadUrl);
          if (signedUrl == null) {
             LOGGER.at(Level.WARNING).log("Failed to get signed URL for download");
-            return false;
+            return null;
          } else {
             HttpRequest downloadRequest = HttpRequest.newBuilder().uri(URI.create(signedUrl)).timeout(DOWNLOAD_TIMEOUT).GET().build();
             Path tempFile = Files.createTempFile("hytale-update-", ".zip");
+            boolean keepTempFile = false;
 
-            boolean var36;
+            Object var36;
             try {
                HttpResponse<InputStream> response = this.httpClient.send(downloadRequest, BodyHandlers.ofInputStream());
                if (response.statusCode() != 200) {
                   LOGGER.at(Level.WARNING).log("Failed to download update: HTTP %d", response.statusCode());
-                  return false;
+                  return null;
                }
 
                long contentLength = response.headers().firstValueAsLong("Content-Length").orElse(-1L);
@@ -160,7 +196,7 @@ public class UpdateService {
                   digest = MessageDigest.getInstance("SHA-256");
                } catch (NoSuchAlgorithmException var31) {
                   LOGGER.at(Level.SEVERE).log("SHA-256 not available - this should never happen");
-                  return false;
+                  return null;
                }
 
                try (
@@ -188,28 +224,117 @@ public class UpdateService {
 
                String actualHash = HexFormat.of().formatHex(digest.digest());
                if (manifest.sha256 == null || manifest.sha256.equalsIgnoreCase(actualHash)) {
-                  if (clearStagingDir(stagingDir)) {
-                     Files.createDirectories(stagingDir);
-                     if (Thread.currentThread().isInterrupted()) {
-                        throw new CancellationException("Update download cancelled");
-                     }
-
-                     FileUtil.extractZip(tempFile, stagingDir);
-                     LOGGER.at(Level.INFO).log("Update %s downloaded and extracted to staging", manifest.version);
-                     return true;
-                  }
-
-                  LOGGER.at(Level.WARNING).log("Failed to clear staging directory before extraction");
-                  return false;
+                  keepTempFile = true;
+                  return tempFile;
                }
 
                LOGGER.at(Level.WARNING).log("Checksum mismatch! Expected: %s, Got: %s", manifest.sha256, actualHash);
-               var36 = false;
+               var36 = null;
             } finally {
-               Files.deleteIfExists(tempFile);
+               if (!keepTempFile) {
+                  Files.deleteIfExists(tempFile);
+               }
             }
 
-            return var36;
+            return (Path)var36;
+         }
+      }
+   }
+
+   public UpdateService.DownloadTask performBootstrapInstall(
+      @Nonnull UpdateService.VersionManifest manifest, @Nullable UpdateService.ProgressCallback progressCallback
+   ) {
+      CompletableFuture<Boolean> future = new CompletableFuture<>();
+      Thread thread = new Thread(() -> {
+         try {
+            future.complete(this.performBootstrapInstallSync(manifest, progressCallback));
+         } catch (CancellationException var5) {
+            future.completeExceptionally(var5);
+         } catch (InterruptedException var6) {
+            Thread.currentThread().interrupt();
+            future.completeExceptionally(new CancellationException("Bootstrap install interrupted"));
+         } catch (Exception var7) {
+            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var7)).log("Error performing bootstrap install");
+            future.complete(false);
+         }
+      }, "BootstrapInstall");
+      thread.setDaemon(true);
+      thread.start();
+      return new UpdateService.DownloadTask(future, thread);
+   }
+
+   private boolean performBootstrapInstallSync(@Nonnull UpdateService.VersionManifest manifest, @Nullable UpdateService.ProgressCallback progressCallback) throws IOException, InterruptedException {
+      Path tempFile = this.downloadAndVerifyZip(manifest, progressCallback);
+      if (tempFile == null) {
+         return false;
+      } else {
+         boolean var11;
+         try {
+            Path cwd = Path.of(".").toAbsolutePath().normalize();
+            if (Thread.currentThread().isInterrupted()) {
+               throw new CancellationException("Bootstrap install cancelled");
+            }
+
+            FileUtil.extractZip(tempFile, cwd);
+            if (!System.getProperty("os.name", "").toLowerCase().contains("win")) {
+               Path startSh = cwd.resolve("start.sh");
+               if (Files.exists(startSh) && !startSh.toFile().setExecutable(true, false)) {
+                  LOGGER.at(Level.WARNING).log("Failed to set executable bit on %s", startSh);
+               }
+            }
+
+            Path serverDir = cwd.resolve("Server");
+            if (Files.isDirectory(serverDir)) {
+               Path credentialPath = cwd.resolve("auth.enc");
+               moveIntoServerDir(credentialPath, serverDir);
+               moveIntoServerDir(EncryptedAuthCredentialStore.keyFilePath(credentialPath), serverDir);
+               moveIntoServerDir(cwd.resolve(HytaleServerConfig.PATH), serverDir);
+            }
+
+            deleteRunningJarIfPossible(cwd);
+            LOGGER.at(Level.INFO).log("Bootstrap install %s extracted to %s", manifest.version, cwd);
+            var11 = true;
+         } finally {
+            Files.deleteIfExists(tempFile);
+         }
+
+         return var11;
+      }
+   }
+
+   private static void moveIntoServerDir(@Nonnull Path src, @Nonnull Path serverDir) {
+      if (Files.exists(src)) {
+         Path dst = serverDir.resolve(src.getFileName());
+
+         try {
+            Files.move(src, dst, StandardCopyOption.REPLACE_EXISTING);
+            LOGGER.at(Level.INFO).log("Moved %s to %s", src.getFileName(), dst);
+         } catch (IOException var4) {
+            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var4)).log("Failed to move %s into Server/", src.getFileName());
+         }
+      }
+   }
+
+   private static void deleteRunningJarIfPossible(@Nonnull Path cwd) {
+      if (ManifestUtil.isJar()) {
+         try {
+            CodeSource codeSource = UpdateService.class.getProtectionDomain().getCodeSource();
+            if (codeSource == null) {
+               return;
+            }
+
+            Path jarPath = Path.of(codeSource.getLocation().toURI());
+            if (!jarPath.getParent().toAbsolutePath().normalize().equals(cwd)) {
+               LOGGER.at(Level.INFO).log("Installer JAR %s is outside cwd %s - skipping cleanup", jarPath, cwd);
+               return;
+            }
+
+            Files.delete(jarPath);
+            LOGGER.at(Level.INFO).log("Deleted installer JAR %s", jarPath);
+         } catch (AccessDeniedException var3) {
+            LOGGER.at(Level.INFO).log("Could not delete installer JAR (Windows locks the running JAR) - delete it manually after shutdown");
+         } catch (Exception var4) {
+            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var4)).log("Failed to delete installer JAR");
          }
       }
    }
@@ -343,11 +468,60 @@ public class UpdateService {
       }
    }
 
+   @Nullable
+   public UpdateService.PatchlineSummary[] fetchPatchlines(@Nonnull String accessToken) throws IOException, InterruptedException {
+      String url = this.accountDataUrl + "/my-account/get-patchlines";
+      HttpRequest request = HttpRequest.newBuilder()
+         .uri(URI.create(url))
+         .header("Accept", "application/json")
+         .header("Authorization", "Bearer " + accessToken)
+         .header("User-Agent", AuthConfig.USER_AGENT)
+         .timeout(REQUEST_TIMEOUT)
+         .GET()
+         .build();
+      HttpResponse<String> response = this.httpClient.send(request, BodyHandlers.ofString());
+      if (response.statusCode() != 200) {
+         LOGGER.at(Level.WARNING).log("Failed to fetch patchlines: HTTP %d", response.statusCode());
+         return null;
+      } else {
+         UpdateService.GetPatchlinesResponse patchlines = UpdateService.GetPatchlinesResponse.CODEC
+            .decodeJson(new RawJsonReader(response.body().toCharArray()), EmptyExtraInfo.EMPTY);
+         return patchlines != null ? patchlines.patchlines : null;
+      }
+   }
+
    private static <T> KeyedCodec<T> externalKey(String key, Codec<T> codec) {
       return new KeyedCodec<>(key, codec, false, true);
    }
 
    public record DownloadTask(CompletableFuture<Boolean> future, Thread thread) {
+   }
+
+   public static class GetPatchlinesResponse {
+      public UpdateService.PatchlineSummary[] patchlines;
+      public static final BuilderCodec<UpdateService.GetPatchlinesResponse> CODEC = BuilderCodec.builder(
+            UpdateService.GetPatchlinesResponse.class, UpdateService.GetPatchlinesResponse::new
+         )
+         .append(
+            UpdateService.externalKey("patchlines", new ArrayCodec<>(UpdateService.PatchlineSummary.CODEC, UpdateService.PatchlineSummary[]::new)),
+            (r, v) -> r.patchlines = v,
+            r -> r.patchlines
+         )
+         .add()
+         .build();
+   }
+
+   public static class PatchlineSummary {
+      public String name;
+      public long expiresAt;
+      public static final BuilderCodec<UpdateService.PatchlineSummary> CODEC = BuilderCodec.builder(
+            UpdateService.PatchlineSummary.class, UpdateService.PatchlineSummary::new
+         )
+         .append(UpdateService.externalKey("name", Codec.STRING), (r, v) -> r.name = v, r -> r.name)
+         .add()
+         .append(UpdateService.externalKey("expiresAt", Codec.LONG), (r, v) -> r.expiresAt = v, r -> r.expiresAt)
+         .add()
+         .build();
    }
 
    @FunctionalInterface

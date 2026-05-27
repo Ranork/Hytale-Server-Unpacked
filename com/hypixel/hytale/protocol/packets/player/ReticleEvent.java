@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.player;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -41,18 +44,52 @@ public class ReticleEvent implements Packet, ToClientPacket {
 
    @Nonnull
    public static ReticleEvent deserialize(@Nonnull ByteBuf buf, int offset) {
-      ReticleEvent obj = new ReticleEvent();
-      obj.eventIndex = buf.getIntLE(offset + 0);
-      return obj;
+      if (buf.readableBytes() - offset < 4) {
+         throw ProtocolException.bufferTooSmall("ReticleEvent", 4, buf.readableBytes() - offset);
+      } else {
+         ReticleEvent obj = new ReticleEvent();
+         obj.eventIndex = buf.getIntLE(offset + 0);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 4;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 4L;
+   }
+
+   public static int getEventIndex(MemorySegment mem) {
+      return getEventIndex(mem, 0);
+   }
+
+   public static int getEventIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static ReticleEvent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ReticleEvent toObject(MemorySegment mem, int offset) {
+      if (offset + 4 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ReticleEvent", offset + 4, (int)mem.byteSize());
+      } else {
+         return new ReticleEvent(mem.get(PacketIO.PROTO_INT, (long)(offset + 0)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeIntLE(this.eventIndex);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.eventIndex);
+      return 4;
    }
 
    @Override

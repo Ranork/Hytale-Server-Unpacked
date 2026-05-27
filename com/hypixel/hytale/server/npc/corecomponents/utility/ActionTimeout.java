@@ -30,7 +30,7 @@ public class ActionTimeout extends ActionWithDelay implements IAnnotatedComponen
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       if (super.canExecute(ref, role, sensorInfo, dt, store) && (this.action == null || this.action.canExecute(ref, role, sensorInfo, dt, store))) {
          if (!this.isDelaying() && this.isDelayPrepared()) {
             this.startDelay(role.getEntitySupport());
@@ -43,7 +43,7 @@ public class ActionTimeout extends ActionWithDelay implements IAnnotatedComponen
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
       if (this.action != null) {
          this.action.execute(ref, role, sensorInfo, dt, store);

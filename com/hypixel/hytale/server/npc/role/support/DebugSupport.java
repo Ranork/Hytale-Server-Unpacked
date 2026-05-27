@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.npc.role.support;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.instructions.Sensor;
@@ -15,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class DebugSupport {
    protected final NPCEntity parent;
@@ -225,7 +225,7 @@ public class DebugSupport {
          this.pathVisDataList = new ArrayList<>();
       }
 
-      this.pathVisDataList.add(new DebugSupport.PathWaypointVisData(position.clone(), isCurrentTarget, isEndNode, isSeekTarget));
+      this.pathVisDataList.add(new DebugSupport.PathWaypointVisData(new Vector3d(position), isCurrentTarget, isEndNode, isSeekTarget));
    }
 
    @Nullable

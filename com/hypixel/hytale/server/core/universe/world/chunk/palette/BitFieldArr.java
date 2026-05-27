@@ -1,5 +1,7 @@
 package com.hypixel.hytale.server.core.universe.world.chunk.palette;
 
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import javax.annotation.Nonnull;
 
 public class BitFieldArr {
@@ -79,6 +81,10 @@ public class BitFieldArr {
       return bytes;
    }
 
+   public int getByteLength() {
+      return this.array.length;
+   }
+
    public void set(@Nonnull byte[] bytes) {
       System.arraycopy(bytes, 0, this.array, 0, Math.min(bytes.length, this.array.length));
    }
@@ -102,5 +108,14 @@ public class BitFieldArr {
       } else {
          System.arraycopy(other.array, 0, this.array, 0, this.array.length);
       }
+   }
+
+   public void copyTo(MemorySegment memorySegment, long offset) {
+      MemorySegment.copy(this.array, 0, memorySegment, ValueLayout.JAVA_BYTE, offset, this.array.length);
+   }
+
+   public void copyFrom(MemorySegment memorySegment, long offset, int length) {
+      int len = Math.min(length, this.array.length);
+      MemorySegment.copy(memorySegment, ValueLayout.JAVA_BYTE, offset, this.array, 0, len);
    }
 }

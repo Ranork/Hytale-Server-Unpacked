@@ -1,18 +1,22 @@
 package com.hypixel.hytale.server.core.command.system.arguments.types;
 
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.common.util.StringCompareUtil;
+import com.hypixel.hytale.common.util.StringUtil;
+import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.NameMatching;
 import com.hypixel.hytale.server.core.asset.type.ambiencefx.config.AmbienceFX;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.weather.config.Weather;
@@ -25,7 +29,6 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.ArgWrapper
 import com.hypixel.hytale.server.core.command.system.arguments.system.Argument;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
 import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionResult;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.hitboxcollision.HitboxCollisionConfig;
 import com.hypixel.hytale.server.core.modules.entity.repulsion.RepulsionConfig;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
@@ -36,15 +39,22 @@ import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.Pair;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2i;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public final class ArgTypes {
    public static final SingleArgumentType<Boolean> BOOLEAN = new SingleArgumentType<Boolean>(
@@ -68,6 +78,11 @@ public final class ArgTypes {
             result.suggest("true");
             result.suggest("false");
          }
+      }
+
+      @Override
+      public int getSuggestionValueCount() {
+         return 2;
       }
    };
    public static final SingleArgumentType<Integer> INTEGER = new SingleArgumentType<Integer>(
@@ -249,6 +264,11 @@ public final class ArgTypes {
             return null;
          }
       }
+
+      @Override
+      public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+         ArgTypes.suggestOnlinePlayers(sender, textAlreadyEntered, result);
+      }
    };
    public static final SingleArgumentType<Coord> RELATIVE_DOUBLE_COORD = new SingleArgumentType<Coord>(
       "server.commands.parsing.argtype.doubleCoordinate.name", "server.commands.parsing.argtype.doubleCoordinate.usage", "5.0", "~-2.3", "0.0"
@@ -262,20 +282,35 @@ public final class ArgTypes {
             return null;
          }
       }
-   };
-   public static final SingleArgumentType<IntCoord> RELATIVE_INT_COORD = new SingleArgumentType<IntCoord>(
-      "server.commands.parsing.argtype.integerCoordinate.name", "server.commands.parsing.argtype.integerCoordinate.usage", "5", "~-2", "0"
-   ) {
-      @Nullable
-      public IntCoord parse(@Nonnull String input, ParseResult parseResult) {
-         try {
-            return IntCoord.parse(input);
-         } catch (NumberFormatException var4) {
-            parseResult.fail(Message.translation("server.commands.parsing.argtype.integerCoordinate.fail").param("input", input));
-            return null;
+
+      @Override
+      public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+         if (textAlreadyEntered.isEmpty() || textAlreadyEntered.startsWith("~")) {
+            result.suggest("~");
          }
       }
    };
+   public static final SingleArgumentType<IntCoord> RELATIVE_INT_COORD = (new SingleArgumentType<Object>(
+         "server.commands.parsing.argtype.integerCoordinate.name", "server.commands.parsing.argtype.integerCoordinate.usage", "5", "~-2", "0"
+      ) {
+         @Nullable
+         public IntCoord parse(@Nonnull String input, ParseResult parseResult) {
+            try {
+               return IntCoord.parse(input);
+            } catch (NumberFormatException var4) {
+               parseResult.fail(Message.translation("server.commands.parsing.argtype.integerCoordinate.fail").param("input", input));
+               return null;
+            }
+         }
+
+         @Override
+         public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+            if (textAlreadyEntered.isEmpty() || textAlreadyEntered.startsWith("~")) {
+               result.suggest("~");
+            }
+         }
+      })
+      .withSharedSuggestions(RELATIVE_DOUBLE_COORD);
    public static final SingleArgumentType<RelativeInteger> RELATIVE_INTEGER = new SingleArgumentType<RelativeInteger>(
       "Relative Integer", "A tilde to mark an integer as relative to a base", "5", "~-2", "0"
    ) {
@@ -284,49 +319,63 @@ public final class ArgTypes {
          return RelativeInteger.parse(input, parseResult);
       }
    };
-   public static final SingleArgumentType<RelativeFloat> RELATIVE_FLOAT = new SingleArgumentType<RelativeFloat>(
-      "server.commands.parsing.argtype.relativeFloat.name", "server.commands.parsing.argtype.relativeFloat.usage", "90.0", "~-45.5", "~"
-   ) {
-      @Nullable
-      public RelativeFloat parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
-         return RelativeFloat.parse(input, parseResult);
-      }
-   };
-   public static final SingleArgumentType<PlayerRef> PLAYER_REF = new SingleArgumentType<PlayerRef>(
-      "server.commands.parsing.argtype.player.name", "server.commands.parsing.argtype.player.usage", "john_doe", "user123"
-   ) {
-      @Nullable
-      public PlayerRef parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
-         PlayerRef playerRef = null;
+   public static final SingleArgumentType<RelativeFloat> RELATIVE_FLOAT = (new SingleArgumentType<Object>(
+         "server.commands.parsing.argtype.relativeFloat.name", "server.commands.parsing.argtype.relativeFloat.usage", "90.0", "~-45.5", "~"
+      ) {
+         @Nullable
+         public RelativeFloat parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
+            return RelativeFloat.parse(input, parseResult);
+         }
 
-         for (World world : Universe.get().getWorlds().values()) {
-            Collection<PlayerRef> playerRefs = world.getPlayerRefs();
-            playerRef = NameMatching.DEFAULT.find(playerRefs, input, PlayerRef::getUsername);
-            if (playerRef != null) {
-               break;
+         @Override
+         public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+            if (textAlreadyEntered.isEmpty() || textAlreadyEntered.startsWith("~")) {
+               result.suggest("~");
+            }
+         }
+      })
+      .withSharedSuggestions(RELATIVE_DOUBLE_COORD);
+   public static final SingleArgumentType<PlayerRef> PLAYER_REF = (new SingleArgumentType<PlayerRef>(
+         "server.commands.parsing.argtype.player.name", "server.commands.parsing.argtype.player.usage", "john_doe", "user123"
+      ) {
+         @Nullable
+         public PlayerRef parse(@Nonnull String input, @Nonnull ParseResult parseResult) {
+            PlayerRef playerRef = null;
+
+            for (World world : Universe.get().getWorlds().values()) {
+               Collection<PlayerRef> playerRefs = world.getPlayerRefs();
+               playerRef = NameMatching.DEFAULT.find(playerRefs, input, PlayerRef::getUsername);
+               if (playerRef != null) {
+                  break;
+               }
+            }
+
+            if (playerRef == null) {
+               parseResult.fail(Message.translation("server.commands.errors.noSuchPlayer").param("username", input));
+               return null;
+            } else {
+               return playerRef;
             }
          }
 
-         if (playerRef == null) {
-            parseResult.fail(Message.translation("server.commands.errors.noSuchPlayer").param("username", input));
-            return null;
-         } else {
-            return playerRef;
+         @Override
+         public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+            ArgTypes.suggestOnlinePlayers(sender, textAlreadyEntered, result);
          }
-      }
 
-      @Nonnull
-      public PlayerRef processedGet(CommandSender sender, @Nonnull CommandContext context, Argument<?, PlayerRef> argument) {
-         PlayerRef playerRef = context.get(argument);
-         if (playerRef != null) {
-            return playerRef;
-         } else if (sender instanceof Player player) {
-            return player.getPlayerRef();
-         } else {
-            throw new GeneralCommandException(Message.translation("server.commands.errors.playerOrArg").param("option", "player"));
+         @Nonnull
+         public PlayerRef processedGet(CommandSender sender, @Nonnull CommandContext context, Argument<?, PlayerRef> argument) {
+            PlayerRef playerRef = context.get(argument);
+            if (playerRef != null) {
+               return playerRef;
+            } else if (sender instanceof PlayerRef senderPlayerRef) {
+               return senderPlayerRef;
+            } else {
+               throw new GeneralCommandException(Message.translation("server.commands.errors.playerOrArg").param("option", "player"));
+            }
          }
-      }
-   };
+      })
+      .withSharedSuggestions(GAME_PROFILE_LOOKUP);
    public static final SingleArgumentType<World> WORLD = new SingleArgumentType<World>(
       "server.commands.parsing.argtype.world.name", "server.commands.parsing.argtype.world.usage", "default"
    ) {
@@ -341,15 +390,32 @@ public final class ArgTypes {
          }
       }
 
+      @Override
+      public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+         String lowerInput = textAlreadyEntered.toLowerCase();
+
+         for (World world : Universe.get().getWorlds().values()) {
+            String worldName = world.getName();
+            if (worldName != null && worldName.toLowerCase().startsWith(lowerInput)) {
+               result.suggest(worldName);
+            }
+         }
+      }
+
       @Nullable
       public World processedGet(CommandSender sender, @Nonnull CommandContext context, @Nonnull Argument<?, World> argument) {
          World world = argument.get(context);
          if (world != null) {
             return world;
-         } else if (sender instanceof Player) {
-            return ((Player)sender).getWorld();
          } else {
             Universe universe = Universe.get();
+            if (context.isPlayer()) {
+               Ref<EntityStore> playerRef = context.senderAsPlayerRef();
+               if (playerRef != null && playerRef.isValid()) {
+                  return playerRef.getStore().getExternalData().getWorld();
+               }
+            }
+
             if (universe.getWorlds().size() == 1) {
                Iterator<World> iterator = universe.getWorlds().values().iterator();
                if (iterator.hasNext()) {
@@ -401,6 +467,12 @@ public final class ArgTypes {
    );
    public static final SingleArgumentType<AmbienceFX> AMBIENCE_FX_ASSET = new AssetArgumentType(
       "server.commands.parsing.argtype.asset.ambiencefx.name", AmbienceFX.class, "server.commands.parsing.argtype.asset.ambiencefx.usage"
+   );
+   public static final SingleArgumentType<MusicContainer> MUSIC_CONTAINER_ASSET = new AssetArgumentType(
+      "server.commands.parsing.argtype.asset.musiccontainer.name", MusicContainer.class, "server.commands.parsing.argtype.asset.musiccontainer.usage"
+   );
+   public static final SingleArgumentType<AudioState> AUDIO_STATE_ASSET = new AssetArgumentType(
+      "server.commands.parsing.argtype.asset.audiostate.name", AudioState.class, "server.commands.parsing.argtype.asset.audiostate.usage"
    );
    public static final SingleArgumentType<SoundCategory> SOUND_CATEGORY = forEnum("server.commands.parsing.argtype.soundcategory.name", SoundCategory.class);
    public static final ArgWrapper<EntityWrappedArg, UUID> ENTITY_ID = new ArgWrapper<>(
@@ -548,6 +620,13 @@ public final class ArgTypes {
       public RelativeIntPosition parse(@Nonnull MultiArgumentContext context, ParseResult parseResult) {
          return new RelativeIntPosition(context.get(this.xValue), context.get(this.yValue), context.get(this.zValue));
       }
+
+      @Override
+      public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+         ArgTypes.suggestPosition(
+            sender, textAlreadyEntered, result, "~ ~ ~", pos -> (int)Math.floor(pos.x) + " " + (int)Math.floor(pos.y) + " " + (int)Math.floor(pos.z)
+         );
+      }
    };
    public static final ArgumentType<RelativeDoublePosition> RELATIVE_POSITION = new MultiArgumentType<RelativeDoublePosition>(
       "server.commands.parsing.argtype.relativePosition.name",
@@ -564,6 +643,11 @@ public final class ArgTypes {
       public RelativeDoublePosition parse(@Nonnull MultiArgumentContext context, ParseResult parseResult) {
          return new RelativeDoublePosition(context.get(this.xValue), context.get(this.yValue), context.get(this.zValue));
       }
+
+      @Override
+      public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+         ArgTypes.suggestPosition(sender, textAlreadyEntered, result, "~ ~ ~", pos -> String.format("%.2f %.2f %.2f", pos.x, pos.y, pos.z));
+      }
    };
    public static final ArgumentType<RelativeChunkPosition> RELATIVE_CHUNK_POSITION = new MultiArgumentType<RelativeChunkPosition>(
       "server.commands.parsing.argtype.relativeChunkPosition.name", "server.commands.parsing.argtype.relativeChunkPosition.usage", "5 10", "~c2 ~c-3", "~ ~"
@@ -575,8 +659,13 @@ public final class ArgTypes {
       public RelativeChunkPosition parse(@Nonnull MultiArgumentContext context, ParseResult parseResult) {
          return new RelativeChunkPosition(context.get(this.xValue), context.get(this.zValue));
       }
+
+      @Override
+      public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+         ArgTypes.suggestPosition(sender, textAlreadyEntered, result, "~ ~", pos -> ((int)Math.floor(pos.x) >> 5) + " " + ((int)Math.floor(pos.z) >> 5));
+      }
    };
-   public static final ArgumentType<Vector3f> ROTATION = new MultiArgumentType<Vector3f>(
+   public static final ArgumentType<Rotation3fc> ROTATION = new MultiArgumentType<Rotation3fc>(
       "server.commands.parsing.argtype.rotation.name", "server.commands.parsing.argtype.rotation.usage", "124.63 232.27 234.22"
    ) {
       private final WrappedArgumentType<Float> pitch = this.withParameter(
@@ -590,8 +679,8 @@ public final class ArgTypes {
       );
 
       @Nonnull
-      public Vector3f parse(@Nonnull MultiArgumentContext context, ParseResult parseResult) {
-         return new Vector3f(context.get(this.pitch), context.get(this.yaw), context.get(this.roll));
+      public Rotation3fc parse(@Nonnull MultiArgumentContext context, ParseResult parseResult) {
+         return new Rotation3f(context.get(this.pitch), context.get(this.yaw), context.get(this.roll));
       }
    };
    public static final SingleArgumentType<String> BLOCK_TYPE_KEY = new SingleArgumentType<String>("Block Type Key", "A block type", "Wood_Drywood_Planks_Half") {
@@ -603,6 +692,17 @@ public final class ArgTypes {
             parseResult.fail(Message.raw(var4.getMessage()));
             return null;
          }
+      }
+
+      @Override
+      public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+         ArgTypes.suggestBlockTypeKeys(textAlreadyEntered, "", result);
+      }
+
+      @Nonnull
+      @Override
+      public int getSuggestionValueCount() {
+         return BlockType.getAssetMap().getAssetMap().size();
       }
    };
    public static final ArgumentType<Integer> BLOCK_ID = new ProcessedArgumentType<String, Integer>(
@@ -628,16 +728,16 @@ public final class ArgTypes {
                long value = Long.parseLong(hexString, 16);
                switch (hexString.length()) {
                   case 3:
-                     int r = (int)(value >> 8 & 15L);
-                     int g = (int)(value >> 4 & 15L);
-                     int b = (int)(value & 15L);
-                     return 0xFF000000 | r << 20 | r << 16 | g << 12 | g << 8 | b << 4 | b;
+                     int red = (int)(value >> 8 & 15L);
+                     int green = (int)(value >> 4 & 15L);
+                     int blue = (int)(value & 15L);
+                     return 0xFF000000 | red << 20 | red << 16 | green << 12 | green << 8 | blue << 4 | blue;
                   case 4:
-                     int r4 = (int)(value >> 12 & 15L);
-                     int g4 = (int)(value >> 8 & 15L);
-                     int b4 = (int)(value >> 4 & 15L);
-                     int a4 = (int)(value & 15L);
-                     return r4 << 28 | r4 << 24 | g4 << 20 | g4 << 16 | b4 << 12 | b4 << 8 | a4 << 4 | a4;
+                     int red4 = (int)(value >> 12 & 15L);
+                     int green4 = (int)(value >> 8 & 15L);
+                     int blue4 = (int)(value >> 4 & 15L);
+                     int alpha4 = (int)(value & 15L);
+                     return red4 << 28 | red4 << 24 | green4 << 20 | green4 << 16 | blue4 << 12 | blue4 << 8 | alpha4 << 4 | alpha4;
                   case 5:
                   case 7:
                   default:
@@ -728,6 +828,28 @@ public final class ArgTypes {
             }
          }
       }
+
+      @Override
+      public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+         int percentIndex = textAlreadyEntered.indexOf(37);
+         if (percentIndex >= 0) {
+            String prefix = textAlreadyEntered.substring(0, percentIndex + 1);
+            String blockPartial = textAlreadyEntered.substring(percentIndex + 1);
+            int pipeIndex = blockPartial.indexOf(124);
+            if (pipeIndex < 0) {
+               ArgTypes.suggestBlockTypeKeys(blockPartial, prefix, result);
+               if (!blockPartial.isEmpty() && ArgTypes.isExactBlockTypeKey(blockPartial)) {
+                  result.suggestContinuation(textAlreadyEntered + ",");
+               }
+            }
+         } else if (!textAlreadyEntered.isEmpty()
+            && Character.isDigit(textAlreadyEntered.charAt(0))
+            && textAlreadyEntered.chars().allMatch(c -> Character.isDigit((char)c) || c == 46)) {
+            result.suggestContinuation(textAlreadyEntered + "%");
+         } else {
+            ArgTypes.suggestBlockTypeKeys(textAlreadyEntered, "", result);
+         }
+      }
    };
    public static final ArgumentType<BlockPattern> BLOCK_PATTERN = new ProcessedArgumentType<List<String>, BlockPattern>(
       "Block Pattern",
@@ -743,6 +865,8 @@ public final class ArgTypes {
          return BlockPattern.parse(patternString);
       }
    };
+   private static final String[] MASK_PREFIXES = new String[]{"!", ">", "<", "~", "^", "#", "+n", "+e", "+s", "+w", "%xy", "%xz", "%zy"};
+   private static final String[] MASK_INVERT_PREFIXES = new String[]{"!>", "!<", "!~", "!^", "!#", "!+n", "!+e", "!+s", "!+w", "!%xy", "!%xz", "!%zy"};
    private static final ArgumentType<BlockMask> INDIVIDUAL_BLOCK_MASK = new SingleArgumentType<BlockMask>(
       "Block Mask", "Create a block mask using symbols and block names", ">Grass_Full", "!Fluid_Water", "!^Fluid_Lava", "!#"
    ) {
@@ -760,6 +884,44 @@ public final class ArgTypes {
          } catch (Exception var5) {
             parseResult.fail(Message.raw("There was an error in the parsing of your block mask: " + input + ", please try again."));
             return null;
+         }
+      }
+
+      @Override
+      public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+         if (textAlreadyEntered.isEmpty()) {
+            for (String p : ArgTypes.MASK_PREFIXES) {
+               result.suggest(p);
+            }
+         } else if ("!".equals(textAlreadyEntered)) {
+            for (String p : ArgTypes.MASK_INVERT_PREFIXES) {
+               result.suggest(p);
+            }
+
+            ArgTypes.suggestBlockTypeKeys(textAlreadyEntered, "!", result);
+         } else {
+            String stripped = textAlreadyEntered;
+            String prefix = "";
+
+            for (String p : ArgTypes.MASK_INVERT_PREFIXES) {
+               if (stripped.startsWith(p)) {
+                  prefix = p;
+                  stripped = stripped.substring(p.length());
+                  break;
+               }
+            }
+
+            if (prefix.isEmpty()) {
+               for (String px : ArgTypes.MASK_PREFIXES) {
+                  if (!px.equals("#") && stripped.startsWith(px)) {
+                     prefix = px;
+                     stripped = stripped.substring(px.length());
+                     break;
+                  }
+               }
+            }
+
+            ArgTypes.suggestBlockTypeKeys(stripped, prefix, result);
          }
       }
    };
@@ -818,10 +980,80 @@ public final class ArgTypes {
       }
    };
    public static final SingleArgumentType<GameMode> GAME_MODE = new GameModeArgumentType();
+   private static final int MAX_BLOCK_SUGGESTIONS = 20;
 
    @Nonnull
    public static <E extends Enum<E>> SingleArgumentType<E> forEnum(String name, @Nonnull Class<E> enumType) {
       return new EnumArgumentType<>(name, enumType);
+   }
+
+   private static boolean isExactBlockTypeKey(@Nonnull String name) {
+      for (String key : BlockType.getAssetMap().getAssetMap().keySet()) {
+         if (key.toString().equalsIgnoreCase(name)) {
+            return true;
+         }
+      }
+
+      return false;
+   }
+
+   private static void suggestBlockTypeKeys(@Nonnull String textAlreadyEntered, @Nonnull String prefix, @Nonnull SuggestionResult result) {
+      Set<String> keys = BlockType.getAssetMap().getAssetMap().keySet();
+      if (textAlreadyEntered.isEmpty()) {
+         int count = 0;
+
+         for (String key : keys) {
+            result.suggest(prefix + key.toString());
+            if (++count >= 20) {
+               break;
+            }
+         }
+      } else {
+         int minScore = textAlreadyEntered.length();
+         List<String> sorted = StringUtil.sortByFuzzyDistance(textAlreadyEntered, keys);
+         int count = 0;
+
+         for (String keyx : sorted) {
+            if (StringCompareUtil.getFuzzyDistance(keyx.toString(), textAlreadyEntered, Locale.ENGLISH) < minScore) {
+               break;
+            }
+
+            result.suggest(prefix + keyx.toString());
+            if (++count >= 20) {
+               break;
+            }
+         }
+      }
+   }
+
+   private static void suggestOnlinePlayers(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, @Nonnull SuggestionResult result) {
+      String lowerInput = textAlreadyEntered.toLowerCase();
+
+      for (World world : Universe.get().getWorlds().values()) {
+         for (PlayerRef player : world.getPlayerRefs()) {
+            String username = player.getUsername();
+            if (username != null && username.toLowerCase().startsWith(lowerInput)) {
+               result.suggest(username);
+            }
+         }
+      }
+   }
+
+   private static void suggestPosition(
+      @Nonnull CommandSender sender,
+      @Nonnull String textAlreadyEntered,
+      @Nonnull SuggestionResult result,
+      @Nonnull String tildeTemplate,
+      @Nonnull Function<Vector3d, String> formatter
+   ) {
+      if (textAlreadyEntered.isEmpty() || textAlreadyEntered.startsWith("~")) {
+         result.suggest(tildeTemplate);
+      }
+
+      if (sender instanceof PlayerRef playerRef) {
+         Vector3d pos = playerRef.getTransform().getPosition();
+         result.suggest(formatter.apply(pos));
+      }
    }
 
    public static enum IntegerComparisonOperator {

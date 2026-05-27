@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -116,35 +119,263 @@ public class MovementStates {
 
    @Nonnull
    public static MovementStates deserialize(@Nonnull ByteBuf buf, int offset) {
-      MovementStates obj = new MovementStates();
-      obj.idle = buf.getByte(offset + 0) != 0;
-      obj.horizontalIdle = buf.getByte(offset + 1) != 0;
-      obj.jumping = buf.getByte(offset + 2) != 0;
-      obj.flying = buf.getByte(offset + 3) != 0;
-      obj.walking = buf.getByte(offset + 4) != 0;
-      obj.running = buf.getByte(offset + 5) != 0;
-      obj.sprinting = buf.getByte(offset + 6) != 0;
-      obj.crouching = buf.getByte(offset + 7) != 0;
-      obj.forcedCrouching = buf.getByte(offset + 8) != 0;
-      obj.falling = buf.getByte(offset + 9) != 0;
-      obj.fallingFar = buf.getByte(offset + 10) != 0;
-      obj.climbing = buf.getByte(offset + 11) != 0;
-      obj.inFluid = buf.getByte(offset + 12) != 0;
-      obj.swimming = buf.getByte(offset + 13) != 0;
-      obj.swimJumping = buf.getByte(offset + 14) != 0;
-      obj.onGround = buf.getByte(offset + 15) != 0;
-      obj.mantling = buf.getByte(offset + 16) != 0;
-      obj.sliding = buf.getByte(offset + 17) != 0;
-      obj.mounting = buf.getByte(offset + 18) != 0;
-      obj.rolling = buf.getByte(offset + 19) != 0;
-      obj.sitting = buf.getByte(offset + 20) != 0;
-      obj.gliding = buf.getByte(offset + 21) != 0;
-      obj.sleeping = buf.getByte(offset + 22) != 0;
-      return obj;
+      if (buf.readableBytes() - offset < 23) {
+         throw ProtocolException.bufferTooSmall("MovementStates", 23, buf.readableBytes() - offset);
+      } else {
+         MovementStates obj = new MovementStates();
+         obj.idle = buf.getByte(offset + 0) != 0;
+         obj.horizontalIdle = buf.getByte(offset + 1) != 0;
+         obj.jumping = buf.getByte(offset + 2) != 0;
+         obj.flying = buf.getByte(offset + 3) != 0;
+         obj.walking = buf.getByte(offset + 4) != 0;
+         obj.running = buf.getByte(offset + 5) != 0;
+         obj.sprinting = buf.getByte(offset + 6) != 0;
+         obj.crouching = buf.getByte(offset + 7) != 0;
+         obj.forcedCrouching = buf.getByte(offset + 8) != 0;
+         obj.falling = buf.getByte(offset + 9) != 0;
+         obj.fallingFar = buf.getByte(offset + 10) != 0;
+         obj.climbing = buf.getByte(offset + 11) != 0;
+         obj.inFluid = buf.getByte(offset + 12) != 0;
+         obj.swimming = buf.getByte(offset + 13) != 0;
+         obj.swimJumping = buf.getByte(offset + 14) != 0;
+         obj.onGround = buf.getByte(offset + 15) != 0;
+         obj.mantling = buf.getByte(offset + 16) != 0;
+         obj.sliding = buf.getByte(offset + 17) != 0;
+         obj.mounting = buf.getByte(offset + 18) != 0;
+         obj.rolling = buf.getByte(offset + 19) != 0;
+         obj.sitting = buf.getByte(offset + 20) != 0;
+         obj.gliding = buf.getByte(offset + 21) != 0;
+         obj.sleeping = buf.getByte(offset + 22) != 0;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 23;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 23L;
+   }
+
+   public static boolean getIdle(MemorySegment mem) {
+      return getIdle(mem, 0);
+   }
+
+   public static boolean getIdle(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0));
+   }
+
+   public static boolean getHorizontalIdle(MemorySegment mem) {
+      return getHorizontalIdle(mem, 0);
+   }
+
+   public static boolean getHorizontalIdle(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1));
+   }
+
+   public static boolean getJumping(MemorySegment mem) {
+      return getJumping(mem, 0);
+   }
+
+   public static boolean getJumping(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 2));
+   }
+
+   public static boolean getFlying(MemorySegment mem) {
+      return getFlying(mem, 0);
+   }
+
+   public static boolean getFlying(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 3));
+   }
+
+   public static boolean getWalking(MemorySegment mem) {
+      return getWalking(mem, 0);
+   }
+
+   public static boolean getWalking(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 4));
+   }
+
+   public static boolean getRunning(MemorySegment mem) {
+      return getRunning(mem, 0);
+   }
+
+   public static boolean getRunning(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 5));
+   }
+
+   public static boolean getSprinting(MemorySegment mem) {
+      return getSprinting(mem, 0);
+   }
+
+   public static boolean getSprinting(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 6));
+   }
+
+   public static boolean getCrouching(MemorySegment mem) {
+      return getCrouching(mem, 0);
+   }
+
+   public static boolean getCrouching(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 7));
+   }
+
+   public static boolean getForcedCrouching(MemorySegment mem) {
+      return getForcedCrouching(mem, 0);
+   }
+
+   public static boolean getForcedCrouching(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 8));
+   }
+
+   public static boolean getFalling(MemorySegment mem) {
+      return getFalling(mem, 0);
+   }
+
+   public static boolean getFalling(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 9));
+   }
+
+   public static boolean getFallingFar(MemorySegment mem) {
+      return getFallingFar(mem, 0);
+   }
+
+   public static boolean getFallingFar(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 10));
+   }
+
+   public static boolean getClimbing(MemorySegment mem) {
+      return getClimbing(mem, 0);
+   }
+
+   public static boolean getClimbing(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 11));
+   }
+
+   public static boolean getInFluid(MemorySegment mem) {
+      return getInFluid(mem, 0);
+   }
+
+   public static boolean getInFluid(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 12));
+   }
+
+   public static boolean getSwimming(MemorySegment mem) {
+      return getSwimming(mem, 0);
+   }
+
+   public static boolean getSwimming(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 13));
+   }
+
+   public static boolean getSwimJumping(MemorySegment mem) {
+      return getSwimJumping(mem, 0);
+   }
+
+   public static boolean getSwimJumping(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 14));
+   }
+
+   public static boolean getOnGround(MemorySegment mem) {
+      return getOnGround(mem, 0);
+   }
+
+   public static boolean getOnGround(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 15));
+   }
+
+   public static boolean getMantling(MemorySegment mem) {
+      return getMantling(mem, 0);
+   }
+
+   public static boolean getMantling(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 16));
+   }
+
+   public static boolean getSliding(MemorySegment mem) {
+      return getSliding(mem, 0);
+   }
+
+   public static boolean getSliding(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 17));
+   }
+
+   public static boolean getMounting(MemorySegment mem) {
+      return getMounting(mem, 0);
+   }
+
+   public static boolean getMounting(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 18));
+   }
+
+   public static boolean getRolling(MemorySegment mem) {
+      return getRolling(mem, 0);
+   }
+
+   public static boolean getRolling(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 19));
+   }
+
+   public static boolean getSitting(MemorySegment mem) {
+      return getSitting(mem, 0);
+   }
+
+   public static boolean getSitting(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 20));
+   }
+
+   public static boolean getGliding(MemorySegment mem) {
+      return getGliding(mem, 0);
+   }
+
+   public static boolean getGliding(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 21));
+   }
+
+   public static boolean getSleeping(MemorySegment mem) {
+      return getSleeping(mem, 0);
+   }
+
+   public static boolean getSleeping(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 22));
+   }
+
+   public static MovementStates toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MovementStates toObject(MemorySegment mem, int offset) {
+      if (offset + 23 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("MovementStates", offset + 23, (int)mem.byteSize());
+      } else {
+         return new MovementStates(
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 2)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 3)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 5)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 6)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 7)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 9)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 10)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 11)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 12)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 13)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 14)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 15)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 16)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 17)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 18)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 19)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 20)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 21)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 22))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -171,6 +402,33 @@ public class MovementStates {
       buf.writeByte(this.sitting ? 1 : 0);
       buf.writeByte(this.gliding ? 1 : 0);
       buf.writeByte(this.sleeping ? 1 : 0);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.idle);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.horizontalIdle);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.jumping);
+      mem.set(PacketIO.PROTO_BOOL, offset + 3, this.flying);
+      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.walking);
+      mem.set(PacketIO.PROTO_BOOL, offset + 5, this.running);
+      mem.set(PacketIO.PROTO_BOOL, offset + 6, this.sprinting);
+      mem.set(PacketIO.PROTO_BOOL, offset + 7, this.crouching);
+      mem.set(PacketIO.PROTO_BOOL, offset + 8, this.forcedCrouching);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.falling);
+      mem.set(PacketIO.PROTO_BOOL, offset + 10, this.fallingFar);
+      mem.set(PacketIO.PROTO_BOOL, offset + 11, this.climbing);
+      mem.set(PacketIO.PROTO_BOOL, offset + 12, this.inFluid);
+      mem.set(PacketIO.PROTO_BOOL, offset + 13, this.swimming);
+      mem.set(PacketIO.PROTO_BOOL, offset + 14, this.swimJumping);
+      mem.set(PacketIO.PROTO_BOOL, offset + 15, this.onGround);
+      mem.set(PacketIO.PROTO_BOOL, offset + 16, this.mantling);
+      mem.set(PacketIO.PROTO_BOOL, offset + 17, this.sliding);
+      mem.set(PacketIO.PROTO_BOOL, offset + 18, this.mounting);
+      mem.set(PacketIO.PROTO_BOOL, offset + 19, this.rolling);
+      mem.set(PacketIO.PROTO_BOOL, offset + 20, this.sitting);
+      mem.set(PacketIO.PROTO_BOOL, offset + 21, this.gliding);
+      mem.set(PacketIO.PROTO_BOOL, offset + 22, this.sleeping);
+      return 23;
    }
 
    public int computeSize() {

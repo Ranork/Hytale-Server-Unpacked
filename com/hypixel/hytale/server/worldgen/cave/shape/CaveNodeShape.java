@@ -1,11 +1,11 @@
 package com.hypixel.hytale.server.worldgen.cave.shape;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.worldgen.cave.Cave;
 import com.hypixel.hytale.server.worldgen.cave.element.CaveNode;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGeneratorExecution;
 import com.hypixel.hytale.server.worldgen.util.bounds.IWorldBounds;
 import java.util.Random;
+import org.joml.Vector3d;
 
 public interface CaveNodeShape {
    Vector3d getStart();

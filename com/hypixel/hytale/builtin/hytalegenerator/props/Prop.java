@@ -5,8 +5,8 @@ import com.hypixel.hytale.builtin.hytalegenerator.engine.entityfunnel.EntityFunn
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.NullSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public abstract class Prop {
    public abstract boolean generate(@Nonnull Prop.Context var1);

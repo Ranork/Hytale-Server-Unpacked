@@ -2,8 +2,9 @@ package com.hypixel.hytale.server.core.modules.physics.util;
 
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class PhysicsMath {
    public static final double DENSITY_AIR = 1.2;
@@ -55,14 +56,14 @@ public class PhysicsMath {
       return computeProjectedArea(direction.x, direction.y, direction.z, box);
    }
 
-   public static double volumeOfIntersection(@Nonnull Box a, @Nonnull Vector3d posA, @Nonnull Box b, @Nonnull Vector3d posB) {
-      return volumeOfIntersection(a, posA, b, posB.x, posB.y, posB.z);
+   public static double volumeOfIntersection(@Nonnull Box a, @Nonnull Vector3dc posA, @Nonnull Box b, @Nonnull Vector3dc posB) {
+      return volumeOfIntersection(a, posA, b, posB.x(), posB.y(), posB.z());
    }
 
-   public static double volumeOfIntersection(@Nonnull Box a, @Nonnull Vector3d posA, @Nonnull Box b, double posBX, double posBY, double posBZ) {
-      posBX -= posA.x;
-      posBY -= posA.y;
-      posBZ -= posA.z;
+   public static double volumeOfIntersection(@Nonnull Box a, @Nonnull Vector3dc posA, @Nonnull Box b, double posBX, double posBY, double posBZ) {
+      posBX -= posA.x();
+      posBY -= posA.y();
+      posBZ -= posA.z();
       return lengthOfIntersection(a.min.x, a.max.x, posBX + b.min.x, posBX + b.max.x)
          * lengthOfIntersection(a.min.y, a.max.y, posBY + b.min.y, posBY + b.max.y)
          * lengthOfIntersection(a.min.z, a.max.z, posBZ + b.min.z, posBZ + b.max.z);

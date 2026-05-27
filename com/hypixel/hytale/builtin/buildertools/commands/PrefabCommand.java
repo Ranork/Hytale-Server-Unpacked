@@ -10,9 +10,6 @@ import com.hypixel.hytale.common.util.PathUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
@@ -25,6 +22,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.CommandBase;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.singleplayer.SingleplayerModule;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.prefab.PrefabStore;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -40,17 +38,20 @@ import java.nio.file.Path;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabCommand extends AbstractCommandCollection {
    public PrefabCommand() {
       super("prefab", "server.commands.prefab.desc");
       this.addAliases("p");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new PrefabCommand.PrefabSaveCommand());
       this.addSubCommand(new PrefabCommand.PrefabLoadCommand());
       this.addSubCommand(new PrefabCommand.PrefabDeleteCommand());
@@ -63,7 +64,7 @@ public class PrefabCommand extends AbstractCommandCollection {
 
       public PrefabDeleteCommand() {
          super("delete", "server.commands.prefab.delete.desc", true);
-         this.requirePermission("hytale.editor.prefab.manage");
+         this.requirePermission(HytalePermissions.EDITOR_PREFAB_MANAGE);
       }
 
       @Override
@@ -108,10 +109,6 @@ public class PrefabCommand extends AbstractCommandCollection {
 
    private static class PrefabListCommand extends CommandBase {
       @Nonnull
-      private final DefaultArg<String> storeTypeArg = this.withDefaultArg(
-         "storeType", "server.commands.prefab.list.storeType.desc", ArgTypes.STRING, "asset", "server.commands.prefab.list.storeType.desc"
-      );
-      @Nonnull
       private final FlagArg textFlag = this.withFlagArg("text", "server.commands.prefab.list.text.desc");
 
       public PrefabListCommand() {
@@ -120,17 +117,6 @@ public class PrefabCommand extends AbstractCommandCollection {
 
       @Override
       protected void executeSync(@Nonnull CommandContext context) {
-         String storeType = this.storeTypeArg.get(context);
-
-         final Path prefabStorePath = switch (storeType) {
-            case "server" -> PrefabStore.get().getServerPrefabsPath();
-            case "asset" -> {
-               List<PrefabStore.AssetPackPrefabPath> assetPaths = PrefabStore.get().getAllAssetPrefabPaths();
-               yield assetPaths.isEmpty() ? PrefabStore.get().getAssetPrefabsPath() : assetPaths.getFirst().prefabsPath();
-            }
-            case "worldgen" -> PrefabStore.get().getWorldGenPrefabsPath();
-            default -> throw new IllegalStateException("Unexpected value: " + storeType);
-         };
          Ref<EntityStore> ref = context.senderAsPlayerRef();
          if (ref != null && ref.isValid() && !this.textFlag.get(context)) {
             Store<EntityStore> store = ref.getStore();
@@ -145,46 +131,36 @@ public class PrefabCommand extends AbstractCommandCollection {
                assert playerRefComponent != null;
 
                BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRefComponent);
-               playerComponent.getPageManager().openCustomPage(ref, store, new PrefabPage(playerRefComponent, prefabStorePath, builderState));
+               playerComponent.getPageManager().openCustomPage(ref, store, new PrefabPage(playerRefComponent, builderState));
             });
          } else {
             try {
                final List<Message> prefabFiles = new ObjectArrayList();
-               if ("asset".equals(storeType)) {
-                  for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllAssetPrefabPaths()) {
-                     final Path path = packPath.prefabsPath();
-                     final String packPrefix = packPath.isBasePack() ? "" : "[" + packPath.getPackName() + "] ";
-                     if (Files.isDirectory(path)) {
-                        Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
-                           @Nonnull
-                           public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
-                              String fileName = file.getFileName().toString();
-                              if (fileName.endsWith(".prefab.json")) {
-                                 prefabFiles.add(Message.raw(packPrefix + PathUtil.relativize(path, file).toString()));
-                              }
 
-                              return FileVisitResult.CONTINUE;
-                           }
-                        });
-                     }
-                  }
-               } else if (Files.isDirectory(prefabStorePath)) {
-                  Files.walkFileTree(prefabStorePath, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
-                     @Nonnull
-                     public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
-                        String fileName = file.getFileName().toString();
-                        if (fileName.endsWith(".prefab.json")) {
-                           prefabFiles.add(Message.raw(PathUtil.relativize(prefabStorePath, file).toString()));
+               for (PrefabStore.AssetPackPrefabPath packPath : PrefabStore.get().getAllBrowsablePrefabPaths()) {
+                  final Path path = packPath.prefabsPath();
+                  final String packPrefix = "[" + packPath.getDisplayName() + "] ";
+                  if (Files.isDirectory(path)) {
+                     Files.walkFileTree(path, FileUtil.DEFAULT_WALK_TREE_OPTIONS_SET, Integer.MAX_VALUE, new SimpleFileVisitor<Path>() {
+                        {
+                           Objects.requireNonNull(PrefabListCommand.this);
                         }
 
-                        return FileVisitResult.CONTINUE;
-                     }
-                  });
+                        @Nonnull
+                        public FileVisitResult visitFile(@Nonnull Path file, @Nonnull BasicFileAttributes attrs) {
+                           if (file.getFileName().toString().endsWith(".prefab.json")) {
+                              prefabFiles.add(Message.raw(packPrefix + PathUtil.relativize(path, file)));
+                           }
+
+                           return FileVisitResult.CONTINUE;
+                        }
+                     });
+                  }
                }
 
                context.sendMessage(MessageFormat.list(Message.translation("server.commands.prefab.list.header"), prefabFiles));
-            } catch (IOException var10) {
-               context.sendMessage(Message.translation("server.builderTools.prefab.errorListingPrefabs").param("reason", var10.getMessage()));
+            } catch (IOException var8) {
+               context.sendMessage(Message.translation("server.builderTools.prefab.errorListingPrefabs").param("reason", var8.getMessage()));
             }
          }
       }
@@ -274,7 +250,7 @@ public class PrefabCommand extends AbstractCommandCollection {
    private static class PrefabLoadCommand extends AbstractPlayerCommand {
       public PrefabLoadCommand() {
          super("load", "server.commands.prefab.load.desc");
-         this.requirePermission("hytale.editor.prefab.use");
+         this.requirePermission(HytalePermissions.EDITOR_PREFAB_USE);
          this.addUsageVariant(new PrefabCommand.PrefabLoadByNameCommand());
       }
 
@@ -286,10 +262,8 @@ public class PrefabCommand extends AbstractCommandCollection {
 
          assert playerComponent != null;
 
-         List<PrefabStore.AssetPackPrefabPath> assetPaths = PrefabStore.get().getAllAssetPrefabPaths();
-         Path defaultRoot = assetPaths.isEmpty() ? PrefabStore.get().getServerPrefabsPath() : assetPaths.getFirst().prefabsPath();
          BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
-         playerComponent.getPageManager().openCustomPage(ref, store, new PrefabPage(playerRef, defaultRoot, builderState));
+         playerComponent.getPageManager().openCustomPage(ref, store, new PrefabPage(playerRef, builderState));
       }
    }
 
@@ -298,7 +272,7 @@ public class PrefabCommand extends AbstractCommandCollection {
 
       public PrefabSaveCommand() {
          super("save", "server.commands.prefab.save.desc");
-         this.requirePermission("hytale.editor.prefab.manage");
+         this.requirePermission(HytalePermissions.EDITOR_PREFAB_MANAGE);
          this.addUsageVariant(new PrefabCommand.PrefabSaveDirectCommand());
       }
 
@@ -380,7 +354,7 @@ public class PrefabCommand extends AbstractCommandCollection {
                return null;
             } else {
                Vector3d position = transformComponent.getPosition();
-               return new Vector3i(MathUtil.floor(position.getX()), MathUtil.floor(position.getY()), MathUtil.floor(position.getZ()));
+               return new Vector3i(MathUtil.floor(position.x()), MathUtil.floor(position.y()), MathUtil.floor(position.z()));
             }
          }
       }

@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.random.RandomExtra;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.path.IPath;
 import com.hypixel.hytale.server.core.universe.world.path.IPathWaypoint;
@@ -28,6 +28,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BodyMotionPath extends BodyMotionBase {
    public static final double MIN_GUARD_POINT_WAIT_TIME = 1.0;
@@ -71,7 +72,7 @@ public class BodyMotionPath extends BodyMotionBase {
    protected float observationSector;
    protected double currentObservationDelay;
    protected boolean rotating;
-   protected final Vector3d previousSteeringTranslation = new Vector3d(Vector3d.MIN);
+   protected final Vector3d previousSteeringTranslation = new Vector3d(Vector3dUtil.MIN);
    protected int currentViewSegment;
 
    public BodyMotionPath(@Nonnull BuilderBodyMotionPath builder, @Nonnull BuilderSupport support) {
@@ -119,7 +120,7 @@ public class BodyMotionPath extends BodyMotionBase {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       desiredSteering.clear();
-      if (!role.getActiveMotionController().canAct(ref, componentAccessor)) {
+      if (!role.getActiveMotionController().canSteer(ref, componentAccessor)) {
          return true;
       } else {
          IPathProvider info = sensorInfo.getExtraInfo(IPathProvider.class);
@@ -152,7 +153,7 @@ public class BodyMotionPath extends BodyMotionBase {
                this.currentNodeDelay = 0.0;
             }
 
-            float heading = transformComponent.getRotation().getYaw();
+            float heading = transformComponent.getRotation().yaw();
             if (this.currentNodeDelay > 0.0) {
                this.currentNodeDelay -= dt;
                if (this.observationSector != 0.0F || numWaypoints == 1) {
@@ -174,9 +175,9 @@ public class BodyMotionPath extends BodyMotionBase {
                MotionController activeMotionController = role.getActiveMotionController();
                Vector3d componentSelector = activeMotionController.getComponentSelector();
                WorldSupport worldSupport = role.getWorldSupport();
-               this.currentPosition.assign(position.getX(), position.getY(), position.getZ());
+               this.currentPosition.set(position.x(), position.y(), position.z());
                int lastIndex = this.currentWaypointIndex;
-               this.lastWaypointPosition.assign(this.currentWaypointPosition);
+               this.lastWaypointPosition.set(this.currentWaypointPosition);
 
                while (this.closeToPosition(this.currentWaypointPosition, activeMotionController)) {
                   if (this.nextPositionValid || numWaypoints == 1) {
@@ -185,7 +186,7 @@ public class BodyMotionPath extends BodyMotionBase {
                         return false;
                      }
 
-                     this.nodeViewDirection = wayPoint.getWaypointRotation(componentAccessor).getYaw();
+                     this.nodeViewDirection = wayPoint.getWaypointRotation(componentAccessor).yaw();
                      this.nodeWaitTime = wayPoint.getPauseTime();
                      this.observationSector = wayPoint.getObservationAngle() / 2.0F;
                      this.currentViewSegment = 0;
@@ -213,20 +214,20 @@ public class BodyMotionPath extends BodyMotionBase {
 
                if (!this.nextPositionValid || this.closeToPosition(this.nextPosition, activeMotionController)) {
                   if (this.pathWidth == 0.0) {
-                     this.nextPosition.assign(this.currentWaypointPosition);
+                     this.nextPosition.set(this.currentWaypointPosition);
                   } else {
                      double maxDistance = NPCPhysicsMath.dotProduct(
                         this.currentWaypointPosition, this.lastWaypointPosition, this.currentPosition, componentSelector
                      );
                      double distance = Math.min(RandomExtra.randomRange(this.minWalkDistance, this.maxWalkDistance), maxDistance);
                      if (distance >= maxDistance - this.nodeWidth) {
-                        this.nextPosition.assign(this.currentWaypointPosition);
+                        this.nextPosition.set(this.currentWaypointPosition);
                      } else {
                         NPCPhysicsMath.orthoComposition(
                            this.lastWaypointPosition,
                            this.currentWaypointPosition,
                            distance,
-                           Vector3d.UP,
+                           Vector3dUtil.UP,
                            RandomExtra.randomRange(-this.pathWidth / 2.0, this.pathWidth / 2.0),
                            this.nextPosition
                         );
@@ -299,7 +300,7 @@ public class BodyMotionPath extends BodyMotionBase {
                   desiredSteering.scaleTranslation(this.currentSpeed);
                }
 
-               this.previousSteeringTranslation.assign(desiredSteering.getTranslation());
+               this.previousSteeringTranslation.set(desiredSteering.getTranslation());
                return true;
             }
          } else {
@@ -485,7 +486,7 @@ public class BodyMotionPath extends BodyMotionBase {
          }
 
          this.waypointIndexUpdated(path, componentAccessor);
-         this.lastWaypointPosition.assign(lastPos.getX(), lastPos.getY(), lastPos.getZ());
+         this.lastWaypointPosition.set(lastPos.x(), lastPos.y(), lastPos.z());
          return true;
       } else {
          return false;
@@ -496,7 +497,7 @@ public class BodyMotionPath extends BodyMotionBase {
       IPathWaypoint pathWaypoint = path.get(this.currentWaypointIndex);
       if (pathWaypoint != null) {
          Vector3d pathWaypointPosition = pathWaypoint.getWaypointPosition(componentAccessor);
-         this.currentWaypointPosition.assign(pathWaypointPosition);
+         this.currentWaypointPosition.set(pathWaypointPosition);
       }
    }
 

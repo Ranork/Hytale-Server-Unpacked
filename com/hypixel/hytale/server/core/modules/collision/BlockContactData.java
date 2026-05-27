@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.core.modules.collision;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class BlockContactData {
    protected final Vector3d collisionNormal = new Vector3d();
@@ -21,8 +21,8 @@ public class BlockContactData {
    }
 
    public void assign(@Nonnull BlockContactData other, int damage, boolean isSubmergedFluid) {
-      this.collisionNormal.assign(other.collisionNormal);
-      this.collisionPoint.assign(other.collisionPoint);
+      this.collisionNormal.set(other.collisionNormal);
+      this.collisionPoint.set(other.collisionPoint);
       this.collisionStart = other.collisionStart;
       this.collisionEnd = other.collisionEnd;
       this.onGround = other.onGround;

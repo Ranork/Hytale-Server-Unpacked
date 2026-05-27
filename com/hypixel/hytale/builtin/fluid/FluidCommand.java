@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class FluidCommand extends AbstractCommandCollection {
    @Nonnull
@@ -32,6 +33,7 @@ public class FluidCommand extends AbstractCommandCollection {
 
    public FluidCommand() {
       super("fluid", "server.commands.fluid.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new FluidCommand.SetCommand());
       this.addSubCommand(new FluidCommand.GetCommand());
       this.addSubCommand(new FluidCommand.SetRadiusCommand());
@@ -61,7 +63,7 @@ public class FluidCommand extends AbstractCommandCollection {
             playerRef.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_LOOKING_AT_BLOCK);
          } else {
             ChunkStore chunkStore = world.getChunkStore();
-            Vector3i pos = offset == null ? blockTarget : offset.getBlockPosition(blockTarget.toVector3d(), chunkStore);
+            Vector3i pos = offset == null ? blockTarget : offset.getBlockPosition(Vector3iUtil.toVector3d(blockTarget), chunkStore);
             chunkStore.getChunkSectionReferenceAtBlockAsync(pos.x, pos.y, pos.z)
                .thenAcceptAsync(
                   section -> {
@@ -119,7 +121,7 @@ public class FluidCommand extends AbstractCommandCollection {
             playerRef.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_LOOKING_AT_BLOCK);
          } else {
             ChunkStore chunkStore = world.getChunkStore();
-            Vector3i pos = offset == null ? blockTarget : offset.getBlockPosition(blockTarget.toVector3d(), chunkStore);
+            Vector3i pos = offset == null ? blockTarget : offset.getBlockPosition(Vector3iUtil.toVector3d(blockTarget), chunkStore);
             Fluid fluid = this.fluid.get(context);
             if (fluid == null) {
                playerRef.sendMessage(MESSAGE_COMMANDS_SET_UNKNOWN_FLUID);
@@ -192,7 +194,7 @@ public class FluidCommand extends AbstractCommandCollection {
             playerRef.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_LOOKING_AT_BLOCK);
          } else {
             ChunkStore chunkStore = world.getChunkStore();
-            Vector3i pos = offset == null ? blockTarget : offset.getBlockPosition(blockTarget.toVector3d(), chunkStore);
+            Vector3i pos = offset == null ? blockTarget : offset.getBlockPosition(Vector3iUtil.toVector3d(blockTarget), chunkStore);
             Fluid fluid = this.fluid.get(context);
             if (fluid == null) {
                playerRef.sendMessage(MESSAGE_COMMANDS_SET_UNKNOWN_FLUID);

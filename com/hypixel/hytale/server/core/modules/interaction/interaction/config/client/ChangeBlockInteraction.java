@@ -6,10 +6,9 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
+import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.BlockRotation;
 import com.hypixel.hytale.protocol.Interaction;
@@ -24,7 +23,10 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -33,6 +35,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class ChangeBlockInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -76,9 +80,9 @@ public class ChangeBlockInteraction extends SimpleBlockInteraction {
    protected Map<String, String> blockTypeKeys;
    protected Int2IntMap changeMapIds;
    @Nullable
-   protected String soundEventId = null;
+   protected String soundEventId;
    protected transient int soundEventIndex = 0;
-   protected boolean requireNotBroken = false;
+   protected boolean requireNotBroken;
 
    protected void processConfig() {
       if (this.soundEventId != null) {
@@ -99,29 +103,49 @@ public class ChangeBlockInteraction extends SimpleBlockInteraction {
       if (this.requireNotBroken && itemInHand != null && itemInHand.isBroken()) {
          context.getState().state = InteractionState.Failed;
       } else {
-         int x = targetBlock.getX();
-         int y = targetBlock.getY();
-         int z = targetBlock.getZ();
-         WorldChunk chunk = world.getChunk(ChunkUtil.indexChunkFromBlock(x, z));
-         int current = chunk.getBlock(x, y, z);
-         int to = this.getChangeMapIds().get(current);
-         if (to != Integer.MIN_VALUE) {
-            BlockType toBlockType = BlockType.getAssetMap().getAsset(to);
-            int rotationBefore = chunk.getRotationIndex(x, y, z);
-            chunk.setBlock(x, y, z, to, toBlockType, rotationBefore, 0, 256);
-            context.getState().blockPosition = new BlockPosition(x, y, z);
-            context.getState().placedBlockId = to;
-            RotationTuple resultRotation = RotationTuple.get(rotationBefore);
-            context.getState().blockRotation = new BlockRotation(
-               resultRotation.yaw().toPacket(), resultRotation.pitch().toPacket(), resultRotation.roll().toPacket()
-            );
-            if (this.soundEventIndex != 0) {
-               Ref<EntityStore> ref = context.getEntity();
-               Vector3d pos = new Vector3d(x + 0.5, y + 0.5, z + 0.5);
-               SoundUtil.playSoundEvent3d(ref, this.soundEventIndex, pos, true, commandBuffer);
+         int x = targetBlock.x();
+         int y = targetBlock.y();
+         int z = targetBlock.z();
+         ChunkStore chunkStore = world.getChunkStore();
+         long chunkIndex = ChunkUtil.indexChunkFromBlock(x, z);
+         Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
+         if (chunkReference != null && chunkReference.isValid()) {
+            Store<ChunkStore> chunkComponentStore = chunkStore.getStore();
+            WorldChunk worldChunkComponent = chunkComponentStore.getComponent(chunkReference, WorldChunk.getComponentType());
+
+            assert worldChunkComponent != null;
+
+            int current = worldChunkComponent.getBlock(x, y, z);
+            int to = this.getChangeMapIds().get(current);
+            if (to == Integer.MIN_VALUE) {
+               context.getState().state = InteractionState.Failed;
+            } else {
+               BlockChunk blockChunkComponent = chunkComponentStore.getComponent(chunkReference, BlockChunk.getComponentType());
+
+               assert blockChunkComponent != null;
+
+               BlockSection targetSection = blockChunkComponent.getSectionAtBlockY(y);
+               int rotationBefore = targetSection.getRotationIndex(x, y, z);
+               BlockType toBlockType = BlockType.getAssetMap().getAsset(to);
+               if (toBlockType == null) {
+                  context.getState().state = InteractionState.Failed;
+               } else {
+                  worldChunkComponent.setBlock(x, y, z, to, toBlockType, rotationBefore, 0, 256);
+                  RotationTuple resultRotation = RotationTuple.get(rotationBefore);
+                  context.getState().blockPosition = new BlockPosition(x, y, z);
+                  context.getState().placedBlockId = to;
+                  context.getState().blockRotation = new BlockRotation(
+                     resultRotation.yaw().toPacket(), resultRotation.pitch().toPacket(), resultRotation.roll().toPacket()
+                  );
+                  if (this.soundEventIndex != 0) {
+                     Vector3d blockCenter = new Vector3d();
+                     toBlockType.getBlockCenter(rotationBefore, blockCenter);
+                     blockCenter.add(x, y, z);
+                     Ref<EntityStore> ref = context.getEntity();
+                     SoundUtil.playSoundEvent3d(ref, this.soundEventIndex, blockCenter, true, commandBuffer);
+                  }
+               }
             }
-         } else {
-            context.getState().state = InteractionState.Failed;
          }
       }
    }

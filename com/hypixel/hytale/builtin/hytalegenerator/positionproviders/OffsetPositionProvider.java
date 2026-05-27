@@ -3,9 +3,10 @@ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class OffsetPositionProvider extends PositionProvider {
    @Nonnull
@@ -20,6 +21,10 @@ public class OffsetPositionProvider extends PositionProvider {
    private PositionProvider.Context rContext;
    @Nonnull
    private final Pipe.One<Vector3d> rChildPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(OffsetPositionProvider.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
          position.add(OffsetPositionProvider.this.vector);
          OffsetPositionProvider.this.rContext.pipe.accept(position, control);
@@ -27,7 +32,7 @@ public class OffsetPositionProvider extends PositionProvider {
    };
 
    public OffsetPositionProvider(@Nonnull Vector3d vector, @Nonnull PositionProvider positionProvider) {
-      this.vector = vector.clone();
+      this.vector = new Vector3d(vector);
       this.positionProvider = positionProvider;
       this.rBounds = new Bounds3d();
       this.rChildContext = new PositionProvider.Context();

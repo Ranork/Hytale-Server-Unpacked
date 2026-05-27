@@ -4,8 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
@@ -20,6 +19,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BodyMotionTeleport extends BodyMotionBase {
    public static final int MAX_TRIES = 10;
@@ -63,25 +63,25 @@ public class BodyMotionTeleport extends BodyMotionBase {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (sensorInfo != null && sensorInfo.getPositionProvider().providePosition(this.target)) {
-         double dist = this.target.distanceSquaredTo(this.lastTriedTarget);
+         double dist = this.target.distanceSquared(this.lastTriedTarget);
          if ((this.tries > 0 || !(dist < 1.0)) && !this.tickCooldown(dt)) {
             if (dist > 1.0) {
                this.tries = 10;
             }
 
-            this.lastTriedTarget.assign(this.target);
+            this.lastTriedTarget.set(this.target);
             TransformComponent transformComponent = componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
 
             assert transformComponent != null;
 
             Vector3d selfPosition = transformComponent.getPosition();
-            double distance = selfPosition.distanceSquaredTo(this.target);
+            double distance = selfPosition.distanceSquared(this.target);
             double maxOffset2 = this.maxOffset * this.maxOffset;
             if (distance <= maxOffset2 + 1.0E-5) {
                return false;
             } else {
-               this.offsetVector.assign(selfPosition).subtract(this.target).setY(0.0);
-               this.offsetVector.setLength(RandomExtra.randomRange(this.minOffset, this.maxOffset));
+               this.offsetVector.set(selfPosition).sub(this.target).y = 0.0;
+               this.offsetVector.normalize(RandomExtra.randomRange(this.minOffset, this.maxOffset));
                this.offsetVector.rotateY(RandomExtra.randomRange(-this.angle, this.angle));
                this.target.add(this.offsetVector);
                MotionController motionController = role.getActiveMotionController();
@@ -96,27 +96,27 @@ public class BodyMotionTeleport extends BodyMotionBase {
                   && motionController.isValidPosition(this.target, componentAccessor)) {
                   switch (this.orientation) {
                      case Unchanged: {
-                        Vector3f bodyRotation = transformComponent.getRotation();
+                        Rotation3f bodyRotation = transformComponent.getRotation();
                         componentAccessor.addComponent(ref, Teleport.getComponentType(), Teleport.createExact(this.target, bodyRotation));
                         break;
                      }
                      case TowardsTarget: {
-                        double x = this.lastTriedTarget.getX() - this.target.getX();
-                        double y = this.lastTriedTarget.getY() - this.target.getY();
-                        double z = this.lastTriedTarget.getZ() - this.target.getZ();
-                        Vector3f bodyRotation = transformComponent.getRotation();
+                        double x = this.lastTriedTarget.x() - this.target.x();
+                        double y = this.lastTriedTarget.y() - this.target.y();
+                        double z = this.lastTriedTarget.z() - this.target.z();
+                        Rotation3f bodyRotation = transformComponent.getRotation();
                         float yaw;
                         float pitch;
                         if (x * x + z * z < 1.0E-5) {
-                           yaw = bodyRotation.getYaw();
-                           pitch = bodyRotation.getPitch();
+                           yaw = bodyRotation.yaw();
+                           pitch = bodyRotation.pitch();
                         } else {
                            yaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
                            pitch = PhysicsMath.pitchFromDirection(x, y, z);
                         }
 
                         componentAccessor.addComponent(
-                           ref, Teleport.getComponentType(), Teleport.createExact(this.target, new Vector3f(yaw, pitch, bodyRotation.getRoll()))
+                           ref, Teleport.getComponentType(), Teleport.createExact(this.target, new Rotation3f(yaw, pitch, bodyRotation.roll()))
                         );
                         break;
                      }
@@ -130,7 +130,7 @@ public class BodyMotionTeleport extends BodyMotionBase {
 
                         assert targetTransformComponent != null;
 
-                        Vector3f bodyRotation = targetTransformComponent.getRotation();
+                        Rotation3f bodyRotation = targetTransformComponent.getRotation();
                         componentAccessor.addComponent(ref, Teleport.getComponentType(), Teleport.createExact(this.target, bodyRotation));
                      }
                   }

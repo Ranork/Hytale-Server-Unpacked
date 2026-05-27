@@ -36,8 +36,8 @@ public class Ellipsoid implements Shape {
    @Override
    public Box getBox(double x, double y, double z) {
       Box boundingBox = new Box();
-      boundingBox.min.assign(x - this.radiusX, y - this.radiusY, z - this.radiusZ);
-      boundingBox.max.assign(x + this.radiusX, y + this.radiusY, z + this.radiusZ);
+      boundingBox.min.set(x - this.radiusX, y - this.radiusY, z - this.radiusZ);
+      boundingBox.max.set(x + this.radiusX, y + this.radiusY, z + this.radiusZ);
       return boundingBox;
    }
 

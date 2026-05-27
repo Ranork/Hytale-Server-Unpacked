@@ -6,8 +6,8 @@ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
-import com.hypixel.hytale.math.vector.Vector2d;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class PointYOutAsset implements JsonAssetWithMap<String, DefaultAssetMap<String, PointYOutAsset>> {
    @Nonnull

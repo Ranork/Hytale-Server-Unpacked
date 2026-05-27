@@ -1,8 +1,6 @@
 package com.hypixel.hytale.server.core.modules.debug;
 
-import com.hypixel.hytale.math.matrix.Matrix4d;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.matrix.Matrix4dUtil;
 import com.hypixel.hytale.protocol.DebugFlags;
 import com.hypixel.hytale.protocol.DebugShape;
 import com.hypixel.hytale.protocol.packets.player.ClearDebugShapes;
@@ -15,6 +13,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Matrix4d;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class DebugUtils {
    public static final Vector3f COLOR_BLACK = new Vector3f(0.0F, 0.0F, 0.0F);
@@ -64,9 +65,7 @@ public class DebugUtils {
       int flags,
       @Nullable float[] shapeParams
    ) {
-      DisplayDebug packet = new DisplayDebug(
-         shape, matrix.asFloatData(), new com.hypixel.hytale.protocol.Vector3f(color.x, color.y, color.z), time, (byte)flags, shapeParams, opacity
-      );
+      DisplayDebug packet = new DisplayDebug(shape, Matrix4dUtil.asFloatData(matrix), color, time, (byte)flags, shapeParams, opacity);
 
       for (PlayerRef playerRef : world.getPlayerRefs()) {
          playerRef.getPacketHandler().write(packet);
@@ -76,7 +75,7 @@ public class DebugUtils {
    public static void addFrustum(
       @Nonnull World world, @Nonnull Matrix4d matrix, @Nonnull Matrix4d frustumProjection, @Nonnull Vector3f color, float time, int flags
    ) {
-      add(world, DebugShape.Frustum, matrix, color, 0.8F, time, flags, frustumProjection.asFloatData());
+      add(world, DebugShape.Frustum, matrix, color, 0.8F, time, flags, Matrix4dUtil.asFloatData(frustumProjection));
    }
 
    public static void clear(@Nonnull World world) {
@@ -176,14 +175,14 @@ public class DebugUtils {
       double dirZ = endZ - startZ;
       double length = Math.sqrt(dirX * dirX + dirY * dirY + dirZ * dirZ);
       if (!(length < 0.001)) {
-         Matrix4d tmp = new Matrix4d();
+         new Matrix4d();
          Matrix4d matrix = new Matrix4d();
          matrix.identity();
          matrix.translate(startX, startY, startZ);
          double angleY = Math.atan2(dirZ, dirX);
-         matrix.rotateAxis(angleY + (Math.PI / 2), 0.0, 1.0, 0.0, tmp);
+         matrix.rotate(-(angleY + (Math.PI / 2)), 0.0, 1.0, 0.0);
          double angleX = Math.atan2(Math.sqrt(dirX * dirX + dirZ * dirZ), dirY);
-         matrix.rotateAxis(angleX, 1.0, 0.0, 0.0, tmp);
+         matrix.rotate(-angleX, 1.0, 0.0, 0.0);
          matrix.translate(0.0, length / 2.0, 0.0);
          matrix.scale(thickness, length, thickness);
          add(world, DebugShape.Cylinder, matrix, color, time, flags);
@@ -304,11 +303,10 @@ public class DebugUtils {
       float time,
       int flags
    ) {
-      Matrix4d tmp = new Matrix4d();
       Matrix4d matrix = new Matrix4d();
       matrix.identity();
       matrix.translate(x, y, z);
-      matrix.rotateAxis(heading, 0.0, 1.0, 0.0, tmp);
+      matrix.rotate(-heading, 0.0, 1.0, 0.0);
       float[] shapeParams = new float[]{
          (float)outerRadius, (float)angle, (float)innerRadius, segmentCount, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F, 0.0F
       };
@@ -318,15 +316,14 @@ public class DebugUtils {
    public static void addArrow(
       @Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d direction, @Nonnull Vector3f color, float opacity, float time, int flags
    ) {
-      Vector3d directionClone = direction.clone();
-      Matrix4d tmp = new Matrix4d();
+      Vector3d directionClone = new Vector3d(direction);
       Matrix4d matrix = new Matrix4d();
       matrix.identity();
       matrix.translate(position);
       double angleY = Math.atan2(directionClone.z, directionClone.x);
-      matrix.rotateAxis(angleY + (Math.PI / 2), 0.0, 1.0, 0.0, tmp);
+      matrix.rotate(-(angleY + (Math.PI / 2)), 0.0, 1.0, 0.0);
       double angleX = Math.atan2(Math.sqrt(directionClone.x * directionClone.x + directionClone.z * directionClone.z), directionClone.y);
-      matrix.rotateAxis(angleX, 1.0, 0.0, 0.0, tmp);
+      matrix.rotate(-angleX, 1.0, 0.0, 0.0);
       addArrow(world, matrix, color, opacity, directionClone.length(), time, flags);
    }
 
@@ -334,25 +331,24 @@ public class DebugUtils {
       addArrow(world, position, direction, color, 0.8F, time, flags);
    }
 
-   public static void addForce(@Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d force, @Nullable VelocityConfig velocityConfig) {
+   public static void addVelocity(@Nonnull World world, @Nonnull Vector3d position, @Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig) {
       if (DISPLAY_FORCES) {
-         Vector3d forceClone = force.clone();
+         Vector3d velocityClone = new Vector3d(velocity);
          if (velocityConfig == null || SplitVelocity.SHOULD_MODIFY_VELOCITY) {
-            forceClone.x = forceClone.x / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;
-            forceClone.z = forceClone.z / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;
+            velocityClone.x = velocityClone.x / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;
+            velocityClone.z = velocityClone.z / DamageSystems.HackKnockbackValues.PLAYER_KNOCKBACK_SCALE;
          }
 
-         Matrix4d tmp = new Matrix4d();
          Matrix4d matrix = new Matrix4d();
          matrix.identity();
          matrix.translate(position);
-         double angleY = Math.atan2(forceClone.z, forceClone.x);
-         matrix.rotateAxis(angleY + (Math.PI / 2), 0.0, 1.0, 0.0, tmp);
-         double angleX = Math.atan2(Math.sqrt(forceClone.x * forceClone.x + forceClone.z * forceClone.z), forceClone.y);
-         matrix.rotateAxis(angleX, 1.0, 0.0, 0.0, tmp);
+         double angleY = Math.atan2(velocityClone.z, velocityClone.x);
+         matrix.rotate(-(angleY + (Math.PI / 2)), 0.0, 1.0, 0.0);
+         double angleX = Math.atan2(Math.sqrt(velocityClone.x * velocityClone.x + velocityClone.z * velocityClone.z), velocityClone.y);
+         matrix.rotate(-angleX, 1.0, 0.0, 0.0);
          Random random = new Random();
          Vector3f color = new Vector3f(random.nextFloat(), random.nextFloat(), random.nextFloat());
-         addArrow(world, matrix, color, forceClone.length(), 10.0F, FLAG_FADE);
+         addArrow(world, matrix, color, velocityClone.length(), 10.0F, FLAG_FADE);
       }
    }
 

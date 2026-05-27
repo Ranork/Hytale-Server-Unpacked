@@ -23,6 +23,7 @@ public class InventoryBackpackCommand extends AbstractPlayerCommand {
 
    public InventoryBackpackCommand() {
       super("backpack", "server.commands.inventorybackpack.desc");
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.iterator.SpiralIterator;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -25,6 +24,7 @@ import it.unimi.dsi.fastutil.ints.IntLists;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class BlockBulkFindCommand extends AbstractWorldCommand {
    @Nonnull
@@ -61,8 +61,8 @@ public class BlockBulkFindCommand extends AbstractWorldCommand {
             assert transformComponent != null;
 
             Vector3d playerPos = transformComponent.getPosition();
-            baseChunkX = MathUtil.floor(playerPos.getX()) >> 5;
-            baseChunkZ = MathUtil.floor(playerPos.getZ()) >> 5;
+            baseChunkX = MathUtil.floor(playerPos.x()) >> 5;
+            baseChunkZ = MathUtil.floor(playerPos.z()) >> 5;
          }
       }
 

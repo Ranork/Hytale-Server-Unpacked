@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.buildertools;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -56,18 +59,93 @@ public class BuilderToolLineAction implements Packet, ToServerPacket {
 
    @Nonnull
    public static BuilderToolLineAction deserialize(@Nonnull ByteBuf buf, int offset) {
-      BuilderToolLineAction obj = new BuilderToolLineAction();
-      obj.xStart = buf.getIntLE(offset + 0);
-      obj.yStart = buf.getIntLE(offset + 4);
-      obj.zStart = buf.getIntLE(offset + 8);
-      obj.xEnd = buf.getIntLE(offset + 12);
-      obj.yEnd = buf.getIntLE(offset + 16);
-      obj.zEnd = buf.getIntLE(offset + 20);
-      return obj;
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("BuilderToolLineAction", 24, buf.readableBytes() - offset);
+      } else {
+         BuilderToolLineAction obj = new BuilderToolLineAction();
+         obj.xStart = buf.getIntLE(offset + 0);
+         obj.yStart = buf.getIntLE(offset + 4);
+         obj.zStart = buf.getIntLE(offset + 8);
+         obj.xEnd = buf.getIntLE(offset + 12);
+         obj.yEnd = buf.getIntLE(offset + 16);
+         obj.zEnd = buf.getIntLE(offset + 20);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 24;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 24L;
+   }
+
+   public static int getXStart(MemorySegment mem) {
+      return getXStart(mem, 0);
+   }
+
+   public static int getXStart(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static int getYStart(MemorySegment mem) {
+      return getYStart(mem, 0);
+   }
+
+   public static int getYStart(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 4));
+   }
+
+   public static int getZStart(MemorySegment mem) {
+      return getZStart(mem, 0);
+   }
+
+   public static int getZStart(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 8));
+   }
+
+   public static int getXEnd(MemorySegment mem) {
+      return getXEnd(mem, 0);
+   }
+
+   public static int getXEnd(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 12));
+   }
+
+   public static int getYEnd(MemorySegment mem) {
+      return getYEnd(mem, 0);
+   }
+
+   public static int getYEnd(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 16));
+   }
+
+   public static int getZEnd(MemorySegment mem) {
+      return getZEnd(mem, 0);
+   }
+
+   public static int getZEnd(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 20));
+   }
+
+   public static BuilderToolLineAction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static BuilderToolLineAction toObject(MemorySegment mem, int offset) {
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("BuilderToolLineAction", offset + 24, (int)mem.byteSize());
+      } else {
+         return new BuilderToolLineAction(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 12)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 16)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 20))
+         );
+      }
    }
 
    @Override
@@ -78,6 +156,17 @@ public class BuilderToolLineAction implements Packet, ToServerPacket {
       buf.writeIntLE(this.xEnd);
       buf.writeIntLE(this.yEnd);
       buf.writeIntLE(this.zEnd);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.xStart);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 4), this.yStart);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 8), this.zStart);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 12), this.xEnd);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 16), this.yEnd);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 20), this.zEnd);
+      return 24;
    }
 
    @Override

@@ -9,8 +9,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
@@ -36,6 +34,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabUtil {
    protected static final String EDITOR_BLOCK = "Editor_Block";
@@ -49,7 +49,7 @@ public class PrefabUtil {
       double xLength = prefabBuffer.getMaxX() - prefabBuffer.getMinX();
       double zLength = prefabBuffer.getMaxZ() - prefabBuffer.getMinZ();
       int prefabRadius = (int)MathUtil.fastFloor(0.5 * Math.sqrt(xLength * xLength + zLength * zLength));
-      LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, position.getX(), position.getZ(), prefabRadius);
+      LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, position.x(), position.z(), prefabRadius);
       return prefabBuffer.compare((x, y, z, blockId, rotation, holder, prefabBufferCall) -> {
          int bx = position.x + x;
          int by = position.y + y;
@@ -72,7 +72,7 @@ public class PrefabUtil {
       double xLength = prefabBuffer.getMaxX() - prefabBuffer.getMinX();
       double zLength = prefabBuffer.getMaxZ() - prefabBuffer.getMinZ();
       int prefabRadius = (int)MathUtil.fastFloor(0.5 * Math.sqrt(xLength * xLength + zLength * zLength));
-      LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, position.getX(), position.getZ(), prefabRadius);
+      LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, position.x(), position.z(), prefabRadius);
       return prefabBuffer.compare(
          (x, y, z, blockId, rotation, holder, prefabBufferCall) -> {
             if (ignoreOrigin && x == 0 && y == 0 && z == 0) {
@@ -141,7 +141,7 @@ public class PrefabUtil {
       double xLength = buffer.getMaxX() - buffer.getMinX();
       double zLength = buffer.getMaxZ() - buffer.getMinZ();
       int prefabRadius = (int)MathUtil.fastFloor(0.5 * Math.sqrt(xLength * xLength + zLength * zLength));
-      LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, position.getX(), position.getZ(), prefabRadius);
+      LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, position.x(), position.z(), prefabRadius);
       BlockTypeAssetMap<String, BlockType> blockTypeMap = BlockType.getAssetMap();
       int editorBlock = blockTypeMap.getIndex("Editor_Block");
       if (editorBlock == Integer.MIN_VALUE) {
@@ -219,9 +219,9 @@ public class PrefabUtil {
                         Holder<EntityStore> entityToAdd = entityWrappers[i].clone();
                         TransformComponent transformComp = entityToAdd.getComponent(TransformComponent.getComponentType());
                         if (transformComp != null) {
-                           Vector3d entityPosition = transformComp.getPosition().clone();
+                           Vector3d entityPosition = new Vector3d(transformComp.getPosition());
                            rotation.rotate(entityPosition);
-                           Vector3d entityWorldPosition = entityPosition.add(position);
+                           Vector3d entityWorldPosition = entityPosition.add(position.x, position.y, position.z);
                            transformComp = entityToAdd.getComponent(TransformComponent.getComponentType());
                            if (transformComp != null) {
                               entityPosition = transformComp.getPosition();
@@ -230,12 +230,14 @@ public class PrefabUtil {
                               entityPosition.z = entityWorldPosition.z;
                               PrefabPlaceEntityEvent prefabPlaceEntityEvent = new PrefabPlaceEntityEvent(prefabId, entityToAdd);
                               componentAccessor.invoke(prefabPlaceEntityEvent);
-                              entityToAdd.ensureComponent(FromPrefab.getComponentType());
-                              if (technicalPaste) {
-                                 entityToAdd.ensureComponent(PrefabCopyableComponent.getComponentType());
-                              }
+                              if (!prefabPlaceEntityEvent.isCancelled()) {
+                                 entityToAdd.ensureComponent(FromPrefab.getComponentType());
+                                 if (technicalPaste) {
+                                    entityToAdd.ensureComponent(PrefabCopyableComponent.getComponentType());
+                                 }
 
-                              componentAccessor.addEntity(entityToAdd, AddReason.LOAD);
+                                 componentAccessor.addEntity(entityToAdd, AddReason.LOAD);
+                              }
                            }
                         }
                      }
@@ -278,7 +280,7 @@ public class PrefabUtil {
       double xLength = prefabBuffer.getMaxX() - prefabBuffer.getMinX();
       double zLength = prefabBuffer.getMaxZ() - prefabBuffer.getMinZ();
       int prefabRadius = (int)MathUtil.fastFloor(0.5 * Math.sqrt(xLength * xLength + zLength * zLength));
-      LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, position.getX(), position.getZ(), prefabRadius);
+      LocalCachedChunkAccessor chunkAccessor = LocalCachedChunkAccessor.atWorldCoords(world, position.x(), position.z(), prefabRadius);
       BlockTypeAssetMap<String, BlockType> blockTypeMap = BlockType.getAssetMap();
       prefabBuffer.forEach(
          IPrefabBuffer.iterateAllColumns(),

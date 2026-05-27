@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.universe.world.lighting;
 
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
@@ -15,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class ChunkLightingManager implements Runnable {
    @Nonnull
@@ -138,8 +138,7 @@ public class ChunkLightingManager implements Runnable {
                   sb.append("\tat ").append(traceElement).append('\n');
                }
 
-               HytaleLogger.getLogger().at(Level.SEVERE).log("Forcing ChunkLighting Thread %s to stop:\n%s", this.thread, sb.toString());
-               this.thread.stop();
+               HytaleLogger.getLogger().at(Level.SEVERE).log("Abandoning ChunkLighting Thread %s (stuck for >5s):\n%s", this.thread, sb.toString());
                break;
             }
          }
@@ -166,7 +165,7 @@ public class ChunkLightingManager implements Runnable {
       Vector3i chunkPos = new Vector3i(chunkX, 0, chunkZ);
 
       for (int chunkY = 0; chunkY < 10; chunkY++) {
-         chunkPos.setY(chunkY);
+         chunkPos.y = chunkY;
          if (this.isQueued(chunkPos)) {
             return true;
          }

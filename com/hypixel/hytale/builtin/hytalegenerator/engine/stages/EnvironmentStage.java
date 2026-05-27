@@ -14,10 +14,11 @@ import com.hypixel.hytale.builtin.hytalegenerator.engine.views.VoxelBufferView;
 import com.hypixel.hytale.builtin.hytalegenerator.environmentproviders.EnvironmentProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class EnvironmentStage implements Stage {
    @Nonnull
@@ -53,7 +54,7 @@ public class EnvironmentStage implements Stage {
       this.environmentOutputBufferType = environmentOutputBufferType;
       this.stageName = stageName;
       this.worldStructure_workerData = worldStructure_workerData;
-      this.inputBounds_bufferGrid = GridUtils.createUnitBounds3i(Vector3i.ZERO);
+      this.inputBounds_bufferGrid = GridUtils.createUnitBounds3i(Vector3iUtil.ZERO);
    }
 
    @Override
@@ -80,7 +81,6 @@ public class EnvironmentStage implements Stage {
             EnvironmentProvider environmentProvider = biome.getEnvironmentProvider();
 
             for (position_voxelGrid.y = outputBounds_voxelGrid.min.y; position_voxelGrid.y < outputBounds_voxelGrid.max.y; position_voxelGrid.y++) {
-               position_voxelGrid.dropHash();
                int environment = environmentProvider.getValue(environmentContext);
                environmentSpace.set(environment, position_voxelGrid);
             }

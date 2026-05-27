@@ -8,8 +8,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -37,6 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SpawnBeacon extends Entity {
    public static final BuilderCodec<SpawnBeacon> CODEC = BuilderCodec.builder(SpawnBeacon.class, SpawnBeacon::new, Entity.CODEC)
@@ -123,37 +123,28 @@ public class SpawnBeacon extends Entity {
                      this.spawningContext.releaseFull();
                   } else {
                      Vector3d position = this.spawningContext.newPosition();
-                     Vector3f rotation = this.spawningContext.newRotation();
+                     Rotation3f rotation = this.spawningContext.newRotation();
                      FlockAsset flockDefinition = roleSpawnParameters.getFlockDefinition();
                      int flockSize = flockDefinition != null ? flockDefinition.pickFlockSize() : 1;
 
                      try {
+                        String mcType = this.spawningContext.activeMotionControllerType;
                         Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCPlugin.get()
-                           .spawnEntity(
-                              store,
-                              roleIndex,
-                              position,
-                              rotation,
-                              this.spawningContext.getModel(),
-                              (_npc, _ref, _store) -> postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store)
-                           );
+                           .spawnEntity(store, roleIndex, position, rotation, this.spawningContext.getModel(), (_npc, _ref, _store) -> {
+                              _npc.setActiveMotionControllerName(mcType);
+                              postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store);
+                           });
                         Ref<EntityStore> npcRef = (Ref<EntityStore>)npcPair.first();
                         NPCEntity npcComponent = (NPCEntity)npcPair.second();
                         FlockPlugin.trySpawnFlock(
-                           npcRef,
-                           npcComponent,
-                           roleIndex,
-                           position,
-                           rotation,
-                           flockSize,
-                           flockDefinition,
-                           null,
-                           (_npc, _ref, _store) -> postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store),
-                           store
+                           npcRef, npcComponent, roleIndex, position, rotation, flockSize, flockDefinition, null, (_npc, _ref, _store) -> {
+                              _npc.setActiveMotionControllerName(mcType);
+                              postSpawn(_npc, _ref, this.spawnWrapper.getSpawn(), targetRef, _store);
+                           }, store
                         );
                         spawnedCount++;
-                     } catch (RuntimeException var22) {
-                        LOGGER.at(Level.WARNING).log("Failed to create %s: %s", NPCPlugin.get().getName(roleIndex), var22.getMessage());
+                     } catch (RuntimeException var23) {
+                        LOGGER.at(Level.WARNING).log("Failed to create %s: %s", NPCPlugin.get().getName(roleIndex), var23.getMessage());
                         this.markUnspawnable(ref, roleIndex, store);
                      } finally {
                         this.spawningContext.releaseFull();

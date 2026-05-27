@@ -10,10 +10,10 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.command.system.arguments.types.RelativeVector3i;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class OffsetOperation extends SequenceBrushOperation {
    public static final BuilderCodec<OffsetOperation> CODEC = BuilderCodec.builder(OffsetOperation.class, OffsetOperation::new)
@@ -57,15 +57,15 @@ public class OffsetOperation extends SequenceBrushOperation {
          }
 
          if (this.offsetArg.isRelativeX()) {
-            offsetVector.setX(offsetVector.getX() + relativeFieldValue);
+            offsetVector.x = offsetVector.x() + relativeFieldValue;
          }
 
          if (this.offsetArg.isRelativeY()) {
-            offsetVector.setY(offsetVector.getY() + relativeFieldValue);
+            offsetVector.y = offsetVector.y() + relativeFieldValue;
          }
 
          if (this.offsetArg.isRelativeZ()) {
-            offsetVector.setZ(offsetVector.getZ() + relativeFieldValue);
+            offsetVector.z = offsetVector.z() + relativeFieldValue;
          }
       }
 

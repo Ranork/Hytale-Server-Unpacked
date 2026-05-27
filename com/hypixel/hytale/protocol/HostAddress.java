@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -33,32 +34,79 @@ public class HostAddress {
 
    @Nonnull
    public static HostAddress deserialize(@Nonnull ByteBuf buf, int offset) {
-      HostAddress obj = new HostAddress();
-      obj.port = buf.getShortLE(offset + 0);
-      int pos = offset + 2;
-      int hostLen = VarInt.peek(buf, pos);
-      if (hostLen < 0) {
-         throw ProtocolException.negativeLength("Host", hostLen);
-      } else if (hostLen > 256) {
-         throw ProtocolException.stringTooLong("Host", hostLen, 256);
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("HostAddress", 2, buf.readableBytes() - offset);
       } else {
-         int hostVarLen = VarInt.length(buf, pos);
-         obj.host = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += hostVarLen + hostLen;
-         return obj;
+         HostAddress obj = new HostAddress();
+         obj.port = buf.getShortLE(offset + 0);
+         int pos = offset + 2;
+         int hostLen = VarInt.peek(buf, pos);
+         if (hostLen < 0) {
+            throw ProtocolException.invalidVarInt("Host");
+         } else {
+            int hostVarLen = VarInt.size(hostLen);
+            if (hostLen > 256) {
+               throw ProtocolException.stringTooLong("Host", hostLen, 256);
+            } else if (pos + hostVarLen + hostLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Host", pos + hostVarLen + hostLen, buf.readableBytes());
+            } else {
+               obj.host = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+               pos += hostVarLen + hostLen;
+               return obj;
+            }
+         }
       }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 2;
       int sl = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + sl;
+      pos += VarInt.size(sl) + sl;
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static String getHost(MemorySegment mem) {
+      return getHost(mem, 0);
+   }
+
+   public static String getHost(MemorySegment mem, int offset) {
+      return PacketIO.readVarString("Host", mem, offset + 2, 256, PacketIO.UTF8);
+   }
+
+   public static short getPort(MemorySegment mem) {
+      return getPort(mem, 0);
+   }
+
+   public static short getPort(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, (long)(offset + 0));
+   }
+
+   public static HostAddress toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static HostAddress toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("HostAddress", offset + 2, (int)mem.byteSize());
+      } else {
+         return new HostAddress(PacketIO.readVarString("Host", mem, offset + 2, 256, PacketIO.UTF8), mem.get(PacketIO.PROTO_SHORT, (long)(offset + 0)));
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeShortLE(this.port);
       PacketIO.writeVarString(buf, this.host, 256);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_SHORT, (long)(offset + 0), this.port);
+      int varOffset = offset + 2;
+      varOffset += PacketIO.writeVarString(mem, varOffset, this.host, 256);
+      return varOffset - offset;
    }
 
    public int computeSize() {
@@ -77,7 +125,7 @@ public class HostAddress {
          } else if (hostLen > 256) {
             return ValidationResult.error("Host exceeds max length 256");
          } else {
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(hostLen);
             pos += hostLen;
             return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading Host") : ValidationResult.OK;
          }

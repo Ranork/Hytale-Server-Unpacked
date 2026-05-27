@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.core.inventory;
 
-import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Archetype;
@@ -9,6 +8,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistration;
@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.Hash.Strategy;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenCustomHashMap;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nonnull;
@@ -54,7 +55,7 @@ public abstract class InventoryComponent implements Component<EntityStore> {
    protected final AtomicBoolean needsSaving = new AtomicBoolean();
    protected ItemContainer inventory = EmptyItemContainer.INSTANCE;
    @Nullable
-   protected EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> changeEvent = null;
+   protected EventRegistration<Void, ItemContainer.ItemContainerChangeEvent> changeEvent;
    protected ConcurrentLinkedQueue<ItemContainer.ItemContainerChangeEvent> changeEvents = new ConcurrentLinkedQueue<>();
    public static ComponentType<EntityStore, ? extends InventoryComponent>[] HOTBAR_STORAGE_BACKPACK;
    public static ComponentType<EntityStore, ? extends InventoryComponent>[] HOTBAR_FIRST;
@@ -77,7 +78,12 @@ public abstract class InventoryComponent implements Component<EntityStore> {
    public void ensureCapacity(short capacity, @Nonnull List<ItemStack> remainder) {
       if (this.inventory.getCapacity() != capacity) {
          this.unregisterChangeEvent();
-         this.inventory = ItemContainer.ensureContainerCapacity(this.inventory, capacity, SimpleItemContainer::new, remainder);
+         if (capacity > 0) {
+            this.inventory = ItemContainer.ensureContainerCapacity(this.inventory, capacity, SimpleItemContainer::new, remainder);
+         } else {
+            this.inventory = ItemContainer.copy(this.inventory, EmptyItemContainer.INSTANCE, remainder);
+         }
+
          this.registerChangeEvent();
       }
    }
@@ -132,12 +138,12 @@ public abstract class InventoryComponent implements Component<EntityStore> {
    public abstract Component<EntityStore> clone();
 
    public static void setupCombined(
-      ComponentType<EntityStore, InventoryComponent.Storage> storageInventoryComponentType,
-      ComponentType<EntityStore, InventoryComponent.Armor> armorInventoryComponentType,
-      ComponentType<EntityStore, InventoryComponent.Hotbar> hotbarInventoryComponentType,
-      ComponentType<EntityStore, InventoryComponent.Utility> utilityInventoryComponentType,
-      ComponentType<EntityStore, InventoryComponent.Backpack> backpackInventoryComponentType,
-      ComponentType<EntityStore, InventoryComponent.Tool> toolInventoryComponentType
+      @Nonnull ComponentType<EntityStore, InventoryComponent.Storage> storageInventoryComponentType,
+      @Nonnull ComponentType<EntityStore, InventoryComponent.Armor> armorInventoryComponentType,
+      @Nonnull ComponentType<EntityStore, InventoryComponent.Hotbar> hotbarInventoryComponentType,
+      @Nonnull ComponentType<EntityStore, InventoryComponent.Utility> utilityInventoryComponentType,
+      @Nonnull ComponentType<EntityStore, InventoryComponent.Backpack> backpackInventoryComponentType,
+      @Nonnull ComponentType<EntityStore, InventoryComponent.Tool> ignoredToolInventoryComponentType
    ) {
       HOTBAR_STORAGE_BACKPACK = new ComponentType[]{hotbarInventoryComponentType, storageInventoryComponentType, backpackInventoryComponentType};
       HOTBAR_FIRST = new ComponentType[]{hotbarInventoryComponentType, storageInventoryComponentType};
@@ -243,9 +249,9 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          commandBuffer.putComponent(archetypeChunk.getReferenceTo(index), InventoryComponent.Combined.getComponentType(), combined);
       }
 
-      CombinedItemContainer inv = (CombinedItemContainer)combined.inventories.get(types);
-      if (inv != null) {
-         return inv;
+      CombinedItemContainer inventory = (CombinedItemContainer)combined.inventories.get(types);
+      if (inventory != null) {
+         return inventory;
       } else {
          int count = 0;
          Archetype<EntityStore> archetype = archetypeChunk.getArchetype();
@@ -266,9 +272,9 @@ public abstract class InventoryComponent implements Component<EntityStore> {
             }
          }
 
-         inv = new CombinedItemContainer(containers);
-         combined.inventories.put(types, inv);
-         return inv;
+         inventory = new CombinedItemContainer(containers);
+         combined.inventories.put(types, inventory);
+         return inventory;
       }
    }
 
@@ -283,12 +289,25 @@ public abstract class InventoryComponent implements Component<EntityStore> {
       }
    }
 
+   @Nullable
+   public static ItemStack getItemInHand(@Nonnull Holder<EntityStore> holder) {
+      InventoryComponent.Tool toolComponent = holder.getComponent(InventoryComponent.Tool.getComponentType());
+      if (toolComponent != null && toolComponent.isUsingToolsItem()) {
+         return toolComponent.getActiveItem();
+      } else {
+         InventoryComponent.Hotbar hotbarComponent = holder.getComponent(InventoryComponent.Hotbar.getComponentType());
+         return hotbarComponent != null ? hotbarComponent.getActiveItem() : null;
+      }
+   }
+
    public static class Armor extends InventoryComponent {
+      @Nonnull
       public static final BuilderCodec<InventoryComponent.Armor> CODEC = BuilderCodec.builder(
             InventoryComponent.Armor.class, InventoryComponent.Armor::new, InventoryComponent.CODEC
          )
          .afterDecode(InventoryComponent.Armor::afterDecode)
          .build();
+      protected boolean outdatedEquipment;
 
       public static ComponentType<EntityStore, InventoryComponent.Armor> getComponentType() {
          return EntityModule.get().getArmorInventoryComponentType();
@@ -318,11 +337,22 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          this.inventory = ItemContainerUtil.trySetArmorFilters(this.inventory);
       }
 
+      public boolean consumeOutdatedEquipment() {
+         boolean wasOutdated = this.outdatedEquipment;
+         this.outdatedEquipment = false;
+         return wasOutdated;
+      }
+
+      public void setOutdatedEquipment(boolean outdatedEquipment) {
+         this.outdatedEquipment = outdatedEquipment;
+      }
+
       @Nullable
       @Override
       public Component<EntityStore> clone() {
          InventoryComponent.Armor armor = new InventoryComponent.Armor();
          armor.inventory = this.inventory.clone();
+         armor.outdatedEquipment = this.outdatedEquipment;
          return armor;
       }
    }
@@ -373,6 +403,10 @@ public abstract class InventoryComponent implements Component<EntityStore> {
    public static class Combined implements Component<EntityStore> {
       private final Object2ObjectOpenCustomHashMap<ComponentType[], CombinedItemContainer> inventories = new Object2ObjectOpenCustomHashMap(
          new Strategy<ComponentType[]>() {
+            {
+               Objects.requireNonNull(Combined.this);
+            }
+
             public int hashCode(ComponentType[] o) {
                return Arrays.hashCode((Object[])o);
             }
@@ -382,6 +416,10 @@ public abstract class InventoryComponent implements Component<EntityStore> {
             }
          }
       );
+
+      public Object2ObjectOpenCustomHashMap<ComponentType[], CombinedItemContainer> getInventories() {
+         return this.inventories;
+      }
 
       public static ComponentType<EntityStore, InventoryComponent.Combined> getComponentType() {
          return EntityModule.get().getCombinedInventoryComponentType();
@@ -394,15 +432,13 @@ public abstract class InventoryComponent implements Component<EntityStore> {
       }
    }
 
-   public static class Hotbar extends InventoryComponent {
+   public static class Hotbar extends ActiveSlotInventoryComponent {
+      @Nonnull
       public static final BuilderCodec<InventoryComponent.Hotbar> CODEC = BuilderCodec.builder(
-            InventoryComponent.Hotbar.class, InventoryComponent.Hotbar::new, InventoryComponent.CODEC
+            InventoryComponent.Hotbar.class, InventoryComponent.Hotbar::new, ActiveSlotInventoryComponent.CODEC
          )
-         .append(new KeyedCodec<>("ActiveSlot", Codec.BYTE), (o, i) -> o.activeSlot = i, o -> o.activeSlot)
-         .add()
-         .afterDecode(InventoryComponent.Hotbar::afterDecode)
          .build();
-      protected byte activeSlot;
+      protected boolean outdatedEquipment;
 
       public static ComponentType<EntityStore, InventoryComponent.Hotbar> getComponentType() {
          return EntityModule.get().getHotbarInventoryComponentType();
@@ -419,31 +455,29 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          this.inventory = hotbar;
          this.activeSlot = activeHotbarSlot;
          this.registerChangeEvent();
+         this.clampActiveSlot();
       }
 
       @Override
-      public void ensureCapacity(short capacity, @Nonnull List<ItemStack> remainder) {
-         super.ensureCapacity(capacity, remainder);
-         if (this.activeSlot >= this.inventory.getCapacity()) {
+      public int getSectionId() {
+         return -1;
+      }
+
+      @Override
+      protected void clampActiveSlot() {
+         if (this.activeSlot < 0 || this.activeSlot >= this.inventory.getCapacity()) {
             this.activeSlot = (byte)(this.inventory.getCapacity() > 0 ? 0 : -1);
          }
       }
 
-      private void afterDecode() {
-         this.activeSlot = (byte)(this.activeSlot < this.inventory.getCapacity() ? this.activeSlot : (this.inventory.getCapacity() > 0 ? 0 : -1));
+      public boolean consumeOutdatedEquipment() {
+         boolean wasOutdated = this.outdatedEquipment;
+         this.outdatedEquipment = false;
+         return wasOutdated;
       }
 
-      public byte getActiveSlot() {
-         return this.activeSlot;
-      }
-
-      public void setActiveSlot(byte activeSlot) {
-         this.activeSlot = activeSlot;
-      }
-
-      @Nullable
-      public ItemStack getActiveItem() {
-         return this.activeSlot != -1 && this.activeSlot < this.inventory.getCapacity() ? this.inventory.getItemStack(this.activeSlot) : null;
+      public void setOutdatedEquipment(boolean outdatedEquipment) {
+         this.outdatedEquipment = outdatedEquipment;
       }
 
       @Nullable
@@ -452,11 +486,13 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          InventoryComponent.Hotbar hotbar = new InventoryComponent.Hotbar();
          hotbar.inventory = this.inventory.clone();
          hotbar.activeSlot = this.activeSlot;
+         hotbar.outdatedEquipment = this.outdatedEquipment;
          return hotbar;
       }
    }
 
    public static class Storage extends InventoryComponent {
+      @Nonnull
       public static final BuilderCodec<InventoryComponent.Storage> CODEC = BuilderCodec.builder(
             InventoryComponent.Storage.class, InventoryComponent.Storage::new, InventoryComponent.CODEC
          )
@@ -487,16 +523,12 @@ public abstract class InventoryComponent implements Component<EntityStore> {
       }
    }
 
-   public static class Tool extends InventoryComponent {
+   public static class Tool extends ActiveSlotInventoryComponent {
       public static final BuilderCodec<InventoryComponent.Tool> CODEC = BuilderCodec.builder(
-            InventoryComponent.Tool.class, InventoryComponent.Tool::new, InventoryComponent.CODEC
+            InventoryComponent.Tool.class, InventoryComponent.Tool::new, ActiveSlotInventoryComponent.CODEC
          )
-         .append(new KeyedCodec<>("ActiveSlot", Codec.BYTE), (o, i) -> o.activeSlot = i, o -> o.activeSlot)
-         .add()
-         .afterDecode(InventoryComponent.Tool::afterDecode)
          .build();
-      protected byte activeSlot = -1;
-      protected boolean usingToolsItem = false;
+      protected boolean usingToolsItem;
 
       public static ComponentType<EntityStore, InventoryComponent.Tool> getComponentType() {
          return EntityModule.get().getToolInventoryComponentType();
@@ -513,31 +545,12 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          this.inventory = tools;
          this.activeSlot = toolsSlot;
          this.registerChangeEvent();
+         this.clampActiveSlot();
       }
 
       @Override
-      public void ensureCapacity(short capacity, @Nonnull List<ItemStack> remainder) {
-         super.ensureCapacity(capacity, remainder);
-         if (this.activeSlot >= this.inventory.getCapacity()) {
-            this.activeSlot = -1;
-         }
-      }
-
-      private void afterDecode() {
-         this.activeSlot = this.activeSlot < this.inventory.getCapacity() ? this.activeSlot : -1;
-      }
-
-      public byte getActiveSlot() {
-         return this.activeSlot;
-      }
-
-      public void setActiveSlot(byte activeSlot) {
-         this.activeSlot = activeSlot;
-      }
-
-      @Nullable
-      public ItemStack getActiveItem() {
-         return this.activeSlot != -1 && this.activeSlot < this.inventory.getCapacity() ? this.inventory.getItemStack(this.activeSlot) : null;
+      public int getSectionId() {
+         return -8;
       }
 
       public boolean isUsingToolsItem() {
@@ -559,15 +572,13 @@ public abstract class InventoryComponent implements Component<EntityStore> {
       }
    }
 
-   public static class Utility extends InventoryComponent {
+   public static class Utility extends ActiveSlotInventoryComponent {
       public static final BuilderCodec<InventoryComponent.Utility> CODEC = BuilderCodec.builder(
-            InventoryComponent.Utility.class, InventoryComponent.Utility::new, InventoryComponent.CODEC
+            InventoryComponent.Utility.class, InventoryComponent.Utility::new, ActiveSlotInventoryComponent.CODEC
          )
-         .append(new KeyedCodec<>("ActiveSlot", Codec.BYTE), (o, i) -> o.activeSlot = i, o -> o.activeSlot)
-         .add()
          .afterDecode(InventoryComponent.Utility::afterDecode)
          .build();
-      protected byte activeSlot = -1;
+      protected boolean outdatedEquipment;
 
       public static ComponentType<EntityStore, InventoryComponent.Utility> getComponentType() {
          return EntityModule.get().getUtilityInventoryComponentType();
@@ -586,38 +597,36 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          this.activeSlot = utilitySlot;
          this.registerChangeEvent();
          this.afterDecode();
+         this.clampActiveSlot();
+      }
+
+      @Override
+      public int getSectionId() {
+         return -5;
       }
 
       @Override
       public void ensureCapacity(short capacity, @Nonnull List<ItemStack> remainder) {
          super.ensureCapacity(capacity, remainder);
-         if (this.activeSlot >= this.inventory.getCapacity()) {
-            this.activeSlot = -1;
-         }
-
          this.inventory = ItemContainerUtil.trySetSlotFilters(
-            this.inventory, (type, container, slot, itemStack) -> itemStack == null || itemStack.getItem().getUtility().isUsable()
+            this.inventory, (var0, var1x, var2x, itemStack) -> itemStack == null || itemStack.getItem().getUtility().isUsable()
          );
       }
 
       private void afterDecode() {
          this.inventory = ItemContainerUtil.trySetSlotFilters(
-            this.inventory, (type, container, slot, itemStack) -> itemStack == null || itemStack.getItem().getUtility().isUsable()
+            this.inventory, (var0, var1, var2, itemStack) -> itemStack == null || itemStack.getItem().getUtility().isUsable()
          );
-         this.activeSlot = this.activeSlot < this.inventory.getCapacity() ? this.activeSlot : -1;
       }
 
-      public byte getActiveSlot() {
-         return this.activeSlot;
+      public boolean consumeOutdatedEquipment() {
+         boolean wasOutdated = this.outdatedEquipment;
+         this.outdatedEquipment = false;
+         return wasOutdated;
       }
 
-      public void setActiveSlot(byte activeSlot) {
-         this.activeSlot = activeSlot;
-      }
-
-      @Nullable
-      public ItemStack getActiveItem() {
-         return this.activeSlot != -1 && this.activeSlot < this.inventory.getCapacity() ? this.inventory.getItemStack(this.activeSlot) : null;
+      public void setOutdatedEquipment(boolean outdatedEquipment) {
+         this.outdatedEquipment = outdatedEquipment;
       }
 
       @Nullable
@@ -626,6 +635,7 @@ public abstract class InventoryComponent implements Component<EntityStore> {
          InventoryComponent.Utility utility = new InventoryComponent.Utility();
          utility.inventory = this.inventory.clone();
          utility.activeSlot = this.activeSlot;
+         utility.outdatedEquipment = this.outdatedEquipment;
          return utility;
       }
    }

@@ -8,18 +8,20 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.consumer.TriIntConsumer;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.math.vector.Vector4d;
-import com.hypixel.hytale.protocol.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.SelectInteraction;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector3i;
+import org.joml.Vector4d;
 
 public class AOECircleSelector extends SelectorType {
    @Nonnull
@@ -35,8 +37,8 @@ public class AOECircleSelector extends SelectorType {
       .documentation("The range of the area to search for targets in.")
       .add()
       .<Vector3d>append(
-         new KeyedCodec<>("Offset", Vector3d.CODEC),
-         (aoeCircleEntitySelector, i) -> aoeCircleEntitySelector.offset = i,
+         new KeyedCodec<>("Offset", Vector3dUtil.CODEC),
+         (aoeCircleEntitySelector, i) -> aoeCircleEntitySelector.offset.set(i),
          aoeCircleEntitySelector -> aoeCircleEntitySelector.offset
       )
       .documentation("The offset of the area to search for targets in.")
@@ -46,7 +48,7 @@ public class AOECircleSelector extends SelectorType {
    private final AOECircleSelector.RuntimeSelector instance = new AOECircleSelector.RuntimeSelector();
    protected float range;
    @Nonnull
-   protected Vector3d offset = Vector3d.ZERO;
+   protected final Vector3d offset = new Vector3d();
 
    @Nonnull
    @Override
@@ -75,8 +77,8 @@ public class AOECircleSelector extends SelectorType {
 
          assert headRotationComponent != null;
 
-         position = this.offset.clone();
-         position.rotateY(headRotationComponent.getRotation().getYaw());
+         position = new Vector3d(this.offset);
+         position.rotateY(headRotationComponent.getRotation().yaw());
          position.add(transformComponent.getPosition());
       }
 
@@ -84,11 +86,16 @@ public class AOECircleSelector extends SelectorType {
    }
 
    private class RuntimeSelector implements Selector {
+      private RuntimeSelector() {
+         Objects.requireNonNull(AOECircleSelector.this);
+         super();
+      }
+
       @Override
       public void tick(@Nonnull CommandBuffer<EntityStore> commandBuffer, @Nonnull Ref<EntityStore> ref, float time, float runTime) {
          if (SelectInteraction.SHOW_VISUAL_DEBUG) {
             Vector3d position = AOECircleSelector.this.selectTargetPosition(commandBuffer, ref);
-            com.hypixel.hytale.math.vector.Vector3f color = new com.hypixel.hytale.math.vector.Vector3f(
+            Vector3f color = new Vector3f(
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 10L),
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 11L),
                (float)HashUtil.random(ref.getIndex(), this.hashCode(), 12L)
@@ -106,7 +113,11 @@ public class AOECircleSelector extends SelectorType {
       ) {
          Vector3d position = AOECircleSelector.this.selectTargetPosition(commandBuffer, attacker);
          Selector.selectNearbyEntities(
-            commandBuffer, position, (double)AOECircleSelector.this.range, entity -> consumer.accept(entity, Vector4d.newPosition(position)), filter
+            commandBuffer,
+            position,
+            (double)AOECircleSelector.this.range,
+            entity -> consumer.accept(entity, new Vector4d(position.x, position.y, position.z, 1.0)),
+            filter
          );
       }
 

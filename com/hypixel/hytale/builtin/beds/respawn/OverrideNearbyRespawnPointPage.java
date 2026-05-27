@@ -2,7 +2,6 @@ package com.hypixel.hytale.builtin.beds.respawn;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.meta.state.RespawnBlock;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class OverrideNearbyRespawnPointPage extends RespawnPointPage {
    @Nonnull
@@ -53,7 +53,7 @@ public class OverrideNearbyRespawnPointPage extends RespawnPointPage {
       if (headRotationComponent != null) {
          PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
          if (playerRefComponent != null) {
-            double direction = Math.toDegrees(headRotationComponent.getRotation().getYaw());
+            double direction = Math.toDegrees(headRotationComponent.getRotation().yaw());
             commandBuilder.set(
                "#DescriptionLabel.Text",
                Message.translation("server.customUI.overrideNearbyRespawnPoint.label")
@@ -68,8 +68,7 @@ public class OverrideNearbyRespawnPointPage extends RespawnPointPage {
                commandBuilder.set(selector + ".Disabled", true);
                commandBuilder.set(selector + " #Name.Text", nearbyRespawnPoint.getName());
                Vector3i nearbyRespawnPointPosition = nearbyRespawnPoint.getBlockPosition();
-               int distance = (int)this.respawnPointPosition
-                  .distanceTo(nearbyRespawnPointPosition.x, this.respawnPointPosition.y, nearbyRespawnPointPosition.z);
+               int distance = (int)this.respawnPointPosition.distance(nearbyRespawnPointPosition.x, this.respawnPointPosition.y, nearbyRespawnPointPosition.z);
                commandBuilder.set(selector + " #Distance.Text", Message.translation("server.customUI.respawnPointDistance").param("distance", distance));
                double angle = Math.atan2(nearbyRespawnPointPosition.z - this.respawnPointPosition.z, nearbyRespawnPointPosition.x - this.respawnPointPosition.x);
                commandBuilder.set(selector + " #Icon.Angle", Math.toDegrees(angle) + direction + 90.0);

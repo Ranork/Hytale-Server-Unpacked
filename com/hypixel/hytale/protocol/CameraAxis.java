@@ -1,9 +1,11 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.Objects;
 import javax.annotation.Nonnull;
@@ -35,38 +37,42 @@ public class CameraAxis {
 
    @Nonnull
    public static CameraAxis deserialize(@Nonnull ByteBuf buf, int offset) {
-      CameraAxis obj = new CameraAxis();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         obj.angleRange = Rangef.deserialize(buf, offset + 1);
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("CameraAxis", 9, buf.readableBytes() - offset);
+      } else {
+         CameraAxis obj = new CameraAxis();
+         byte nullBits = buf.getByte(offset);
+         if ((nullBits & 1) != 0) {
+            obj.angleRange = Rangef.deserialize(buf, offset + 1);
+         }
+
+         int pos = offset + 9;
+         if ((nullBits & 2) != 0) {
+            int targetNodesCount = VarInt.peek(buf, pos);
+            if (targetNodesCount < 0) {
+               throw ProtocolException.invalidVarInt("TargetNodes");
+            }
+
+            int targetNodesVarLen = VarInt.size(targetNodesCount);
+            if (targetNodesCount > 4096000) {
+               throw ProtocolException.arrayTooLong("TargetNodes", targetNodesCount, 4096000);
+            }
+
+            if (pos + targetNodesVarLen + targetNodesCount * 1L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("TargetNodes", pos + targetNodesVarLen + targetNodesCount * 1, buf.readableBytes());
+            }
+
+            pos += targetNodesVarLen;
+            obj.targetNodes = new CameraNode[targetNodesCount];
+
+            for (int i = 0; i < targetNodesCount; i++) {
+               obj.targetNodes[i] = CameraNode.fromValue(buf.getByte(pos));
+               pos++;
+            }
+         }
+
+         return obj;
       }
-
-      int pos = offset + 9;
-      if ((nullBits & 2) != 0) {
-         int targetNodesCount = VarInt.peek(buf, pos);
-         if (targetNodesCount < 0) {
-            throw ProtocolException.negativeLength("TargetNodes", targetNodesCount);
-         }
-
-         if (targetNodesCount > 4096000) {
-            throw ProtocolException.arrayTooLong("TargetNodes", targetNodesCount, 4096000);
-         }
-
-         int targetNodesVarLen = VarInt.size(targetNodesCount);
-         if (pos + targetNodesVarLen + targetNodesCount * 1L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("TargetNodes", pos + targetNodesVarLen + targetNodesCount * 1, buf.readableBytes());
-         }
-
-         pos += targetNodesVarLen;
-         obj.targetNodes = new CameraNode[targetNodesCount];
-
-         for (int i = 0; i < targetNodesCount; i++) {
-            obj.targetNodes[i] = CameraNode.fromValue(buf.getByte(pos));
-            pos++;
-         }
-      }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -74,10 +80,107 @@ public class CameraAxis {
       int pos = offset + 9;
       if ((nullBits & 2) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + arrLen * 1;
+         pos += VarInt.size(arrLen) + arrLen * 1;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static Rangef getAngleRange(MemorySegment mem) {
+      return getAngleRange(mem, 0);
+   }
+
+   @Nullable
+   public static Rangef getAngleRange(MemorySegment mem, int offset) {
+      return hasAngleRange(mem, offset) ? Rangef.toObject(mem, offset + 1) : null;
+   }
+
+   @Nullable
+   public static CameraNode[] getTargetNodes(MemorySegment mem) {
+      return getTargetNodes(mem, 0);
+   }
+
+   @Nullable
+   public static CameraNode[] getTargetNodes(MemorySegment mem, int offset) {
+      if (!hasTargetNodes(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 9;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("TargetNodes", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("TargetNodes", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len * 1L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("TargetNodes", off + lenOffset + len * 1, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               CameraNode[] data = new CameraNode[len];
+
+               for (int i = 0; i < len; i++) {
+                  data[i] = CameraNode.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(off + i * 1)));
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   public static boolean hasAngleRange(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasTargetNodes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static CameraAxis toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static CameraAxis toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("CameraAxis", offset + 9, (int)mem.byteSize());
+      } else {
+         CameraNode[] targetNodes = null;
+         if (hasTargetNodes(mem, offset)) {
+            int off = offset + 9;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("TargetNodes", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.arrayTooLong("TargetNodes", len, 4096000);
+            }
+
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len * 1L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("TargetNodes", off + lenOffset + len * 1, (int)mem.byteSize());
+            }
+
+            off += lenOffset;
+            targetNodes = new CameraNode[len];
+
+            for (int i = 0; i < len; i++) {
+               targetNodes[i] = CameraNode.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(off + i * 1)));
+            }
+         }
+
+         return new CameraAxis(hasAngleRange(mem, offset) ? Rangef.toObject(mem, offset + 1) : null, targetNodes);
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -110,6 +213,41 @@ public class CameraAxis {
       }
    }
 
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.angleRange != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.targetNodes != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      if (this.angleRange != null) {
+         this.angleRange.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 8L).fill((byte)0);
+      }
+
+      int varOffset = offset + 9;
+      if (this.targetNodes != null) {
+         if (this.targetNodes.length > 4096000) {
+            throw ProtocolException.arrayTooLong("TargetNodes", this.targetNodes.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.targetNodes.length);
+
+         for (int i = 0; i < this.targetNodes.length; i++) {
+            mem.set(PacketIO.PROTO_BYTE, (long)(varOffset + i * 1), (byte)this.targetNodes[i].getValue());
+         }
+
+         varOffset += this.targetNodes.length * 1;
+      }
+
+      return varOffset - offset;
+   }
+
    public int computeSize() {
       int size = 9;
       if (this.targetNodes != null) {
@@ -135,10 +273,18 @@ public class CameraAxis {
                return ValidationResult.error("TargetNodes exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
-            pos += targetNodesCount * 1;
-            if (pos > buffer.writerIndex()) {
+            pos += VarInt.size(targetNodesCount);
+            if (pos + targetNodesCount * 1L > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading TargetNodes");
+            }
+
+            for (int i = 0; i < targetNodesCount; i++) {
+               int v = buffer.getByte(pos) & 255;
+               if (v >= 5) {
+                  return ValidationResult.error("Invalid CameraNode value for TargetNodes[i]");
+               }
+
+               pos++;
             }
          }
 

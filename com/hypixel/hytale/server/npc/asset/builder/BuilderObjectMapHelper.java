@@ -1,10 +1,10 @@
 package com.hypixel.hytale.server.npc.asset.builder;
 
-import com.google.gson.JsonElement;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
@@ -41,37 +41,76 @@ public class BuilderObjectMapHelper<K, V> extends BuilderObjectArrayHelper<Map<K
       }
    }
 
-   @Override
-   public void readConfig(
-      @Nonnull JsonElement data,
-      @Nonnull BuilderManager builderManager,
-      @Nonnull BuilderParameters builderParameters,
-      @Nonnull BuilderValidationHelper builderValidationHelper
-   ) {
-      super.readConfig(data, builderManager, builderParameters, builderValidationHelper);
-   }
-
    @Nullable
-   public <T, U> T testEach(
+   public <T, U> T anyMatch(
       @Nonnull BiFunction<Builder<V>, U, T> test,
       @Nonnull BuilderManager builderManager,
       ExecutionContext executionContext,
       U meta,
       T successResult,
       T emptyResult,
+      T noMatchResult,
       Builder<?> parentSpawnable
    ) {
       if (this.hasNoElements()) {
          return emptyResult;
       } else {
+         assert this.builders != null;
+
          for (BuilderObjectReferenceHelper<V> builderObjectReferenceHelper : this.builders) {
             T result = test.apply(builderObjectReferenceHelper.getBuilder(builderManager, executionContext, parentSpawnable), meta);
-            if (!Objects.equals(result, successResult)) {
+            if (Objects.equals(result, successResult)) {
                return result;
             }
          }
 
-         return successResult;
+         return noMatchResult;
+      }
+   }
+
+   @Nullable
+   public <T, U> T findFirst(
+      @Nonnull BiFunction<Builder<V>, U, T> test,
+      @Nonnull BuilderManager builderManager,
+      ExecutionContext executionContext,
+      U meta,
+      @Nullable T emptyResult,
+      Builder<?> parentSpawnable
+   ) {
+      if (this.hasNoElements()) {
+         return emptyResult;
+      } else {
+         assert this.builders != null;
+
+         for (BuilderObjectReferenceHelper<V> ref : this.builders) {
+            if (!ref.excludeFromRegularBuild()) {
+               T result = test.apply(ref.getBuilder(builderManager, executionContext, parentSpawnable), meta);
+               if (result != null) {
+                  return result;
+               }
+            }
+         }
+
+         return emptyResult;
+      }
+   }
+
+   public <A> void forEach(
+      @Nonnull BiConsumer<Builder<V>, A> action,
+      @Nonnull A argument,
+      @Nonnull BuilderManager builderManager,
+      @Nonnull ExecutionContext executionContext,
+      @Nonnull Builder<?> parent
+   ) {
+      if (!this.hasNoElements()) {
+         assert this.builders != null;
+
+         for (BuilderObjectReferenceHelper<V> builderObjectReferenceHelper : this.builders) {
+            if (!builderObjectReferenceHelper.excludeFromRegularBuild()) {
+               Builder<V> builder = builderObjectReferenceHelper.getBuilder(builderManager, executionContext, parent);
+               action.accept(builder, argument);
+            }
+         }
       }
    }
 }

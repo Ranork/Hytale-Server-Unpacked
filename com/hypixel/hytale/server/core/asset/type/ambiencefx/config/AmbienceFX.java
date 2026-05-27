@@ -5,7 +5,10 @@ import com.hypixel.hytale.assetstore.AssetKeyValidator;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
+import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.IndexedAssetMap;
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -15,7 +18,12 @@ import com.hypixel.hytale.codec.schema.metadata.ui.UIEditorSectionStart;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.ArrayUtil;
+import com.hypixel.hytale.protocol.AmbienceStateWrite;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategory;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AmbienceStateWriteConfig;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.lang.ref.SoftReference;
 import java.util.Arrays;
@@ -50,12 +58,21 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
       )
       .metadata(new UIEditorSectionStart("Audio"))
       .add()
-      .appendInherited(
+      .<AmbienceFXMusic>appendInherited(
          new KeyedCodec<>("Music", AmbienceFXMusic.CODEC),
-         (ambienceFX, l) -> ambienceFX.music = l,
-         ambienceFX -> ambienceFX.music,
-         (ambienceFX, parent) -> ambienceFX.music = parent.music
+         (ambienceFX, l) -> ambienceFX.legacyMusic = l,
+         ambienceFX -> ambienceFX.legacyMusic,
+         (ambienceFX, parent) -> ambienceFX.legacyMusic = parent.legacyMusic
       )
+      .documentation("Deprecated: Use MusicContainer instead.")
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("MusicContainer", MusicContainer.CHILD_ASSET_CODEC),
+         (ambienceFX, id) -> ambienceFX.musicContainerId = id,
+         ambienceFX -> ambienceFX.musicContainerId,
+         (ambienceFX, parent) -> ambienceFX.musicContainerId = parent.musicContainerId
+      )
+      .addValidator(MusicContainer.VALIDATOR_CACHE.getValidator())
       .add()
       .appendInherited(
          new KeyedCodec<>("AmbientBed", AmbienceFXAmbientBed.CODEC),
@@ -97,9 +114,39 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
       .addValidator(AudioCategory.VALIDATOR_CACHE.getValidator())
       .documentation("Audio category to assign this ambienceFX to for additional property routing. Only affects ambient bed and music, not emitters.")
       .add()
+      .<AmbienceStateWriteConfig[]>append(
+         new KeyedCodec<>("SetStates", AmbienceStateWriteConfig.CODEC_ARRAY), (ambienceFX, v) -> ambienceFX.setStates = v, ambienceFX -> ambienceFX.setStates
+      )
+      .documentation(
+         "When this AmbienceFX asset becomes active on the client, these states will be set. Targets must be AudioState assets with Authority: Client."
+      )
+      .add()
       .afterDecode(ambienceFX -> {
          if (ambienceFX.audioCategoryId != null) {
             ambienceFX.audioCategoryIndex = AudioCategory.getAssetMap().getIndex(ambienceFX.audioCategoryId);
+         }
+
+         AudioStateResolver.resolveSetStates(ambienceFX.setStates);
+         if (ambienceFX.sounds != null) {
+            for (AmbienceFXSound sound : ambienceFX.sounds) {
+               AudioStateResolver.resolveBindings(sound.getStateBindings());
+            }
+         }
+
+         if (ambienceFX.ambientBed != null) {
+            AudioStateResolver.resolveBindings(ambienceFX.ambientBed.getStateBindings());
+         }
+      })
+      .validator((ambienceFX, results) -> {
+         AudioStateResolver.validateSetStates(ambienceFX.setStates, "AmbienceFX '" + ambienceFX.id + "'", results);
+         if (ambienceFX.sounds != null) {
+            for (int si = 0; si < ambienceFX.sounds.length; si++) {
+               AudioStateResolver.validateBindings(ambienceFX.sounds[si].getStateBindings(), "AmbienceFX '" + ambienceFX.id + "' Sounds[" + si + "]", results);
+            }
+         }
+
+         if (ambienceFX.ambientBed != null) {
+            AudioStateResolver.validateBindings(ambienceFX.ambientBed.getStateBindings(), "AmbienceFX '" + ambienceFX.id + "' AmbientBed", results);
          }
       })
       .build();
@@ -114,7 +161,11 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
    protected String id;
    protected AmbienceFXConditions conditions;
    protected AmbienceFXSound[] sounds;
-   protected AmbienceFXMusic music;
+   protected AmbienceFXMusic legacyMusic;
+   @Nullable
+   protected String musicContainerId;
+   protected transient int musicContainerIndex;
+   protected transient boolean musicContainerIndexResolved;
    protected AmbienceFXAmbientBed ambientBed;
    protected AmbienceFXSoundEffect soundEffect;
    protected int priority = 0;
@@ -122,6 +173,8 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
    @Nullable
    protected String audioCategoryId = null;
    protected transient int audioCategoryIndex = 0;
+   @Nullable
+   public AmbienceStateWriteConfig[] setStates;
    private SoftReference<com.hypixel.hytale.protocol.AmbienceFX> cachedPacket;
 
    public static AssetStore<String, AmbienceFX, IndexedAssetMap<String, AmbienceFX>> getAssetStore() {
@@ -159,10 +212,8 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
             packet.sounds = ArrayUtil.copyAndMutate(this.sounds, AmbienceFXSound::toPacket, com.hypixel.hytale.protocol.AmbienceFXSound[]::new);
          }
 
-         if (this.music != null) {
-            packet.music = this.music.toPacket();
-         }
-
+         this.resolveMusicContainerIndex();
+         packet.musicContainerIndex = this.musicContainerIndex;
          if (this.ambientBed != null) {
             packet.ambientBed = this.ambientBed.toPacket();
          }
@@ -181,6 +232,14 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
          }
 
          packet.audioCategoryIndex = this.audioCategoryIndex;
+         if (this.setStates != null && this.setStates.length > 0) {
+            packet.setStates = new AmbienceStateWrite[this.setStates.length];
+
+            for (int i = 0; i < this.setStates.length; i++) {
+               packet.setStates[i] = this.setStates[i].toPacket();
+            }
+         }
+
          this.cachedPacket = new SoftReference<>(packet);
          return packet;
       }
@@ -188,6 +247,41 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
 
    public String getId() {
       return this.id;
+   }
+
+   public void refreshAudioStateResolution() {
+      if (this.ambientBed != null) {
+         AudioStateResolver.resolveBindings(this.ambientBed.stateBindings);
+      }
+
+      if (this.sounds != null) {
+         for (AmbienceFXSound sound : this.sounds) {
+            if (sound != null) {
+               AudioStateResolver.resolveBindings(sound.stateBindings);
+            }
+         }
+      }
+
+      AudioStateResolver.resolveSetStates(this.setStates);
+      this.cachedPacket = null;
+   }
+
+   public static void onAudioStateLoaded(@Nonnull LoadedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
+      if (!event.isInitial()) {
+         refreshAllAudioStateResolutions();
+      }
+   }
+
+   public static void onAudioStateRemoved(@Nonnull RemovedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
+      refreshAllAudioStateResolutions();
+   }
+
+   private static void refreshAllAudioStateResolutions() {
+      for (AmbienceFX ambFX : getAssetMap().getAssetMap().values()) {
+         if (ambFX != null) {
+            ambFX.refreshAudioStateResolution();
+         }
+      }
    }
 
    public AmbienceFXConditions getConditions() {
@@ -198,8 +292,39 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
       return this.sounds;
    }
 
-   public AmbienceFXMusic getMusic() {
-      return this.music;
+   public int getMusicContainerIndex() {
+      this.resolveMusicContainerIndex();
+      return this.musicContainerIndex;
+   }
+
+   private void resolveMusicContainerIndex() {
+      if (!this.musicContainerIndexResolved) {
+         this.musicContainerIndexResolved = true;
+         if (this.musicContainerId != null) {
+            this.musicContainerIndex = MusicContainer.getAssetMap().getIndex(this.musicContainerId);
+         }
+      }
+   }
+
+   @Nullable
+   public AmbienceFXMusic consumeLegacyMusic() {
+      if (this.legacyMusic != null && this.musicContainerId == null) {
+         AmbienceFXMusic legacy = this.legacyMusic;
+         this.musicContainerId = "_legacy_" + this.id;
+         this.legacyMusic = null;
+         return legacy;
+      } else {
+         return null;
+      }
+   }
+
+   @Nullable
+   public String getAudioCategoryId() {
+      return this.audioCategoryId;
+   }
+
+   public int getAudioCategoryIndex() {
+      return this.audioCategoryIndex;
    }
 
    public AmbienceFXAmbientBed getAmbientBed() {
@@ -227,8 +352,8 @@ public class AmbienceFX implements JsonAssetWithMap<String, IndexedAssetMap<Stri
          + this.conditions
          + ", sounds="
          + Arrays.toString((Object[])this.sounds)
-         + ", music="
-         + this.music
+         + ", musicContainerIndex="
+         + this.musicContainerIndex
          + ", ambientBed="
          + this.ambientBed
          + ", soundEffect='"

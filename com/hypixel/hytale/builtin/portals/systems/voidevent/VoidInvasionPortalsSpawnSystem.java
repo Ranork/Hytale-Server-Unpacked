@@ -24,10 +24,9 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
@@ -40,6 +39,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntityStore> {
    @Nonnull
@@ -85,7 +86,7 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
          if (portalPos != null) {
             Holder<EntityStore> voidSpawnerHolder = EntityStore.REGISTRY.newHolder();
             voidSpawnerHolder.addComponent(VoidSpawner.getComponentType(), new VoidSpawner());
-            voidSpawnerHolder.addComponent(TransformComponent.getComponentType(), new TransformComponent(portalPos, new Vector3f()));
+            voidSpawnerHolder.addComponent(TransformComponent.getComponentType(), new TransformComponent(portalPos, new Rotation3f()));
             Ref<EntityStore> voidSpawner = commandBuffer.addEntity(voidSpawnerHolder, AddReason.SPAWN);
             voidEventComponent.getVoidSpawners().add(portalPos, voidSpawner);
             VoidEventConfig eventConfig = VoidEvent.getConfig(world);
@@ -93,7 +94,7 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
                LOGGER.at(Level.WARNING).log("There's a Void Event entity but no void event config in the gameplay config");
             } else {
                InvasionPortalConfig invasionPortalConfig = eventConfig.getInvasionPortalConfig();
-               Vector3i portalBlockPos = portalPos.toVector3i();
+               Vector3i portalBlockPos = Vector3dUtil.toVector3i(portalPos);
                long chunkIndex = ChunkUtil.indexChunkFromBlock(portalBlockPos.x, portalBlockPos.z);
                world.getChunkAsync(chunkIndex)
                   .thenAcceptAsync(
@@ -135,7 +136,7 @@ public class VoidInvasionPortalsSpawnSystem extends DelayedEntitySystem<EntitySt
             if (playerTransform == null) {
                return null;
             } else {
-               Vector3d originPosition = playerTransform.getPosition().clone().add(0.0, 5.0, 0.0);
+               Vector3d originPosition = new Vector3d(playerTransform.getPosition()).add(0.0, 5.0, 0.0);
                Vector3d direction = playerTransform.getDirection();
                SpatialHashGrid<Ref<EntityStore>> existingSpawners = voidEvent.getVoidSpawners();
                NotNearAnyInHashGrid noNearbySpawners = new NotNearAnyInHashGrid(existingSpawners, 62.0);

@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.iterator.SpiralIterator;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -19,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ChunkResendCommand extends AbstractTargetPlayerCommand {
    @Nonnull
@@ -52,8 +52,8 @@ public class ChunkResendCommand extends AbstractTargetPlayerCommand {
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      int chunkX = MathUtil.floor(position.getX()) >> 5;
-      int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+      int chunkX = MathUtil.floor(position.x()) >> 5;
+      int chunkZ = MathUtil.floor(position.z()) >> 5;
       if (this.clearCacheArg.provided(context)) {
          ChunkStore chunkStore = world.getChunkStore();
          Store<ChunkStore> chunkStoreStore = chunkStore.getStore();

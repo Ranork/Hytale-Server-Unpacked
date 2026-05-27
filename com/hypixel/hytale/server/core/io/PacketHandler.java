@@ -1,9 +1,7 @@
 package com.hypixel.hytale.server.core.io;
 
-import com.google.common.flogger.LazyArgs;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
-import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.NetworkUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.metrics.MetricsRegistry;
@@ -14,32 +12,25 @@ import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.io.PacketStatsRecorder;
-import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
 import com.hypixel.hytale.protocol.packets.connection.DisconnectType;
 import com.hypixel.hytale.protocol.packets.connection.Ping;
 import com.hypixel.hytale.protocol.packets.connection.Pong;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
-import com.hypixel.hytale.protocol.packets.connection.ServerDisconnect;
 import com.hypixel.hytale.protocol.packets.stream.StreamType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
 import com.hypixel.hytale.server.core.io.adapter.PacketAdapters;
 import com.hypixel.hytale.server.core.io.handlers.login.AuthenticationPacketHandler;
 import com.hypixel.hytale.server.core.io.handlers.login.PasswordPacketHandler;
-import com.hypixel.hytale.server.core.io.netty.NettyUtil;
-import com.hypixel.hytale.server.core.io.transport.QUICTransport;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.receiver.IPacketReceiver;
 import com.hypixel.hytale.server.core.util.MessageUtil;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.unix.DomainSocketAddress;
-import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamPriority;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import it.unimi.dsi.fastutil.ints.IntArrayFIFOQueue;
 import it.unimi.dsi.fastutil.ints.IntPriorityQueue;
 import it.unimi.dsi.fastutil.longs.LongArrayFIFOQueue;
@@ -53,8 +44,8 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -65,7 +56,7 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public abstract class PacketHandler implements IPacketReceiver {
+public abstract class PacketHandler implements IPacketReceiver, ConnectionHandler {
    public static final int MAX_PACKET_ID = 512;
    @Nonnull
    public static final Map<NetworkChannel, QuicStreamPriority> DEFAULT_STREAM_PRIORITIES = Map.of(
@@ -77,9 +68,8 @@ public abstract class PacketHandler implements IPacketReceiver {
       new QuicStreamPriority(1, true)
    );
    private static final HytaleLogger LOGIN_TIMING_LOGGER = HytaleLogger.get("LoginTiming");
-   private static final AttributeKey<Long> LOGIN_START_ATTRIBUTE_KEY = AttributeKey.newInstance("LOGIN_START");
    @Nonnull
-   protected final Channel[] channels = new Channel[NetworkChannel.COUNT];
+   protected final ChannelConnection[] channels = new ChannelConnection[NetworkChannel.COUNT];
    @Nonnull
    protected final ProtocolVersion protocolVersion;
    @Nullable
@@ -91,7 +81,6 @@ public abstract class PacketHandler implements IPacketReceiver {
    protected final PacketHandler.PingInfo[] pingInfo;
    private float pingTimer;
    protected boolean registered;
-   private ScheduledFuture<?> timeoutTask;
    @Nullable
    protected Throwable clientReadyForChunksFutureStack;
    @Nullable
@@ -99,11 +88,11 @@ public abstract class PacketHandler implements IPacketReceiver {
    @Nonnull
    protected final PacketHandler.DisconnectReason disconnectReason = new PacketHandler.DisconnectReason();
    @Nonnull
-   private final Map<StreamType, Channel> auxiliaryChannels = Collections.synchronizedMap(new EnumMap<>(StreamType.class));
+   private final Map<StreamType, ChannelConnection> auxiliaryChannels = Collections.synchronizedMap(new EnumMap<>(StreamType.class));
    private final AtomicLong lastStreamOpenTimeNanos = new AtomicLong();
    private static final long STREAM_OPEN_MIN_INTERVAL_NANOS = TimeUnit.SECONDS.toNanos(1L);
 
-   public PacketHandler(@Nonnull Channel channel, @Nonnull ProtocolVersion protocolVersion) {
+   public PacketHandler(@Nonnull ChannelConnection channel, @Nonnull ProtocolVersion protocolVersion) {
       this.channels[0] = channel;
       this.protocolVersion = protocolVersion;
       this.pingInfo = new PacketHandler.PingInfo[PongType.VALUES.length];
@@ -114,12 +103,12 @@ public abstract class PacketHandler implements IPacketReceiver {
    }
 
    @Nonnull
-   public Channel getChannel() {
+   public ChannelConnection getChannel() {
       return this.channels[0];
    }
 
    @Nullable
-   public Channel getChannel(@Nonnull StreamType type) {
+   public ChannelConnection getChannel(@Nonnull StreamType type) {
       return type == StreamType.Game ? this.channels[0] : this.auxiliaryChannels.get(type);
    }
 
@@ -131,34 +120,39 @@ public abstract class PacketHandler implements IPacketReceiver {
       return this.protocolVersion;
    }
 
-   public final void registered(@Nullable PacketHandler oldHandler) {
+   @Override
+   public final void registered(@Nullable ConnectionHandler oldHandler) {
       this.registered = true;
       this.registered0(oldHandler);
    }
 
-   protected void registered0(@Nullable PacketHandler oldHandler) {
+   protected void registered0(@Nullable ConnectionHandler oldHandler) {
    }
 
-   public final void unregistered(@Nullable PacketHandler newHandler) {
+   @Override
+   public final void unregistered(@Nullable ConnectionHandler newHandler) {
       this.registered = false;
       this.clearTimeout();
       this.unregistered0(newHandler);
    }
 
-   protected void unregistered0(@Nullable PacketHandler newHandler) {
+   protected void unregistered0(@Nullable ConnectionHandler newHandler) {
    }
 
+   @Override
    public void handle(@Nonnull ToServerPacket packet) {
       this.accept(packet);
    }
 
    public abstract void accept(@Nonnull ToServerPacket var1);
 
+   @Override
    public void logCloseMessage() {
       HytaleLogger.getLogger().at(Level.INFO).log("%s was closed.", this.getIdentifier());
    }
 
-   public void closed(ChannelHandlerContext ctx) {
+   @Override
+   public void closed(@Nullable NetworkChannel networkChannel) {
       this.clearTimeout();
    }
 
@@ -168,7 +162,7 @@ public abstract class PacketHandler implements IPacketReceiver {
 
    public void tryFlush() {
       if (this.queuedPackets.getAndSet(0) > 0) {
-         for (Channel channel : this.channels) {
+         for (ChannelConnection channel : this.channels) {
             if (channel != null) {
                channel.flush();
             }
@@ -188,12 +182,12 @@ public abstract class PacketHandler implements IPacketReceiver {
             }
          }
 
-         Channel channel = this.channels[networkChannel.getValue()];
+         ChannelConnection channel = this.channels[networkChannel.getValue()];
          if (this.queuePackets) {
-            channel.write(cachedPackets, channel.voidPromise());
+            channel.write(cachedPackets);
             this.queuedPackets.getAndIncrement();
          } else {
-            channel.writeAndFlush(cachedPackets, channel.voidPromise());
+            channel.writeAndFlush(cachedPackets);
          }
       }
    }
@@ -210,12 +204,12 @@ public abstract class PacketHandler implements IPacketReceiver {
          }
       }
 
-      Channel channel = this.channels[networkChannel.getValue()];
+      ChannelConnection channel = this.channels[networkChannel.getValue()];
       if (this.queuePackets) {
-         channel.write(cachedPackets, channel.voidPromise());
+         channel.write(cachedPackets);
          this.queuedPackets.getAndIncrement();
       } else {
-         channel.writeAndFlush(cachedPackets, channel.voidPromise());
+         channel.writeAndFlush(cachedPackets);
       }
    }
 
@@ -238,12 +232,12 @@ public abstract class PacketHandler implements IPacketReceiver {
             toSend = packet;
          }
 
-         Channel channel = this.channels[packet.getChannel().getValue()];
+         ChannelConnection channel = this.channels[packet.getChannel().getValue()];
          if (this.queuePackets) {
-            channel.write(toSend, channel.voidPromise());
+            channel.write(toSend);
             this.queuedPackets.getAndIncrement();
          } else {
-            channel.writeAndFlush(toSend, channel.voidPromise());
+            channel.writeAndFlush(toSend);
          }
       }
    }
@@ -271,22 +265,17 @@ public abstract class PacketHandler implements IPacketReceiver {
       String sni = this.getSniHostname();
       HytaleLogger.getLogger()
          .at(Level.INFO)
-         .log(
-            "Disconnecting %s (SNI: %s) with the message: %s",
-            NettyUtil.formatRemoteAddress(this.getChannel()),
-            sni,
-            MessageUtil.formatMessageToPlainString(message)
-         );
+         .log("Disconnecting %s (SNI: %s) with the message: %s", this.getChannel().formatRemoteAddress(), sni, MessageUtil.formatMessageToPlainString(message));
       this.disconnect0(message);
    }
 
    protected void disconnect0(@Nonnull FormattedMessage message) {
-      this.getChannel().writeAndFlush(new ServerDisconnect(message, DisconnectType.Disconnect)).addListener(ProtocolUtil.CLOSE_ON_COMPLETE);
+      this.getChannel().disconnect(message);
    }
 
    @Nullable
    public PacketStatsRecorder getPacketStatsRecorder() {
-      return (PacketStatsRecorder)this.getChannel().attr(PacketStatsRecorder.CHANNEL_KEY).get();
+      return this.getChannel().getPacketStatsRecorder();
    }
 
    @Nonnull
@@ -332,65 +321,39 @@ public abstract class PacketHandler implements IPacketReceiver {
    }
 
    protected void initStage(@Nonnull String stage, @Nonnull Duration timeout, @Nonnull BooleanSupplier condition) {
-      NettyUtil.TimeoutContext.init(this.getChannel(), stage, this.getIdentifier());
+      this.getChannel().initTimeoutContext(stage, this.getIdentifier());
       this.setStageTimeout(stage, timeout, condition);
    }
 
    protected void enterStage(@Nonnull String stage, @Nonnull Duration timeout, @Nonnull BooleanSupplier condition) {
-      NettyUtil.TimeoutContext.update(this.getChannel(), stage, this.getIdentifier());
+      this.getChannel().updateTimeoutContext(stage, this.getIdentifier());
       this.updatePacketTimeout(timeout);
       this.setStageTimeout(stage, timeout, condition);
    }
 
    protected void enterStage(@Nonnull String stage, @Nonnull Duration timeout) {
-      NettyUtil.TimeoutContext.update(this.getChannel(), stage, this.getIdentifier());
+      this.getChannel().updateTimeoutContext(stage, this.getIdentifier());
       this.updatePacketTimeout(timeout);
    }
 
    protected void continueStage(@Nonnull String stage, @Nonnull Duration timeout, @Nonnull BooleanSupplier condition) {
-      NettyUtil.TimeoutContext.update(this.getChannel(), stage);
+      this.getChannel().updateTimeoutContext(stage);
       this.updatePacketTimeout(timeout);
       this.setStageTimeout(stage, timeout, condition);
    }
 
    private void setStageTimeout(@Nonnull String stageId, @Nonnull Duration timeout, @Nonnull BooleanSupplier meets) {
-      if (this.timeoutTask != null) {
-         this.timeoutTask.cancel(false);
-      }
-
       if (this instanceof AuthenticationPacketHandler || !(this instanceof PasswordPacketHandler) || this.auth != null) {
-         logConnectionTimings(this.getChannel(), "Entering stage '" + stageId + "'", Level.FINEST);
-         long timeoutMillis = timeout.toMillis();
-         this.timeoutTask = this.getChannel()
-            .eventLoop()
-            .schedule(
-               () -> {
-                  if (this.getChannel().isOpen()) {
-                     if (!meets.getAsBoolean()) {
-                        NettyUtil.TimeoutContext context = (NettyUtil.TimeoutContext)this.getChannel().attr(NettyUtil.TimeoutContext.KEY).get();
-                        String duration = context != null ? FormatUtil.nanosToString(System.nanoTime() - context.connectionStartNs()) : "unknown";
-                        HytaleLogger.getLogger()
-                           .at(Level.WARNING)
-                           .log("Stage timeout for %s at stage '%s' after %s connected", this.getIdentifier(), stageId, duration);
-                        this.disconnect(Message.translation("client.general.disconnect.stageTimeout"));
-                     }
-                  }
-               },
-               timeoutMillis,
-               TimeUnit.MILLISECONDS
-            );
+         this.getChannel().setStageTimeout(stageId, timeout, meets, () -> this.disconnect(Message.translation("client.general.disconnect.stageTimeout")));
       }
    }
 
    private void updatePacketTimeout(@Nonnull Duration timeout) {
-      this.getChannel().attr(ProtocolUtil.PACKET_TIMEOUT_KEY).set(timeout);
+      this.getChannel().setPacketTimeout(timeout);
    }
 
    protected void clearTimeout() {
-      if (this.timeoutTask != null) {
-         this.timeoutTask.cancel(false);
-      }
-
+      this.getChannel().clearStageTimeout();
       if (this.clientReadyForChunksFuture != null) {
          this.clientReadyForChunksFuture.cancel(true);
          this.clientReadyForChunksFuture = null;
@@ -412,13 +375,7 @@ public abstract class PacketHandler implements IPacketReceiver {
    }
 
    public boolean isLocalConnection() {
-      SocketAddress socketAddress;
-      if (this.getChannel() instanceof QuicStreamChannel quicStreamChannel) {
-         socketAddress = quicStreamChannel.parent().remoteSocketAddress();
-      } else {
-         socketAddress = this.getChannel().remoteAddress();
-      }
-
+      SocketAddress socketAddress = this.getChannel().remoteAddress();
       if (socketAddress instanceof InetSocketAddress) {
          InetAddress address = ((InetSocketAddress)socketAddress).getAddress();
          return NetworkUtil.addressMatchesAny(address, NetworkUtil.AddressType.ANY_LOCAL, NetworkUtil.AddressType.LOOPBACK);
@@ -428,13 +385,7 @@ public abstract class PacketHandler implements IPacketReceiver {
    }
 
    public boolean isLANConnection() {
-      SocketAddress socketAddress;
-      if (this.getChannel() instanceof QuicStreamChannel quicStreamChannel) {
-         socketAddress = quicStreamChannel.parent().remoteSocketAddress();
-      } else {
-         socketAddress = this.getChannel().remoteAddress();
-      }
-
+      SocketAddress socketAddress = this.getChannel().remoteAddress();
       if (socketAddress instanceof InetSocketAddress) {
          InetAddress address = ((InetSocketAddress)socketAddress).getAddress();
          return NetworkUtil.addressMatchesAny(address);
@@ -445,9 +396,7 @@ public abstract class PacketHandler implements IPacketReceiver {
 
    @Nullable
    public String getSniHostname() {
-      return this.getChannel() instanceof QuicStreamChannel quicStreamChannel
-         ? (String)quicStreamChannel.parent().attr(QUICTransport.SNI_HOSTNAME_ATTR).get()
-         : null;
+      return this.getChannel().getSniHostname();
    }
 
    public boolean checkStreamOpenRateLimit() {
@@ -477,15 +426,15 @@ public abstract class PacketHandler implements IPacketReceiver {
    }
 
    @Nonnull
-   public Channel getChannel(@Nonnull NetworkChannel networkChannel) {
+   public ChannelConnection getChannel(@Nonnull NetworkChannel networkChannel) {
       return this.channels[networkChannel.getValue()];
    }
 
-   public void setChannel(@Nonnull NetworkChannel networkChannel, @Nonnull Channel channel) {
+   public void setChannel(@Nonnull NetworkChannel networkChannel, @Nonnull ChannelConnection channel) {
       this.channels[networkChannel.getValue()] = channel;
    }
 
-   public void setChannel(@Nonnull StreamType type, @Nullable Channel channel) {
+   public void setChannel(@Nonnull StreamType type, @Nullable ChannelConnection channel) {
       if (type == StreamType.Game) {
          throw new IllegalArgumentException("Cannot set Game stream via auxiliary channel API");
       } else {
@@ -497,13 +446,13 @@ public abstract class PacketHandler implements IPacketReceiver {
       }
    }
 
-   public boolean compareAndSetChannel(@Nonnull StreamType type, @Nullable Channel expected, @Nullable Channel newValue) {
+   public boolean compareAndSetChannel(@Nonnull StreamType type, @Nullable ChannelConnection expected, @Nullable ChannelConnection newValue) {
       if (type == StreamType.Game) {
          throw new IllegalArgumentException("Cannot CAS Game stream via auxiliary channel API");
       } else {
          synchronized (this.auxiliaryChannels) {
-            Channel current = this.auxiliaryChannels.get(type);
-            if (current == expected) {
+            ChannelConnection current = this.auxiliaryChannels.get(type);
+            if (Objects.equals(current, expected)) {
                if (newValue != null) {
                   this.auxiliaryChannels.put(type, newValue);
                } else {
@@ -522,17 +471,8 @@ public abstract class PacketHandler implements IPacketReceiver {
       return this.auxiliaryChannels.size();
    }
 
-   public static void logConnectionTimings(@Nonnull Channel channel, @Nonnull String message, @Nonnull Level level) {
-      Attribute<Long> loginStartAttribute = channel.attr(LOGIN_START_ATTRIBUTE_KEY);
-      long now = System.nanoTime();
-      Long before = (Long)loginStartAttribute.getAndSet(now);
-      NettyUtil.TimeoutContext context = (NettyUtil.TimeoutContext)channel.attr(NettyUtil.TimeoutContext.KEY).get();
-      String identifier = context != null ? context.playerIdentifier() : NettyUtil.formatRemoteAddress(channel);
-      if (before == null) {
-         LOGIN_TIMING_LOGGER.at(level).log("[%s] %s", identifier, message);
-      } else {
-         LOGIN_TIMING_LOGGER.at(level).log("[%s] %s took %s", identifier, message, LazyArgs.lazy(() -> FormatUtil.nanosToString(now - before)));
-      }
+   public static void logConnectionTimings(@Nonnull ChannelConnection connection, @Nonnull String message, @Nonnull Level level) {
+      connection.logConnectionTimings(message, level);
    }
 
    static {

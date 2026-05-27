@@ -10,12 +10,12 @@ import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.ty
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.type.ParametrizedBufferType;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.views.PixelBufferView;
 import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BiomeDistanceStage implements Stage {
    private static final double ORIGIN_REACH = 1.0;
@@ -159,13 +159,13 @@ public class BiomeDistanceStage implements Stage {
 
       assert (double)position_bufferGrid.y == 0.0;
 
-      Vector3i bufferAtPosition_bufferGrid = position_voxelGrid.clone();
+      Vector3i bufferAtPosition_bufferGrid = new Vector3i(position_voxelGrid);
       GridUtils.toBufferGrid_fromVoxelGrid(bufferAtPosition_bufferGrid);
       if (bufferAtPosition_bufferGrid.x == position_bufferGrid.x && bufferAtPosition_bufferGrid.z == position_bufferGrid.z) {
          return 0.0;
       } else {
          int cornerShift = CountedPixelBuffer.SIZE_VOXEL_GRID.x - 1;
-         Vector3i corner00 = position_bufferGrid.clone();
+         Vector3i corner00 = new Vector3i(position_bufferGrid);
          GridUtils.toVoxelGrid_fromBufferGrid(corner00);
          Vector3i corner01 = new Vector3i(corner00);
          corner01.z += cornerShift;
@@ -177,14 +177,14 @@ public class BiomeDistanceStage implements Stage {
             if (position_voxelGrid.z >= corner00.z && position_voxelGrid.z <= corner00.z + cornerShift) {
                return Math.min(Math.abs(position_voxelGrid.x - corner00.x), Math.abs(position_voxelGrid.x - corner10.x));
             } else if (position_voxelGrid.x < corner00.x && position_voxelGrid.z < corner00.z) {
-               return position_voxelGrid.distanceTo(corner00);
+               return position_voxelGrid.distance(corner00);
             } else if (position_voxelGrid.x < corner01.x && position_voxelGrid.z > corner01.z) {
-               return position_voxelGrid.distanceTo(corner01);
+               return position_voxelGrid.distance(corner01);
             } else if (position_voxelGrid.x > corner10.x && position_voxelGrid.z < corner10.z) {
-               return position_voxelGrid.distanceTo(corner10);
+               return position_voxelGrid.distance(corner10);
             } else {
                Vector3i corner11 = new Vector3i(corner10.x, 0, corner01.z);
-               return position_voxelGrid.distanceTo(corner11);
+               return position_voxelGrid.distance(corner11);
             }
          }
       }

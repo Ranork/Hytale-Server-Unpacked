@@ -1,10 +1,10 @@
 package com.hypixel.hytale.server.npc.movement;
 
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class Steering {
    public static final double DIRECTION_VECTOR_MIN_LENGTH_SQUARED = 0.1;
@@ -13,7 +13,7 @@ public class Steering {
    private double maxDistance = Double.MAX_VALUE;
    private Vector3d maxDistanceComponentSelector;
    private boolean hasTranslation;
-   private final Vector3f directionHint = new Vector3f();
+   private final Rotation3f directionHint = new Rotation3f();
    private boolean hasDirectionHint;
    private float yaw;
    private boolean hasYaw;
@@ -33,11 +33,11 @@ public class Steering {
 
    @Nonnull
    public Steering assign(@Nonnull Steering other) {
-      this.translation.assign(other.translation);
+      this.translation.set(other.translation);
       this.maxDistance = other.maxDistance;
       this.maxDistanceComponentSelector = other.maxDistanceComponentSelector;
       this.hasTranslation = other.hasTranslation;
-      this.directionHint.assign(other.directionHint);
+      this.directionHint.set(other.directionHint);
       this.hasDirectionHint = other.hasDirectionHint;
       this.yaw = other.yaw;
       this.hasYaw = other.hasYaw;
@@ -107,10 +107,10 @@ public class Steering {
 
    @Nonnull
    public Steering clearTranslation() {
-      this.translation.assign(Vector3d.ZERO);
+      this.translation.zero();
       this.maxDistance = Double.MAX_VALUE;
       this.hasTranslation = false;
-      this.directionHint.assign(Vector3f.ZERO);
+      this.directionHint.set(Rotation3f.ZERO);
       this.hasDirectionHint = false;
       return this;
    }
@@ -167,33 +167,33 @@ public class Steering {
    @Nonnull
    public Steering setTranslation(@Nonnull Vector3d translation) {
       this.hasTranslation = true;
-      this.translation.assign(translation);
+      this.translation.set(translation);
       return this;
    }
 
    @Nonnull
    public Steering setTranslation(double x, double y, double z) {
       this.hasTranslation = true;
-      this.translation.assign(x, y, z);
+      this.translation.set(x, y, z);
       return this;
    }
 
    @Nonnull
    public Steering setTranslationRelativeSpeed(double relativeSpeed) {
-      this.translation.setLength(relativeSpeed);
+      this.translation.normalize(relativeSpeed);
       return this;
    }
 
    @Nonnull
    public Steering scaleTranslation(double speedFactor) {
-      this.translation.scale(speedFactor);
+      this.translation.mul(speedFactor);
       return this;
    }
 
    @Nonnull
    public Steering ensureMinTranslation(double relativeSpeed) {
-      if (this.translation.squaredLength() < relativeSpeed * relativeSpeed && this.translation.squaredLength() > 0.0) {
-         this.translation.setLength(relativeSpeed);
+      if (this.translation.lengthSquared() < relativeSpeed * relativeSpeed && this.translation.lengthSquared() > 0.0) {
+         this.translation.normalize(relativeSpeed);
       }
 
       return this;
@@ -280,7 +280,7 @@ public class Steering {
    }
 
    @Nonnull
-   public Vector3f getDirectionHint() {
+   public Rotation3f getDirectionHint() {
       return this.directionHint;
    }
 
@@ -289,29 +289,29 @@ public class Steering {
    }
 
    @Nonnull
-   public Steering setDirectionHint(@Nonnull Vector3d direction, @Nonnull Vector3f rotation, boolean forceOverwrite) {
+   public Steering setDirectionHint(@Nonnull Vector3d direction, @Nonnull Rotation3f rotation, boolean forceOverwrite) {
       if (!forceOverwrite && this.hasDirectionHint) {
          return this;
-      } else if (direction.squaredLength() < 0.1) {
-         this.directionHint.assign(rotation);
+      } else if (direction.lengthSquared() < 0.1) {
+         this.directionHint.set(rotation);
          this.hasDirectionHint = true;
          return this;
       } else {
          this.directionHint.setYaw(PhysicsMath.headingFromDirection(direction.x, direction.z));
          this.directionHint.setPitch(PhysicsMath.pitchFromDirection(direction.x, direction.y, direction.z));
-         this.directionHint.setRoll(rotation.getRoll());
+         this.directionHint.setRoll(rotation.roll());
          this.hasDirectionHint = true;
          return this;
       }
    }
 
    @Nonnull
-   public Steering setDirectionHint(@Nonnull Vector3f rotation) {
+   public Steering setDirectionHint(@Nonnull Rotation3f rotation) {
       return this.setDirectionHint(rotation, false);
    }
 
    @Nonnull
-   public Steering setDirectionHint(@Nonnull Vector3f rotation, boolean forceOverwrite) {
+   public Steering setDirectionHint(@Nonnull Rotation3f rotation, boolean forceOverwrite) {
       return this.setDirectionHint(this.translation, rotation, forceOverwrite);
    }
 
@@ -324,7 +324,7 @@ public class Steering {
    }
 
    public float getYawOrDirection() {
-      return this.hasYaw ? this.yaw : this.directionHint.getYaw();
+      return this.hasYaw ? this.yaw : this.directionHint.yaw();
    }
 
    public boolean hasPitch() {
@@ -336,7 +336,7 @@ public class Steering {
    }
 
    public float getPitchOrDirection() {
-      return this.hasPitch ? this.pitch : this.directionHint.getPitch();
+      return this.hasPitch ? this.pitch : this.directionHint.pitch();
    }
 
    public boolean hasRoll() {
@@ -348,7 +348,7 @@ public class Steering {
    }
 
    public float getRollOrDirection() {
-      return this.hasRoll ? this.roll : this.directionHint.getRoll();
+      return this.hasRoll ? this.roll : this.directionHint.roll();
    }
 
    public double getSpeed() {

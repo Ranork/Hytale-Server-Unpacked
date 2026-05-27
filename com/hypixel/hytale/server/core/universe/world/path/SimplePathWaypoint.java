@@ -1,11 +1,11 @@
 package com.hypixel.hytale.server.core.universe.world.path;
 
 import com.hypixel.hytale.component.ComponentAccessor;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SimplePathWaypoint implements IPathWaypoint {
    private int order;
@@ -29,7 +29,7 @@ public class SimplePathWaypoint implements IPathWaypoint {
 
    @Nonnull
    @Override
-   public Vector3f getWaypointRotation(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public Rotation3f getWaypointRotation(@Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       return this.transform.getRotation();
    }
 

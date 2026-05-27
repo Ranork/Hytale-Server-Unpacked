@@ -19,29 +19,21 @@ import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktick.BlockTickStrategy;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockMigration;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
-import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.AbstractSectionPalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.EmptySectionPalette;
-import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.ISectionPalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.palette.PaletteTypeEnum;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.FillerBlockUtil;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectHeapPriorityQueue;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.lang.ref.SoftReference;
 import java.time.Instant;
 import java.util.BitSet;
@@ -52,7 +44,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
-import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -70,9 +61,9 @@ public class BlockSection implements Component<ChunkStore> {
    private IntOpenHashSet changedPositions = new IntOpenHashSet(0);
    @Nonnull
    private IntOpenHashSet swapChangedPositions = new IntOpenHashSet(0);
-   private ISectionPalette chunkSection;
-   private ISectionPalette fillerSection;
-   private ISectionPalette rotationSection;
+   private AbstractSectionPalette chunkSection;
+   private AbstractSectionPalette fillerSection;
+   private AbstractSectionPalette rotationSection;
    private ChunkLightData localLight;
    private short localChangeCounter;
    private ChunkLightData globalLight;
@@ -88,12 +79,52 @@ public class BlockSection implements Component<ChunkStore> {
    private double maximumHitboxExtent;
    @Nullable
    private transient SoftReference<CompletableFuture<CachedPacket<SetChunk>>> cachedChunkPacket;
-   @Nullable
-   @Deprecated(forRemoval = true)
-   private FluidSection migratedFluidSection;
-   @Nullable
-   @Deprecated(forRemoval = true)
-   private BlockPhysics migratedBlockPhysics;
+   private static final AbstractSectionPalette.KeyMemorySerializer FILLER_SERIALIZER = new AbstractSectionPalette.KeyMemorySerializer() {
+      @Override
+      public int serialize(MemorySegment memorySegment, int offset, int index) {
+         memorySegment.set(MemorySegmentUtil.SHORT_BE, (long)offset, (short)index);
+         return 2;
+      }
+
+      @Override
+      public int keySize(int index) {
+         return 2;
+      }
+   };
+   private static final AbstractSectionPalette.KeyMemorySerializer ROTATION_SERIALIZER = new AbstractSectionPalette.KeyMemorySerializer() {
+      @Override
+      public int serialize(MemorySegment memorySegment, int offset, int index) {
+         memorySegment.set(ValueLayout.JAVA_BYTE, (long)offset, (byte)index);
+         return 1;
+      }
+
+      @Override
+      public int keySize(int index) {
+         return 1;
+      }
+   };
+   private static final AbstractSectionPalette.KeyMemoryDeserializer FILLER_DESERIALIZER = new AbstractSectionPalette.KeyMemoryDeserializer() {
+      @Override
+      public int deserialize(MemorySegment mem, int offset) {
+         return Short.toUnsignedInt(mem.get(MemorySegmentUtil.SHORT_BE, (long)offset));
+      }
+
+      @Override
+      public int keySize(MemorySegment mem, int offset) {
+         return 2;
+      }
+   };
+   private static final AbstractSectionPalette.KeyMemoryDeserializer ROTATION_DESERIALIZER = new AbstractSectionPalette.KeyMemoryDeserializer() {
+      @Override
+      public int deserialize(MemorySegment mem, int offset) {
+         return Byte.toUnsignedInt(mem.get(ValueLayout.JAVA_BYTE, (long)offset));
+      }
+
+      @Override
+      public int keySize(MemorySegment mem, int offset) {
+         return 1;
+      }
+   };
    private static final Comparator<BlockSection.TickRequest> TICK_REQUEST_COMPARATOR = Comparator.comparing(t -> t.requestedGameTime);
 
    public static ComponentType<ChunkStore, BlockSection> getComponentType() {
@@ -104,7 +135,7 @@ public class BlockSection implements Component<ChunkStore> {
       this(EmptySectionPalette.INSTANCE, EmptySectionPalette.INSTANCE, EmptySectionPalette.INSTANCE);
    }
 
-   public BlockSection(ISectionPalette chunkSection, ISectionPalette fillerSection, ISectionPalette rotationSection) {
+   public BlockSection(AbstractSectionPalette chunkSection, AbstractSectionPalette fillerSection, AbstractSectionPalette rotationSection) {
       this.tickRequests = new ObjectHeapPriorityQueue(TICK_REQUEST_COMPARATOR);
       this.maximumHitboxExtent = -1.0;
       this.chunkSection = chunkSection;
@@ -121,11 +152,11 @@ public class BlockSection implements Component<ChunkStore> {
       this.globalChangeCounter = 0;
    }
 
-   public ISectionPalette getChunkSection() {
+   public AbstractSectionPalette getChunkSection() {
       return this.chunkSection;
    }
 
-   public void setChunkSection(ISectionPalette chunkSection) {
+   public void setChunkSection(AbstractSectionPalette chunkSection) {
       this.chunkSection = chunkSection;
    }
 
@@ -255,15 +286,15 @@ public class BlockSection implements Component<ChunkStore> {
 
          boolean changed;
          try {
-            ISectionPalette.SetResult result = this.chunkSection.set(blockIdx, blockId);
-            if (result == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
+            AbstractSectionPalette.SetResult result = this.chunkSection.set(blockIdx, blockId);
+            if (result == AbstractSectionPalette.SetResult.REQUIRES_PROMOTE) {
                this.chunkSection = this.chunkSection.promote();
-               ISectionPalette.SetResult repeatResult = this.chunkSection.set(blockIdx, blockId);
-               if (repeatResult != ISectionPalette.SetResult.ADDED_OR_REMOVED) {
+               AbstractSectionPalette.SetResult repeatResult = this.chunkSection.set(blockIdx, blockId);
+               if (repeatResult != AbstractSectionPalette.SetResult.ADDED_OR_REMOVED) {
                   throw new IllegalStateException("Promoted chunk section failed to correctly add the new block!");
                }
             } else {
-               if (result == ISectionPalette.SetResult.ADDED_OR_REMOVED) {
+               if (result == AbstractSectionPalette.SetResult.ADDED_OR_REMOVED) {
                   this.maximumHitboxExtent = -1.0;
                }
 
@@ -272,31 +303,31 @@ public class BlockSection implements Component<ChunkStore> {
                }
             }
 
-            changed = result != ISectionPalette.SetResult.UNCHANGED;
+            changed = result != AbstractSectionPalette.SetResult.UNCHANGED;
             result = this.fillerSection.set(blockIdx, filler);
-            if (result == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
+            if (result == AbstractSectionPalette.SetResult.REQUIRES_PROMOTE) {
                this.fillerSection = this.fillerSection.promote();
-               ISectionPalette.SetResult repeatResult = this.fillerSection.set(blockIdx, filler);
-               if (repeatResult != ISectionPalette.SetResult.ADDED_OR_REMOVED) {
+               AbstractSectionPalette.SetResult repeatResult = this.fillerSection.set(blockIdx, filler);
+               if (repeatResult != AbstractSectionPalette.SetResult.ADDED_OR_REMOVED) {
                   throw new IllegalStateException("Promoted chunk section failed to correctly add the new block!");
                }
             } else if (this.fillerSection.shouldDemote()) {
                this.fillerSection = this.fillerSection.demote();
             }
 
-            changed |= result != ISectionPalette.SetResult.UNCHANGED;
+            changed |= result != AbstractSectionPalette.SetResult.UNCHANGED;
             result = this.rotationSection.set(blockIdx, rotation);
-            if (result == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
+            if (result == AbstractSectionPalette.SetResult.REQUIRES_PROMOTE) {
                this.rotationSection = this.rotationSection.promote();
-               ISectionPalette.SetResult repeatResult = this.rotationSection.set(blockIdx, rotation);
-               if (repeatResult != ISectionPalette.SetResult.ADDED_OR_REMOVED) {
+               AbstractSectionPalette.SetResult repeatResult = this.rotationSection.set(blockIdx, rotation);
+               if (repeatResult != AbstractSectionPalette.SetResult.ADDED_OR_REMOVED) {
                   throw new IllegalStateException("Promoted chunk section failed to correctly add the new block!");
                }
             } else if (this.rotationSection.shouldDemote()) {
                this.rotationSection = this.rotationSection.demote();
             }
 
-            changed |= result != ISectionPalette.SetResult.UNCHANGED;
+            changed |= result != AbstractSectionPalette.SetResult.UNCHANGED;
             if (changed && this.loaded) {
                this.changedPositions.add(blockIdx);
             }
@@ -649,6 +680,8 @@ public class BlockSection implements Component<ChunkStore> {
                         this.tickingBlocksCount++;
                         this.tickingBlocks.set(index, true);
                      }
+                  case SLEEP:
+                  case IGNORED:
                }
             } finally {
                this.chunkSectionLock.unlockWrite(writeStamp);
@@ -721,337 +754,162 @@ public class BlockSection implements Component<ChunkStore> {
       }
    }
 
-   @Nullable
-   @Deprecated(forRemoval = true)
-   public FluidSection takeMigratedFluid() {
-      FluidSection temp = this.migratedFluidSection;
-      this.migratedFluidSection = null;
-      return temp;
-   }
-
-   @Nullable
-   @Deprecated(forRemoval = true)
-   public BlockPhysics takeMigratedDecoBlocks() {
-      BlockPhysics temp = this.migratedBlockPhysics;
-      this.migratedBlockPhysics = null;
-      return temp;
-   }
-
-   public void serializeForPacket(@Nonnull ByteBuf buf) {
+   public byte[] serializeForPacket() {
       long lock = this.chunkSectionLock.readLock();
 
+      byte[] var12;
       try {
+         byte[] result = new byte[1
+            + this.chunkSection.serializedPacketByteSize()
+            + 1
+            + this.fillerSection.serializedPacketByteSize()
+            + 1
+            + this.rotationSection.serializedPacketByteSize()];
+         MemorySegment data = MemorySegment.ofArray(result);
          PaletteType paletteType = this.chunkSection.getPaletteType();
          byte paletteTypeId = (byte)paletteType.ordinal();
-         buf.writeByte(paletteTypeId);
-         this.chunkSection.serializeForPacket(buf);
+         data.set(ValueLayout.JAVA_BYTE, 0L, paletteTypeId);
+         int offset = 1 + this.chunkSection.serializeForPacket(data, 1);
          PaletteType fillerType = this.fillerSection.getPaletteType();
          byte fillerTypeId = (byte)fillerType.ordinal();
-         buf.writeByte(fillerTypeId);
-         this.fillerSection.serializeForPacket(buf);
+         data.set(ValueLayout.JAVA_BYTE, (long)offset, fillerTypeId);
+         offset += 1 + this.fillerSection.serializeForPacket(data, offset + 1);
          PaletteType rotationType = this.rotationSection.getPaletteType();
          byte rotationTypeId = (byte)rotationType.ordinal();
-         buf.writeByte(rotationTypeId);
-         this.rotationSection.serializeForPacket(buf);
+         data.set(ValueLayout.JAVA_BYTE, (long)offset, rotationTypeId);
+         this.rotationSection.serializeForPacket(data, offset + 1);
+         var12 = result;
       } finally {
          this.chunkSectionLock.unlockRead(lock);
       }
-   }
 
-   public void serialize(ISectionPalette.KeySerializer keySerializer, @Nonnull ByteBuf buf) {
-      long lock = this.chunkSectionLock.readLock();
-
-      try {
-         buf.writeInt(BlockMigration.getAssetMap().getAssetCount());
-         PaletteType paletteType = this.chunkSection.getPaletteType();
-         buf.writeByte(paletteType.ordinal());
-         this.chunkSection.serialize(keySerializer, buf);
-         if (paletteType != PaletteType.Empty) {
-            BitSet combinedTickingBlock = (BitSet)this.tickingBlocks.clone();
-            combinedTickingBlock.or(this.tickingWaitAdjacentBlocks);
-            buf.writeShort(combinedTickingBlock.cardinality());
-            long[] data = combinedTickingBlock.toLongArray();
-            buf.writeShort(data.length);
-
-            for (long l : data) {
-               buf.writeLong(l);
-            }
-         }
-
-         buf.writeByte(this.fillerSection.getPaletteType().ordinal());
-         this.fillerSection.serialize(ByteBuf::writeShort, buf);
-         buf.writeByte(this.rotationSection.getPaletteType().ordinal());
-         this.rotationSection.serialize(ByteBuf::writeByte, buf);
-         this.localLight.serialize(buf);
-         this.globalLight.serialize(buf);
-         buf.writeShort(this.localChangeCounter);
-         buf.writeShort(this.globalChangeCounter);
-      } finally {
-         this.chunkSectionLock.unlockRead(lock);
-      }
+      return var12;
    }
 
    public byte[] serialize(ExtraInfo extraInfo) {
-      ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
+      long lock = this.chunkSectionLock.readLock();
 
+      byte[] var10;
       try {
-         this.serialize(BlockType.KEY_SERIALIZER, buf);
-         return ByteBufUtil.getBytesRelease(buf);
-      } catch (Throwable var4) {
-         buf.release();
-         throw SneakyThrow.sneakyThrow(var4);
-      }
-   }
-
-   public void deserialize(ToIntFunction<ByteBuf> keyDeserializer, @Nonnull ByteBuf buf, int version) {
-      int blockMigrationVersion = 0;
-      if (version >= 6) {
-         blockMigrationVersion = buf.readInt();
-      }
-
-      Function<String, String> blockMigration = null;
-      Map<Integer, BlockMigration> blockMigrationMap = BlockMigration.getAssetMap().getAssetMap();
-
-      for (BlockMigration migration = blockMigrationMap.get(blockMigrationVersion);
-         migration != null;
-         migration = blockMigrationMap.get(++blockMigrationVersion)
-      ) {
-         if (blockMigration == null) {
-            blockMigration = migration::getMigration;
+         PaletteType paletteType = this.chunkSection.getPaletteType();
+         BitSet combinedTickingBlock;
+         long[] tickingData;
+         if (paletteType != PaletteType.Empty) {
+            combinedTickingBlock = (BitSet)this.tickingBlocks.clone();
+            combinedTickingBlock.or(this.tickingWaitAdjacentBlocks);
+            tickingData = combinedTickingBlock.toLongArray();
          } else {
-            blockMigration = blockMigration.andThen(migration::getMigration);
-         }
-      }
-
-      PaletteTypeEnum typeEnum = PaletteTypeEnum.get(buf.readByte());
-      PaletteType paletteType = typeEnum.getPaletteType();
-      this.chunkSection = typeEnum.getConstructor().get();
-      if (version <= 4) {
-         ISectionPalette tempSection = typeEnum.getConstructor().get();
-         boolean[] foundMigratable = new boolean[]{false};
-         boolean[] needsPhysics = new boolean[]{false};
-         int[] nextTempIndex = new int[]{-1};
-         Int2ObjectOpenHashMap<String> types = new Int2ObjectOpenHashMap();
-         Object2IntOpenHashMap<String> typesRev = new Object2IntOpenHashMap();
-         typesRev.defaultReturnValue(Integer.MIN_VALUE);
-         Function<String, String> finalBlockMigration = blockMigration;
-         tempSection.deserialize(
-            bytebuf -> {
-               String keyx = ByteBufUtil.readUTF(bytebuf);
-               if (finalBlockMigration != null) {
-                  keyx = finalBlockMigration.apply(keyx);
-               }
-
-               int indexx = typesRev.getInt(keyx);
-               if (indexx != Integer.MIN_VALUE) {
-                  return indexx;
-               } else {
-                  boolean migratable = keyx.startsWith("Fluid_")
-                     || keyx.contains("|Fluid=")
-                     || keyx.contains("|Deco")
-                     || keyx.contains("|Support")
-                     || keyx.contains("|Filler")
-                     || keyx.contains("|Yaw=")
-                     || keyx.contains("|Pitch=")
-                     || keyx.contains("|Roll=");
-                  foundMigratable[0] |= migratable;
-                  Object var10x;
-                  if (migratable) {
-                     var10x = nextTempIndex[0]--;
-                  } else {
-                     var10x = BlockType.getBlockIdOrUnknown(keyx, "Unknown BlockType %s", keyx);
-                     needsPhysics[0] |= BlockType.getAssetMap().getAsset((int)var10x).hasSupport();
-                  }
-
-                  types.put((int)var10x, keyx);
-                  typesRev.put(keyx, (int)var10x);
-                  return (int)var10x;
-               }
-            },
-            buf,
-            version
-         );
-         if (needsPhysics[0]) {
-            this.migratedBlockPhysics = new BlockPhysics();
+            combinedTickingBlock = null;
+            tickingData = null;
          }
 
-         if (foundMigratable[0]) {
-            for (int index = 0; index < 32768; index++) {
-               int id = tempSection.get(index);
-               if (id >= 0) {
-                  this.chunkSection.set(index, id);
-               } else {
-                  Rotation rotationYaw = Rotation.None;
-                  Rotation rotationPitch = Rotation.None;
-                  Rotation rotationRoll = Rotation.None;
-                  String key = (String)types.get(id);
-                  if (key.startsWith("Fluid_") || key.contains("|Fluid=")) {
-                     if (this.migratedFluidSection == null) {
-                        this.migratedFluidSection = new FluidSection();
-                     }
-
-                     Fluid.ConversionResult result = Fluid.convertBlockToFluid(key);
-                     if (result == null) {
-                        throw new RuntimeException("Invalid Fluid Key " + key);
-                     }
-
-                     if (result.blockTypeStr == null) {
-                        this.migratedFluidSection.setFluid(index, result.fluidId, result.fluidLevel);
-                        continue;
-                     }
-
-                     key = result.blockTypeStr;
-                     this.migratedFluidSection.setFluid(index, result.fluidId, result.fluidLevel);
-                  }
-
-                  if (key.contains("|Deco")) {
-                     if (this.migratedBlockPhysics == null) {
-                        this.migratedBlockPhysics = new BlockPhysics();
-                     }
-
-                     this.migratedBlockPhysics.set(index, 15);
-                  }
-
-                  if (key.contains("|Support=")) {
-                     if (this.migratedBlockPhysics == null) {
-                        this.migratedBlockPhysics = new BlockPhysics();
-                     }
-
-                     int start = key.indexOf("|Support=") + "|Support=".length();
-                     int end = key.indexOf(124, start);
-                     if (end == -1) {
-                        end = key.length();
-                     }
-
-                     this.migratedBlockPhysics.set(index, Integer.parseInt(key, start, end, 10));
-                  }
-
-                  if (key.contains("|Filler=")) {
-                     int start = key.indexOf("|Filler=") + "|Filler=".length();
-                     int firstComma = key.indexOf(44, start);
-                     if (firstComma == -1) {
-                        throw new IllegalArgumentException("Invalid filler metadata! Missing comma");
-                     }
-
-                     int secondComma = key.indexOf(44, firstComma + 1);
-                     if (secondComma == -1) {
-                        throw new IllegalArgumentException("Invalid filler metadata! Missing second comma");
-                     }
-
-                     int end = key.indexOf(124, start);
-                     if (end == -1) {
-                        end = key.length();
-                     }
-
-                     int fillerX = Integer.parseInt(key, start, firstComma, 10);
-                     int fillerY = Integer.parseInt(key, firstComma + 1, secondComma, 10);
-                     int fillerZ = Integer.parseInt(key, secondComma + 1, end, 10);
-                     int filler = FillerBlockUtil.pack(fillerX, fillerY, fillerZ);
-                     ISectionPalette.SetResult resultx = this.fillerSection.set(index, filler);
-                     if (resultx == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
-                        this.fillerSection = this.fillerSection.promote();
-                        this.fillerSection.set(index, filler);
-                     }
-                  }
-
-                  if (key.contains("|Yaw=")) {
-                     int startx = key.indexOf("|Yaw=") + "|Yaw=".length();
-                     int endx = key.indexOf(124, startx);
-                     if (endx == -1) {
-                        endx = key.length();
-                     }
-
-                     rotationYaw = Rotation.ofDegrees(Integer.parseInt(key, startx, endx, 10));
-                  }
-
-                  if (key.contains("|Pitch=")) {
-                     int startx = key.indexOf("|Pitch=") + "|Pitch=".length();
-                     int endx = key.indexOf(124, startx);
-                     if (endx == -1) {
-                        endx = key.length();
-                     }
-
-                     rotationPitch = Rotation.ofDegrees(Integer.parseInt(key, startx, endx, 10));
-                  }
-
-                  if (key.contains("|Roll=")) {
-                     int startx = key.indexOf("|Roll=") + "|Roll=".length();
-                     int endx = key.indexOf(124, startx);
-                     if (endx == -1) {
-                        endx = key.length();
-                     }
-
-                     rotationRoll = Rotation.ofDegrees(Integer.parseInt(key, startx, endx, 10));
-                  }
-
-                  if (rotationYaw != Rotation.None || rotationPitch != Rotation.None || rotationRoll != Rotation.None) {
-                     int rotation = RotationTuple.index(rotationYaw, rotationPitch, rotationRoll);
-                     ISectionPalette.SetResult resultx = this.rotationSection.set(index, rotation);
-                     if (resultx == ISectionPalette.SetResult.REQUIRES_PROMOTE) {
-                        this.rotationSection = this.rotationSection.promote();
-                        this.rotationSection.set(index, rotation);
-                     }
-                  }
-
-                  int endOfName = key.indexOf(124);
-                  if (endOfName != -1) {
-                     key = key.substring(0, endOfName);
-                  }
-
-                  this.chunkSection.set(index, BlockType.getBlockIdOrUnknown(key, "Unknown BlockType: %s", key));
-               }
-            }
-
-            if (this.chunkSection.shouldDemote()) {
-               this.chunkSection.demote();
-            }
-         } else {
-            this.chunkSection = tempSection;
-         }
-      } else if (blockMigration != null) {
-         this.chunkSection.deserialize(bytebuf -> {
-            String keyx = ByteBufUtil.readUTF(bytebuf);
-            keyx = blockMigration.apply(keyx);
-            return BlockType.getBlockIdOrUnknown(keyx, "Unknown BlockType %s", keyx);
-         }, buf, version);
-      } else {
-         this.chunkSection.deserialize(keyDeserializer, buf, version);
-      }
-
-      if (paletteType != PaletteType.Empty) {
-         this.tickingBlocksCount = buf.readUnsignedShort();
-         int len = buf.readUnsignedShort();
-         long[] tickingBlocksData = new long[len];
-
-         for (int i = 0; i < tickingBlocksData.length; i++) {
-            tickingBlocksData[i] = buf.readLong();
+         byte[] result = new byte[5
+            + this.chunkSection.serializedByteSize(BlockType.KEY_MEMORY_SERIALIZER)
+            + (paletteType != PaletteType.Empty ? 4 + tickingData.length * 8 : 0)
+            + 1
+            + this.fillerSection.serializedByteSize(FILLER_SERIALIZER)
+            + 1
+            + this.rotationSection.serializedByteSize(ROTATION_SERIALIZER)
+            + this.localLight.serializedByteSize()
+            + this.globalLight.serializedByteSize()
+            + 2
+            + 2];
+         MemorySegment data = MemorySegment.ofArray(result);
+         data.set(MemorySegmentUtil.INT_BE, 0L, BlockMigration.getAssetMap().getAssetCount());
+         data.set(ValueLayout.JAVA_BYTE, 4L, (byte)paletteType.ordinal());
+         int offset = 5 + this.chunkSection.serialize(BlockType.KEY_MEMORY_SERIALIZER, data, 5);
+         if (paletteType != PaletteType.Empty) {
+            data.set(MemorySegmentUtil.SHORT_BE, (long)offset, (short)combinedTickingBlock.cardinality());
+            data.set(MemorySegmentUtil.SHORT_BE, (long)(offset + 2), (short)tickingData.length);
+            MemorySegment.copy(tickingData, 0, data, MemorySegmentUtil.LONG_BE, offset + 4, tickingData.length);
+            offset += 4 + tickingData.length * 8;
          }
 
-         this.tickingBlocks = BitSet.valueOf(tickingBlocksData);
-         this.tickingBlocksCount = this.tickingBlocks.cardinality();
+         data.set(ValueLayout.JAVA_BYTE, (long)offset, (byte)this.fillerSection.getPaletteType().ordinal());
+         offset += 1 + this.fillerSection.serialize(FILLER_SERIALIZER, data, offset + 1);
+         data.set(ValueLayout.JAVA_BYTE, (long)offset, (byte)this.rotationSection.getPaletteType().ordinal());
+         offset += 1 + this.rotationSection.serialize(ROTATION_SERIALIZER, data, offset + 1);
+         offset += this.localLight.serialize(data, offset);
+         offset += this.globalLight.serialize(data, offset);
+         data.set(MemorySegmentUtil.SHORT_BE, (long)offset, this.localChangeCounter);
+         data.set(MemorySegmentUtil.SHORT_BE, (long)(offset + 2), this.globalChangeCounter);
+         var10 = result;
+      } finally {
+         this.chunkSectionLock.unlockRead(lock);
       }
 
-      if (version >= 4) {
-         PaletteTypeEnum fillerTypeEnum = PaletteTypeEnum.get(buf.readByte());
-         this.fillerSection = fillerTypeEnum.getConstructor().get();
-         this.fillerSection.deserialize(ByteBuf::readUnsignedShort, buf, version);
-      }
-
-      if (version >= 5) {
-         PaletteTypeEnum rotationTypeEnum = PaletteTypeEnum.get(buf.readByte());
-         this.rotationSection = rotationTypeEnum.getConstructor().get();
-         this.rotationSection.deserialize(ByteBuf::readUnsignedByte, buf, version);
-      }
-
-      this.localLight = ChunkLightData.deserialize(buf, version);
-      this.globalLight = ChunkLightData.deserialize(buf, version);
-      this.localChangeCounter = buf.readShort();
-      this.globalChangeCounter = buf.readShort();
+      return var10;
    }
 
    public void deserialize(@Nonnull byte[] bytes, @Nonnull ExtraInfo extraInfo) {
-      ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-      this.deserialize(BlockType.KEY_DESERIALIZER, buf, extraInfo.getVersion());
+      MemorySegment data = MemorySegment.ofArray(bytes);
+      int version = extraInfo.getVersion();
+      if (version < 6) {
+         throw new IllegalArgumentException("Version not supported: " + version);
+      } else {
+         int blockMigrationVersion = data.get(MemorySegmentUtil.INT_BE, 0L);
+         final Function<String, String> blockMigration = null;
+         Map<Integer, BlockMigration> blockMigrationMap = BlockMigration.getAssetMap().getAssetMap();
+
+         for (BlockMigration migration = blockMigrationMap.get(blockMigrationVersion);
+            migration != null;
+            migration = blockMigrationMap.get(++blockMigrationVersion)
+         ) {
+            if (blockMigration == null) {
+               blockMigration = migration::getMigration;
+            } else {
+               blockMigration = blockMigration.andThen(migration::getMigration);
+            }
+         }
+
+         PaletteTypeEnum typeEnum = PaletteTypeEnum.get(data.get(ValueLayout.JAVA_BYTE, 4L));
+         PaletteType paletteType = typeEnum.getPaletteType();
+         this.chunkSection = typeEnum.getConstructor().get();
+         int offset = 5;
+         if (blockMigration != null) {
+            offset += this.chunkSection.deserialize(new AbstractSectionPalette.KeyMemoryDeserializer() {
+               {
+                  Objects.requireNonNull(BlockSection.this);
+               }
+
+               @Override
+               public int deserialize(MemorySegment mem, int offsetx) {
+                  String key = blockMigration.apply(MemorySegmentUtil.readUTF(mem, offsetx));
+                  return BlockType.getBlockIdOrUnknown(key, "Unknown BlockType %s", key);
+               }
+
+               @Override
+               public int keySize(MemorySegment mem, int offsetx) {
+                  return MemorySegmentUtil.utf8Size(mem, offsetx);
+               }
+            }, data, offset);
+         } else {
+            offset += this.chunkSection.deserialize(BlockType.KEY_MEMORY_DESERIALIZER, data, offset);
+         }
+
+         if (paletteType != PaletteType.Empty) {
+            this.tickingBlocksCount = Short.toUnsignedInt(data.get(MemorySegmentUtil.SHORT_BE, (long)offset));
+            int len = Short.toUnsignedInt(data.get(MemorySegmentUtil.SHORT_BE, (long)(offset + 2)));
+            offset += 4;
+            long[] tickingBlocksData = data.asSlice(offset, len * 8).toArray(MemorySegmentUtil.LONG_BE);
+            offset += len * 8;
+            this.tickingBlocks = BitSet.valueOf(tickingBlocksData);
+            this.tickingBlocksCount = this.tickingBlocks.cardinality();
+         }
+
+         PaletteTypeEnum fillerTypeEnum = PaletteTypeEnum.get(data.get(ValueLayout.JAVA_BYTE, (long)offset));
+         this.fillerSection = fillerTypeEnum.getConstructor().get();
+         offset += 1 + this.fillerSection.deserialize(FILLER_DESERIALIZER, data, offset + 1);
+         PaletteTypeEnum rotationTypeEnum = PaletteTypeEnum.get(data.get(ValueLayout.JAVA_BYTE, (long)offset));
+         this.rotationSection = rotationTypeEnum.getConstructor().get();
+         offset += 1 + this.rotationSection.deserialize(ROTATION_DESERIALIZER, data, offset + 1);
+         this.localLight = ChunkLightData.deserialize(data, offset);
+         offset += this.localLight.serializedByteSize();
+         this.globalLight = ChunkLightData.deserialize(data, offset);
+         offset += this.globalLight.serializedByteSize();
+         this.localChangeCounter = data.get(MemorySegmentUtil.SHORT_BE, (long)offset);
+         this.globalChangeCounter = data.get(MemorySegmentUtil.SHORT_BE, (long)(offset + 2));
+      }
    }
 
    @Override
@@ -1078,26 +936,26 @@ public class BlockSection implements Component<ChunkStore> {
             byte[] data = null;
             if (BlockChunk.SEND_LOCAL_LIGHTING_DATA && this.hasLocalLight()) {
                ChunkLightData localLight = this.getLocalLight();
-               ByteBuf buffer = Unpooled.buffer();
-               localLight.serializeForPacket(buffer);
-               if (this.getLocalChangeCounter() == localLight.getChangeId()) {
-                  localLightArr = ByteBufUtil.getBytesRelease(buffer);
+               localLightArr = new byte[localLight.serializedForPacketByteSize()];
+               MemorySegment mem = MemorySegment.ofArray(localLightArr);
+               localLight.serializeForPacket(mem, 0);
+               if (this.getLocalChangeCounter() != localLight.getChangeId()) {
+                  localLightArr = null;
                }
             }
 
             if (BlockChunk.SEND_GLOBAL_LIGHTING_DATA && this.hasGlobalLight()) {
-               ByteBuf buffer = Unpooled.buffer();
                ChunkLightData globalLight = this.getGlobalLight();
-               globalLight.serializeForPacket(buffer);
-               if (this.getGlobalChangeCounter() == globalLight.getChangeId()) {
-                  globalLightArr = ByteBufUtil.getBytesRelease(buffer);
+               globalLightArr = new byte[globalLight.serializedForPacketByteSize()];
+               MemorySegment mem = MemorySegment.ofArray(globalLightArr);
+               globalLight.serializeForPacket(mem, 0);
+               if (this.getGlobalChangeCounter() != globalLight.getChangeId()) {
+                  globalLightArr = null;
                }
             }
 
             if (!this.isSolidAir()) {
-               ByteBuf buf = Unpooled.buffer(65536);
-               this.serializeForPacket(buf);
-               data = ByteBufUtil.getBytesRelease(buf);
+               data = this.serializeForPacket();
             }
 
             SetChunk setChunk = new SetChunk(x, y, z, localLightArr, globalLightArr, data);

@@ -5,8 +5,10 @@ import com.hypixel.hytale.codec.DocumentContainingCodec;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.codec.codecs.map.ObjectMapCodec;
+import com.hypixel.hytale.codec.function.FunctionCodec;
 import com.hypixel.hytale.codec.lookup.Priority;
 import com.hypixel.hytale.codec.util.RawJsonReader;
 import com.hypixel.hytale.codec.validation.Validators;
@@ -46,6 +48,7 @@ public class HytaleServerConfig {
    public static final int DEFAULT_MAX_VIEW_RADIUS = 32;
    @Nonnull
    public static final Path PATH = Path.of("config.json");
+   public static final PluginIdentifier[] PLUGIN_IDENTIFIERS = new PluginIdentifier[0];
    @Nonnull
    public static final BuilderCodec<HytaleServerConfig> CODEC = BuilderCodec.builder(HytaleServerConfig.class, HytaleServerConfig::new)
       .versioned()
@@ -91,6 +94,15 @@ public class HytaleServerConfig {
          ),
          (o, i) -> o.modConfig = i,
          o -> o.modConfig
+      )
+      .add()
+      .append(
+         new KeyedCodec<>(
+            "ModLoadOrder",
+            new ArrayCodec<>(new FunctionCodec<>(Codec.STRING, PluginIdentifier::fromString, PluginIdentifier::toString), PluginIdentifier[]::new)
+         ),
+         (o, i) -> o.modLoadOrder = i,
+         o -> o.modLoadOrder.length == 0 ? null : o.modLoadOrder
       )
       .add()
       .<Boolean>append(new KeyedCodec<>("DefaultModsEnabled", Codec.BOOLEAN), (o, v) -> o.defaultModsEnabled = v, o -> o.defaultModsEnabled)
@@ -179,6 +191,7 @@ public class HytaleServerConfig {
    private transient Map<PluginIdentifier, ModConfig> legacyPluginConfig;
    @Nonnull
    private Map<PluginIdentifier, ModConfig> modConfig = new ConcurrentHashMap<>();
+   private PluginIdentifier[] modLoadOrder = PLUGIN_IDENTIFIERS;
    @Nullable
    private Boolean defaultModsEnabled;
    @Nonnull
@@ -327,6 +340,10 @@ public class HytaleServerConfig {
       return this.defaultModsEnabled != null ? this.defaultModsEnabled : !Constants.SINGLEPLAYER;
    }
 
+   public PluginIdentifier[] getModLoadOrder() {
+      return this.modLoadOrder;
+   }
+
    @Nonnull
    public PlayerStorageProvider getPlayerStorageProvider() {
       return this.playerStorageProvider;
@@ -420,7 +437,7 @@ public class HytaleServerConfig {
    public static HytaleServerConfig load(@Nonnull Path path) {
       if (!Files.isRegularFile(path)) {
          HytaleServerConfig hytaleServerConfig = new HytaleServerConfig();
-         if (!Options.getOptionSet().has(Options.BARE)) {
+         if (!Options.isBare()) {
             save(hytaleServerConfig).join();
          }
 

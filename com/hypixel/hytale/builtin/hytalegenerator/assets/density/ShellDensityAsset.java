@@ -8,15 +8,16 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ShellDensity;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ShellDensityAsset extends DensityAsset {
    @Nonnull
    public static final BuilderCodec<ShellDensityAsset> CODEC = BuilderCodec.builder(
          ShellDensityAsset.class, ShellDensityAsset::new, DensityAsset.ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Axis", Vector3d.CODEC, true), (t, k) -> t.axis = k, k -> k.axis)
+      .append(new KeyedCodec<>("Axis", Vector3dUtil.CODEC, true), (t, k) -> t.axis = k, k -> k.axis)
       .add()
       .append(new KeyedCodec<>("Mirror", Codec.BOOLEAN, false), (t, k) -> t.isMirrored = k, k -> k.isMirrored)
       .add()

@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.util.HashUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
 import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateRndCondition;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
@@ -16,9 +15,11 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.worldgen.chunk.ChunkGeneratorExecution;
 import com.hypixel.hytale.server.worldgen.loader.WorldGenPrefabSupplier;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
+import java.util.Objects;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PrefabPasteUtil {
    public static final int MAX_RECURSION_DEPTH = 10;
@@ -27,8 +28,8 @@ public class PrefabPasteUtil {
       @Nonnull PrefabPasteUtil.PrefabPasteBuffer buffer, PrefabRotation rotation, @Nonnull WorldGenPrefabSupplier supplier, int x, int y, int z, int cx, int cz
    ) {
       buffer.supplier = supplier;
-      buffer.posWorld.assign(x, y, z);
-      buffer.posChunk.assign(cx, y, cz);
+      buffer.posWorld.set(x, y, z);
+      buffer.posChunk.set(cx, y, cz);
       buffer.rotation = rotation;
       generate0(buffer, supplier);
       buffer.reset();
@@ -87,7 +88,8 @@ public class PrefabPasteUtil {
                }
 
                Vector3i offset = new Vector3i(buffer.posWorld.x, buffer.posWorld.y + buffer.yOffset, buffer.posWorld.z);
-               buffer.execution.getEntityChunk().addEntities(offset, buffer.rotation, clone, buffer.specificSeed);
+               int prefabInstanceId = Objects.hash(buffer.posWorld.x, buffer.posWorld.y, buffer.posWorld.z, buffer.specificSeed);
+               buffer.execution.getEntityChunk().addEntities(offset, buffer.rotation, clone, buffer.specificSeed, prefabInstanceId);
             },
             (cx, cy, cz, path, fitHeightmap, inheritSeed, inheritHeightCondition, weights, rotation, buffer) -> {
                if (buffer.depth < 10) {
@@ -104,8 +106,8 @@ public class PrefabPasteUtil {
                   PrefabRotation _rotation = buffer.rotation;
                   boolean _fitHeightmap = buffer.fitHeightmap;
                   generateChild(cx, cy, cz, path, fitHeightmap, inheritSeed, inheritHeightCondition, weights, rotation, buffer, buffer.childRandom);
-                  buffer.posChunk.assign(_localX, _localY, _localZ);
-                  buffer.posWorld.assign(_worldX, _worldY, _worldZ);
+                  buffer.posChunk.set(_localX, _localY, _localZ);
+                  buffer.posWorld.set(_worldX, _worldY, _worldZ);
                   buffer.yOffset = _yOffset;
                   buffer.originHeight = _originHeight;
                   buffer.rotation = _rotation;

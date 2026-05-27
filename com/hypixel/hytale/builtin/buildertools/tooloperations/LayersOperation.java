@@ -3,11 +3,12 @@ package com.hypixel.hytale.builtin.buildertools.tooloperations;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.accessor.BlockAccessor;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -15,9 +16,10 @@ import it.unimi.dsi.fastutil.Pair;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class LayersOperation extends ToolOperation {
-   private final Vector3i depthDirection;
+   private final Vector3i depthDirection = new Vector3i();
    private final int layerOneLength;
    private final int layerTwoLength;
    private final boolean enableLayerTwo;
@@ -37,6 +39,7 @@ public class LayersOperation extends ToolOperation {
    public LayersOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
@@ -45,31 +48,31 @@ public class LayersOperation extends ToolOperation {
 
       assert headRotationComponent != null;
 
-      String var6 = (String)this.args.tool().get("aDirection");
-      switch (var6) {
+      String var7 = (String)this.args.tool().get("aDirection");
+      switch (var7) {
          case "Up":
-            this.depthDirection = Vector3i.UP;
+            this.depthDirection.set(Vector3iUtil.UP);
             break;
          case "Down":
-            this.depthDirection = Vector3i.DOWN;
+            this.depthDirection.set(Vector3iUtil.DOWN);
             break;
          case "North":
-            this.depthDirection = Vector3i.NORTH;
+            this.depthDirection.set(Vector3iUtil.NORTH);
             break;
          case "South":
-            this.depthDirection = Vector3i.SOUTH;
+            this.depthDirection.set(Vector3iUtil.SOUTH);
             break;
          case "East":
-            this.depthDirection = Vector3i.EAST;
+            this.depthDirection.set(Vector3iUtil.EAST);
             break;
          case "West":
-            this.depthDirection = Vector3i.WEST;
+            this.depthDirection.set(Vector3iUtil.WEST);
             break;
          case "Camera":
-            this.depthDirection = headRotationComponent.getAxisDirection();
+            this.depthDirection.set(headRotationComponent.getAxisDirection());
             break;
          default:
-            this.depthDirection = Vector3i.DOWN;
+            this.depthDirection.set(Vector3iUtil.DOWN);
       }
 
       this.brushDensity = (Integer)this.args.tool().get("jBrushDensity");
@@ -99,13 +102,13 @@ public class LayersOperation extends ToolOperation {
 
       this.maxDepthNecessary = this.layerOneLength + (this.enableLayerTwo ? this.layerTwoLength : 0) + (this.enableLayerThree ? this.layerThreeLength : 0);
       if (this.enableLayerThree && !this.enableLayerTwo) {
-         player.sendMessage(Message.translation("server.builderTools.layerOperation.layerTwoRequired"));
+         playerRef.sendMessage(Message.translation("server.builderTools.layerOperation.layerTwoRequired"));
          this.failed = true;
       }
    }
 
    @Override
-   boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       if (this.failed) {
          return false;
       } else if (this.random.nextInt(100) > this.brushDensity) {

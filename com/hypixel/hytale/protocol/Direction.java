@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -32,21 +35,76 @@ public class Direction {
 
    @Nonnull
    public static Direction deserialize(@Nonnull ByteBuf buf, int offset) {
-      Direction obj = new Direction();
-      obj.yaw = buf.getFloatLE(offset + 0);
-      obj.pitch = buf.getFloatLE(offset + 4);
-      obj.roll = buf.getFloatLE(offset + 8);
-      return obj;
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("Direction", 12, buf.readableBytes() - offset);
+      } else {
+         Direction obj = new Direction();
+         obj.yaw = buf.getFloatLE(offset + 0);
+         obj.pitch = buf.getFloatLE(offset + 4);
+         obj.roll = buf.getFloatLE(offset + 8);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 12;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 12L;
+   }
+
+   public static float getYaw(MemorySegment mem) {
+      return getYaw(mem, 0);
+   }
+
+   public static float getYaw(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 0));
+   }
+
+   public static float getPitch(MemorySegment mem) {
+      return getPitch(mem, 0);
+   }
+
+   public static float getPitch(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4));
+   }
+
+   public static float getRoll(MemorySegment mem) {
+      return getRoll(mem, 0);
+   }
+
+   public static float getRoll(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 8));
+   }
+
+   public static Direction toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Direction toObject(MemorySegment mem, int offset) {
+      if (offset + 12 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Direction", offset + 12, (int)mem.byteSize());
+      } else {
+         return new Direction(
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 8))
+         );
+      }
+   }
+
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeFloatLE(this.yaw);
       buf.writeFloatLE(this.pitch);
       buf.writeFloatLE(this.roll);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 0), this.yaw);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 4), this.pitch);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 8), this.roll);
+      return 12;
    }
 
    public int computeSize() {

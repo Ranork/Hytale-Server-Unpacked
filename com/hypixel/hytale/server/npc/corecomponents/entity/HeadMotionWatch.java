@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.npc.corecomponents.entity;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.IPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class HeadMotionWatch extends HeadMotionBase {
    protected static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
@@ -59,9 +59,9 @@ public class HeadMotionWatch extends HeadMotionBase {
 
          Model model = modelComponent.getModel();
          Vector3d position = transformComponent.getPosition();
-         x -= position.getX();
-         y -= position.getY() + model.getEyeHeight();
-         z -= position.getZ();
+         x -= position.x();
+         y -= position.y() + model.getEyeHeight();
+         z -= position.z();
          float yaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
          float pitch = PhysicsMath.pitchFromDirection(x, y, z);
          desiredSteering.clearTranslation();

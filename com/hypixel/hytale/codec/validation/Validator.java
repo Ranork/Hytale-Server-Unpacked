@@ -3,6 +3,7 @@ package com.hypixel.hytale.codec.validation;
 import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.codec.schema.SchemaContext;
 import com.hypixel.hytale.codec.schema.config.Schema;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import javax.annotation.Nonnull;
 
@@ -15,6 +16,10 @@ public interface Validator<T> extends BiConsumer<T, ValidationResults> {
    default LateValidator<T> late() {
       final Validator<T> current = this;
       return new LateValidator<T>() {
+         {
+            Objects.requireNonNull(Validator.this);
+         }
+
          @Override
          public void accept(T t, ValidationResults results) {
          }

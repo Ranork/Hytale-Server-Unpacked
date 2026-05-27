@@ -3,8 +3,7 @@ package com.hypixel.hytale.builtin.teleport.commands.teleport;
 import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -17,6 +16,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TeleportHomeCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -39,8 +39,8 @@ public class TeleportHomeCommand extends AbstractPlayerCommand {
 
       assert headRotationComponent != null;
 
-      Vector3d previousPos = transformComponent.getPosition().clone();
-      Vector3f previousHeadRotation = headRotationComponent.getRotation().clone();
+      Vector3d previousPos = new Vector3d(transformComponent.getPosition());
+      Rotation3f previousHeadRotation = new Rotation3f(headRotationComponent.getRotation());
       TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
       teleportHistoryComponent.append(world, previousPos, previousHeadRotation, "Home");
       Player.getRespawnPosition(ref, world.getName(), store).thenAcceptAsync(homeTransform -> {

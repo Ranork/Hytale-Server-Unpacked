@@ -12,6 +12,7 @@ import javax.annotation.Nonnull;
 public class NPCCleanCommand extends AbstractWorldCommand {
    public NPCCleanCommand() {
       super("clean", "server.commands.npc.clean.desc", true);
+      this.setPermissionGroups("hytale:ServerEditor");
    }
 
    @Override

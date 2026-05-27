@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.worldgen.modifier.event;
 
-import com.google.gson.JsonElement;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.Content;
 import com.hypixel.hytale.event.IEvent;
 import com.hypixel.hytale.procedurallib.json.SeedString;
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -10,9 +10,11 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-public interface ModifyEvent<T> extends IEvent<EventType> {
+public interface ModifyEvent<T> extends IEvent<Content.Type> {
+   SeedString<SeedStringResource> seed();
+
    @Nonnull
-   EventType type();
+   Content.Type type();
 
    @Nonnull
    FileContext<?> file();
@@ -34,7 +36,7 @@ public interface ModifyEvent<T> extends IEvent<EventType> {
    @FunctionalInterface
    public interface ContentLoader<T> {
       @Nullable
-      T load(@Nonnull JsonElement var1) throws Exception;
+      T load(@Nonnull String var1) throws Exception;
    }
 
    public static class SeedGenerator<K extends SeedStringResource> {

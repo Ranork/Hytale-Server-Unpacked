@@ -1,12 +1,12 @@
 package com.hypixel.hytale.server.worldgen.zone;
 
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.server.worldgen.biome.BiomePatternGenerator;
 import com.hypixel.hytale.server.worldgen.cave.CaveGenerator;
 import com.hypixel.hytale.server.worldgen.container.UniquePrefabContainer;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2i;
 
 public record Zone(
    int id,

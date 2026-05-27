@@ -23,7 +23,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import java.util.List;
+import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
@@ -56,7 +56,7 @@ public class ServerPlayerListModule extends JavaPlugin {
    private void onPlayerConnect(@Nonnull PlayerConnectEvent event) {
       PlayerRef joiningPlayerRef = event.getPlayerRef();
       UUID joiningPlayerUuid = joiningPlayerRef.getUuid();
-      List<PlayerRef> allPlayers = Universe.get().getPlayers();
+      Collection<PlayerRef> allPlayers = Universe.get().getPlayers();
       ServerPlayerListPlayer[] serverListPlayers = new ServerPlayerListPlayer[allPlayers.size()];
       int index = 0;
 
@@ -102,7 +102,7 @@ public class ServerPlayerListModule extends JavaPlugin {
    }
 
    private void broadcastPingUpdates() {
-      List<PlayerRef> allPlayers = Universe.get().getPlayers();
+      Collection<PlayerRef> allPlayers = Universe.get().getPlayers();
       if (!allPlayers.isEmpty()) {
          Object2IntOpenHashMap<UUID> pingMap = new Object2IntOpenHashMap(allPlayers.size());
 

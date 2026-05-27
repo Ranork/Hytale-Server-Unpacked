@@ -22,9 +22,11 @@ import com.hypixel.hytale.sneakythrow.SneakyThrow;
 import com.hypixel.hytale.storage.IndexedStorageFile;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntListIterator;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
-import it.unimi.dsi.fastutil.longs.LongSets;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap.Entry;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
@@ -63,6 +65,11 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
       IndexedStorageChunkStorageProvider.IndexedStorageCache cache = new IndexedStorageChunkStorageProvider.IndexedStorageCache();
       cache.path = world.getSavePath().resolve("chunks");
       return cache;
+   }
+
+   public void delete(@Nonnull IndexedStorageChunkStorageProvider.IndexedStorageCache cache, @Nonnull Store<ChunkStore> store) throws IOException {
+      cache.close();
+      FileUtil.deleteDirectory(cache.path);
    }
 
    public void close(@NonNullDecl IndexedStorageChunkStorageProvider.IndexedStorageCache cache, @NonNullDecl Store<ChunkStore> store) throws IOException {
@@ -216,11 +223,11 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
       }
 
       @Nonnull
-      public LongSet getIndexes() throws IOException {
+      public LongList getIndexes() throws IOException {
          if (!Files.exists(this.path)) {
-            return LongSets.EMPTY_SET;
+            return LongList.of();
          } else {
-            LongOpenHashSet chunkIndexes = new LongOpenHashSet();
+            LongArrayList chunkIndexes = new LongArrayList();
 
             try (Stream<Path> stream = Files.list(this.path)) {
                stream.forEach(SneakyThrow.sneakyConsumer(path -> {
@@ -350,7 +357,7 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
 
       @Nonnull
       @Override
-      public LongSet getIndexes() throws IOException {
+      public LongList getIndexes() throws IOException {
          return this.cache.getIndexes();
       }
 
@@ -412,13 +419,41 @@ public class IndexedStorageChunkStorageProvider implements IChunkStorageProvider
 
       @Nonnull
       @Override
-      public LongSet getIndexes() throws IOException {
+      public LongList getIndexes() throws IOException {
          return this.cache.getIndexes();
       }
 
       @Override
       public void flush() throws IOException {
          this.cache.flush();
+      }
+
+      @Override
+      public void compact(@Nullable long[] removedHint) throws IOException {
+         LongSet regions = new LongOpenHashSet();
+         if (removedHint != null) {
+            for (long c : removedHint) {
+               int rx = ChunkUtil.xOfChunkIndex(c) >> 5;
+               int rz = ChunkUtil.zOfChunkIndex(c) >> 5;
+               regions.add(ChunkUtil.indexChunk(rx, rz));
+            }
+         } else {
+            regions.addAll(this.cache.getCache().keySet());
+         }
+
+         LongIterator iter = regions.iterator();
+
+         while (iter.hasNext()) {
+            long regionKey = iter.nextLong();
+            IndexedStorageFile file = this.cache.getCache().get(regionKey);
+            if (file != null && file.getUsedBlobCount() == 0) {
+               int regionX = ChunkUtil.xOfChunkIndex(regionKey);
+               int regionZ = ChunkUtil.zOfChunkIndex(regionKey);
+               file.close();
+               this.cache.getCache().remove(regionKey);
+               Files.deleteIfExists(this.cache.path.resolve(IndexedStorageChunkStorageProvider.toFileName(regionX, regionZ)));
+            }
+         }
       }
 
       @Override

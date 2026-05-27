@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.npc.navigation;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public interface IWaypoint {
    int getLength();

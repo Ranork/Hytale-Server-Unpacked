@@ -4,13 +4,12 @@ import com.hypixel.hytale.builtin.teleport.commands.teleport.variant.TeleportOth
 import com.hypixel.hytale.builtin.teleport.commands.teleport.variant.TeleportPlayerToCoordinatesCommand;
 import com.hypixel.hytale.builtin.teleport.commands.teleport.variant.TeleportToCoordinatesCommand;
 import com.hypixel.hytale.builtin.teleport.commands.teleport.variant.TeleportToPlayerCommand;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
 
 public class TeleportCommand extends AbstractCommandCollection {
    public TeleportCommand() {
       super("tp", "server.commands.tp.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addAliases("teleport");
       this.addUsageVariant(new TeleportToCoordinatesCommand());
       this.addUsageVariant(new TeleportPlayerToCoordinatesCommand());

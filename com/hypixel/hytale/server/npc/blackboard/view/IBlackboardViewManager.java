@@ -2,10 +2,10 @@ package com.hypixel.hytale.server.npc.blackboard.view;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
 import java.util.function.Consumer;
+import org.joml.Vector3d;
 
 public interface IBlackboardViewManager<View extends IBlackboardView<View>> {
    View get(Ref<EntityStore> var1, Blackboard var2, ComponentAccessor<EntityStore> var3);

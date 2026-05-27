@@ -1,8 +1,8 @@
 package com.hypixel.hytale.server.core.modules.voice;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.Position;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
 import com.hypixel.hytale.protocol.packets.stream.StreamType;
 import com.hypixel.hytale.protocol.packets.voice.RelayedVoiceData;
 import com.hypixel.hytale.protocol.packets.voice.VoiceCodec;
@@ -11,7 +11,6 @@ import com.hypixel.hytale.protocol.packets.voice.VoiceData;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
-import io.netty.channel.Channel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -19,6 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class VoiceRouter {
    private static final int VERBOSE_LOG_PACKET_FREQUENCY = 50;
@@ -146,7 +146,7 @@ public class VoiceRouter {
                                     if (distSq <= maxDistSq) {
                                        PacketHandler handler = this.getPlayerHandler(listenerId);
                                        if (handler != null) {
-                                          Channel voiceChannel = handler.getChannel(StreamType.Voice);
+                                          ChannelConnection voiceChannel = handler.getChannel(StreamType.Voice);
                                           if (voiceChannel != null && voiceChannel.isActive()) {
                                              if (candidates == null) {
                                                 candidates = new ArrayList<>();
@@ -171,7 +171,7 @@ public class VoiceRouter {
 
                            for (VoiceRouter.ListenerCandidate candidate : candidates) {
                               RelayedVoiceData recipientRelay = createPerRecipientRelay(relay);
-                              Channel voiceChannel = candidate.handler.getChannel(StreamType.Voice);
+                              ChannelConnection voiceChannel = candidate.handler.getChannel(StreamType.Voice);
                               if (voiceChannel != null && voiceChannel.isActive()) {
                                  voiceChannel.writeAndFlush(recipientRelay);
                                  recipientCount++;

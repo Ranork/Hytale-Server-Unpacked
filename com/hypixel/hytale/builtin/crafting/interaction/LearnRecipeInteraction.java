@@ -75,7 +75,7 @@ public class LearnRecipeInteraction extends SimpleInstantInteraction {
          }
 
          Item item = Item.getAssetMap().getAsset(itemId);
-         Message itemNameMessage = item != null ? Message.translation(item.getTranslationKey()) : Message.raw("?");
+         Message itemNameMessage = item != null ? item.getTranslationMessage() : Message.raw("?");
          if (CraftingPlugin.learnRecipe(ref, itemId, commandBuffer)) {
             playerRefComponent.sendMessage(Message.translation("server.modules.learnrecipe.success").param("name", itemNameMessage));
          } else {

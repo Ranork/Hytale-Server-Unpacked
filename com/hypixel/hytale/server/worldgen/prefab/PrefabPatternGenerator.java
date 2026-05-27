@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
 import com.hypixel.hytale.server.worldgen.util.function.ICoordinateDoubleSupplier;
 import java.util.Arrays;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 
 public class PrefabPatternGenerator {
@@ -29,6 +30,8 @@ public class PrefabPatternGenerator {
    protected final boolean submerge;
    protected final int maxSize;
    protected final int exclusionRadius;
+   @Nonnull
+   protected final PrefabBaseCheck[] baseChecks;
 
    public PrefabPatternGenerator(
       int seedOffset,
@@ -46,7 +49,8 @@ public class PrefabPatternGenerator {
       boolean deepSearch,
       boolean submerge,
       int maxSize,
-      int exclusionRadius
+      int exclusionRadius,
+      PrefabBaseCheck[] baseChecks
    ) {
       this.seedOffset = seedOffset;
       this.category = category;
@@ -64,6 +68,7 @@ public class PrefabPatternGenerator {
       this.submerge = submerge;
       this.maxSize = maxSize;
       this.exclusionRadius = exclusionRadius;
+      this.baseChecks = Objects.requireNonNullElse(baseChecks, PrefabBaseCheck.EMPTY_ARRAY);
    }
 
    public PrefabCategory getCategory() {
@@ -127,10 +132,16 @@ public class PrefabPatternGenerator {
    }
 
    @Nonnull
+   public PrefabBaseCheck[] getBaseChecks() {
+      return this.baseChecks;
+   }
+
    @Override
    public String toString() {
       return "PrefabPatternGenerator{seedOffset="
          + this.seedOffset
+         + ", category="
+         + this.category
          + ", gridGenerator="
          + this.gridGenerator
          + ", heightCondition="
@@ -149,14 +160,18 @@ public class PrefabPatternGenerator {
          + this.displacement
          + ", fitHeightmap="
          + this.fitHeightmap
-         + ", submerge="
-         + this.submerge
-         + ", maxSize="
-         + this.maxSize
          + ", onWater="
          + this.onWater
          + ", deepSearch="
          + this.deepSearch
+         + ", submerge="
+         + this.submerge
+         + ", maxSize="
+         + this.maxSize
+         + ", exclusionRadius="
+         + this.exclusionRadius
+         + ", baseChecks="
+         + Arrays.toString((Object[])this.baseChecks)
          + "}";
    }
 }

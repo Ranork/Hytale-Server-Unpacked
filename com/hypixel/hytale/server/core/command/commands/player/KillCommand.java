@@ -22,6 +22,7 @@ public class KillCommand extends AbstractPlayerCommand {
    public KillCommand() {
       super("kill", "server.commands.kill.desc");
       this.requirePermission(HytalePermissions.fromCommand("kill.self"));
+      this.setPermissionGroups("hytale:Builder");
       this.addUsageVariant(new KillCommand.KillOtherCommand());
    }
 
@@ -42,6 +43,7 @@ public class KillCommand extends AbstractPlayerCommand {
       KillOtherCommand() {
          super("server.commands.kill.other.desc");
          this.requirePermission(HytalePermissions.fromCommand("kill.other"));
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

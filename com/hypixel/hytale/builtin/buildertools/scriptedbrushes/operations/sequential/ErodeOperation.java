@@ -10,12 +10,12 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class ErodeOperation extends SequenceBrushOperation {
    public static final BuilderCodec<ErodeOperation> CODEC = BuilderCodec.builder(ErodeOperation.class, ErodeOperation::new)

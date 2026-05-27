@@ -20,7 +20,6 @@ import com.hypixel.hytale.builtin.adventure.farming.interactions.UseCoopInteract
 import com.hypixel.hytale.builtin.adventure.farming.interactions.UseWateringCanInteraction;
 import com.hypixel.hytale.builtin.adventure.farming.states.CoopBlock;
 import com.hypixel.hytale.builtin.adventure.farming.states.FarmingBlock;
-import com.hypixel.hytale.builtin.adventure.farming.states.FarmingBlockState;
 import com.hypixel.hytale.builtin.adventure.farming.states.TilledSoilBlock;
 import com.hypixel.hytale.builtin.tagset.config.NPCGroup;
 import com.hypixel.hytale.component.ComponentRegistryProxy;
@@ -51,7 +50,6 @@ public class FarmingPlugin extends JavaPlugin {
    protected static FarmingPlugin instance;
    private ComponentType<ChunkStore, TilledSoilBlock> tiledSoilBlockComponentType;
    private ComponentType<ChunkStore, FarmingBlock> farmingBlockComponentType;
-   private ComponentType<ChunkStore, FarmingBlockState> farmingBlockStateComponentType;
    private ComponentType<ChunkStore, CoopBlock> coopBlockStateComponentType;
    private ComponentType<EntityStore, CoopResidentComponent> coopResidentComponentType;
 
@@ -106,7 +104,6 @@ public class FarmingPlugin extends JavaPlugin {
       this.getCodecRegistry(SpreadGrowthBehaviour.CODEC).register("Directional", DirectionalGrowthBehaviour.class, DirectionalGrowthBehaviour.CODEC);
       this.tiledSoilBlockComponentType = chunkStoreRegistry.registerComponent(TilledSoilBlock.class, "TilledSoil", TilledSoilBlock.CODEC);
       this.farmingBlockComponentType = chunkStoreRegistry.registerComponent(FarmingBlock.class, "FarmingBlock", FarmingBlock.CODEC);
-      this.farmingBlockStateComponentType = chunkStoreRegistry.registerComponent(FarmingBlockState.class, "Farming", FarmingBlockState.CODEC);
       this.coopBlockStateComponentType = chunkStoreRegistry.registerComponent(CoopBlock.class, "Coop", CoopBlock.CODEC);
       this.coopResidentComponentType = entityStoreRegistry.registerComponent(CoopResidentComponent.class, "CoopResident", CoopResidentComponent.CODEC);
       ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateInfoComponentType = BlockModule.BlockStateInfo.getComponentType();
@@ -124,7 +121,6 @@ public class FarmingPlugin extends JavaPlugin {
             this.coopBlockStateComponentType
          )
       );
-      chunkStoreRegistry.registerSystem(new FarmingSystems.MigrateFarming());
       chunkStoreRegistry.registerSystem(new FarmingSystems.OnCoopAdded(blockStateInfoComponentType, this.coopBlockStateComponentType));
       entityStoreRegistry.registerSystem(new FarmingSystems.CoopResidentEntitySystem(this.coopResidentComponentType, uuidComponentType));
       entityStoreRegistry.registerSystem(new FarmingSystems.CoopResidentTicking(this.coopResidentComponentType));
@@ -152,10 +148,6 @@ public class FarmingPlugin extends JavaPlugin {
 
    public ComponentType<ChunkStore, FarmingBlock> getFarmingBlockComponentType() {
       return this.farmingBlockComponentType;
-   }
-
-   public ComponentType<ChunkStore, FarmingBlockState> getFarmingBlockStateComponentType() {
-      return this.farmingBlockStateComponentType;
    }
 
    public ComponentType<ChunkStore, CoopBlock> getCoopBlockStateComponentType() {

@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.npc.corecomponents.entity;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
@@ -14,6 +13,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.EntityPositionProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SensorTarget extends SensorWithEntityFilters {
    protected static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
@@ -68,7 +68,7 @@ public class SensorTarget extends SensorWithEntityFilters {
                return false;
             }
 
-            double squaredDistance = position.distanceSquaredTo(targetTransformComponent.getPosition());
+            double squaredDistance = position.distanceSquared(targetTransformComponent.getPosition());
             if (squaredDistance > this.range * this.range) {
                return false;
             }

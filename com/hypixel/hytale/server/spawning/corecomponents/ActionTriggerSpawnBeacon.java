@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.spawning.corecomponents.builders.BuilderActionT
 import com.hypixel.hytale.server.spawning.util.FloodFillPositionSelector;
 import com.hypixel.hytale.server.spawning.wrappers.BeaconSpawnWrapper;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionTriggerSpawnBeacon extends ActionBase {
    protected final int beaconId;
@@ -26,7 +27,7 @@ public class ActionTriggerSpawnBeacon extends ActionBase {
    }
 
    @Override
-   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean canExecute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       return super.canExecute(ref, role, sensorInfo, dt, store)
          && (this.targetSlot == Integer.MIN_VALUE || role.getMarkedEntitySupport().hasMarkedEntityInSlot(this.targetSlot));
    }
@@ -37,7 +38,7 @@ public class ActionTriggerSpawnBeacon extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       super.execute(ref, role, sensorInfo, dt, store);
 
       for (Ref<EntityStore> spawnBeaconRef : role.getPositionCache().getSpawnBeaconList()) {

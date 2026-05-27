@@ -2,16 +2,16 @@ package com.hypixel.hytale.server.core.asset.type.model.config.camera;
 
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.protocol.Vector3f;
-import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3f;
 
 public class CameraSettings implements NetworkSerializable<com.hypixel.hytale.protocol.CameraSettings> {
    public static final BuilderCodec<CameraSettings> CODEC = BuilderCodec.builder(CameraSettings.class, CameraSettings::new)
       .addField(
-         new KeyedCodec<>("PositionOffset", ProtocolCodecs.VECTOR3F),
+         new KeyedCodec<>("PositionOffset", Vector3fUtil.CODEC),
          (cameraSettings, s) -> cameraSettings.positionOffset = s,
          cameraSettings -> cameraSettings.positionOffset
       )

@@ -7,8 +7,7 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadat
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -21,6 +20,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabEditSelectCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -55,15 +56,15 @@ public class PrefabEditSelectCommand extends AbstractPlayerCommand {
 
             assert transformComponent != null;
 
-            Vector3d playerLocation = transformComponent.getPosition().clone();
-            playerLocation.setY(0.0);
+            Vector3d playerLocation = new Vector3d(transformComponent.getPosition());
+            playerLocation.y = 0.0;
             double distance = 2.147483647E9;
 
             for (PrefabEditingMetadata value : prefabEditSession.getLoadedPrefabMetadata().values()) {
                Vector3d centerPoint = new Vector3d(
                   (value.getMaxPoint().x + value.getMinPoint().x) / 2.0, 0.0, (value.getMaxPoint().z + value.getMinPoint().z) / 2.0
                );
-               double distanceTo = centerPoint.distanceTo(playerLocation);
+               double distanceTo = centerPoint.distance(playerLocation);
                if (distance > distanceTo) {
                   distance = distanceTo;
                   prefabEditingMetadata = value;
@@ -106,7 +107,7 @@ public class PrefabEditSelectCommand extends AbstractPlayerCommand {
          Ref<EntityStore> targetEntityRef = TargetUtil.getTargetEntity(ref, componentAccessor);
          if (targetEntityRef != null && targetEntityRef.isValid()) {
             TransformComponent entityTransformComponent = componentAccessor.getComponent(targetEntityRef, TransformComponent.getComponentType());
-            return entityTransformComponent == null ? null : entityTransformComponent.getPosition().toVector3i();
+            return entityTransformComponent == null ? null : Vector3dUtil.toVector3i(entityTransformComponent.getPosition());
          } else {
             return null;
          }

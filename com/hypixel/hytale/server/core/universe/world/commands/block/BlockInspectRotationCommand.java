@@ -6,8 +6,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
@@ -22,6 +20,8 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class BlockInspectRotationCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -31,7 +31,7 @@ public class BlockInspectRotationCommand extends AbstractPlayerCommand {
 
    public BlockInspectRotationCommand() {
       super("inspectrotation", "server.commands.block.inspectrotation.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override
@@ -43,9 +43,9 @@ public class BlockInspectRotationCommand extends AbstractPlayerCommand {
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      int x = MathUtil.floor(position.getX());
-      int z = MathUtil.floor(position.getZ());
-      int y = MathUtil.floor(position.getY());
+      int x = MathUtil.floor(position.x());
+      int z = MathUtil.floor(position.z());
+      int y = MathUtil.floor(position.y());
       int chunkX = ChunkUtil.chunkCoordinate(x);
       int chunkY = ChunkUtil.chunkCoordinate(y);
       int chunkZ = ChunkUtil.chunkCoordinate(z);

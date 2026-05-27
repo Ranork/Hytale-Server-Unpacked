@@ -9,8 +9,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.RotatorDensity;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class CylinderDensityAsset extends DensityAsset {
    @Nonnull
@@ -21,7 +22,7 @@ public class CylinderDensityAsset extends DensityAsset {
       .add()
       .append(new KeyedCodec<>("AxialCurve", CurveAsset.CODEC, true), (t, k) -> t.axialCurveAsset = k, k -> k.axialCurveAsset)
       .add()
-      .append(new KeyedCodec<>("NewYAxis", Vector3d.CODEC, false), (t, k) -> {
+      .append(new KeyedCodec<>("NewYAxis", Vector3dUtil.CODEC, false), (t, k) -> {
          if (k.length() != 0.0) {
             t.newYAxis = k;
          }

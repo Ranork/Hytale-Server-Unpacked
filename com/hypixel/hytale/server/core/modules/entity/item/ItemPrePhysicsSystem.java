@@ -10,8 +10,6 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.NearestBlockUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -27,6 +25,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class ItemPrePhysicsSystem extends EntityTickingSystem<EntityStore> {
    public static final NearestBlockUtil.IterationElement[] SEARCH_ELEMENTS = new NearestBlockUtil.IterationElement[]{
@@ -140,7 +140,7 @@ public class ItemPrePhysicsSystem extends EntityTickingSystem<EntityStore> {
                   return testBlockType.getMaterial() != BlockMaterial.Solid;
                }, chunk);
                if (nearestBlock != null) {
-                  position.assign(nearestBlock.x + 0.5, nearestBlock.y, nearestBlock.z + 0.5);
+                  position.set(nearestBlock.x + 0.5, nearestBlock.y, nearestBlock.z + 0.5);
                } else {
                   velocityComponent.setY(7.0 * blockBoundingBoxes.getBoundingBox().height());
                }

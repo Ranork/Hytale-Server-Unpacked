@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.npc.components.messaging;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class EventMessage extends NPCMessage {
    private final Vector3d position = new Vector3d();
@@ -15,7 +15,7 @@ public class EventMessage extends NPCMessage {
    }
 
    private EventMessage(@Nonnull Vector3d position, double maxRangeSquared, boolean sameFlock) {
-      this.position.assign(position);
+      this.position.set(position);
       this.maxRangeSquared = maxRangeSquared;
       this.sameFlock = sameFlock;
    }
@@ -39,7 +39,7 @@ public class EventMessage extends NPCMessage {
 
    public void activate(double x, double y, double z, Ref<EntityStore> target, double age) {
       super.activate(target, age);
-      this.position.assign(x, y, z);
+      this.position.set(x, y, z);
    }
 
    @Nonnull

@@ -13,12 +13,19 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.shape.Box;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.ColorLight;
 import com.hypixel.hytale.protocol.ItemUpdate;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.model.BlockyModelBoundsParser;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
 import com.hypixel.hytale.server.core.modules.entity.component.DynamicLight;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PropComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.entity.tracker.NetworkId;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -43,7 +50,26 @@ public class ItemSystems {
          }
 
          holder.ensureComponent(ItemPhysicsComponent.getComponentType());
-         holder.putComponent(BoundingBox.getComponentType(), new BoundingBox(Box.horizontallyCentered(0.5, 0.5, 0.5)));
+         if (!holder.getArchetype().contains(BoundingBox.getComponentType())) {
+            ModelComponent modelComponent = holder.getComponent(ModelComponent.getComponentType());
+            Box modelBox = modelComponent != null && modelComponent.getModel() != null ? modelComponent.getModel().getBoundingBox() : null;
+            if (modelBox == null && holder.getArchetype().contains(PropComponent.getComponentType())) {
+               modelBox = resolveItemBounds(holder);
+            }
+
+            BoundingBox box = new BoundingBox(modelBox != null ? modelBox : Box.horizontallyCentered(0.5, 0.5, 0.5));
+            if (modelBox != null) {
+               box.setBaseModelBox(modelBox);
+               TransformComponent transform = holder.getComponent(TransformComponent.getComponentType());
+               if (transform != null) {
+                  Rotation3f rotation = transform.getRotation();
+                  box.applyRotation(rotation.pitch(), rotation.yaw(), rotation.roll());
+               }
+            }
+
+            holder.putComponent(BoundingBox.getComponentType(), box);
+         }
+
          ItemComponent itemComponent = holder.getComponent(ItemComponent.getComponentType());
 
          assert itemComponent != null;
@@ -51,6 +77,41 @@ public class ItemSystems {
          ColorLight itemDynamicLight = itemComponent.computeDynamicLight();
          if (itemDynamicLight != null) {
             holder.putComponent(DynamicLight.getComponentType(), new DynamicLight(itemDynamicLight));
+         }
+      }
+
+      @Nullable
+      private static Box resolveItemBounds(@Nonnull Holder<EntityStore> holder) {
+         ItemComponent itemComponent = holder.getComponent(ITEM_COMPONENT_TYPE);
+         if (itemComponent == null) {
+            return null;
+         } else {
+            ItemStack itemStack = itemComponent.getItemStack();
+            if (itemStack == null) {
+               return null;
+            } else {
+               Item item = Item.getAssetMap().getAsset(itemStack.getItemId());
+               if (item == null) {
+                  return null;
+               } else {
+                  String modelId = item.getModel();
+                  if (modelId != null) {
+                     ModelAsset modelAsset = ModelAsset.getAssetMap().getAsset(modelId);
+                     if (modelAsset != null) {
+                        return modelAsset.getBoundingBox();
+                     }
+                  }
+
+                  if (modelId != null) {
+                     Box blockyBounds = BlockyModelBoundsParser.computeBounds(modelId);
+                     if (blockyBounds != null) {
+                        return blockyBounds;
+                     }
+                  }
+
+                  return null;
+               }
+            }
          }
       }
 
@@ -109,7 +170,12 @@ public class ItemSystems {
             entityScale = entityScaleComponent.getScale();
          }
 
-         if (itemComponent.consumeNetworkOutdated()) {
+         boolean scaleOutdated = false;
+         if (entityScaleComponent != null) {
+            scaleOutdated = entityScaleComponent.consumeNetworkOutdated();
+         }
+
+         if (itemComponent.consumeNetworkOutdated() || scaleOutdated) {
             queueUpdatesFor(archetypeChunk.getReferenceTo(index), itemComponent, entityScale, visibleComponent.visibleTo);
          } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
             queueUpdatesFor(archetypeChunk.getReferenceTo(index), itemComponent, entityScale, visibleComponent.newlyVisibleTo);

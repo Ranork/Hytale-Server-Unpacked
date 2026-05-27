@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.buildertools.tooloperations.transform;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class Translate implements Transform {
    private final int x;
@@ -27,7 +27,7 @@ public class Translate implements Transform {
 
    @Nonnull
    public static Transform of(@Nonnull Vector3i vector) {
-      return of(vector.getX(), vector.getY(), vector.getZ());
+      return of(vector.x(), vector.y(), vector.z());
    }
 
    @Nonnull

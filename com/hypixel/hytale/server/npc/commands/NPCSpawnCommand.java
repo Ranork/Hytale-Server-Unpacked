@@ -10,8 +10,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.PlayerSkin;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
@@ -55,6 +55,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class NPCSpawnCommand extends AbstractPlayerCommand {
    private static final double PLAYER_FOOT_POINT_EPSILON = 0.01;
@@ -116,7 +117,7 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
 
       assert headRotationComponent != null;
 
-      Vector3f playerHeadRotation = headRotationComponent.getRotation();
+      Rotation3f playerHeadRotation = headRotationComponent.getRotation();
       TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
 
       assert transformComponent != null;
@@ -131,23 +132,23 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
       double radius = this.radiusArg.provided(context) ? this.radiusArg.get(context) : 8.0;
       String flagsString = this.flagsArg.provided(context) ? this.flagsArg.get(context) : null;
       EnumSet<RoleDebugFlags> flags = flagsString != null ? RoleDebugFlags.getFlags(flagsString.split(",")) : RoleDebugFlags.getPreset("none");
-      Vector3d velocity = new Vector3d(Vector3d.ZERO);
+      Vector3d velocity = new Vector3d(Vector3dUtil.ZERO);
       if (this.speedArg.provided(context)) {
-         PhysicsMath.vectorFromAngles(playerHeadRotation.getYaw(), playerHeadRotation.getPitch(), velocity);
-         velocity.setLength(this.speedArg.get(context));
+         PhysicsMath.vectorFromAngles(playerHeadRotation.yaw(), playerHeadRotation.pitch(), velocity);
+         velocity.normalize(this.speedArg.get(context));
       }
 
       Random random = (Random)(this.nonRandomArg.get(context) ? new Random(0L) : ThreadLocalRandom.current());
       Vector3d posOffset = this.posOffsetArg.provided(context) ? this.parseVector3d(context, this.posOffsetArg.get(context)) : null;
-      Vector3f headRotation = this.headRotationArg.provided(context) ? this.parseVector3f(context, this.headRotationArg.get(context)) : null;
+      Rotation3f headRotation = this.headRotationArg.provided(context) ? this.parseVector3f(context, this.headRotationArg.get(context)) : null;
       boolean randomRotation = false;
-      Vector3f rotation = playerHeadRotation;
+      Rotation3f rotation = new Rotation3f(0.0F, playerHeadRotation.y(), 0.0F);
       if (this.bodyRotationArg.provided(context)) {
          rotation = this.parseVector3f(context, this.bodyRotationArg.get(context));
       } else if (this.randomRotationArg.get(context)) {
          randomRotation = true;
       } else if (this.facingRotationArg.get(context)) {
-         playerHeadRotation.setY(playerHeadRotation.getY() - (float) Math.PI);
+         rotation.setY(rotation.y() - (float) Math.PI);
       }
 
       String flockSizeString = this.flockArg.provided(context) ? this.flockArg.get(context) : "1";
@@ -194,7 +195,7 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
                   }
 
                   if (randomRotation) {
-                     rotation = new Vector3f(0.0F, (float)(2.0 * random.nextDouble() * Math.PI), 0.0F);
+                     rotation = new Rotation3f(0.0F, (float)(2.0 * random.nextDouble() * Math.PI), 0.0F);
                   }
 
                   if (this.scaleArg.provided(context)) {
@@ -243,7 +244,7 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
                         position.y = position.y - model.getBoundingBox().min.y;
                      } else {
                         position = new Vector3d(playerPosition);
-                        position.y = Math.floor(position.y + playerBoundingBox.min.y + 0.01) - model.getBoundingBox().min.y;
+                        position.y = position.y + playerBoundingBox.min.y + 0.01 - model.getBoundingBox().min.y;
                      }
 
                      if (posOffset != null) {
@@ -271,14 +272,14 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
                   assert npcUuidComponent != null;
 
                   if (headRotation != null) {
-                     npcHeadRotationComponent.getRotation().assign(headRotation);
+                     npcHeadRotationComponent.getRotation().set(headRotation);
                      store.ensureComponent(npcRef, Frozen.getComponentType());
                   }
 
                   Vector3d npcPosition = npcTransformComponent.getPosition();
-                  double x = npcPosition.getX();
-                  double y = npcPosition.getY();
-                  double z = npcPosition.getZ();
+                  double x = npcPosition.x();
+                  double y = npcPosition.y();
+                  double z = npcPosition.z();
                   if (count > 1) {
                      x += random.nextDouble() * 2.0 * radius - radius;
                      z += random.nextDouble() * 2.0 * radius - radius;
@@ -287,10 +288,10 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
                      y += 0.1;
                   }
 
-                  npcPosition.assign(x, y, z);
+                  npcPosition.set(x, y, z);
                   npc.saveLeashInformation(npcPosition, npcTransformComponent.getRotation());
-                  if (!velocity.equals(Vector3d.ZERO)) {
-                     npc.getRole().forceVelocity(velocity, null, false);
+                  if (!velocity.equals(Vector3dUtil.ZERO)) {
+                     npc.getRole().setVelocity(velocity, null, false);
                   }
 
                   if (frozen) {
@@ -308,7 +309,7 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
                   NPCPlugin.get()
                      .getLogger()
                      .at(Level.INFO)
-                     .log("%s created with id %s at position %s", npc.getRoleName(), npcUuidComponent.getUuid(), Vector3d.formatShortString(npcPosition));
+                     .log("%s created with id %s at position %s", npc.getRoleName(), npcUuidComponent.getUuid(), Vector3dUtil.formatShortString(npcPosition));
                }
             } catch (IllegalStateException | NullPointerException | IllegalArgumentException var49) {
                NPCPlugin.get().getLogger().at(Level.WARNING).log("Spawn failed: " + var49.getMessage());
@@ -335,14 +336,14 @@ public class NPCSpawnCommand extends AbstractPlayerCommand {
    }
 
    @Nullable
-   private Vector3f parseVector3f(@Nonnull CommandContext context, @Nonnull String str) {
+   private Rotation3f parseVector3f(@Nonnull CommandContext context, @Nonnull String str) {
       String[] parts = str.split(",");
       if (parts.length != 3) {
          context.sendMessage(Message.raw("Invalid Vector3f format: must be three comma-separated floats"));
          return null;
       } else {
          try {
-            return new Vector3f(Float.parseFloat(parts[0]), Float.parseFloat(parts[1]), Float.parseFloat(parts[2]));
+            return new Rotation3f(Float.parseFloat(parts[0]), Float.parseFloat(parts[1]), Float.parseFloat(parts[2]));
          } catch (NumberFormatException var5) {
             context.sendMessage(Message.raw("Invalid Vector3f format: " + var5.getMessage()));
             return null;

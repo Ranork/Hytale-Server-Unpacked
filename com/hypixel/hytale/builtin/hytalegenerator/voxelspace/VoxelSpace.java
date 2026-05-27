@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.voxelspace;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public interface VoxelSpace<T> {
    void set(@Nullable T var1, int var2, int var3, int var4);

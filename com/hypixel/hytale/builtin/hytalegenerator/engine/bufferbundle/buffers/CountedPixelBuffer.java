@@ -3,19 +3,20 @@ package com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers;
 import com.hypixel.hytale.builtin.hytalegenerator.ArrayUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.performanceinstruments.MemInstrument;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class CountedPixelBuffer<T> extends PixelBuffer<T> {
    public static final int BUFFER_SIZE_BITS = 3;
    @Nonnull
    public static final Vector3i SIZE_VOXEL_GRID = new Vector3i(8, 1, 8);
    @Nonnull
-   public static final Bounds3i BOUNDS_VOXEL_GRID = new Bounds3i(Vector3i.ZERO, SIZE_VOXEL_GRID);
+   public static final Bounds3i BOUNDS_VOXEL_GRID = new Bounds3i(Vector3iUtil.ZERO, SIZE_VOXEL_GRID);
    @Nonnull
    private final Class<T> pixelType;
    @Nonnull
@@ -30,6 +31,10 @@ public class CountedPixelBuffer<T> extends PixelBuffer<T> {
       this.state = CountedPixelBuffer.State.EMPTY;
       this.countedArrayContents = null;
       this.singleValue = null;
+   }
+
+   private static int index(@Nonnull Vector3i position) {
+      return position.y + position.x * SIZE_VOXEL_GRID.y + position.z * SIZE_VOXEL_GRID.y * SIZE_VOXEL_GRID.x;
    }
 
    @Nullable
@@ -123,10 +128,6 @@ public class CountedPixelBuffer<T> extends PixelBuffer<T> {
       Arrays.fill(this.countedArrayContents.array, this.singleValue);
       this.countedArrayContents.allBiomes.add(this.singleValue);
       this.singleValue = null;
-   }
-
-   private static int index(@Nonnull Vector3i position) {
-      return position.y + position.x * SIZE_VOXEL_GRID.y + position.z * SIZE_VOXEL_GRID.y * SIZE_VOXEL_GRID.x;
    }
 
    public static class CountedArrayContents<T> implements MemInstrument {

@@ -23,6 +23,7 @@ import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.entity.condition.Condition;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
+import com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsModule;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
@@ -220,7 +221,7 @@ public class EntityEffect
       .documentation("Determines whether this effect applies the invulnerable component to the entity whilst active.")
       .add()
       .<Map>appendInherited(
-         new KeyedCodec<>("DamageResistance", new MapCodec<>(new ArrayCodec<>(StaticModifier.CODEC, StaticModifier[]::new), HashMap::new)),
+         new KeyedCodec<>("DamageResistance", new MapCodec<>(new ArrayCodec<>(ResistanceModifier.CODEC, ResistanceModifier[]::new), HashMap::new)),
          (entityEffect, map) -> entityEffect.damageResistanceValuesRaw = map,
          entityEffect -> entityEffect.damageResistanceValuesRaw,
          (entityEffect, parent) -> entityEffect.damageResistanceValuesRaw = parent.damageResistanceValuesRaw
@@ -312,9 +313,9 @@ public class EntityEffect
    @Nullable
    protected Int2ObjectMap<StaticModifier[]> statModifiers;
    @Nullable
-   protected Map<String, StaticModifier[]> damageResistanceValuesRaw;
+   protected Map<String, ResistanceModifier[]> damageResistanceValuesRaw;
    @Nullable
-   protected Map<DamageCause, StaticModifier[]> damageResistanceValues;
+   protected Map<DamageCause, ResistanceModifier[]> damageResistanceValues;
    @Nullable
    private SoftReference<com.hypixel.hytale.protocol.EntityEffect> cachedPacket;
 
@@ -434,7 +435,7 @@ public class EntityEffect
    }
 
    @Nullable
-   public Map<DamageCause, StaticModifier[]> getDamageResistanceValues() {
+   public Map<DamageCause, ResistanceModifier[]> getDamageResistanceValues() {
       return this.damageResistanceValues;
    }
 

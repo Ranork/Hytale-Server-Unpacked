@@ -2,7 +2,6 @@ package com.hypixel.hytale.builtin.buildertools.imageimport;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -14,7 +13,7 @@ import javax.annotation.Nonnull;
 public class ImageImportCommand extends AbstractPlayerCommand {
    public ImageImportCommand() {
       super("importimage", "server.commands.importimage.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

@@ -1,10 +1,10 @@
 package com.hypixel.hytale.server.worldgen.cave.shape.distorted;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.logic.GeneralNoise;
 import com.hypixel.hytale.server.worldgen.cave.CaveType;
 import com.hypixel.hytale.server.worldgen.cave.shape.CaveNodeShapeUtils;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class DistortedEllipsoidShape extends AbstractDistortedBody {
    private final double radiusX;

@@ -1,9 +1,10 @@
 package com.hypixel.hytale.math.shape;
 
-import com.hypixel.hytale.math.matrix.Matrix4d;
-import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.math.vector.Vector4dUtil;
 import java.util.Random;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
+import org.joml.Vector4d;
 
 public class Quad4d {
    private Vector4d a;
@@ -19,7 +20,7 @@ public class Quad4d {
    }
 
    public Quad4d() {
-      this(new Vector4d(), new Vector4d(), new Vector4d(), new Vector4d());
+      this(new Vector4d().zero(), new Vector4d().zero(), new Vector4d().zero(), new Vector4d().zero());
    }
 
    public Quad4d(@Nonnull Vector4d[] points) {
@@ -31,7 +32,10 @@ public class Quad4d {
    }
 
    public boolean isFullyInsideFrustum() {
-      return this.a.isInsideFrustum() && this.b.isInsideFrustum() && this.c.isInsideFrustum() && this.d.isInsideFrustum();
+      return Vector4dUtil.isInsideFrustum(this.a)
+         && Vector4dUtil.isInsideFrustum(this.b)
+         && Vector4dUtil.isInsideFrustum(this.c)
+         && Vector4dUtil.isInsideFrustum(this.d);
    }
 
    public Vector4d getA() {
@@ -101,19 +105,19 @@ public class Quad4d {
 
    @Nonnull
    public Quad4d multiply(@Nonnull Matrix4d matrix, @Nonnull Quad4d target) {
-      matrix.multiply(this.a, target.a);
-      matrix.multiply(this.b, target.b);
-      matrix.multiply(this.c, target.c);
-      matrix.multiply(this.d, target.d);
+      matrix.transform(this.a, target.a);
+      matrix.transform(this.b, target.b);
+      matrix.transform(this.c, target.c);
+      matrix.transform(this.d, target.d);
       return target;
    }
 
    @Nonnull
    public Quad2d to2d(@Nonnull Quad2d target) {
-      target.getA().assign(this.a.x, this.a.y);
-      target.getB().assign(this.b.x, this.b.y);
-      target.getC().assign(this.c.x, this.c.y);
-      target.getD().assign(this.d.x, this.d.y);
+      target.getA().set(this.a.x, this.a.y);
+      target.getB().set(this.b.x, this.b.y);
+      target.getC().set(this.c.x, this.c.y);
+      target.getD().set(this.d.x, this.d.y);
       return target;
    }
 
@@ -124,7 +128,7 @@ public class Quad4d {
 
    @Nonnull
    public Vector4d getCenter(@Nonnull Vector4d target) {
-      return target.assign(
+      return target.set(
          this.a.x + (this.c.x - this.a.x) * 0.5,
          this.b.x + (this.b.x - this.b.x) * 0.5,
          this.c.x + (this.c.x - this.c.x) * 0.5,
@@ -133,10 +137,10 @@ public class Quad4d {
    }
 
    public void perspectiveTransform() {
-      this.a.perspectiveTransform();
-      this.b.perspectiveTransform();
-      this.c.perspectiveTransform();
-      this.d.perspectiveTransform();
+      Vector4dUtil.perspectiveTransform(this.a);
+      Vector4dUtil.perspectiveTransform(this.b);
+      Vector4dUtil.perspectiveTransform(this.c);
+      Vector4dUtil.perspectiveTransform(this.d);
    }
 
    @Nonnull
@@ -150,14 +154,14 @@ public class Quad4d {
       double q = random.nextDouble() * (1.0 - p);
       double pq = 1.0 - p - q;
       if (random.nextBoolean()) {
-         target.assign(
+         target.set(
             this.a.x * pq + this.b.x * p + this.c.x * q,
             this.a.y * pq + this.b.y * p + this.c.y * q,
             this.a.z * pq + this.b.z * p + this.c.z * q,
             this.a.w * pq + this.b.w * p + this.c.w * q
          );
       } else {
-         target.assign(
+         target.set(
             this.a.x * pq + this.c.x * p + this.d.x * q,
             this.a.y * pq + this.c.y * p + this.d.y * q,
             this.a.z * pq + this.c.z * p + this.d.z * q,

@@ -6,7 +6,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.system.AbstractOp
 import com.hypixel.hytale.server.core.command.system.arguments.system.Argument;
 import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
 import com.hypixel.hytale.server.core.command.system.exceptions.SenderTypeException;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Map;
@@ -87,7 +87,7 @@ public final class CommandContext {
    }
 
    public boolean isPlayer() {
-      return this.sender instanceof Player;
+      return this.sender instanceof PlayerRef;
    }
 
    @Nonnull
@@ -101,7 +101,7 @@ public final class CommandContext {
 
    @Nullable
    public Ref<EntityStore> senderAsPlayerRef() {
-      return this.senderAs(Player.class).getReference();
+      return this.sender instanceof PlayerRef playerRef ? playerRef.getReference() : null;
    }
 
    @Nonnull

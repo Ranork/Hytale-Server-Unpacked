@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthBrowserFlow;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthClient;
 import com.hypixel.hytale.server.core.auth.oauth.OAuthDeviceFlow;
+import com.hypixel.hytale.server.core.telemetry.TelemetryService;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.cert.X509Certificate;
@@ -57,7 +58,7 @@ public class ServerAuthManager {
    });
    private ScheduledFuture<?> refreshTask;
    private Runnable cancelActiveFlow;
-   private volatile String pendingFatalError;
+   private volatile Message pendingFatalError;
 
    private ServerAuthManager() {
    }
@@ -110,12 +111,12 @@ public class ServerAuthManager {
                   LOGGER.at(Level.INFO).log("Offline token validated, singleplayer offline mode");
                   LOGGER.at(Level.INFO).log("Server session ID: %s", this.serverSessionId);
                } else {
-                  this.pendingFatalError = "Offline token validation failed. The token may be expired, tampered, or malformed.";
-                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
+                  this.pendingFatalError = Message.translation("client.disconnection.shutdownReason.authFailed.offlineTokenValidationFailed");
+                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError.getAnsiMessage());
                }
             } else {
-               this.pendingFatalError = "Offline singleplayer mode requires the game must be launched through the official launcher.";
-               LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
+               this.pendingFatalError = Message.translation("client.disconnection.shutdownReason.authFailed.needOfficialLauncher");
+               LOGGER.at(Level.SEVERE).log(this.pendingFatalError.getAnsiMessage());
             }
          } else {
             boolean hasCliTokens = false;
@@ -151,8 +152,8 @@ public class ServerAuthManager {
                   this.gameSession.set(session);
                   hasCliTokens = true;
                } else {
-                  this.pendingFatalError = "Token validation failed. Provided tokens may be expired, tampered, or malformed. Remove invalid tokens or provide valid ones.";
-                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError);
+                  this.pendingFatalError = Message.translation("client.disconnection.shutdownReason.authFailed.tokenValidationFailed");
+                  LOGGER.at(Level.SEVERE).log(this.pendingFatalError.getAnsiMessage());
                }
             }
 
@@ -184,8 +185,7 @@ public class ServerAuthManager {
 
    public void checkPendingFatalError() {
       if (this.pendingFatalError != null) {
-         Message reasonMessage = Message.translation("client.disconnection.shutdownReason.authFailed.detail").param("detail", this.pendingFatalError);
-         HytaleServer.get().shutdownServer(ShutdownReason.AUTH_FAILED.withMessage(reasonMessage));
+         HytaleServer.get().shutdownServer(ShutdownReason.AUTH_FAILED.withMessage(this.pendingFatalError));
       }
    }
 
@@ -371,8 +371,9 @@ public class ServerAuthManager {
                      case FAILED:
                         LOGGER.at(Level.WARNING).log("OAuth browser flow failed: %s", flow.getErrorMessage());
                         return ServerAuthManager.AuthResult.FAILED;
+                     case UNKNOWN:
                      default:
-                        LOGGER.at(Level.WARNING).log("OAuth browser flow completed with unexpected result: %v", res);
+                        LOGGER.at(Level.WARNING).log("OAuth browser flow completed with unexpected result: %s", res);
                         return ServerAuthManager.AuthResult.FAILED;
                   }
                }
@@ -400,8 +401,9 @@ public class ServerAuthManager {
                      case FAILED:
                         LOGGER.at(Level.WARNING).log("OAuth device flow failed: %s", flow.getErrorMessage());
                         return ServerAuthManager.AuthResult.FAILED;
+                     case UNKNOWN:
                      default:
-                        LOGGER.at(Level.WARNING).log("OAuth device flow completed with unexpected result: %v", res);
+                        LOGGER.at(Level.WARNING).log("OAuth device flow completed with unexpected result: %s", res);
                         return ServerAuthManager.AuthResult.FAILED;
                   }
                }
@@ -750,6 +752,11 @@ public class ServerAuthManager {
          }
 
          LOGGER.at(Level.INFO).log("Authentication successful! Mode: %s", mode);
+         TelemetryService telemetryService = TelemetryService.get();
+         if (telemetryService != null) {
+            telemetryService.onAuthenticated();
+         }
+
          return true;
       }
    }
@@ -934,8 +941,9 @@ public class ServerAuthManager {
    }
 
    static {
-      AuthCredentialStoreProvider.CODEC.register(Priority.DEFAULT, "Memory", MemoryAuthCredentialStoreProvider.class, MemoryAuthCredentialStoreProvider.CODEC);
-      AuthCredentialStoreProvider.CODEC.register("Encrypted", EncryptedAuthCredentialStoreProvider.class, EncryptedAuthCredentialStoreProvider.CODEC);
+      AuthCredentialStoreProvider.CODEC.register("Memory", MemoryAuthCredentialStoreProvider.class, MemoryAuthCredentialStoreProvider.CODEC);
+      AuthCredentialStoreProvider.CODEC
+         .register(Priority.DEFAULT, "Encrypted", EncryptedAuthCredentialStoreProvider.class, EncryptedAuthCredentialStoreProvider.CODEC);
    }
 
    public static enum AuthMode {

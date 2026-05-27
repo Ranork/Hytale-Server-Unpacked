@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.cosmetics;
 
+import java.util.Arrays;
 import javax.annotation.Nonnull;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
@@ -29,6 +30,6 @@ public class PlayerSkinTintColor {
    @Nonnull
    @Override
    public String toString() {
-      return "PlayerSkinTintColor{id='" + this.id + "', baseColor='" + this.baseColor + "'}";
+      return "PlayerSkinTintColor{id='" + this.id + "', baseColor=" + Arrays.toString((Object[])this.baseColor) + "}";
    }
 }

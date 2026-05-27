@@ -2,8 +2,8 @@ package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.math.Interpolation;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class YSampledDensity extends Density {
    @Nonnull
@@ -44,9 +44,9 @@ public class YSampledDensity extends Density {
          this.rChildContext.position = this.rChildPosition;
          this.y0 = newY0;
          this.y1 = newY1;
-         this.rChildPosition.assign(context.position.x, this.y0, context.position.z);
+         this.rChildPosition.set(context.position.x, this.y0, context.position.z);
          this.value0 = this.input.process(this.rChildContext);
-         this.rChildPosition.assign(context.position.x, this.y1, context.position.z);
+         this.rChildPosition.set(context.position.x, this.y1, context.position.z);
          this.value1 = this.input.process(this.rChildContext);
          this.isEmpty = false;
          this.x = context.position.x;
@@ -61,7 +61,7 @@ public class YSampledDensity extends Density {
             this.value0 = this.value1;
          } else {
             this.y0 = newY0;
-            this.rChildPosition.assign(context.position.x, this.y0, context.position.z);
+            this.rChildPosition.set(context.position.x, this.y0, context.position.z);
             this.value0 = this.input.process(this.rChildContext);
          }
 
@@ -70,7 +70,7 @@ public class YSampledDensity extends Density {
             this.value1 = this.value0;
          } else {
             this.y1 = newY1;
-            this.rChildPosition.assign(context.position.x, this.y1, context.position.z);
+            this.rChildPosition.set(context.position.x, this.y1, context.position.z);
             this.value1 = this.input.process(this.rChildContext);
          }
       }

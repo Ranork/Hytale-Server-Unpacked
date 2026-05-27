@@ -102,12 +102,12 @@ public abstract class AbstractCachedAccessor {
          if (index >= 0 && index < this.sections.length) {
             Ref<ChunkStore> section = this.sections[index];
             if (section == null) {
-               this.sections[index] = section = this.commandBuffer.getExternalData().getChunkSectionReference(this.commandBuffer, cx, cy, cz);
+               this.sections[index] = section = this.commandBuffer.getExternalData().getChunkSectionReference(cx, cy, cz);
             }
 
             return section;
          } else {
-            return this.commandBuffer.getExternalData().getChunkSectionReference(this.commandBuffer, cx, cy, cz);
+            return this.commandBuffer.getExternalData().getChunkSectionReference(cx, cy, cz);
          }
       } else {
          return null;

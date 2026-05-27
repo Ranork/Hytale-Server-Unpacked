@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -34,6 +35,7 @@ public class BackupTask {
    private BackupTask(@Nonnull final Path universeDir, @Nonnull final Path backupDir) {
       (new Thread("Backup Runner") {
          {
+            Objects.requireNonNull(BackupTask.this);
             this.setDaemon(false);
          }
 

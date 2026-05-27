@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.core.universe.world.worldmap.markers.providers;
 
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.packets.worldmap.HeightDeltaIconComponent;
 import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.protocol.packets.worldmap.PlayerMarkerComponent;
@@ -15,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerB
 import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class OtherPlayersMarkerProvider implements WorldMapManager.MarkerProvider {
    public static final OtherPlayersMarkerProvider INSTANCE = new OtherPlayersMarkerProvider();

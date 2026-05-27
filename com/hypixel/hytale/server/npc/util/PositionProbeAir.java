@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.npc.util;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.modules.collision.BoxBlockIntersectionEvaluator;
 import com.hypixel.hytale.server.core.modules.collision.CollisionConfig;
@@ -11,6 +10,7 @@ import com.hypixel.hytale.server.core.modules.collision.CollisionMath;
 import com.hypixel.hytale.server.core.modules.collision.CollisionResult;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PositionProbeAir extends PositionProbeBase {
    protected boolean inAir;

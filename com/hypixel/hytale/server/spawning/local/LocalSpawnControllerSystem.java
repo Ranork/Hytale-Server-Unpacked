@@ -11,7 +11,6 @@ import com.hypixel.hytale.component.system.tick.TickingSystem;
 import com.hypixel.hytale.function.function.TriIntObjectDoubleToByteFunction;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -32,6 +31,7 @@ import it.unimi.dsi.fastutil.objects.Object2ByteOpenHashMap;
 import java.util.List;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class LocalSpawnControllerSystem extends TickingSystem<EntityStore> {
    public static final double RUN_FREQUENCY_SECONDS = 5.0;
@@ -134,16 +134,16 @@ public class LocalSpawnControllerSystem extends TickingSystem<EntityStore> {
                Vector3d position = transformComponent.getPosition();
                double largestDistanceSquared = largestDistance * largestDistance;
                int yDistance = Math.abs(lowestY) + Math.abs(highestY);
-               int y = MathUtil.floor(position.getY());
+               int y = MathUtil.floor(position.y());
                int minY = Math.max(0, y - yDistance);
                int maxY = Math.min(319, y + yDistance);
                SpatialResource<Ref<EntityStore>, EntityStore> spatialResource = store.getResource(this.beaconSpatialComponent);
                spatialResource.getSpatialStructure().ordered(position, largestDistance, existingBeacons);
                WorldTimeResource worldTimeResource = store.getResource(WorldTimeResource.getResourceType());
                double sunlightFactor = worldTimeResource.getSunlightFactor();
-               int xPos = MathUtil.floor(position.getX());
-               int yPos = MathUtil.floor(position.getY());
-               int zPos = MathUtil.floor(position.getZ());
+               int xPos = MathUtil.floor(position.x());
+               int yPos = MathUtil.floor(position.y());
+               int zPos = MathUtil.floor(position.z());
                Object2ByteOpenHashMap<LightType> averageLightValues = new Object2ByteOpenHashMap();
                averageLightValues.defaultReturnValue((byte)-1);
 
@@ -161,7 +161,7 @@ public class LocalSpawnControllerSystem extends TickingSystem<EntityStore> {
 
                         assert existingBeaconTransformComponent != null;
 
-                        double existingY = existingBeaconTransformComponent.getPosition().getY();
+                        double existingY = existingBeaconTransformComponent.getPosition().y();
                         if (!(existingY > maxY) && !(existingY < minY)) {
                            int existingBeaconIndex = existingBeaconComponent.getSpawnWrapper().getSpawnIndex();
                            if (existingBeaconIndex == possibleBeacon.getSpawnIndex()) {
@@ -178,7 +178,7 @@ public class LocalSpawnControllerSystem extends TickingSystem<EntityStore> {
                         assert pendingTransformComponent != null;
 
                         Vector3d pendingPosition = pendingTransformComponent.getPosition();
-                        double pendingY = pendingPosition.getY();
+                        double pendingY = pendingPosition.y();
                         if (!(pendingY > maxY) && !(pendingY < minY)) {
                            double xDiff = position.x - pendingPosition.x;
                            double zDiff = position.z - pendingPosition.z;

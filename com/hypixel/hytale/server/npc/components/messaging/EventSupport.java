@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.components.messaging;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.view.event.EventNotification;
@@ -11,6 +10,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class EventSupport<EventType extends Enum<EventType>, NotificationType extends EventNotification> extends MessageSupport {
    protected static final double EVENT_AGE = 2.0;
@@ -22,12 +22,12 @@ public abstract class EventSupport<EventType extends Enum<EventType>, Notificati
       if (slot != null && slot.isEnabled()) {
          Vector3d parentEntityPosition = store.getComponent(parent, TransformComponent.getComponentType()).getPosition();
          Vector3d pos = notification.getPosition();
-         double x = pos.getX();
-         double y = pos.getY();
-         double z = pos.getZ();
-         double distanceSquared = parentEntityPosition.distanceSquaredTo(x, y, z);
+         double x = pos.x();
+         double y = pos.y();
+         double z = pos.z();
+         double distanceSquared = parentEntityPosition.distanceSquared(x, y, z);
          if (distanceSquared <= slot.getMaxRangeSquared()
-            && (!slot.isActivated() || distanceSquared < slot.getPosition().distanceSquaredTo(parentEntityPosition))) {
+            && (!slot.isActivated() || distanceSquared < slot.getPosition().distanceSquared(parentEntityPosition))) {
             slot.activate(x, y, z, notification.getInitiator(), 2.0);
          }
       }
@@ -53,7 +53,7 @@ public abstract class EventSupport<EventType extends Enum<EventType>, Notificati
          return false;
       } else {
          EventMessage event = this.messageSlots[messageIndex];
-         return event.getPosition().distanceSquaredTo(parentPosition) < range * range;
+         return event.getPosition().distanceSquared(parentPosition) < range * range;
       }
    }
 

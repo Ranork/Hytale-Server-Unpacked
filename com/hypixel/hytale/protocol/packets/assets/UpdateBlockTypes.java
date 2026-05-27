@@ -5,10 +5,12 @@ import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.UpdateType;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -77,40 +79,45 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
 
    @Nonnull
    public static UpdateBlockTypes deserialize(@Nonnull ByteBuf buf, int offset) {
-      UpdateBlockTypes obj = new UpdateBlockTypes();
-      byte nullBits = buf.getByte(offset);
-      obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
-      obj.maxId = buf.getIntLE(offset + 2);
-      obj.updateBlockTextures = buf.getByte(offset + 6) != 0;
-      obj.updateModelTextures = buf.getByte(offset + 7) != 0;
-      obj.updateModels = buf.getByte(offset + 8) != 0;
-      obj.updateMapGeometry = buf.getByte(offset + 9) != 0;
-      int pos = offset + 10;
-      if ((nullBits & 1) != 0) {
-         int blockTypesCount = VarInt.peek(buf, pos);
-         if (blockTypesCount < 0) {
-            throw ProtocolException.negativeLength("BlockTypes", blockTypesCount);
-         }
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockTypes", 10, buf.readableBytes() - offset);
+      } else {
+         UpdateBlockTypes obj = new UpdateBlockTypes();
+         byte nullBits = buf.getByte(offset);
+         obj.type = UpdateType.fromValue(buf.getByte(offset + 1));
+         obj.maxId = buf.getIntLE(offset + 2);
+         obj.updateBlockTextures = buf.getByte(offset + 6) != 0;
+         obj.updateModelTextures = buf.getByte(offset + 7) != 0;
+         obj.updateModels = buf.getByte(offset + 8) != 0;
+         obj.updateMapGeometry = buf.getByte(offset + 9) != 0;
+         int pos = offset + 10;
+         if ((nullBits & 1) != 0) {
+            int blockTypesCount = VarInt.peek(buf, pos);
+            if (blockTypesCount < 0) {
+               throw ProtocolException.invalidVarInt("BlockTypes");
+            }
 
-         if (blockTypesCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("BlockTypes", blockTypesCount, 4096000);
-         }
+            int blockTypesVarLen = VarInt.size(blockTypesCount);
+            if (blockTypesCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("BlockTypes", blockTypesCount, 4096000);
+            }
 
-         pos += VarInt.size(blockTypesCount);
-         obj.blockTypes = new HashMap<>(blockTypesCount);
+            pos += blockTypesVarLen;
+            obj.blockTypes = new HashMap<>(blockTypesCount);
 
-         for (int i = 0; i < blockTypesCount; i++) {
-            int key = buf.getIntLE(pos);
-            pos += 4;
-            BlockType val = BlockType.deserialize(buf, pos);
-            pos += BlockType.computeBytesConsumed(buf, pos);
-            if (obj.blockTypes.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("blockTypes", key);
+            for (int i = 0; i < blockTypesCount; i++) {
+               int key = buf.getIntLE(pos);
+               pos += 4;
+               BlockType val = BlockType.deserialize(buf, pos);
+               pos += BlockType.computeBytesConsumed(buf, pos);
+               if (obj.blockTypes.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("blockTypes", key);
+               }
             }
          }
-      }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -118,7 +125,7 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
       int pos = offset + 10;
       if ((nullBits & 1) != 0) {
          int dictLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             pos += 4;
@@ -127,6 +134,146 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 10L;
+   }
+
+   public static UpdateType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static UpdateType getType(MemorySegment mem, int offset) {
+      return UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   public static int getMaxId(MemorySegment mem) {
+      return getMaxId(mem, 0);
+   }
+
+   public static int getMaxId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 2));
+   }
+
+   @Nullable
+   public static Map<Integer, BlockType> getBlockTypes(MemorySegment mem) {
+      return getBlockTypes(mem, 0);
+   }
+
+   @Nullable
+   public static Map<Integer, BlockType> getBlockTypes(MemorySegment mem, int offset) {
+      if (!hasBlockTypes(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 10;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("BlockTypes", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("BlockTypes", len, 4096000);
+         } else {
+            Map<Integer, BlockType> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               BlockType value = BlockType.toObject(mem, off);
+               off += value.computeSize();
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("BlockTypes", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static boolean getUpdateBlockTextures(MemorySegment mem) {
+      return getUpdateBlockTextures(mem, 0);
+   }
+
+   public static boolean getUpdateBlockTextures(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 6));
+   }
+
+   public static boolean getUpdateModelTextures(MemorySegment mem) {
+      return getUpdateModelTextures(mem, 0);
+   }
+
+   public static boolean getUpdateModelTextures(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 7));
+   }
+
+   public static boolean getUpdateModels(MemorySegment mem) {
+      return getUpdateModels(mem, 0);
+   }
+
+   public static boolean getUpdateModels(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 8));
+   }
+
+   public static boolean getUpdateMapGeometry(MemorySegment mem) {
+      return getUpdateMapGeometry(mem, 0);
+   }
+
+   public static boolean getUpdateMapGeometry(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 9));
+   }
+
+   public static boolean hasBlockTypes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static UpdateBlockTypes toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static UpdateBlockTypes toObject(MemorySegment mem, int offset) {
+      if (offset + 10 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("UpdateBlockTypes", offset + 10, (int)mem.byteSize());
+      } else {
+         Map<Integer, BlockType> blockTypes = null;
+         if (hasBlockTypes(mem, offset)) {
+            int off = offset + 10;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("BlockTypes", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("BlockTypes", len, 4096000);
+            }
+
+            blockTypes = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               int key = mem.get(PacketIO.PROTO_INT, (long)off);
+               off += 4;
+               BlockType value = BlockType.toObject(mem, off);
+               off += value.computeSize();
+               if (blockTypes.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("BlockTypes", key);
+               }
+            }
+         }
+
+         return new UpdateBlockTypes(
+            UpdateType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1))),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 2)),
+            blockTypes,
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 6)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 7)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 9))
+         );
+      }
    }
 
    @Override
@@ -158,6 +305,38 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.blockTypes != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.type.getValue());
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 2), this.maxId);
+      mem.set(PacketIO.PROTO_BOOL, offset + 6, this.updateBlockTextures);
+      mem.set(PacketIO.PROTO_BOOL, offset + 7, this.updateModelTextures);
+      mem.set(PacketIO.PROTO_BOOL, offset + 8, this.updateModels);
+      mem.set(PacketIO.PROTO_BOOL, offset + 9, this.updateMapGeometry);
+      int varOffset = offset + 10;
+      if (this.blockTypes != null) {
+         if (this.blockTypes.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("BlockTypes", this.blockTypes.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.blockTypes.size());
+
+         for (Entry<Integer, BlockType> e : this.blockTypes.entrySet()) {
+            mem.set(PacketIO.PROTO_INT, (long)varOffset, e.getKey());
+            varOffset += 4;
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 10;
       if (this.blockTypes != null) {
@@ -178,30 +357,35 @@ public class UpdateBlockTypes implements Packet, ToClientPacket {
          return ValidationResult.error("Buffer too small: expected at least 10 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
-         int pos = offset + 10;
-         if ((nullBits & 1) != 0) {
-            int blockTypesCount = VarInt.peek(buffer, pos);
-            if (blockTypesCount < 0) {
-               return ValidationResult.error("Invalid dictionary count for BlockTypes");
-            }
-
-            if (blockTypesCount > 4096000) {
-               return ValidationResult.error("BlockTypes exceeds max length 4096000");
-            }
-
-            pos += VarInt.length(buffer, pos);
-
-            for (int i = 0; i < blockTypesCount; i++) {
-               pos += 4;
-               if (pos > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading key");
+         int v = buffer.getByte(offset + 1) & 255;
+         if (v >= 3) {
+            return ValidationResult.error("Invalid UpdateType value for Type");
+         } else {
+            v = offset + 10;
+            if ((nullBits & 1) != 0) {
+               int blockTypesCount = VarInt.peek(buffer, v);
+               if (blockTypesCount < 0) {
+                  return ValidationResult.error("Invalid dictionary count for BlockTypes");
                }
 
-               pos += BlockType.computeBytesConsumed(buffer, pos);
-            }
-         }
+               if (blockTypesCount > 4096000) {
+                  return ValidationResult.error("BlockTypes exceeds max length 4096000");
+               }
 
-         return ValidationResult.OK;
+               v += VarInt.size(blockTypesCount);
+
+               for (int i = 0; i < blockTypesCount; i++) {
+                  v += 4;
+                  if (v > buffer.writerIndex()) {
+                     return ValidationResult.error("Buffer overflow reading key");
+                  }
+
+                  v += BlockType.computeBytesConsumed(buffer, v);
+               }
+            }
+
+            return ValidationResult.OK;
+         }
       }
    }
 

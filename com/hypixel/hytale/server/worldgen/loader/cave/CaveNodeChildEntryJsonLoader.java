@@ -4,7 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.hypixel.hytale.common.map.IWeightedMap;
 import com.hypixel.hytale.common.map.WeightedMap;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.json.DoubleRangeJsonLoader;
 import com.hypixel.hytale.procedurallib.json.FloatRangeJsonLoader;
 import com.hypixel.hytale.procedurallib.json.JsonLoader;
@@ -19,6 +18,7 @@ import com.hypixel.hytale.server.worldgen.cave.CaveYawMode;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class CaveNodeChildEntryJsonLoader extends JsonLoader<SeedStringResource, CaveNodeType.CaveNodeChildEntry> {
    protected final CaveNodeTypeStorage storage;
@@ -98,9 +98,9 @@ public class CaveNodeChildEntryJsonLoader extends JsonLoader<SeedStringResource,
 
    @Nonnull
    protected Vector3d loadAnchor() {
-      Vector3d anchor = Vector3d.ZERO;
+      Vector3d anchor = new Vector3d();
       if (this.has("Anchor")) {
-         anchor = this.loadVector(anchor.clone(), this.get("Anchor"));
+         anchor = this.loadVector(new Vector3d(anchor), this.get("Anchor"));
       }
 
       return anchor;
@@ -108,9 +108,9 @@ public class CaveNodeChildEntryJsonLoader extends JsonLoader<SeedStringResource,
 
    @Nonnull
    protected Vector3d loadOffset() {
-      Vector3d offset = Vector3d.ZERO;
+      Vector3d offset = new Vector3d();
       if (this.has("Offset")) {
-         offset = this.loadVector(offset.clone(), this.get("Offset"));
+         offset = this.loadVector(new Vector3d(offset), this.get("Offset"));
       }
 
       return offset;

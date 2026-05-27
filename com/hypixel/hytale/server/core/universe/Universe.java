@@ -26,10 +26,8 @@ import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
 import com.hypixel.hytale.metrics.MetricsRegistry;
 import com.hypixel.hytale.protocol.FormattedMessage;
-import com.hypixel.hytale.protocol.NetworkChannel;
-import com.hypixel.hytale.protocol.PlayerSkin;
 import com.hypixel.hytale.protocol.ToClientPacket;
-import com.hypixel.hytale.protocol.io.netty.ProtocolUtil;
+import com.hypixel.hytale.protocol.io.ChannelConnection;
 import com.hypixel.hytale.protocol.packets.setup.ServerTags;
 import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -39,6 +37,7 @@ import com.hypixel.hytale.server.core.NameMatching;
 import com.hypixel.hytale.server.core.Options;
 import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.PlayerAuthentication;
+import com.hypixel.hytale.server.core.command.system.CommandManager;
 import com.hypixel.hytale.server.core.command.system.CommandRegistry;
 import com.hypixel.hytale.server.core.config.BackupConfig;
 import com.hypixel.hytale.server.core.cosmetics.CosmeticsModule;
@@ -49,10 +48,8 @@ import com.hypixel.hytale.server.core.event.events.PrepareUniverseEvent;
 import com.hypixel.hytale.server.core.event.events.ShutdownEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
-import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.io.ProtocolVersion;
 import com.hypixel.hytale.server.core.io.handlers.game.GamePacketHandler;
-import com.hypixel.hytale.server.core.io.netty.NettyUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.MovementAudioComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.PositionDataComponent;
@@ -113,14 +110,10 @@ import com.hypixel.hytale.server.core.util.BsonUtil;
 import com.hypixel.hytale.server.core.util.backup.BackupTask;
 import com.hypixel.hytale.server.core.util.io.FileUtil;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.channel.Channel;
-import io.netty.handler.codec.quic.QuicChannel;
-import io.netty.handler.codec.quic.QuicStreamChannel;
-import io.netty.handler.codec.quic.QuicStreamType;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import it.unimi.dsi.fastutil.longs.LongIterator;
-import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.longs.LongList;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.io.IOException;
 import java.nio.file.DirectoryStream;
@@ -131,6 +124,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.ConcurrentModificationException;
@@ -172,7 +166,9 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    private final Path worldsPath = this.path.resolve("worlds");
    private final Path worldsDeletedPath = this.worldsPath.resolveSibling("worlds-deleted");
    @Nonnull
-   private final Map<UUID, PlayerRef> players = new ConcurrentHashMap<>();
+   private final Map<UUID, PlayerRef> playersByUuid = new ConcurrentHashMap<>();
+   @Nonnull
+   private final Collection<PlayerRef> players = Collections.unmodifiableCollection(this.playersByUuid.values());
    @Nonnull
    private final Map<String, World> worlds = new ConcurrentHashMap<>();
    @Nonnull
@@ -184,6 +180,8 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    private ResourceType<ChunkStore, WorldMarkersResource> worldMarkersResourceType;
    private CompletableFuture<Void> universeReady;
    private final AtomicBoolean isBackingUp = new AtomicBoolean(false);
+   private final StorageManager storageManager = new StorageManager(this::isSavingLocked);
+   private final AtomicInteger savingLocks = new AtomicInteger(0);
 
    public static Universe get() {
       return instance;
@@ -192,7 +190,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    public Universe(@Nonnull JavaPluginInit init) {
       super(init);
       instance = this;
-      if (!Files.isDirectory(this.path) && !Options.getOptionSet().has(Options.BARE)) {
+      if (!Files.isDirectory(this.path) && !Options.isBare()) {
          try {
             Files.createDirectories(this.path);
          } catch (IOException var4) {
@@ -230,20 +228,46 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    @Nonnull
    public CompletableFuture<Void> runBackup() {
       Path backupDir = HytaleServer.get().getConfig().getBackupConfig().getDirectory();
-      return backupDir == null
-         ? CompletableFuture.failedFuture(new IllegalStateException("Backup directory not configured"))
-         : CompletableFuture.allOf(this.worlds.values().stream().map(world -> CompletableFuture.<ChunkSavingSystems.Data>supplyAsync(() -> {
-               Store<ChunkStore> componentStore = world.getChunkStore().getStore();
-               ChunkSavingSystems.Data data = componentStore.getResource(ChunkStore.SAVE_RESOURCE);
-               data.isSaving = false;
-               return data;
-            }, world).thenCompose(ChunkSavingSystems.Data::waitForSavingChunks)).toArray(CompletableFuture[]::new))
-            .thenCompose(aVoid -> BackupTask.start(this.path, backupDir))
-            .thenCompose(success -> CompletableFuture.allOf(this.worlds.values().stream().map(world -> CompletableFuture.runAsync(() -> {
-               Store<ChunkStore> componentStore = world.getChunkStore().getStore();
-               ChunkSavingSystems.Data data = componentStore.getResource(ChunkStore.SAVE_RESOURCE);
-               data.isSaving = true;
-            }, world)).toArray(CompletableFuture[]::new)).thenApply(aVoid -> success));
+      if (backupDir == null) {
+         return CompletableFuture.failedFuture(new IllegalStateException("Backup directory not configured"));
+      } else {
+         this.lockSaving();
+         return this.storageManager
+            .pendingOperations()
+            .thenCompose(
+               v -> CompletableFuture.allOf(this.worlds.values().stream().map(world -> CompletableFuture.<ChunkSavingSystems.Data>supplyAsync(() -> {
+                     Store<ChunkStore> componentStore = world.getChunkStore().getStore();
+                     ChunkSavingSystems.Data data = componentStore.getResource(ChunkStore.SAVE_RESOURCE);
+                     world.getChunkStore().pauseBackgroundSaving(data);
+                     world.lockSaving();
+                     return data;
+                  }, world).thenCompose(ChunkSavingSystems.Data::waitForSavingChunks)).toArray(CompletableFuture[]::new))
+                  .thenCompose(aVoid -> BackupTask.start(this.path, backupDir))
+                  .thenCompose(success -> CompletableFuture.allOf(this.worlds.values().stream().map(world -> CompletableFuture.runAsync(() -> {
+                     world.getChunkStore().resumeBackgroundSaving();
+                     world.unlockSaving();
+                  }, world)).toArray(CompletableFuture[]::new)).thenApply(aVoid -> success))
+            )
+            .whenComplete((u, throwable) -> this.unlockSaving());
+      }
+   }
+
+   public boolean isSavingLocked() {
+      return this.savingLocks.get() > 0;
+   }
+
+   public void lockSaving() {
+      this.savingLocks.incrementAndGet();
+   }
+
+   public void unlockSaving() {
+      int result = this.savingLocks.decrementAndGet();
+
+      assert result >= 0 : "savingLocks underflow";
+
+      if (result == 0) {
+         this.storageManager.onSavingRelease();
+      }
    }
 
    @Override
@@ -326,7 +350,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
             ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var21)).log("Failed to delete blockIdMap.json");
          }
 
-         if (Options.getOptionSet().has(Options.BARE)) {
+         if (Options.isBare()) {
             this.universeReady = CompletableFuture.completedFuture(null);
             HytaleServer.get().getEventBus().dispatch(AllWorldsLoadedEvent.class);
          } else {
@@ -401,7 +425,10 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                                     .shutdownServer(
                                        ShutdownReason.VERIFY_ERROR
                                           .withMessage(
-                                             "Failed to verify world " + name + ", " + result.leftInt() + "/" + result.rightInt() + " chunks corrupted"
+                                             Message.translation("client.disconnection.shutdownReason.verifyError.chunksCorrupted")
+                                                .param("world", name)
+                                                .param("corrupted", result.leftInt())
+                                                .param("total", result.rightInt())
                                           )
                                     );
                                  return;
@@ -409,10 +436,13 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                            } catch (Exception var17) {
                               ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var17))
                                  .log("Failed to %s world %s", isRecovery ? "recover" : "verify", name);
+                              String messageKey = isRecovery
+                                 ? "client.disconnection.shutdownReason.recoverError"
+                                 : "client.disconnection.shutdownReason.verifyError";
                               HytaleServer.get()
                                  .shutdownServer(
                                     ShutdownReason.VERIFY_ERROR
-                                       .withMessage("Failed to " + (isRecovery ? "recover" : "verify") + " world " + name + "\n" + var17.getMessage())
+                                       .withMessage(Message.translation(messageKey).param("world", name).param("detail", var17.getMessage()))
                                  );
                               return;
                            }
@@ -446,10 +476,14 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                      CompletableFuture.allOf((CompletableFuture<?>[])loadingWorlds.toArray(CompletableFuture[]::new))
                         .thenCompose(
                            v -> {
-                              String worldName = config.getDefaults().getWorld();
-                              return worldName != null && !this.worlds.containsKey(worldName.toLowerCase())
-                                 ? CompletableFutureUtil._catch(this.addWorld(worldName))
-                                 : CompletableFuture.completedFuture(null);
+                              if (HytaleServer.get().isShuttingDown()) {
+                                 return CompletableFuture.completedFuture(null);
+                              } else {
+                                 String worldName = config.getDefaults().getWorld();
+                                 return worldName != null && !this.worlds.containsKey(worldName.toLowerCase()) && !this.isWorldLoadable(worldName)
+                                    ? CompletableFutureUtil._catch(this.addWorld(worldName))
+                                    : CompletableFuture.completedFuture(null);
+                              }
                            }
                         )
                         .thenRun(() -> HytaleServer.get().getEventBus().dispatch(AllWorldsLoadedEvent.class))
@@ -469,7 +503,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
          : world.getWorldConfig().getChunkStorageProvider().getRecoveryLoader(store.getStore(), recoveryPath);
       IChunkSaver saver = store.getSaver();
       if (loader != null && saver != null) {
-         LongSet chunks = loader.getIndexes();
+         LongList chunks = loader.getIndexes();
          IChunkLoader fallbackLoader;
          if (Options.getOptionSet().valueOf(Options.RECOVERY_MODE) == Options.RecoveryMode.FROM_BACKUP_OR_REGENERATE) {
             Path backupDir = HytaleServer.get().getConfig().getBackupConfig().getDirectory();
@@ -641,7 +675,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
       FormattedMessage message = reason != null && reason.getFormattedMessage() != null
          ? reason.getFormattedMessage()
          : Message.translation("server.general.disconnect.stoppingServer").getFormattedMessage();
-      this.players.values().forEach(player -> player.getPacketHandler().disconnect(message));
+      this.playersByUuid.values().forEach(player -> player.getPacketHandler().disconnect(message));
    }
 
    public void shutdownAllWorlds() {
@@ -927,101 +961,79 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    }
 
    @Nonnull
-   public List<PlayerRef> getPlayers() {
-      return new ObjectArrayList(this.players.values());
+   public Collection<PlayerRef> getPlayers() {
+      return this.players;
    }
 
    @Nullable
    public PlayerRef getPlayer(@Nonnull UUID uuid) {
-      return this.players.get(uuid);
+      return this.playersByUuid.get(uuid);
    }
 
    @Nullable
    public PlayerRef getPlayer(@Nonnull String value, @Nonnull NameMatching matching) {
-      return matching.find(this.players.values(), value, v -> v.getComponent(PlayerRef.getComponentType()).getUsername());
+      return matching.find(this.playersByUuid.values(), value, v -> v.getComponent(PlayerRef.getComponentType()).getUsername());
    }
 
    @Nullable
    public PlayerRef getPlayer(@Nonnull String value, @Nonnull Comparator<String> comparator, @Nonnull BiPredicate<String, String> equality) {
-      return NameMatching.find(this.players.values(), value, v -> v.getComponent(PlayerRef.getComponentType()).getUsername(), comparator, equality);
+      return NameMatching.find(this.playersByUuid.values(), value, v -> v.getComponent(PlayerRef.getComponentType()).getUsername(), comparator, equality);
    }
 
    @Nullable
    public PlayerRef getPlayerByUsername(@Nonnull String value, @Nonnull NameMatching matching) {
-      return matching.find(this.players.values(), value, PlayerRef::getUsername);
+      return matching.find(this.playersByUuid.values(), value, PlayerRef::getUsername);
    }
 
    @Nullable
    public PlayerRef getPlayerByUsername(@Nonnull String value, @Nonnull Comparator<String> comparator, @Nonnull BiPredicate<String, String> equality) {
-      return NameMatching.find(this.players.values(), value, PlayerRef::getUsername, comparator, equality);
+      return NameMatching.find(this.playersByUuid.values(), value, PlayerRef::getUsername, comparator, equality);
    }
 
    public int getPlayerCount() {
-      return this.players.size();
+      return this.playersByUuid.size();
    }
 
    @Nonnull
    public CompletableFuture<PlayerRef> addPlayer(
-      @Nonnull Channel channel,
+      @Nonnull ChannelConnection channel,
       @Nonnull String language,
       @Nonnull ProtocolVersion protocolVersion,
-      @Nonnull UUID uuid,
-      @Nonnull String username,
       @Nonnull PlayerAuthentication auth,
-      int clientViewRadiusChunks,
-      @Nullable PlayerSkin skin
+      int clientViewRadiusChunks
    ) {
       GamePacketHandler playerConnection = new GamePacketHandler(channel, protocolVersion, auth);
       playerConnection.setQueuePackets(false);
-      this.getLogger().at(Level.INFO).log("Adding player '%s (%s)", username, uuid);
-      CompletableFuture<Void> setupFuture;
-      if (channel instanceof QuicStreamChannel streamChannel) {
-         QuicChannel conn = streamChannel.parent();
-         conn.attr(ProtocolUtil.STREAM_CHANNEL_KEY).set(NetworkChannel.Default);
-         streamChannel.updatePriority(PacketHandler.DEFAULT_STREAM_PRIORITIES.get(NetworkChannel.Default));
-         CompletableFuture<Void> chunkFuture = NettyUtil.createStream(
-            conn, QuicStreamType.UNIDIRECTIONAL, NetworkChannel.Chunks, PacketHandler.DEFAULT_STREAM_PRIORITIES.get(NetworkChannel.Chunks), playerConnection
-         );
-         CompletableFuture<Void> worldMapFuture = NettyUtil.createStream(
-            conn,
-            QuicStreamType.UNIDIRECTIONAL,
-            NetworkChannel.WorldMap,
-            PacketHandler.DEFAULT_STREAM_PRIORITIES.get(NetworkChannel.WorldMap),
-            playerConnection
-         );
-         setupFuture = CompletableFuture.allOf(chunkFuture, worldMapFuture);
-      } else {
-         playerConnection.setChannel(NetworkChannel.WorldMap, channel);
-         playerConnection.setChannel(NetworkChannel.Chunks, channel);
-         setupFuture = CompletableFuture.completedFuture(null);
-      }
-
-      return setupFuture.<Holder<EntityStore>, Holder<EntityStore>>thenCombine(this.playerStorage.load(uuid), (setupResult, playerData) -> playerData)
+      this.getLogger().at(Level.INFO).log("Adding player '%s (%s)", auth.getUsername(), auth.getUuid());
+      CompletableFuture<Void> setupFuture = channel.setupAuxiliaryChannels(playerConnection, playerConnection::setChannel);
+      return setupFuture.<Holder<EntityStore>, Holder<EntityStore>>thenCombine(this.playerStorage.load(auth.getUuid()), (setupResult, playerData) -> playerData)
          .exceptionally(throwable -> {
             throw new RuntimeException("Exception when adding player to universe:", throwable);
          })
          .thenCompose(
             holder -> {
                ChunkTracker chunkTrackerComponent = new ChunkTracker();
-               PlayerRef playerRefComponent = new PlayerRef((Holder<EntityStore>)holder, uuid, username, language, playerConnection, chunkTrackerComponent);
+               PlayerRef playerRefComponent = new PlayerRef(
+                  (Holder<EntityStore>)holder, auth.getUuid(), auth.getUsername(), language, playerConnection, chunkTrackerComponent
+               );
                chunkTrackerComponent.setDefaultMaxChunksPerSecond(playerRefComponent);
                holder.putComponent(PlayerRef.getComponentType(), playerRefComponent);
                holder.putComponent(ChunkTracker.getComponentType(), chunkTrackerComponent);
-               holder.putComponent(UUIDComponent.getComponentType(), new UUIDComponent(uuid));
+               holder.putComponent(UUIDComponent.getComponentType(), new UUIDComponent(auth.getUuid()));
                holder.ensureComponent(PositionDataComponent.getComponentType());
                holder.ensureComponent(MovementAudioComponent.getComponentType());
                Player playerComponent = holder.ensureAndGetComponent(Player.getComponentType());
-               playerComponent.init(uuid, playerRefComponent);
+               playerComponent.init(auth.getUuid(), playerRefComponent);
                PlayerConfigData playerConfig = playerComponent.getPlayerConfigData();
                playerConfig.cleanup(this);
-               PacketHandler.logConnectionTimings(channel, "Load Player Config", Level.FINEST);
-               if (skin != null) {
-                  holder.putComponent(PlayerSkinComponent.getComponentType(), new PlayerSkinComponent(skin));
-                  holder.putComponent(ModelComponent.getComponentType(), new ModelComponent(CosmeticsModule.get().createModel(skin)));
+               channel.logConnectionTimings("Load Player Config", Level.FINEST);
+               if (auth.getSkin() != null) {
+                  holder.putComponent(PlayerSkinComponent.getComponentType(), new PlayerSkinComponent(auth.getSkin()));
+                  holder.putComponent(ModelComponent.getComponentType(), new ModelComponent(CosmeticsModule.get().createModel(auth.getSkin())));
                }
 
-               playerConnection.setPlayerRef(playerRefComponent, playerComponent);
-               NettyUtil.setChannelHandler(channel, playerConnection);
+               playerConnection.setPlayerRef(playerRefComponent);
+               playerConnection.getChannel().setChannelHandler(playerConnection);
                playerComponent.setClientViewRadius(clientViewRadiusChunks);
                EntityTrackerSystems.EntityViewer entityViewerComponent = holder.getComponent(EntityTrackerSystems.EntityViewer.getComponentType());
                if (entityViewerComponent != null) {
@@ -1031,9 +1043,11 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                   holder.addComponent(EntityTrackerSystems.EntityViewer.getComponentType(), entityViewerComponent);
                }
 
-               PlayerRef existingPlayer = this.players.putIfAbsent(uuid, playerRefComponent);
+               PlayerRef existingPlayer = this.playersByUuid.putIfAbsent(auth.getUuid(), playerRefComponent);
                if (existingPlayer != null) {
-                  this.getLogger().at(Level.WARNING).log("Player '%s' (%s) already joining from another connection, rejecting duplicate", username, uuid);
+                  this.getLogger()
+                     .at(Level.WARNING)
+                     .log("Player '%s' (%s) already joining from another connection, rejecting duplicate", auth.getUsername(), auth.getUuid());
                   playerConnection.disconnect(Message.translation("client.general.disconnect.accountAlreadyConnecting"));
                   return CompletableFuture.completedFuture(null);
                } else {
@@ -1044,54 +1058,61 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
                      .<Void, PlayerConnectEvent>dispatchFor(PlayerConnectEvent.class)
                      .dispatch(new PlayerConnectEvent((Holder<EntityStore>)holder, playerRefComponent, lastWorld != null ? lastWorld : this.getDefaultWorld()));
                   if (!channel.isActive()) {
-                     this.players.remove(uuid, playerRefComponent);
-                     this.getLogger().at(Level.INFO).log("Player '%s' (%s) disconnected during PlayerConnectEvent, cleaned up", username, uuid);
+                     this.playersByUuid.remove(auth.getUuid(), playerRefComponent);
+                     this.getLogger()
+                        .at(Level.INFO)
+                        .log("Player '%s' (%s) disconnected during PlayerConnectEvent, cleaned up", auth.getUsername(), auth.getUuid());
                      return CompletableFuture.completedFuture(null);
                   } else {
                      World world = event.getWorld() != null ? event.getWorld() : this.getDefaultWorld();
                      if (world == null) {
-                        this.players.remove(uuid, playerRefComponent);
+                        this.playersByUuid.remove(auth.getUuid(), playerRefComponent);
                         playerConnection.disconnect(Message.translation("client.general.disconnect.noWorldAvailable"));
-                        this.getLogger().at(Level.SEVERE).log("Player '%s' (%s) could not join - no default world configured", username, uuid);
+                        this.getLogger()
+                           .at(Level.SEVERE)
+                           .log("Player '%s' (%s) could not join - no default world configured", auth.getUsername(), auth.getUuid());
                         return CompletableFuture.completedFuture(null);
                      } else {
                         if (lastWorldName != null && lastWorld == null) {
-                           playerComponent.sendMessage(
+                           playerRefComponent.sendMessage(
                               Message.translation("server.universe.failedToFindWorld").param("lastWorldName", lastWorldName).param("name", world.getName())
                            );
                         }
 
-                        PacketHandler.logConnectionTimings(channel, "Processed Referral", Level.FINEST);
+                        channel.logConnectionTimings("Processed Referral", Level.FINEST);
                         playerRefComponent.getPacketHandler().write(new ServerTags(AssetRegistry.getClientTags()));
                         CompletableFuture<PlayerRef> addPlayerFuture = world.addPlayer(playerRefComponent, null, false, false);
                         if (addPlayerFuture == null) {
-                           this.players.remove(uuid, playerRefComponent);
-                           this.getLogger().at(Level.INFO).log("Player '%s' (%s) disconnected before world addition, cleaned up", username, uuid);
+                           this.playersByUuid.remove(auth.getUuid(), playerRefComponent);
+                           this.getLogger()
+                              .at(Level.INFO)
+                              .log("Player '%s' (%s) disconnected before world addition, cleaned up", auth.getUsername(), auth.getUuid());
                            return CompletableFuture.completedFuture(null);
                         } else {
                            return addPlayerFuture.<PlayerRef>thenApply(
                                  p -> {
-                                    PacketHandler.logConnectionTimings(channel, "Add to World", Level.FINEST);
+                                    channel.logConnectionTimings("Add to World", Level.FINEST);
                                     if (!channel.isActive()) {
                                        if (p != null) {
                                           playerComponent.remove();
                                        }
 
-                                       this.players.remove(uuid, playerRefComponent);
+                                       this.playersByUuid.remove(auth.getUuid(), playerRefComponent);
                                        this.getLogger()
                                           .at(Level.WARNING)
-                                          .log("Player '%s' (%s) disconnected during world join, cleaned up from universe", username, uuid);
+                                          .log("Player '%s' (%s) disconnected during world join, cleaned up from universe", auth.getUsername(), auth.getUuid());
                                        return null;
                                     } else if (playerComponent.wasRemoved()) {
-                                       this.players.remove(uuid, playerRefComponent);
+                                       this.playersByUuid.remove(auth.getUuid(), playerRefComponent);
                                        return null;
                                     } else {
+                                       CommandManager.get().broadcastArgCacheInvalidation("player_ref");
                                        return (PlayerRef)p;
                                     }
                                  }
                               )
                               .exceptionally(throwable -> {
-                                 this.players.remove(uuid, playerRefComponent);
+                                 this.playersByUuid.remove(auth.getUuid(), playerRefComponent);
                                  playerComponent.remove();
                                  throw new RuntimeException("Exception when adding player to universe:", throwable);
                               });
@@ -1154,19 +1175,21 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
    }
 
    private void finalizePlayerRemoval(@Nonnull PlayerRef playerRef) {
-      this.players.remove(playerRef.getUuid());
-      if (Constants.SINGLEPLAYER) {
-         if (this.players.isEmpty()) {
-            this.getLogger().at(Level.INFO).log("No players left on singleplayer server shutting down!");
-            HytaleServer.get().shutdownServer();
-         } else if (SingleplayerModule.isOwner(playerRef)) {
-            this.getLogger().at(Level.INFO).log("Owner left the singleplayer server shutting down!");
-            this.getPlayers()
-               .forEach(
-                  p -> p.getPacketHandler()
-                     .disconnect(Message.translation("server.general.disconnect.singleplayerOwnerLeft").param("username", playerRef.getUsername()))
-               );
-            HytaleServer.get().shutdownServer();
+      if (this.playersByUuid.remove(playerRef.getUuid(), playerRef)) {
+         CommandManager.get().broadcastArgCacheInvalidation("player_ref");
+         if (Constants.SINGLEPLAYER) {
+            if (this.playersByUuid.isEmpty()) {
+               this.getLogger().at(Level.INFO).log("No players left on singleplayer server shutting down!");
+               HytaleServer.get().shutdownServer();
+            } else if (SingleplayerModule.isOwner(playerRef)) {
+               this.getLogger().at(Level.INFO).log("Owner left the singleplayer server shutting down!");
+               this.getPlayers()
+                  .forEach(
+                     p -> p.getPacketHandler()
+                        .disconnect(Message.translation("server.general.disconnect.singleplayerOwnerLeft").param("username", playerRef.getUsername()))
+                  );
+               HytaleServer.get().shutdownServer();
+            }
          }
       }
    }
@@ -1229,7 +1252,7 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
             holder.addComponent(EntityTrackerSystems.EntityViewer.getComponentType(), viewer);
          }
 
-         playerConnection.setPlayerRef(playerRef, newPlayer);
+         playerConnection.setPlayerRef(playerRef);
          playerRef.replaceHolder(holder);
          holder.putComponent(PlayerRef.getComponentType(), playerRef);
       }).thenCompose(v -> targetWorld.addPlayer(playerRef, transform));
@@ -1237,27 +1260,31 @@ public class Universe extends JavaPlugin implements IMessageReceiver, MetricProv
 
    @Override
    public void sendMessage(@Nonnull Message message) {
-      for (PlayerRef ref : this.players.values()) {
+      for (PlayerRef ref : this.playersByUuid.values()) {
          ref.sendMessage(message);
       }
    }
 
    public void broadcastPacket(@Nonnull ToClientPacket packet) {
-      for (PlayerRef player : this.players.values()) {
+      for (PlayerRef player : this.playersByUuid.values()) {
          player.getPacketHandler().write(packet);
       }
    }
 
    public void broadcastPacketNoCache(@Nonnull ToClientPacket packet) {
-      for (PlayerRef player : this.players.values()) {
+      for (PlayerRef player : this.playersByUuid.values()) {
          player.getPacketHandler().writeNoCache(packet);
       }
    }
 
    public void broadcastPacket(@Nonnull ToClientPacket... packets) {
-      for (PlayerRef player : this.players.values()) {
+      for (PlayerRef player : this.playersByUuid.values()) {
          player.getPacketHandler().write(packets);
       }
+   }
+
+   public StorageManager getStorageManager() {
+      return this.storageManager;
    }
 
    public PlayerStorage getPlayerStorage() {

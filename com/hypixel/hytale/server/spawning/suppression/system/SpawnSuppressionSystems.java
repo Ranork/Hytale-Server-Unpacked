@@ -25,7 +25,6 @@ import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
@@ -58,6 +57,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SpawnSuppressionSystems {
    private static void suppressSpawns(
@@ -337,7 +337,7 @@ public class SpawnSuppressionSystems {
          boolean fromExternal = archetype.contains(FromPrefab.getComponentType()) || archetype.contains(FromWorldGen.getComponentType());
          if (reason == AddReason.SPAWN || fromExternal) {
             SpawnSuppressionController suppressionController = store.getResource(this.spawnSuppressionControllerResourceType);
-            SpawnSuppressorEntry entry = new SpawnSuppressorEntry(suppressor.getSpawnSuppression(), transform.getPosition().clone());
+            SpawnSuppressorEntry entry = new SpawnSuppressorEntry(suppressor.getSpawnSuppression(), new Vector3d(transform.getPosition()));
             UUID uuid = uuidComponent.getUuid();
             SpawnSuppressorEntry prev = suppressionController.getSpawnSuppressorMap().put(uuid, entry);
             if (prev != null) {

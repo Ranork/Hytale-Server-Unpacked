@@ -12,7 +12,6 @@ import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -24,6 +23,7 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class NPCPreTickSystem extends SteppableTickingSystem {
    private static final float DEFAULT_DESPAWN_CHECK_DELAY = 30.0F;

@@ -113,7 +113,7 @@ public class PlaySoundPage extends InteractiveCustomUIPage<PlaySoundPage.PlaySou
             }
          }
 
-         this.soundEvents = map.keySet().stream().sorted().sorted(Comparator.comparingInt(map::getInt).reversed()).limit(20L).collect(Collectors.toList());
+         this.soundEvents = map.keySet().stream().sorted(Comparator.comparingInt(map::getInt).reversed()).limit(20L).collect(Collectors.toList());
       } else {
          this.soundEvents = SoundEvent.getAssetMap().getAssetMap().keySet().stream().sorted(String::compareTo).collect(Collectors.toList());
       }

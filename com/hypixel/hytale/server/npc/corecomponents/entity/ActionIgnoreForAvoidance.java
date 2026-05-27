@@ -9,6 +9,7 @@ import com.hypixel.hytale.server.npc.corecomponents.entity.builders.BuilderActio
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class ActionIgnoreForAvoidance extends ActionBase {
    private final int targetSlot;
@@ -19,7 +20,7 @@ public class ActionIgnoreForAvoidance extends ActionBase {
    }
 
    @Override
-   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
+   public boolean execute(@Nonnull Ref<EntityStore> ref, @Nonnull Role role, @Nullable InfoProvider sensorInfo, double dt, @Nonnull Store<EntityStore> store) {
       role.getMarkedEntitySupport().setTargetSlotToIgnoreForAvoidance(this.targetSlot);
       return true;
    }

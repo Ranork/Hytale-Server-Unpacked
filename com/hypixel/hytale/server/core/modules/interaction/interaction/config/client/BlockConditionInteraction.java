@@ -7,9 +7,10 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockFace;
+import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.Interaction;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
@@ -18,8 +19,10 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
+import com.hypixel.hytale.server.core.modules.entity.player.PlayerSettings;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -29,6 +32,7 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BlockConditionInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -79,14 +83,14 @@ public class BlockConditionInteraction extends SimpleBlockInteraction {
             context.getState().state = InteractionState.Failed;
          } else {
             boolean ok = false;
-            BlockConditionInteraction.BlockMatcher[] var10 = this.matchers;
-            int var11 = var10.length;
-            int var12 = 0;
+            BlockConditionInteraction.BlockMatcher[] commandBuffer = this.matchers;
+            int ref = commandBuffer.length;
+            int playerComponent = 0;
 
-            while (var12 < var11) {
-               label69: {
-                  label77: {
-                     BlockConditionInteraction.BlockMatcher matcher = var10[var12];
+            while (playerComponent < ref) {
+               label85: {
+                  label93: {
+                     BlockConditionInteraction.BlockMatcher matcher = commandBuffer[playerComponent];
                      if (matcher.face != BlockFace.None) {
                         BlockFace transformedFace = matcher.face;
                         if (!matcher.staticFace) {
@@ -99,15 +103,15 @@ public class BlockConditionInteraction extends SimpleBlockInteraction {
                         }
 
                         if (!transformedFace.equals(face)) {
-                           break label77;
+                           break label93;
                         }
                      }
 
                      if (matcher.block == null) {
-                        break label69;
+                        break label85;
                      }
 
-                     label61:
+                     label77:
                      if (matcher.block.id == null || matcher.block.id.equals(itemType.getId())) {
                         if (matcher.block.state != null) {
                            String state = blockType.getStateForBlock(blockType);
@@ -116,30 +120,47 @@ public class BlockConditionInteraction extends SimpleBlockInteraction {
                            }
 
                            if (!matcher.block.state.equals(state)) {
-                              break label61;
+                              break label77;
                            }
                         }
 
                         if (matcher.block.tag == null) {
-                           break label69;
+                           break label85;
                         }
 
                         AssetExtraInfo.Data data = blockType.getData();
                         if (data != null) {
                            Int2ObjectMap<IntSet> tags = data.getTags();
                            if (tags != null && tags.containsKey(matcher.block.tagIndex)) {
-                              break label69;
+                              break label85;
                            }
                         }
                      }
                   }
 
-                  var12++;
+                  playerComponent++;
                   continue;
                }
 
                ok = true;
                break;
+            }
+
+            if (ok) {
+               CommandBuffer<EntityStore> commandBufferx = context.getCommandBuffer();
+               Ref<EntityStore> refx = context.getEntity();
+               if (commandBufferx != null && refx != null) {
+                  Player playerComponentx = commandBufferx.getComponent(refx, Player.getComponentType());
+                  if (playerComponentx != null && playerComponentx.getGameMode() == GameMode.Creative) {
+                     PlayerSettings settingsComponent = commandBufferx.getComponent(refx, PlayerSettings.getComponentType());
+                     if (settingsComponent != null) {
+                        String placeMode = settingsComponent.creativeSettings().placeMode();
+                        if (!"default".equals(placeMode)) {
+                           ok = false;
+                        }
+                     }
+                  }
+               }
             }
 
             if (ok) {

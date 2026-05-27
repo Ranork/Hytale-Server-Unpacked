@@ -2,18 +2,8 @@ package com.hypixel.hytale.server.core.modules;
 
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.common.plugin.PluginManifest;
-import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.component.RemoveReason;
-import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.component.dependency.Dependency;
-import com.hypixel.hytale.component.dependency.Order;
-import com.hypixel.hytale.component.dependency.RootDependency;
-import com.hypixel.hytale.component.dependency.SystemDependency;
-import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
-import com.hypixel.hytale.server.core.modules.migrations.ChunkColumnMigrationSystem;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
@@ -29,7 +19,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.blockposition
 import com.hypixel.hytale.server.core.universe.world.chunk.systems.ChunkSystems;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import java.util.Set;
 import javax.annotation.Nonnull;
 
 public class LegacyModule extends JavaPlugin {
@@ -70,11 +59,9 @@ public class LegacyModule extends JavaPlugin {
       this.blockPositionProviderComponentType = this.getChunkStoreRegistry().registerComponent(BlockPositionProvider.class, () -> {
          throw new UnsupportedOperationException("BlockPositionProvider cannot be constructed");
       });
-      this.getChunkStoreRegistry().registerSystem(new ChunkSystems.OnNewChunk());
       this.getChunkStoreRegistry().registerSystem(new ChunkSystems.OnChunkLoad());
       this.getChunkStoreRegistry().registerSystem(new ChunkSystems.OnNonTicking());
       this.getChunkStoreRegistry().registerSystem(new ChunkSystems.EnsureBlockSection());
-      this.getChunkStoreRegistry().registerSystem(new LegacyModule.MigrateLegacySections());
       this.getChunkStoreRegistry().registerSystem(new ChunkSystems.LoadBlockSection());
       this.getChunkStoreRegistry().registerSystem(new ChunkSystems.ReplicateChanges());
       this.getChunkStoreRegistry().registerSystem(new BlockChunk.LoadBlockChunkPacketSystem(this.blockChunkComponentType));
@@ -123,53 +110,5 @@ public class LegacyModule extends JavaPlugin {
 
    public ComponentType<ChunkStore, BlockPositionProvider> getBlockPositionProviderComponentType() {
       return this.blockPositionProviderComponentType;
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class MigrateLegacySections extends ChunkColumnMigrationSystem {
-      private final Query<ChunkStore> QUERY = Query.and(ChunkColumn.getComponentType(), BlockChunk.getComponentType());
-      private final Set<Dependency<ChunkStore>> DEPENDENCIES = Set.of(
-         new SystemDependency<>(Order.AFTER, ChunkSystems.OnNewChunk.class), RootDependency.first()
-      );
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
-         ChunkColumn column = holder.getComponent(ChunkColumn.getComponentType());
-
-         assert column != null;
-
-         BlockChunk blockChunk = holder.getComponent(BlockChunk.getComponentType());
-
-         assert blockChunk != null;
-
-         Holder<ChunkStore>[] sections = column.getSectionHolders();
-         BlockSection[] migratedSections = blockChunk.takeMigratedSections();
-         if (migratedSections != null) {
-            for (int i = 0; i < sections.length; i++) {
-               Holder<ChunkStore> section = sections[i];
-               BlockSection blockSection = migratedSections[i];
-               if (section != null && blockSection != null) {
-                  section.putComponent(BlockSection.getComponentType(), blockSection);
-                  blockChunk.markNeedsSaving();
-               }
-            }
-         }
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<ChunkStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<ChunkStore> getQuery() {
-         return this.QUERY;
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<ChunkStore>> getDependencies() {
-         return this.DEPENDENCIES;
-      }
    }
 }

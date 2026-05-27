@@ -16,6 +16,7 @@ import javax.annotation.Nullable;
 public class PlayerResetCommand extends AbstractTargetPlayerCommand {
    public PlayerResetCommand() {
       super("reset", "server.commands.player.reset.desc");
+      this.setPermissionGroups("hytale:Admin");
    }
 
    @Override

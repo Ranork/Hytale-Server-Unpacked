@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class ReputationCommand extends AbstractCommandCollection {
    public ReputationCommand() {
       super("reputation", "server.commands.reputation.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new ReputationAddCommand());
       this.addSubCommand(new ReputationSetCommand());
       this.addSubCommand(new ReputationRankCommand());

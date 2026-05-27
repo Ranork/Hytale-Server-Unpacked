@@ -42,6 +42,7 @@ import javax.annotation.Nullable;
 public class HubPortalInteraction extends SimpleInstantInteraction {
    @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+   private static final String LEGACY_DEFAULT_WORLD_NAME = "default_world";
    @Nonnull
    public static final BuilderCodec<HubPortalInteraction> CODEC = BuilderCodec.builder(
          HubPortalInteraction.class, HubPortalInteraction::new, SimpleInstantInteraction.CODEC
@@ -83,6 +84,7 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
       assert commandBuffer != null;
 
       Ref<EntityStore> ref = context.getEntity();
+      CreativeHubEntityConfig hubEntityConfig = commandBuffer.getComponent(ref, CreativeHubEntityConfig.getComponentType());
       Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       if (playerComponent != null && !playerComponent.isWaitingForClientReady()) {
          Archetype<EntityStore> archetype = commandBuffer.getArchetype(ref);
@@ -90,25 +92,54 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
             World currentWorld = commandBuffer.getExternalData().getWorld();
             Universe universe = Universe.get();
             World targetWorld = universe.getWorld(this.worldName);
+            if (targetWorld == null && this.worldName.equals("default")) {
+               targetWorld = universe.getWorld("default_world");
+            }
+
             if (targetWorld != null) {
                teleportToLoadedWorld(ref, commandBuffer, targetWorld, playerComponent);
             } else {
                CompletableFuture<World> worldFuture;
                if (this.instanceTemplate != null) {
-                  worldFuture = CreativeHubPlugin.get().spawnPermanentWorldFromTemplate(this.instanceTemplate, this.worldName);
+                  worldFuture = CreativeHubPlugin.get().spawnPermanentWorldFromTemplate(this.instanceTemplate, this.worldName, parentConfig -> {
+                     if (hubEntityConfig != null && hubEntityConfig.getParentHubWorldUuid() != null) {
+                        World parentWorld = Universe.get().getWorld(hubEntityConfig.getParentHubWorldUuid());
+                        if (parentWorld != null) {
+                           WorldConfig srcConfig = parentWorld.getWorldConfig();
+                           parentConfig.setSpawningNPC(srcConfig.isSpawningNPC());
+                           parentConfig.setGameTimePaused(srcConfig.isGameTimePaused());
+                        }
+                     }
+                  });
                } else if (universe.isWorldLoadable(this.worldName)) {
                   worldFuture = universe.loadWorld(this.worldName);
+               } else if (this.worldName.equals("default") && universe.isWorldLoadable("default_world")) {
+                  worldFuture = universe.loadWorld("default_world");
                } else {
                   worldFuture = universe.addWorld(this.worldName, this.worldGenType, null);
                   worldFuture.thenAccept(world -> {
                      if (world.getWorldConfig().getDisplayName() == null) {
                         world.getWorldConfig().setDisplayName(WorldConfig.formatDisplayName(this.worldName));
                      }
+
+                     applyParentWorldSettings(world, hubEntityConfig);
                   });
                }
 
                teleportToLoadingWorld(ref, commandBuffer, worldFuture, currentWorld, playerComponent);
             }
+         }
+      }
+   }
+
+   private static void applyParentWorldSettings(@Nonnull World newWorld, @Nullable CreativeHubEntityConfig hubEntityConfig) {
+      if (hubEntityConfig != null && hubEntityConfig.getParentHubWorldUuid() != null) {
+         World parentWorld = Universe.get().getWorld(hubEntityConfig.getParentHubWorldUuid());
+         if (parentWorld != null) {
+            WorldConfig parentConfig = parentWorld.getWorldConfig();
+            WorldConfig childConfig = newWorld.getWorldConfig();
+            childConfig.setSpawningNPC(parentConfig.isSpawningNPC());
+            childConfig.setGameTimePaused(parentConfig.isGameTimePaused());
          }
       }
    }
@@ -148,7 +179,7 @@ public class HubPortalInteraction extends SimpleInstantInteraction {
       if (transformComponent == null) {
          LOGGER.at(Level.SEVERE).log("Cannot teleport player %s to permanent world - missing TransformComponent", playerRef);
       } else {
-         Transform originalPosition = transformComponent.getTransform().clone();
+         Transform originalPosition = new Transform(transformComponent.getTransform());
          PlayerRef playerRefComponent = componentAccessor.getComponent(playerRef, PlayerRef.getComponentType());
          if (playerRefComponent == null) {
             LOGGER.at(Level.SEVERE).log("Cannot teleport player %s to permanent world - missing PlayerRef component", playerRef);

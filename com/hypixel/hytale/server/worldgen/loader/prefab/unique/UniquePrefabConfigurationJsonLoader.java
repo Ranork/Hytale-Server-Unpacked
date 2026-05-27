@@ -2,8 +2,6 @@ package com.hypixel.hytale.server.worldgen.loader.prefab.unique;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.condition.ConstantBlockFluidCondition;
 import com.hypixel.hytale.procedurallib.condition.ConstantIntCondition;
 import com.hypixel.hytale.procedurallib.condition.HeightCondition;
@@ -33,6 +31,8 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class UniquePrefabConfigurationJsonLoader extends JsonLoader<SeedStringResource, UniquePrefabConfiguration> {
    protected final ZoneFileContext zoneContext;

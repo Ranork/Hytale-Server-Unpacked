@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.core.command.system.arguments.types;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.exceptions.GeneralCommandException;
@@ -10,6 +9,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class RelativeDoublePosition {
    @Nonnull
@@ -40,7 +40,7 @@ public class RelativeDoublePosition {
       if (relative && !context.isPlayer()) {
          throw new GeneralCommandException(MESSAGE_COMMANDS_ERRORS_RELATIVE_POSITION_ARG);
       } else {
-         Vector3d basePosition;
+         Vector3d basePosition = new Vector3d();
          if (relative) {
             Ref<EntityStore> senderPlayerRef = context.senderAsPlayerRef();
             if (senderPlayerRef == null || !senderPlayerRef.isValid()) {
@@ -51,9 +51,7 @@ public class RelativeDoublePosition {
 
             assert transformComponent != null;
 
-            basePosition = transformComponent.getPosition();
-         } else {
-            basePosition = Vector3d.ZERO;
+            basePosition.set(transformComponent.getPosition());
          }
 
          return this.getRelativePosition(basePosition, world);

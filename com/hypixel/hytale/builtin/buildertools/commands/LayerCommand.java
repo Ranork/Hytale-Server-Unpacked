@@ -4,8 +4,7 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -13,6 +12,7 @@ import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -20,10 +20,22 @@ import it.unimi.dsi.fastutil.Pair;
 import java.util.List;
 import java.util.Map;
 import javax.annotation.Nonnull;
+import org.joml.Vector3ic;
 
 public class LayerCommand extends AbstractPlayerCommand {
-   private static Map<String, Vector3i> directions = Map.of(
-      "up", Vector3i.UP, "down", Vector3i.DOWN, "north", Vector3i.NORTH, "south", Vector3i.SOUTH, "east", Vector3i.EAST, "west", Vector3i.WEST
+   private static final Map<String, Vector3ic> DIRECTIONS = Map.of(
+      "up",
+      Vector3iUtil.UP,
+      "down",
+      Vector3iUtil.DOWN,
+      "north",
+      Vector3iUtil.NORTH,
+      "south",
+      Vector3iUtil.SOUTH,
+      "east",
+      Vector3iUtil.EAST,
+      "west",
+      Vector3iUtil.WEST
    );
    @Nonnull
    private final RequiredArg<String> layerDirectionArg = this.withRequiredArg("direction", "server.commands.layer.direction.desc", ArgTypes.STRING);
@@ -34,8 +46,8 @@ public class LayerCommand extends AbstractPlayerCommand {
 
    public LayerCommand() {
       super("layer", "server.commands.layer.desc");
-      this.setPermissionGroup(GameMode.Creative);
-      this.requirePermission("hytale.editor.selection.clipboard");
+      this.setPermissionGroups("hytale:WorldEditor");
+      this.requirePermission(HytalePermissions.EDITOR_SELECTION_CLIPBOARD);
    }
 
    @Override
@@ -46,22 +58,22 @@ public class LayerCommand extends AbstractPlayerCommand {
 
       assert playerComponent != null;
 
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          String direction = this.layerDirectionArg.get(context).toLowerCase();
          List<Pair<Integer, String>> layers = this.layersArg.get(context);
          if (layers != null && direction != null) {
-            boolean directionValid = directions.containsKey(direction);
+            boolean directionValid = DIRECTIONS.containsKey(direction);
             if (directionValid) {
                BuilderToolsPlugin.addToQueue(playerComponent, playerRef, (r, s, componentAccessor) -> {
                   HeadRotation headRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
 
                   assert headRotationComponent != null;
 
-                  Vector3i layerDirection = Vector3i.ZERO;
+                  Vector3ic layerDirection;
                   if (direction.equalsIgnoreCase("camera")) {
                      layerDirection = headRotationComponent.getAxisDirection();
                   } else {
-                     layerDirection = directions.get(direction);
+                     layerDirection = DIRECTIONS.get(direction);
                   }
 
                   s.layer(layers, layerDirection, componentAccessor);

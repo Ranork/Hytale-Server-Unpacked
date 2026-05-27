@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.flock.config.FlockAsset;
 import com.hypixel.hytale.server.npc.util.DamageData;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class Flock implements Component<EntityStore> {
    private boolean trace;
@@ -89,7 +90,7 @@ public class Flock implements Component<EntityStore> {
    public void onTargetKilled(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> targetEntityReference) {
       TransformComponent targetTransformComponent = componentAccessor.getComponent(targetEntityReference, TransformComponent.getComponentType());
       if (targetTransformComponent != null) {
-         this.nextDamageData.onKill(targetEntityReference, targetTransformComponent.getPosition().clone());
+         this.nextDamageData.onKill(targetEntityReference, new Vector3d(targetTransformComponent.getPosition()));
       }
    }
 

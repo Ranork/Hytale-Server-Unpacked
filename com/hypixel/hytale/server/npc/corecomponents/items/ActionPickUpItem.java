@@ -5,15 +5,14 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.ActionWithDelay;
 import com.hypixel.hytale.server.npc.corecomponents.items.builders.BuilderActionPickUpItem;
-import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.InventoryHelper;
@@ -21,6 +20,7 @@ import java.util.List;
 import java.util.function.Supplier;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ActionPickUpItem extends ActionWithDelay {
    protected static final ComponentType<EntityStore, ItemComponent> ITEM_COMPONENT_TYPE = ItemComponent.getComponentType();
@@ -75,7 +75,7 @@ public class ActionPickUpItem extends ActionWithDelay {
             assert targetTransformComponent != null;
 
             Vector3d targetPosition = targetTransformComponent.getPosition();
-            double distanceSquared = selfPosition.distanceSquaredTo(targetPosition);
+            double distanceSquared = selfPosition.distanceSquared(targetPosition);
             if (distanceSquared > this.range * this.range) {
                return false;
             }
@@ -104,17 +104,14 @@ public class ActionPickUpItem extends ActionWithDelay {
       if (itemRef == null) {
          return false;
       } else {
-         NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
-
-         assert npcComponent != null;
-
-         Inventory inventory = npcComponent.getInventory();
          switch (this.storageTarget) {
             case Hotbar:
-               ItemComponent.addToItemContainer(store, itemRef, inventory.getCombinedHotbarFirst());
+               CombinedItemContainer combinedInventoryHotbarFirst = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
+               ItemComponent.addToItemContainer(store, itemRef, combinedInventoryHotbarFirst);
                break;
             case Inventory:
-               ItemComponent.addToItemContainer(store, itemRef, inventory.getCombinedStorageFirst());
+               CombinedItemContainer combinedInventoryStorageFirst = InventoryComponent.getCombined(store, ref, InventoryComponent.STORAGE_FIRST);
+               ItemComponent.addToItemContainer(store, itemRef, combinedInventoryStorageFirst);
                break;
             case Destroy:
                store.removeEntity(itemRef, RemoveReason.REMOVE);

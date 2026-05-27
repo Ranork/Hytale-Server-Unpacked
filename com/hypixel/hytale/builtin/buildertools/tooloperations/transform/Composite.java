@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.buildertools.tooloperations.transform;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class Composite implements Transform {
    private final Transform first;

@@ -11,9 +11,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.spatial.SpatialResource;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
@@ -41,6 +40,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ParticleSpawnPage extends InteractiveCustomUIPage<ParticleSpawnPage.ParticleSpawnPageEventData> {
    private static final String COMMON_TEXT_BUTTON_DOCUMENT = "Common/TextButton.ui";
@@ -54,7 +54,7 @@ public class ParticleSpawnPage extends InteractiveCustomUIPage<ParticleSpawnPage
    @Nullable
    private Ref<EntityStore> particleSystemPreview;
    private Vector3d position;
-   private Vector3f rotation;
+   private Rotation3f rotation;
 
    public ParticleSpawnPage(@Nonnull PlayerRef playerRef) {
       super(playerRef, CustomPageLifetime.CanDismiss, ParticleSpawnPage.ParticleSpawnPageEventData.CODEC);
@@ -96,10 +96,10 @@ public class ParticleSpawnPage extends InteractiveCustomUIPage<ParticleSpawnPage
             case "UpdateRotationOffset":
                if (this.particleSystemPreview.isValid()) {
                   TransformComponent transform = store.getComponent(this.particleSystemPreview, TransformComponent.getComponentType());
-                  transform.getRotation().setYaw(this.rotation.getYaw() + (float)Math.toRadians(data.rotationOffset));
+                  transform.getRotation().setYaw(this.rotation.yaw() + (float)Math.toRadians(data.rotationOffset));
                   HeadRotation headRotation = store.getComponent(this.particleSystemPreview, HeadRotation.getComponentType());
                   if (headRotation != null) {
-                     headRotation.getRotation().setYaw(this.rotation.getYaw() + (float)Math.toRadians(data.rotationOffset));
+                     headRotation.getRotation().setYaw(this.rotation.yaw() + (float)Math.toRadians(data.rotationOffset));
                   }
                }
                break;
@@ -219,10 +219,10 @@ public class ParticleSpawnPage extends InteractiveCustomUIPage<ParticleSpawnPage
          assert headRotationComponent != null;
 
          Vector3d playerPosition = transformComponent.getPosition();
-         Vector3f headRotation = headRotationComponent.getRotation();
+         Rotation3f headRotation = headRotationComponent.getRotation();
          Vector3d previewPosition = TargetUtil.getTargetLocation(ref, 8.0, store);
          if (previewPosition == null) {
-            previewPosition = playerPosition.clone().add(Transform.getDirection(headRotation.getPitch(), headRotation.getYaw()).scale(4.0));
+            previewPosition = new Vector3d(playerPosition).add(Transform.getDirection(headRotation.pitch(), headRotation.yaw()).mul(4.0));
          }
 
          Vector3d targetGround = TargetUtil.getTargetLocation(
@@ -233,9 +233,9 @@ public class ParticleSpawnPage extends InteractiveCustomUIPage<ParticleSpawnPage
          }
 
          previewPosition.add(0.0, particleSystem.getBoundingRadius(), 0.0);
-         Vector3d relativePos = playerPosition.clone().subtract(previewPosition);
-         relativePos.setY(0.0);
-         Vector3f previewRotation = Vector3f.lookAt(relativePos);
+         Vector3d relativePos = new Vector3d(playerPosition).sub(previewPosition);
+         relativePos.y = 0.0;
+         Rotation3f previewRotation = Rotation3f.lookAt(relativePos);
          this.position = previewPosition;
          this.rotation = previewRotation;
          Holder<EntityStore> holder = store.getRegistry().newHolder();

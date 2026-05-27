@@ -9,8 +9,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.VectorProvider
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class AngleDensityAsset extends DensityAsset {
    @Nonnull
@@ -23,7 +24,7 @@ public class AngleDensityAsset extends DensityAsset {
          value -> value.vectorProviderAsset
       )
       .add()
-      .append(new KeyedCodec<>("Vector", Vector3d.CODEC, true), (asset, value) -> asset.vector = value, asset -> asset.vector)
+      .append(new KeyedCodec<>("Vector", Vector3dUtil.CODEC, true), (asset, value) -> asset.vector = value, asset -> asset.vector)
       .add()
       .append(new KeyedCodec<>("IsAxis", Codec.BOOLEAN, true), (asset, value) -> asset.isAxis = value, asset -> asset.isAxis)
       .add()

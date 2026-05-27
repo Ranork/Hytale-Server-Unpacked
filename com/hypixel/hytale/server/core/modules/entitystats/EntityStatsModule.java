@@ -36,11 +36,12 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap.Entry;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import org.bouncycastle.util.Arrays;
 
 public class EntityStatsModule extends JavaPlugin {
    public static final PluginManifest MANIFEST = PluginManifest.corePlugin(EntityStatsModule.class)
@@ -193,9 +194,7 @@ public class EntityStatsModule extends JavaPlugin {
 
    @Nullable
    public static int[] resolveEntityStats(@Nullable String[] raw) {
-      if (Arrays.isNullOrEmpty(raw)) {
-         return null;
-      } else {
+      if (raw != null && raw.length != 0) {
          int[] out = new int[raw.length];
          int size = 0;
 
@@ -211,6 +210,8 @@ public class EntityStatsModule extends JavaPlugin {
          }
 
          return out;
+      } else {
+         return null;
       }
    }
 
@@ -224,6 +225,7 @@ public class EntityStatsModule extends JavaPlugin {
 
    public class PlayerRegenerateStatsSystem extends EntityStatsSystems.Regenerate<Player> {
       public PlayerRegenerateStatsSystem() {
+         Objects.requireNonNull(EntityStatsModule.this);
          super(EntityStatsModule.this.entityStatMapComponentType, Player.getComponentType());
       }
    }

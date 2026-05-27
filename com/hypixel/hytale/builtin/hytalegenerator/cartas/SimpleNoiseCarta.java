@@ -5,9 +5,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.rangemaps.DoubleRange;
 import com.hypixel.hytale.builtin.hytalegenerator.rangemaps.DoubleRangeMap;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.BiCarta;
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SimpleNoiseCarta<T> extends BiCarta<T> {
    @Nonnull

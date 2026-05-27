@@ -10,14 +10,17 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.soundevent.validator.SoundEventValidators;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.World;
+import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -68,10 +71,44 @@ public abstract class FarmingStageData {
       return false;
    }
 
+   public boolean consumesRemainingTime() {
+      return false;
+   }
+
    public boolean shouldStop(
       @Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z
    ) {
       return false;
+   }
+
+   public boolean canApply(
+      @Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z
+   ) {
+      return true;
+   }
+
+   protected static boolean testFillerPositions(@Nonnull WorldChunk worldChunk, @Nonnull BlockType blockType, int x, int y, int z) {
+      int rotationIndex = worldChunk.getRotationIndex(x, y, z);
+      int originWorldX = ChunkUtil.worldCoordFromLocalCoord(worldChunk.getX(), x);
+      int originWorldZ = ChunkUtil.worldCoordFromLocalCoord(worldChunk.getZ(), z);
+      return worldChunk.testPlaceBlock(
+         x,
+         y,
+         z,
+         blockType,
+         rotationIndex,
+         (bx, by, bz, bt, br, bf) -> {
+            if (bx == originWorldX && by == y && bz == originWorldZ) {
+               return true;
+            } else {
+               return bf == 0
+                  ? false
+                  : bx - FillerBlockUtil.unpackX(bf) == originWorldX
+                     && by - FillerBlockUtil.unpackY(bf) == y
+                     && bz - FillerBlockUtil.unpackZ(bf) == originWorldZ;
+            }
+         }
+      );
    }
 
    public void apply(

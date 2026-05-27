@@ -33,6 +33,35 @@ public class BlockStateFarmingStageData extends FarmingStageData {
    }
 
    @Override
+   public boolean canApply(
+      @Nonnull ComponentAccessor<ChunkStore> commandBuffer, @Nonnull Ref<ChunkStore> sectionRef, @Nonnull Ref<ChunkStore> blockRef, int x, int y, int z
+   ) {
+      ChunkSection chunkSectionComponent = commandBuffer.getComponent(sectionRef, ChunkSection.getComponentType());
+      if (chunkSectionComponent == null) {
+         return true;
+      } else {
+         WorldChunk worldChunkComponent = commandBuffer.getComponent(chunkSectionComponent.getChunkColumnReference(), WorldChunk.getComponentType());
+         if (worldChunkComponent == null) {
+            return true;
+         } else {
+            int originBlockId = worldChunkComponent.getBlock(x, y, z);
+            BlockType originBlockType = BlockType.getAssetMap().getAsset(originBlockId);
+            if (originBlockType == null) {
+               return true;
+            } else {
+               BlockType blockType = originBlockType.getBlockForState(this.state);
+               if (blockType == null) {
+                  return true;
+               } else {
+                  int newBlockId = BlockType.getAssetMap().getIndex(blockType.getId());
+                  return originBlockId == newBlockId ? true : testFillerPositions(worldChunkComponent, blockType, x, y, z);
+               }
+            }
+         }
+      }
+   }
+
+   @Override
    public void apply(
       @Nonnull ComponentAccessor<ChunkStore> commandBuffer,
       @Nonnull Ref<ChunkStore> sectionRef,
@@ -67,9 +96,11 @@ public class BlockStateFarmingStageData extends FarmingStageData {
                   int newBlockId = BlockType.getAssetMap().getIndex(blockType.getId());
                   if (originBlockId != newBlockId) {
                      int rotationIndex = worldChunkComponent.getRotationIndex(x, y, z);
-                     commandBuffer.getExternalData()
-                        .getWorld()
-                        .execute(() -> worldChunkComponent.setBlock(x, y, z, newBlockId, blockType, rotationIndex, 0, 2));
+                     commandBuffer.getExternalData().getWorld().execute(() -> {
+                        if (testFillerPositions(worldChunkComponent, blockType, x, y, z)) {
+                           worldChunkComponent.setBlock(x, y, z, newBlockId, blockType, rotationIndex, 0, 2);
+                        }
+                     });
                   }
                }
             }

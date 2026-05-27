@@ -8,7 +8,9 @@ public enum Feature implements Supplier<String> {
    NPC("NPC target"),
    Drop("dropped item target"),
    Position("vector position"),
-   Path("path");
+   Path("path"),
+   EntityHits("entity hit list"),
+   BlockHits("block hit list");
 
    private final String description;
    public static final EnumSet<Feature> AnyPosition = EnumSet.of(Player, NPC, Drop, Position);

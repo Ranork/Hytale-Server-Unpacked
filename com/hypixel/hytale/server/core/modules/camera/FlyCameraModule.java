@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.event.events.permissions.GroupPermissionChangeEvent;
 import com.hypixel.hytale.server.core.event.events.permissions.PlayerGroupEvent;
 import com.hypixel.hytale.server.core.event.events.permissions.PlayerPermissionChangeEvent;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -33,7 +34,7 @@ public class FlyCameraModule extends JavaPlugin {
    }
 
    private void handlePlayerPermissionsRemoved(@Nonnull PlayerPermissionChangeEvent.PermissionsRemoved event) {
-      if (PermissionsModule.hasPermission(event.getRemovedPermissions(), "hytale.camera.flycam") == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(PermissionsModule.hasPermission(event.getRemovedPermissions(), HytalePermissions.FLY_CAM))) {
          this.checkAndEnforceFlyCameraPermission(event.getPlayerUuid());
       }
    }
@@ -43,7 +44,7 @@ public class FlyCameraModule extends JavaPlugin {
    }
 
    private void handleGroupPermissionsRemoved(@Nonnull GroupPermissionChangeEvent.Removed event) {
-      if (PermissionsModule.hasPermission(event.getRemovedPermissions(), "hytale.camera.flycam") == Boolean.TRUE) {
+      if (Boolean.TRUE.equals(PermissionsModule.hasPermission(event.getRemovedPermissions(), HytalePermissions.FLY_CAM))) {
          String groupName = event.getGroupName();
          PermissionsModule permissionsModule = PermissionsModule.get();
 
@@ -60,7 +61,7 @@ public class FlyCameraModule extends JavaPlugin {
    private void checkAndEnforceFlyCameraPermission(@Nonnull UUID uuid) {
       PlayerRef playerRef = Universe.get().getPlayer(uuid);
       if (playerRef != null) {
-         boolean hasPermission = PermissionsModule.get().hasPermission(uuid, "hytale.camera.flycam");
+         boolean hasPermission = PermissionsModule.get().hasPermission(uuid, HytalePermissions.FLY_CAM);
          if (!hasPermission) {
             playerRef.getPacketHandler().writeNoCache(new SetFlyCameraMode(false));
          }

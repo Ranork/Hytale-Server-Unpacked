@@ -39,6 +39,8 @@ public class CameraShakeConfig implements NetworkSerializable<com.hypixel.hytale
       .documentation("The rotational motion")
       .add()
       .build();
+   @Nonnull
+   public static final CameraShakeConfig NONE = new CameraShakeConfig();
    protected float duration;
    protected Float startTime;
    protected EasingConfig easeIn = EasingConfig.NONE;

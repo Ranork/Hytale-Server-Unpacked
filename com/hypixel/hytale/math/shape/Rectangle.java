@@ -1,8 +1,8 @@
 package com.hypixel.hytale.math.shape;
 
-import com.hypixel.hytale.math.vector.Vector2d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
 
 public class Rectangle {
    private Vector2d min;

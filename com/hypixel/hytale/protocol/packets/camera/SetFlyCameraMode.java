@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.camera;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -41,18 +44,52 @@ public class SetFlyCameraMode implements Packet, ToClientPacket {
 
    @Nonnull
    public static SetFlyCameraMode deserialize(@Nonnull ByteBuf buf, int offset) {
-      SetFlyCameraMode obj = new SetFlyCameraMode();
-      obj.entering = buf.getByte(offset + 0) != 0;
-      return obj;
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("SetFlyCameraMode", 1, buf.readableBytes() - offset);
+      } else {
+         SetFlyCameraMode obj = new SetFlyCameraMode();
+         obj.entering = buf.getByte(offset + 0) != 0;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 1;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   public static boolean getEntering(MemorySegment mem) {
+      return getEntering(mem, 0);
+   }
+
+   public static boolean getEntering(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0));
+   }
+
+   public static SetFlyCameraMode toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SetFlyCameraMode toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SetFlyCameraMode", offset + 1, (int)mem.byteSize());
+      } else {
+         return new SetFlyCameraMode(mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0)));
+      }
+   }
+
    @Override
    public void serialize(@Nonnull ByteBuf buf) {
       buf.writeByte(this.entering ? 1 : 0);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.entering);
+      return 1;
    }
 
    @Override

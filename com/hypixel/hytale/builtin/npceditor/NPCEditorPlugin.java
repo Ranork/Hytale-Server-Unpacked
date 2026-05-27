@@ -2,7 +2,6 @@ package com.hypixel.hytale.builtin.npceditor;
 
 import com.hypixel.hytale.builtin.asseteditor.AssetEditorPlugin;
 import com.hypixel.hytale.builtin.asseteditor.event.AssetEditorSelectAssetEvent;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorPreviewCameraSettings;
 import com.hypixel.hytale.protocol.packets.asseteditor.AssetEditorUpdateModelPreview;
 import com.hypixel.hytale.server.core.Message;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import com.hypixel.hytale.server.spawning.SpawningContext;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
 
 public class NPCEditorPlugin extends JavaPlugin {
    private static final AssetEditorPreviewCameraSettings DEFAULT_PREVIEW_CAMERA_SETTINGS = new AssetEditorPreviewCameraSettings(

@@ -14,6 +14,6 @@ public class DebugShapeShowForceCommand extends CommandBase {
    @Override
    protected void executeSync(@Nonnull CommandContext context) {
       DebugUtils.DISPLAY_FORCES = !DebugUtils.DISPLAY_FORCES;
-      context.sendMessage(Message.raw("Display forces: " + (DebugUtils.DISPLAY_FORCES ? "enabled" : "disabled")));
+      context.sendMessage(Message.translation("server.commands.debug.shape.showforce." + (DebugUtils.DISPLAY_FORCES ? "enabled" : "disabled")));
    }
 }

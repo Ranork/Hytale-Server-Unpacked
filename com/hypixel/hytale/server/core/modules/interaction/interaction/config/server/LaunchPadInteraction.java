@@ -5,8 +5,7 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
 import com.hypixel.hytale.protocol.InteractionType;
@@ -27,6 +26,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class LaunchPadInteraction extends SimpleBlockInteraction {
    public static final BuilderCodec<LaunchPadInteraction> CODEC = BuilderCodec.builder(
@@ -68,7 +69,7 @@ public class LaunchPadInteraction extends SimpleBlockInteraction {
                   velocityComponent.addInstruction(
                      new Vector3d(launchPadState.getVelocityX(), launchPadState.getVelocityY(), launchPadState.getVelocityZ()), null, ChangeVelocityType.Set
                   );
-                  Vector3d particlePos = targetBlock.toVector3d().add(0.5, 0.5, 0.5);
+                  Vector3d particlePos = Vector3iUtil.toVector3d(targetBlock).add(0.5, 0.5, 0.5);
                   SpatialResource<Ref<EntityStore>, EntityStore> playerSpatialResource = commandBuffer.getResource(
                      EntityModule.get().getPlayerSpatialResourceType()
                   );

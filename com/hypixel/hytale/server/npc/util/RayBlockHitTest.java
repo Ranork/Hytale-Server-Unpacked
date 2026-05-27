@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.iterator.BlockIterator;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.blockset.BlockSetModule;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class RayBlockHitTest implements BlockIterator.BlockIteratorProcedure {
    public static final ThreadLocal<RayBlockHitTest> THREAD_LOCAL = ThreadLocal.withInitial(RayBlockHitTest::new);
@@ -24,7 +25,7 @@ public class RayBlockHitTest implements BlockIterator.BlockIteratorProcedure {
    private final Vector3d origin = new Vector3d();
    private final Vector3d direction = new Vector3d();
    private int blockSet;
-   private final Vector3d hitPosition = new Vector3d(Vector3d.MIN);
+   private final Vector3d hitPosition = new Vector3d(Vector3dUtil.MIN);
    private short lastBlockRevision;
 
    @Override
@@ -32,7 +33,7 @@ public class RayBlockHitTest implements BlockIterator.BlockIteratorProcedure {
       if (!ChunkUtil.isInsideChunk(this.chunk.getX(), this.chunk.getZ(), x, z)) {
          this.chunk = this.world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
          if (this.chunk == null) {
-            this.hitPosition.assign(Vector3d.MIN);
+            this.hitPosition.set(Vector3dUtil.MIN);
             return false;
          }
       }
@@ -45,7 +46,7 @@ public class RayBlockHitTest implements BlockIterator.BlockIteratorProcedure {
       } else {
          this.lastBlockRevision = this.chunk.getBlockChunk().getSectionAtBlockY(y).getLocalChangeCounter();
          if (BlockSetModule.getInstance().blockInSet(this.blockSet, blockId)) {
-            this.hitPosition.assign(x, y, z);
+            this.hitPosition.set(x, y, z);
          }
 
          return false;
@@ -76,27 +77,27 @@ public class RayBlockHitTest implements BlockIterator.BlockIteratorProcedure {
 
       World world = componentAccessor.getExternalData().getWorld();
       this.blockSet = blockSet;
-      this.origin.assign(transformComponent.getPosition());
+      this.origin.set(transformComponent.getPosition());
       this.origin.y = this.origin.y + modelComponent.getModel().getEyeHeight();
       this.world = world;
       this.chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(this.origin.x, this.origin.z));
       if (this.chunk == null) {
          return false;
       } else {
-         float yaw = headRotationComponent.getRotation().getYaw();
-         this.direction.assign(yaw, pitch);
+         float yaw = headRotationComponent.getRotation().yaw();
+         Vector3dUtil.setYawPitch(yaw, pitch, this.direction);
          return true;
       }
    }
 
    public boolean run(double range) {
       BlockIterator.iterate(this.origin, this.direction, range, this);
-      return !this.hitPosition.equals(Vector3d.MIN);
+      return !this.hitPosition.equals(Vector3dUtil.MIN);
    }
 
    public void clear() {
       this.world = null;
       this.chunk = null;
-      this.hitPosition.assign(Vector3d.MIN);
+      this.hitPosition.set(Vector3dUtil.MIN);
    }
 }

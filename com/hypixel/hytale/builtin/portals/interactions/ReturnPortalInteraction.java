@@ -6,7 +6,6 @@ import com.hypixel.hytale.builtin.portals.utils.CursedItems;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -18,11 +17,13 @@ import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.client.SimpleBlockInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Duration;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class ReturnPortalInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -50,26 +51,31 @@ public class ReturnPortalInteraction extends SimpleBlockInteraction {
       @Nonnull CooldownHandler cooldownHandler
    ) {
       Ref<EntityStore> ref = context.getEntity();
-      Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-      if (playerComponent == null) {
+      PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+      if (playerRefComponent == null) {
          context.getState().state = InteractionState.Failed;
       } else {
-         long elapsedNanosInWorld = playerComponent.getSinceLastSpawnNanos();
-         if (elapsedNanosInWorld < MINIMUM_TIME_IN_WORLD.toNanos()) {
-            if (elapsedNanosInWorld > WARNING_TIME.toNanos()) {
-               playerComponent.sendMessage(MESSAGE_PORTALS_ATTUNING_TO_WORLD);
-            }
-
+         Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
+         if (playerComponent == null) {
             context.getState().state = InteractionState.Failed;
          } else {
-            PortalWorld portalWorld = commandBuffer.getResource(PortalWorld.getResourceType());
-            if (!portalWorld.exists()) {
-               playerComponent.sendMessage(MESSAGE_PORTALS_DEVICE_NOT_IN_PORTAL_WORLD);
+            long elapsedNanosInWorld = playerComponent.getSinceLastSpawnNanos();
+            if (elapsedNanosInWorld < MINIMUM_TIME_IN_WORLD.toNanos()) {
+               if (elapsedNanosInWorld > WARNING_TIME.toNanos()) {
+                  playerRefComponent.sendMessage(MESSAGE_PORTALS_ATTUNING_TO_WORLD);
+               }
+
                context.getState().state = InteractionState.Failed;
             } else {
-               CombinedItemContainer everythingInventoryComponent = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.EVERYTHING);
-               CursedItems.uncurseAll(everythingInventoryComponent);
-               InstancesPlugin.exitInstance(ref, commandBuffer);
+               PortalWorld portalWorld = commandBuffer.getResource(PortalWorld.getResourceType());
+               if (!portalWorld.exists()) {
+                  playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_NOT_IN_PORTAL_WORLD);
+                  context.getState().state = InteractionState.Failed;
+               } else {
+                  CombinedItemContainer everythingInventoryComponent = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.EVERYTHING);
+                  CursedItems.uncurseAll(everythingInventoryComponent);
+                  InstancesPlugin.exitInstance(ref, commandBuffer);
+               }
             }
          }
       }

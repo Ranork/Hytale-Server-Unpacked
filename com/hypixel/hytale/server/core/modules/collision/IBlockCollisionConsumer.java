@@ -1,7 +1,7 @@
 package com.hypixel.hytale.server.core.modules.collision;
 
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
+import org.joml.Vector3d;
 
 public interface IBlockCollisionConsumer {
    IBlockCollisionConsumer.Result onCollision(int var1, int var2, int var3, Vector3d var4, BlockContactData var5, BlockData var6, Box var7);

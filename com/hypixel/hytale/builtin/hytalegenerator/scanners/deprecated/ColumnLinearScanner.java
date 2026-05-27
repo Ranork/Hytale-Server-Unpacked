@@ -4,9 +4,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class ColumnLinearScanner extends Scanner {
    private final int minY;
@@ -52,12 +52,12 @@ public class ColumnLinearScanner extends Scanner {
          scanMaxY = Math.min(bedY + this.maxY, bounds.max.y);
       }
 
-      Vector3i patternPosition = context.position.clone();
+      Vector3i patternPosition = new Vector3i(context.position);
       Pattern.Context patternContext = new Pattern.Context(patternPosition, context.materialSpace);
       if (this.topDownOrder) {
          for (patternPosition.y = scanMaxY - 1; patternPosition.y >= scanMinY; patternPosition.y--) {
             if (context.pattern.matches(patternContext)) {
-               context.validPositions_out.add(patternPosition.clone());
+               context.validPositions_out.add(new Vector3i(patternPosition));
                if (context.validPositions_out.size() >= this.resultsCap) {
                   return;
                }
@@ -66,7 +66,7 @@ public class ColumnLinearScanner extends Scanner {
       } else {
          for (patternPosition.y = scanMinY; patternPosition.y < scanMaxY; patternPosition.y++) {
             if (context.pattern.matches(patternContext)) {
-               context.validPositions_out.add(patternPosition.clone());
+               context.validPositions_out.add(new Vector3i(patternPosition));
                if (context.validPositions_out.size() >= this.resultsCap) {
                   return;
                }

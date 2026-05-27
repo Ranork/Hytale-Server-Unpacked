@@ -26,8 +26,6 @@ import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
 import com.hypixel.hytale.common.util.ExceptionUtil;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferCall;
@@ -36,11 +34,14 @@ import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.function.Function;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabProp extends Prop {
    @Nonnull
@@ -69,7 +70,6 @@ public class PrefabProp extends Prop {
    private final Pattern moldingPattern;
    private final MoldingDirection moldingDirection;
    private final boolean moldChildren;
-   private final int prefabId = this.hashCode();
    private boolean loadEntities;
 
    public PrefabProp(
@@ -102,7 +102,7 @@ public class PrefabProp extends Prop {
 
       for (List<IPrefabBuffer> prefabList : prefabPool.allElements()) {
          if (prefabList.isEmpty()) {
-            throw new IllegalArgumentException("prefab pool contains empty list");
+            return;
          }
 
          for (IPrefabBuffer prefab : prefabList) {
@@ -182,7 +182,7 @@ public class PrefabProp extends Prop {
       RotatedPositionsScanResult scanResult = new RotatedPositionsScanResult(new ArrayList<>());
 
       for (Vector3i validPosition : validPositions) {
-         patternPosition.assign(validPosition);
+         patternPosition.set(validPosition);
          PrefabRotation rotation = this.directionality.getRotationAt(patternContext);
          if (rotation != null) {
             scanResult.positions.add(new RotatedPosition(validPosition.x, validPosition.y, validPosition.z, rotation));
@@ -214,7 +214,7 @@ public class PrefabProp extends Prop {
       return list.get(randomIndex);
    }
 
-   private void place(@Nonnull RotatedPosition position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull EntityFunnel entityBuffer) {
+   public void place(@Nonnull RotatedPosition position, @Nonnull VoxelSpace<Material> materialSpace, @Nonnull EntityFunnel entityBuffer) {
       Random random = new Random(this.rngField.get(position.x, position.y, position.z));
       PrefabBufferCall callInstance = new PrefabBufferCall(random, position.rotation);
       IPrefabBuffer prefab = this.pickPrefab(random);
@@ -250,6 +250,7 @@ public class PrefabProp extends Prop {
       try {
          Vector3i prefabPositionVector = position.toVector3i();
          VoxelSpace<Integer> moldingOffsetsFinal = moldingOffsets;
+         int prefabInstanceId = Objects.hash(position.x, position.y, position.z, prefab.hashCode());
          prefab.forEach(
             IPrefabBuffer.iterateAllColumns(),
             (x, yx, z, blockId, holder, support, rotation, filler, call, fluidId, fluidLevel) -> {
@@ -291,9 +292,9 @@ public class PrefabProp extends Prop {
                      for (int ix = 0; ix < entityWrappers.length; ix++) {
                         TransformComponent transformComp = entityWrappers[ix].getComponent(TransformComponent.getComponentType());
                         if (transformComp != null) {
-                           Vector3d entityPosition = transformComp.getPosition().clone();
+                           Vector3d entityPosition = new Vector3d(transformComp.getPosition());
                            buffer.rotation.rotate(entityPosition);
-                           Vector3d entityWorldPosition = entityPosition.add(prefabPositionVector);
+                           Vector3d entityWorldPosition = entityPosition.add(prefabPositionVector.x, prefabPositionVector.y, prefabPositionVector.z);
                            if (entityBuffer.getBounds().contains(entityWorldPosition)) {
                               Holder<EntityStore> entityClone = entityWrappers[ix].clone();
                               transformComp = entityClone.getComponent(TransformComponent.getComponentType());
@@ -308,7 +309,7 @@ public class PrefabProp extends Prop {
                                  }
 
                                  EntityPlacementData placementData = new EntityPlacementData(
-                                    new Vector3i(), PrefabRotation.ROTATION_0, entityClone, this.prefabId
+                                    new Vector3i(), PrefabRotation.ROTATION_0, entityClone, prefabInstanceId
                                  );
                                  entityBuffer.addEntity(placementData);
                               }

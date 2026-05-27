@@ -15,8 +15,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.event.IEventDispatcher;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.MouseButtonType;
@@ -34,8 +32,6 @@ import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.particle.config.ParticleSystem;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
 import com.hypixel.hytale.server.core.asset.type.trail.config.Trail;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.CameraManager;
@@ -88,6 +84,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.non
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ChainFlagInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ChangeActiveSlotInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ConditionInteraction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.DurabilityConditionInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.EffectConditionInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.ParallelInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.RepeatInteraction;
@@ -98,7 +95,6 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.non
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.StatsConditionInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.StatsConditionWithModifierInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.ApplyEffectInteraction;
-import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.CommandInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.RemoveEntityInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.none.simple.SendMessageInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.selector.AOECircleSelector;
@@ -145,6 +141,8 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector3i;
 
 public class InteractionModule extends JavaPlugin {
    @Nonnull
@@ -265,9 +263,9 @@ public class InteractionModule extends JavaPlugin {
       Interaction.CODEC.register("Replace", ReplaceInteraction.class, ReplaceInteraction.CODEC);
       Interaction.CODEC.register("StatsCondition", StatsConditionInteraction.class, StatsConditionInteraction.CODEC);
       Interaction.CODEC.register("StatsConditionWithModifier", StatsConditionWithModifierInteraction.class, StatsConditionWithModifierInteraction.CODEC);
+      Interaction.CODEC.register("DurabilityCondition", DurabilityConditionInteraction.class, DurabilityConditionInteraction.CODEC);
       Interaction.CODEC.register("SpawnPrefab", SpawnPrefabInteraction.class, SpawnPrefabInteraction.CODEC);
       Interaction.CODEC.register("SendMessage", SendMessageInteraction.class, SendMessageInteraction.CODEC);
-      Interaction.CODEC.register("Command", CommandInteraction.class, CommandInteraction.CODEC);
       Interaction.CODEC.register("EquipItem", EquipItemInteraction.class, EquipItemInteraction.CODEC);
       Interaction.CODEC.register("RefillContainer", RefillContainerInteraction.class, RefillContainerInteraction.CODEC);
       Interaction.CODEC.register("Door", DoorInteraction.class, DoorInteraction.CODEC);
@@ -360,7 +358,7 @@ public class InteractionModule extends JavaPlugin {
          if (hotbarComponent != null) {
             byte activeHotbarSlot = hotbarComponent.getActiveSlot();
             if (activeHotbarSlot != packet.activeSlot) {
-               playerComponent.sendMessage(
+               playerRefComponent.sendMessage(
                   Message.translation("server.modules.interaction.failedGetActiveSlot")
                      .param("server", (int)activeHotbarSlot)
                      .param("packet", packet.activeSlot)
@@ -386,12 +384,11 @@ public class InteractionModule extends JavaPlugin {
                if (ref.isValid()) {
                   EntityStore entityComponentStore = componentAccessor.getExternalData();
                   Vector3i targetBlock = blockPositionPacket == null ? null : new Vector3i(blockPositionPacket.x, blockPositionPacket.y, blockPositionPacket.z);
-                  Entity targetEntity;
+                  Ref<EntityStore> targetRef;
                   if (worldInteraction_.entityId < 0) {
-                     targetEntity = null;
+                     targetRef = null;
                   } else {
-                     Ref<EntityStore> entityReference = entityComponentStore.getRefFromNetworkId(worldInteraction_.entityId);
-                     targetEntity = EntityUtils.getEntity(entityReference, componentAccessor);
+                     targetRef = entityComponentStore.getRefFromNetworkId(worldInteraction_.entityId);
                   }
 
                   CameraManager cameraManagerComponent = componentAccessor.getComponent(ref, CameraManager.getComponentType());
@@ -411,7 +408,7 @@ public class InteractionModule extends JavaPlugin {
                               packet.clientTimestamp,
                               item,
                               targetBlock,
-                              targetEntity,
+                              targetRef,
                               packet.screenPoint,
                               packet.mouseButton
                            )
@@ -426,13 +423,13 @@ public class InteractionModule extends JavaPlugin {
                      if (dispatcher.hasListener()) {
                         dispatcher.dispatch(
                            new PlayerMouseMotionEvent(
-                              ref, playerComponent, packet.clientTimestamp, item, targetBlock, targetEntity, packet.screenPoint, packet.mouseMotion
+                              ref, playerComponent, packet.clientTimestamp, item, targetBlock, targetRef, packet.screenPoint, packet.mouseMotion
                            )
                         );
                      }
                   }
 
-                  cameraManagerComponent.setLastScreenPoint(new Vector2d(packet.screenPoint.x, packet.screenPoint.y));
+                  cameraManagerComponent.setLastScreenPoint(new Vector2d(packet.screenPoint.x(), packet.screenPoint.y()));
                   cameraManagerComponent.setLastBlockPosition(targetBlock);
                }
             }

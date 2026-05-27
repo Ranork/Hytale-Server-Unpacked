@@ -5,7 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class BlockBulkCommand extends AbstractCommandCollection {
    public BlockBulkCommand() {
       super("bulk", "server.commands.block.bulk.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new BlockBulkFindCommand());
       this.addSubCommand(new BlockBulkFindHereCommand());
       this.addSubCommand(new BlockBulkReplaceCommand());

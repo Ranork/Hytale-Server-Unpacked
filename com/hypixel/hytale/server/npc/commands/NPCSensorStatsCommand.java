@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.commands;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -24,6 +23,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class NPCSensorStatsCommand extends AbstractPlayerCommand {
    public NPCSensorStatsCommand() {

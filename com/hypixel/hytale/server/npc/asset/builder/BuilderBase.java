@@ -18,7 +18,6 @@ import com.hypixel.hytale.function.consumer.BooleanConsumer;
 import com.hypixel.hytale.function.consumer.FloatConsumer;
 import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.expression.BuilderExpressionDynamic;
 import com.hypixel.hytale.server.npc.asset.builder.holder.AssetArrayHolder;
@@ -37,6 +36,7 @@ import com.hypixel.hytale.server.npc.asset.builder.holder.TemporalArrayHolder;
 import com.hypixel.hytale.server.npc.asset.builder.holder.ValueHolder;
 import com.hypixel.hytale.server.npc.asset.builder.providerevaluators.ParameterProviderEvaluator;
 import com.hypixel.hytale.server.npc.asset.builder.providerevaluators.ParameterType;
+import com.hypixel.hytale.server.npc.asset.builder.providerevaluators.PrecedingProviderEvaluator;
 import com.hypixel.hytale.server.npc.asset.builder.providerevaluators.ProviderEvaluator;
 import com.hypixel.hytale.server.npc.asset.builder.providerevaluators.UnconditionalFeatureProviderEvaluator;
 import com.hypixel.hytale.server.npc.asset.builder.providerevaluators.UnconditionalParameterProviderEvaluator;
@@ -53,6 +53,7 @@ import com.hypixel.hytale.server.npc.asset.builder.validators.ComponentOnlyValid
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleArrayValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.EnumArrayValidator;
+import com.hypixel.hytale.server.npc.asset.builder.validators.ExactlyOneZeroValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.ExistsIfParameterSetValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.InstructionContextValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.IntArrayValidator;
@@ -65,6 +66,7 @@ import com.hypixel.hytale.server.npc.asset.builder.validators.RequiredFeatureVal
 import com.hypixel.hytale.server.npc.asset.builder.validators.RequiresFeatureIfEnumValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.RequiresFeatureIfValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.RequiresOneOfFeaturesValidator;
+import com.hypixel.hytale.server.npc.asset.builder.validators.RequiresPrecedingValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StateStringValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringArrayNoEmptyStringsValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.StringArrayValidator;
@@ -110,6 +112,7 @@ import java.util.logging.Level;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public abstract class BuilderBase<T> implements Builder<T> {
    private static final Pattern PATTERN = Pattern.compile("\\s*,\\s*");
@@ -131,6 +134,10 @@ public abstract class BuilderBase<T> implements Builder<T> {
    protected BuilderParameters builderParameters;
    protected BuilderManager builderManager;
    protected BuilderContext owner;
+   @Nullable
+   private Class<?> requiredPrecedingClass;
+   @Nullable
+   private Class<?> providedPrecedingClass;
    @Nullable
    protected List<String> readErrors;
    private List<ValueHolder> dynamicHolders;
@@ -3838,6 +3845,81 @@ public abstract class BuilderBase<T> implements Builder<T> {
       }
    }
 
+   protected void validateExactlyOneZero(String attribute1, double value1, String attribute2, double value2) {
+      if (this.isCreatingDescriptor()) {
+         this.builderDescriptor.addValidator(ExactlyOneZeroValidator.withAttributes(attribute1, attribute2));
+      } else {
+         if (!ExactlyOneZeroValidator.test(value1, value2)) {
+            this.addError(ExactlyOneZeroValidator.formatErrorMessage(attribute1, value1, attribute2, value2, this.getBreadCrumbs()));
+         }
+      }
+   }
+
+   protected void validateExactlyOneZero(@Nonnull DoubleHolder value1, String attribute2, double value2) {
+      if (this.isCreatingDescriptor()) {
+         this.builderDescriptor.addValidator(ExactlyOneZeroValidator.withAttributes(value1.getName(), attribute2));
+      } else {
+         if (value1.isStatic()) {
+            this.validateExactlyOneZero(value1.getName(), value1.get(null), attribute2, value2);
+         } else {
+            value1.addRelationValidator((executionContext, v1) -> {
+               if (!ExactlyOneZeroValidator.test(v1, value2)) {
+                  throw new IllegalStateException(ExactlyOneZeroValidator.formatErrorMessage(value1.getName(), v1, attribute2, value2, this.getBreadCrumbs()));
+               }
+            });
+         }
+      }
+   }
+
+   protected void validateExactlyOneZero(String attribute1, double value1, @Nonnull DoubleHolder value2) {
+      if (this.isCreatingDescriptor()) {
+         this.builderDescriptor.addValidator(ExactlyOneZeroValidator.withAttributes(attribute1, value2.getName()));
+      } else {
+         if (value2.isStatic()) {
+            this.validateExactlyOneZero(attribute1, value1, value2.getName(), value2.get(null));
+         } else {
+            value2.addRelationValidator((executionContext, v2) -> {
+               if (!ExactlyOneZeroValidator.test(value1, v2)) {
+                  throw new IllegalStateException(ExactlyOneZeroValidator.formatErrorMessage(attribute1, value1, value2.getName(), v2, this.getBreadCrumbs()));
+               }
+            });
+         }
+      }
+   }
+
+   protected void validateExactlyOneZero(@Nonnull DoubleHolder value1, @Nonnull DoubleHolder value2) {
+      if (this.isCreatingDescriptor()) {
+         this.builderDescriptor.addValidator(ExactlyOneZeroValidator.withAttributes(value1.getName(), value2.getName()));
+      } else {
+         if (value1.isStatic()) {
+            this.validateExactlyOneZero(value1.getName(), value1.get(null), value2);
+         } else if (value2.isStatic()) {
+            this.validateExactlyOneZero(value1, value2.getName(), value2.get(null));
+         } else {
+            value1.addRelationValidator(
+               (executionContext, v1) -> {
+                  double v2 = value2.rawGet(executionContext);
+                  if (!ExactlyOneZeroValidator.test(v1, v2)) {
+                     throw new IllegalStateException(
+                        ExactlyOneZeroValidator.formatErrorMessage(value1.getName(), v1, value2.getName(), v2, this.getBreadCrumbs())
+                     );
+                  }
+               }
+            );
+            value2.addRelationValidator(
+               (executionContext, v2) -> {
+                  double v1 = value1.rawGet(executionContext);
+                  if (!ExactlyOneZeroValidator.test(v1, v2)) {
+                     throw new IllegalStateException(
+                        ExactlyOneZeroValidator.formatErrorMessage(value1.getName(), v1, value2.getName(), v2, this.getBreadCrumbs())
+                     );
+                  }
+               }
+            );
+         }
+      }
+   }
+
    protected void validateFloatRelation(String attribute1, float value1, @Nonnull RelationalOperator relation, String attribute2, float value2) {
       if (this.isCreatingDescriptor()) {
          this.builderDescriptor.addValidator(AttributeRelationValidator.withAttributes(attribute1, relation, attribute2));
@@ -4525,6 +4607,24 @@ public abstract class BuilderBase<T> implements Builder<T> {
       }
    }
 
+   protected void requirePreceding(
+      @Nonnull Class<?> clazz, @Nonnull BuilderDescriptorState state, @Nonnull String shortDescription, @Nullable String longDescription
+   ) {
+      if (this.isCreatingDescriptor()) {
+         this.builderDescriptor.addValidator(new RequiresPrecedingValidator(clazz, state, shortDescription, longDescription));
+      } else {
+         this.requiredPrecedingClass = clazz;
+      }
+   }
+
+   protected void providePreceding(@Nonnull Class<?> clazz) {
+      if (this.isCreatingDescriptor()) {
+         this.builderDescriptor.addProviderEvaluator(new PrecedingProviderEvaluator(clazz));
+      } else {
+         this.providedPrecedingClass = clazz;
+      }
+   }
+
    protected void provideFeature(@Nonnull Feature feature) {
       this.provideFeatureOrParameters(new UnconditionalFeatureProviderEvaluator(feature));
    }
@@ -4968,6 +5068,13 @@ public abstract class BuilderBase<T> implements Builder<T> {
    protected void runLoadTimeValidationHelper0(
       String configName, NPCLoadTimeValidationHelper loadTimeValidationHelper, ExecutionContext context, List<String> errors
    ) {
+      if (this.requiredPrecedingClass != null && !loadTimeValidationHelper.checkPrecedingProvided(this.requiredPrecedingClass)) {
+         errors.add(String.format("%s: requires a preceding %s in the same instruction list scope", configName, this.requiredPrecedingClass.getSimpleName()));
+      }
+
+      if (this.providedPrecedingClass != null) {
+         loadTimeValidationHelper.registerPrecedingProvider(this.providedPrecedingClass);
+      }
    }
 
    private boolean runLoadTimeValidationHelper(

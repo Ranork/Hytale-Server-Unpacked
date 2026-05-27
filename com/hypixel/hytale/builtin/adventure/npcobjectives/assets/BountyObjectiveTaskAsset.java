@@ -7,9 +7,9 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.Objects;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BountyObjectiveTaskAsset extends ObjectiveTaskAsset {
    @Nonnull

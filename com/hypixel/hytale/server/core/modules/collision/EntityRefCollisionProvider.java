@@ -6,8 +6,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.function.consumer.TriConsumer;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.model.config.DetailBox;
 import com.hypixel.hytale.server.core.entity.Entity;
 import com.hypixel.hytale.server.core.entity.EntityUtils;
@@ -22,6 +20,8 @@ import java.util.Map.Entry;
 import java.util.function.BiPredicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class EntityRefCollisionProvider {
    protected static final int ALLOC_SIZE = 4;
@@ -139,7 +139,7 @@ public class EntityRefCollisionProvider {
    }
 
    protected void setContact(@Nonnull Ref<EntityStore> ref, @Nonnull String detailName) {
-      this.collisionPosition.assign(this.position).addScaled(this.direction, this.minMax.x);
+      this.collisionPosition.set(this.position).fma(this.minMax.x, this.direction);
       this.contacts[0].assign(this.collisionPosition, this.minMax.x, this.minMax.y, ref, detailName);
       this.count = 1;
    }
@@ -157,8 +157,8 @@ public class EntityRefCollisionProvider {
             if (boundingBoxComponent.getDetailBoxes() != null && !boundingBoxComponent.getDetailBoxes().isEmpty()) {
                for (Entry<String, DetailBox[]> e : boundingBoxComponent.getDetailBoxes().entrySet()) {
                   for (DetailBox v : e.getValue()) {
-                     this.tmpVector.assign(v.getOffset());
-                     this.tmpVector.rotateY(transformComponent.getRotation().getYaw());
+                     this.tmpVector.set(v.getOffset());
+                     this.tmpVector.rotateY(transformComponent.getRotation().yaw());
                      this.tmpVector.add(transformComponent.getPosition());
                      if (CollisionMath.intersectSweptAABBs(this.position, this.direction, this.boundingBox, this.tmpVector, v.getBox(), minMax, this.tempBox)
                         && minMax.x <= 1.0) {

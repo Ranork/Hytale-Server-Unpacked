@@ -5,10 +5,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.BufferBundle;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.VoxelBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class VoxelBufferView<T> implements VoxelSpace<T> {
    @Nonnull
@@ -33,25 +33,15 @@ public class VoxelBufferView<T> implements VoxelSpace<T> {
 
       Bounds3i thisBounds_bufferGrid = this.bufferAccess.getBounds_bufferGrid();
       Vector3i pos_bufferGrid = new Vector3i();
-      pos_bufferGrid.setX(thisBounds_bufferGrid.min.x);
 
-      while (pos_bufferGrid.x < thisBounds_bufferGrid.max.x) {
-         pos_bufferGrid.setY(thisBounds_bufferGrid.min.y);
-
-         while (pos_bufferGrid.y < thisBounds_bufferGrid.max.y) {
-            pos_bufferGrid.setZ(thisBounds_bufferGrid.min.z);
-
-            while (pos_bufferGrid.z < thisBounds_bufferGrid.max.z) {
+      for (pos_bufferGrid.x = thisBounds_bufferGrid.min.x; pos_bufferGrid.x < thisBounds_bufferGrid.max.x; pos_bufferGrid.x++) {
+         for (pos_bufferGrid.y = thisBounds_bufferGrid.min.y; pos_bufferGrid.y < thisBounds_bufferGrid.max.y; pos_bufferGrid.y++) {
+            for (pos_bufferGrid.z = thisBounds_bufferGrid.min.z; pos_bufferGrid.z < thisBounds_bufferGrid.max.z; pos_bufferGrid.z++) {
                VoxelBuffer<T> sourceBuffer = source.getBuffer_fromBufferGrid(pos_bufferGrid);
                VoxelBuffer<T> destinationBuffer = this.getBuffer_fromBufferGrid(pos_bufferGrid);
                destinationBuffer.reference(sourceBuffer);
-               pos_bufferGrid.setZ(pos_bufferGrid.z + 1);
             }
-
-            pos_bufferGrid.setY(pos_bufferGrid.y + 1);
          }
-
-         pos_bufferGrid.setX(pos_bufferGrid.x + 1);
       }
    }
 
@@ -76,7 +66,7 @@ public class VoxelBufferView<T> implements VoxelSpace<T> {
       VoxelBuffer<T> buffer = this.getBuffer_fromVoxelGrid(position_voxelGrid);
       GridUtils.toVoxelGridInsideBuffer_fromWorldGrid(position_voxelGrid);
       buffer.setVoxelContent(position_voxelGrid, content);
-      position_voxelGrid.assign(initialX, initialY, initialZ);
+      position_voxelGrid.set(initialX, initialY, initialZ);
    }
 
    @Override
@@ -107,7 +97,7 @@ public class VoxelBufferView<T> implements VoxelSpace<T> {
       VoxelBuffer<T> buffer = this.getBuffer_fromVoxelGrid(position_voxelGrid);
       GridUtils.toVoxelGridInsideBuffer_fromWorldGrid(position_voxelGrid);
       T content = buffer.getVoxelContent(position_voxelGrid);
-      position_voxelGrid.assign(initialX, initialY, initialZ);
+      position_voxelGrid.set(initialX, initialY, initialZ);
       return content;
    }
 
@@ -127,7 +117,7 @@ public class VoxelBufferView<T> implements VoxelSpace<T> {
 
    @Nonnull
    private VoxelBuffer<T> getBuffer_fromVoxelGrid(@Nonnull Vector3i position_voxelGrid) {
-      Vector3i localBufferPosition_bufferGrid = position_voxelGrid.clone();
+      Vector3i localBufferPosition_bufferGrid = new Vector3i(position_voxelGrid);
       GridUtils.toBufferGrid_fromVoxelGrid(localBufferPosition_bufferGrid);
       return this.getBuffer_fromBufferGrid(localBufferPosition_bufferGrid);
    }

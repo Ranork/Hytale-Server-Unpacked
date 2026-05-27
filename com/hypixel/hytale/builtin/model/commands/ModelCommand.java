@@ -26,6 +26,7 @@ import javax.annotation.Nonnull;
 public class ModelCommand extends AbstractPlayerCommand {
    public ModelCommand() {
       super("model", "server.commands.model.desc");
+      this.setPermissionGroups("hytale:Builder");
       this.addUsageVariant(new ModelCommand.ModelOtherCommand());
       this.addSubCommand(new ModelCommand.ModelSetCommand());
       this.addSubCommand(new ModelCommand.ModelResetCommand());

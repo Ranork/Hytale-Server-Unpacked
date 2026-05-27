@@ -228,7 +228,7 @@ public class ChainingInteraction extends Interaction {
       return "ChainingInteraction{chainingAllowance=" + this.chainingAllowance + ", next=" + Arrays.toString((Object[])this.next) + "} " + super.toString();
    }
 
-   private static class ChainingTag implements CollectorTag {
+   public static final class ChainingTag implements CollectorTag {
       private final int index;
 
       private ChainingTag(int index) {

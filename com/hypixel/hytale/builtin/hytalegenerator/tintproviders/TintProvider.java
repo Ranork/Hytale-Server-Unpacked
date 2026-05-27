@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.tintproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public abstract class TintProvider {
    public static final int DEFAULT_TINT = ColorParseUtil.colorToARGBInt(new Color((byte)91, (byte)-98, (byte)40));

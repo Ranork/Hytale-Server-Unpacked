@@ -11,7 +11,7 @@ import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionProvider;
 import com.hypixel.hytale.server.core.modules.collision.BlockTracker;
 import com.hypixel.hytale.server.core.modules.collision.EntityContactData;
@@ -36,6 +36,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> {
    @Nonnull
@@ -101,7 +102,7 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
          ForceProviderStandardState forceState = physicsComponent.getForceProviderStandardState();
          RestingSupport restingSupport = physicsComponent.getRestingSupport();
          if (physicsComponent.getState() == StandardPhysicsProvider.STATE.RESTING) {
-            if (forceState.externalForce.squaredLength() == 0.0 && !restingSupport.hasChanged(world)) {
+            if (forceState.externalForce.lengthSquared() == 0.0 && !restingSupport.hasChanged(world)) {
                return;
             }
 
@@ -122,13 +123,13 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
          int bounceCount = physicsConfig.getBounceCount();
          boolean allowRolling = physicsConfig.isAllowRolling();
          physicsComponent.setWorld(world);
-         position.assign(transformComponent.getPosition());
+         position.set(transformComponent.getPosition());
          velocityComponent.assignVelocityTo(velocity);
          double mass = forceProviderEntity.getMass(boundingBox.getVolume());
          forceState.convertToForces(dt, mass);
          forceState.updateVelocity(velocity);
-         if (!(velocity.squaredLength() * dt * dt >= 1.0000000000000002E-10) && !(forceState.externalForce.squaredLength() >= 0.0)) {
-            velocity.assign(Vector3d.ZERO);
+         if (!(velocity.lengthSquared() * dt * dt >= 1.0000000000000002E-10) && !(forceState.externalForce.lengthSquared() >= 0.0)) {
+            velocity.zero();
          } else {
             physicsComponent.setState(StandardPhysicsProvider.STATE.ACTIVE);
          }
@@ -137,17 +138,17 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
             physicsComponent.setState(StandardPhysicsProvider.STATE.ACTIVE);
          }
 
-         stateBefore.position.assign(position);
-         stateBefore.velocity.assign(velocity);
+         stateBefore.position.set(position);
+         stateBefore.velocity.set(velocity);
          forceProviderEntity.setForceProviderStandardState(forceState);
          stateUpdater.update(stateBefore, stateAfter, mass, dt, physicsComponent.isOnGround(), forceProviders);
-         velocity.assign(stateAfter.velocity);
-         movement.assign(velocity).scale(dt);
+         velocity.set(stateAfter.velocity);
+         movement.set(velocity).mul(dt);
          forceState.clear();
-         if (velocity.squaredLength() * dt * dt >= 1.0000000000000002E-10) {
+         if (velocity.lengthSquared() * dt * dt >= 1.0000000000000002E-10) {
             physicsComponent.setState(StandardPhysicsProvider.STATE.ACTIVE);
          } else {
-            velocity.assign(Vector3d.ZERO);
+            velocity.zero();
          }
 
          EntityRefCollisionProvider entityCollisionProvider = physicsComponent.getEntityCollisionProvider();
@@ -171,33 +172,33 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
 
          physicsComponent.setBounced(false);
          physicsComponent.setOnGround(false);
-         moveOutOfSolidVelocity.assign(Vector3d.ZERO);
+         moveOutOfSolidVelocity.zero();
          physicsComponent.setMovedInsideSolid(false);
          physicsComponent.setDisplacedMass(0.0);
          physicsComponent.setSubSurfaceVolume(0.0);
          physicsComponent.setEnterFluid(Double.MAX_VALUE);
          physicsComponent.setLeaveFluid(-Double.MAX_VALUE);
          physicsComponent.setCollisionStart(maxRelativeDistance);
-         contactPosition.assign(position).addScaled(movement, physicsComponent.getCollisionStart());
-         contactNormal.assign(Vector3d.ZERO);
+         contactPosition.set(position).fma(physicsComponent.getCollisionStart(), movement);
+         contactNormal.zero();
          physicsComponent.setSliding(true);
-         Vector3d tmpPosition = position.clone();
-         nextMovement.assign(Vector3d.ZERO);
+         Vector3d tmpPosition = new Vector3d(position);
+         nextMovement.zero();
 
-         while (physicsComponent.isSliding() && !movement.equals(Vector3d.ZERO)) {
-            contactPosition.assign(tmpPosition).addScaled(movement, physicsComponent.getCollisionStart());
+         while (physicsComponent.isSliding() && !movement.equals(Vector3dUtil.ZERO)) {
+            contactPosition.set(tmpPosition).fma(physicsComponent.getCollisionStart(), movement);
             physicsComponent.setSliding(false);
             blockCollisionProvider.cast(world, boundingBox, tmpPosition, movement, physicsComponent, triggerTracker, maxRelativeDistance);
-            movement.assign(nextMovement);
-            tmpPosition.assign(contactPosition);
+            movement.set(nextMovement);
+            tmpPosition.set(contactPosition);
          }
 
-         movement.assign(tmpPosition).add(nextMovement).subtract(position);
+         movement.set(tmpPosition).add(nextMovement).sub(position);
          physicsComponent.getFluidTracker().reset();
          double density = physicsComponent.getDisplacedMass() > 0.0 ? physicsComponent.getDisplacedMass() / physicsComponent.getSubSurfaceVolume() : 1.2;
          if (physicsComponent.isMovedInsideSolid()) {
-            position.addScaled(moveOutOfSolidVelocity, dt);
-            velocity.assign(moveOutOfSolidVelocity);
+            position.fma(dt, moveOutOfSolidVelocity);
+            velocity.set(moveOutOfSolidVelocity);
             forceState.dragCoefficient = physicsComponent.getDragCoefficient(density);
             forceState.displacedMass = physicsComponent.getDisplacedMass();
             forceState.gravity = gravity;
@@ -218,7 +219,7 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
 
             if (velocityClip > 0.0 && velocityClip < 1.0) {
                stateUpdater.update(stateBefore, stateAfter, mass, dt * velocityClip, physicsComponent.isOnGround(), forceProviders);
-               velocity.assign(stateAfter.velocity);
+               velocity.set(stateAfter.velocity);
             }
 
             if (physicsComponent.isInFluid()
@@ -236,7 +237,7 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
             }
 
             if (enteringWater) {
-               forceState.externalImpulse.addScaled(stateAfter.velocity, -physicsConfig.getHitWaterImpulseLoss() * mass);
+               forceState.externalImpulse.fma(-physicsConfig.getHitWaterImpulseLoss() * mass, stateAfter.velocity);
             }
 
             forceState.displacedMass = physicsComponent.getDisplacedMass();
@@ -245,7 +246,7 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
             if (entityCollisionProvider.getCount() > 0) {
                EntityContactData contact = entityCollisionProvider.getContact(0);
                Ref<EntityStore> contactRef = contact.getEntityReference();
-               position.assign(contact.getCollisionPoint());
+               position.set(contact.getCollisionPoint());
                physicsComponent.setState(StandardPhysicsProvider.STATE.INACTIVE);
                if (physicsComponent.getImpactConsumer() != null) {
                   physicsComponent.getImpactConsumer().onImpact(selfRef, position, contactRef, contact.getCollisionDetailName(), commandBuffer);
@@ -258,20 +259,20 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
                physicsComponent.rotateBody(dt, transformComponent.getRotation());
                physicsComponent.finishTick(transformComponent, velocityComponent);
             } else {
-               position.assign(contactPosition);
+               position.set(contactPosition);
                physicsComponent.incrementBounces();
                SimplePhysicsProvider.computeReflectedVector(velocity, contactNormal, velocity);
                if (bounceCount == -1 || physicsComponent.getBounces() <= bounceCount) {
-                  velocity.scale(physicsConfig.getBounciness());
+                  velocity.mul(physicsConfig.getBounciness());
                }
 
                if ((bounceCount == -1 || physicsComponent.getBounces() <= bounceCount)
-                  && !(velocity.squaredLength() * dt * dt < physicsConfig.getBounceLimit() * physicsConfig.getBounceLimit())) {
+                  && !(velocity.lengthSquared() * dt * dt < physicsConfig.getBounceLimit() * physicsConfig.getBounceLimit())) {
                   if (physicsComponent.getBounceConsumer() != null) {
                      physicsComponent.getBounceConsumer().onBounce(selfRef, position, commandBuffer);
                   }
                } else {
-                  boolean hitGround = contactNormal.equals(Vector3d.UP);
+                  boolean hitGround = contactNormal.equals(Vector3dUtil.UP);
                   if (!allowRolling && (physicsConfig.isSticksVertically() || hitGround)) {
                      physicsComponent.setState(StandardPhysicsProvider.STATE.RESTING);
                      restingSupport.rest(world, boundingBox, position);
@@ -283,10 +284,10 @@ public class StandardPhysicsTickSystem extends EntityTickingSystem<EntityStore> 
 
                   if (allowRolling) {
                      velocity.y = 0.0;
-                     velocity.scale(physicsConfig.getRollingFrictionFactor());
+                     velocity.mul(physicsConfig.getRollingFrictionFactor());
                      physicsComponent.setOnGround(hitGround);
                   } else {
-                     velocity.assign(Vector3d.ZERO);
+                     velocity.zero();
                   }
                }
 

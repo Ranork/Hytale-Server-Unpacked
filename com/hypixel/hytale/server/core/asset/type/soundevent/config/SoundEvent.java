@@ -5,6 +5,8 @@ import com.hypixel.hytale.assetstore.AssetKeyValidator;
 import com.hypixel.hytale.assetstore.AssetRegistry;
 import com.hypixel.hytale.assetstore.AssetStore;
 import com.hypixel.hytale.assetstore.codec.AssetBuilderCodec;
+import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.event.RemovedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
@@ -15,6 +17,9 @@ import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.common.util.AudioUtil;
 import com.hypixel.hytale.server.core.asset.type.audiocategory.config.AudioCategory;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioState;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.AudioStateResolver;
+import com.hypixel.hytale.server.core.asset.type.audiostate.config.StateBindingConfig;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.lang.ref.SoftReference;
 import java.util.Arrays;
@@ -131,7 +136,15 @@ public class SoundEvent
       .addValidator(AudioCategory.VALIDATOR_CACHE.getValidator())
       .documentation("Audio category to assign this sound event to for additional property routing.")
       .add()
+      .<StateBindingConfig[]>append(
+         new KeyedCodec<>("StateBindings", StateBindingConfig.CODEC_ARRAY),
+         (soundEvent, v) -> soundEvent.stateBindings = v,
+         soundEvent -> soundEvent.stateBindings
+      )
+      .documentation("Subscribe this sound event to AudioState axes. Per-state volume deltas will be applied to all layers.")
+      .add()
       .afterDecode(SoundEvent::processConfig)
+      .validator((soundEvent, results) -> AudioStateResolver.validateBindings(soundEvent.stateBindings, "SoundEvent '" + soundEvent.id + "'", results))
       .build();
    public static final ValidatorCache<String> VALIDATOR_CACHE = new ValidatorCache<>(new AssetKeyValidator<>(SoundEvent::getAssetStore));
    private static AssetStore<String, SoundEvent, IndexedLookupTableAssetMap<String, SoundEvent>> ASSET_STORE;
@@ -150,6 +163,8 @@ public class SoundEvent
    @Nullable
    protected String audioCategoryId = null;
    protected transient int audioCategoryIndex = 0;
+   @Nullable
+   protected StateBindingConfig[] stateBindings;
    protected transient int highestNumberOfChannels = 0;
    private SoftReference<com.hypixel.hytale.protocol.SoundEvent> cachedPacket;
 
@@ -177,6 +192,8 @@ public class SoundEvent
             }
          }
       }
+
+      AudioStateResolver.resolveBindings(this.stateBindings);
    }
 
    public SoundEvent(
@@ -212,6 +229,29 @@ public class SoundEvent
 
    public String getId() {
       return this.id;
+   }
+
+   public void refreshAudioStateResolution() {
+      AudioStateResolver.resolveBindings(this.stateBindings);
+      this.cachedPacket = null;
+   }
+
+   public static void onAudioStateLoaded(@Nonnull LoadedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
+      if (!event.isInitial()) {
+         refreshAllAudioStateResolutions();
+      }
+   }
+
+   public static void onAudioStateRemoved(@Nonnull RemovedAssetsEvent<String, AudioState, IndexedLookupTableAssetMap<String, AudioState>> event) {
+      refreshAllAudioStateResolutions();
+   }
+
+   private static void refreshAllAudioStateResolutions() {
+      for (SoundEvent se : getAssetMap().getAssetMap().values()) {
+         if (se != null) {
+            se.refreshAudioStateResolution();
+         }
+      }
    }
 
    public float getVolume() {
@@ -327,6 +367,7 @@ public class SoundEvent
             }
          }
 
+         packet.stateBindings = AudioStateResolver.toPacketArray(this.stateBindings);
          this.cachedPacket = new SoftReference<>(packet);
          return packet;
       }

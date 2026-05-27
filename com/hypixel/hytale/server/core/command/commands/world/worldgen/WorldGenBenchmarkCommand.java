@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.core.command.commands.world.worldgen;
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -24,6 +23,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector2i;
 
 public class WorldGenBenchmarkCommand extends CommandBase {
    private static final AtomicBoolean IS_RUNNING = new AtomicBoolean(false);

@@ -329,6 +329,7 @@ public class EntitySystems {
 
             switch (reason) {
                case REMOVE:
+               case BUILDER_TOOLS_UNDO:
                   entityChunkComponent.removeEntityReference(ref);
                   break;
                case UNLOAD:

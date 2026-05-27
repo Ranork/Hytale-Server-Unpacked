@@ -4,8 +4,12 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgumentType;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class RequiredArg<DataType> extends Argument<RequiredArg<DataType>, DataType> {
+   @Nullable
+   private ArgumentType<?> suggestionOverrideType;
+
    public RequiredArg(
       @Nonnull AbstractCommand commandRegisteredTo, @Nonnull String name, @Nonnull String description, @Nonnull ArgumentType<DataType> argumentType
    ) {
@@ -13,6 +17,17 @@ public class RequiredArg<DataType> extends Argument<RequiredArg<DataType>, DataT
       if (argumentType.getNumberOfParameters() < 1) {
          throw new IllegalArgumentException("Cannot create a Required Argument with 0 parameters.");
       }
+   }
+
+   @Nonnull
+   public RequiredArg<DataType> withSuggestionOverride(@Nonnull ArgumentType<?> overrideType) {
+      this.suggestionOverrideType = overrideType;
+      return this;
+   }
+
+   @Nullable
+   public ArgumentType<?> getSuggestionOverrideType() {
+      return this.suggestionOverrideType;
    }
 
    @Nonnull

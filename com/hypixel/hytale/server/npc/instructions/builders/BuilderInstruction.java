@@ -231,8 +231,10 @@ public class BuilderInstruction extends BuilderBase<Instruction> {
          boolean result = this.sensorBuilderObjectReferenceHelper.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
             & this.bodyMotionBuilderObjectReferenceHelper.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
             & this.headMotionBuilderObjectReferenceHelper.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
-            & this.actionsBuilderObjectReferenceHelper.validate(configName, validationHelper, this.builderManager, context, globalScope, errors)
-            & this.steps.validate(configName, validationHelper, this.builderManager, context, globalScope, errors);
+            & this.actionsBuilderObjectReferenceHelper.validate(configName, validationHelper, this.builderManager, context, globalScope, errors);
+         validationHelper.pushPrecedingScope();
+         result &= this.steps.validate(configName, validationHelper, this.builderManager, context, globalScope, errors);
+         validationHelper.popPrecedingScope();
          if (this.currentStateName != null) {
             validationHelper.popCurrentStateName();
          }

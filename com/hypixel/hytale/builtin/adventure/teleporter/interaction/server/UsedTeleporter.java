@@ -3,11 +3,11 @@ package com.hypixel.hytale.builtin.adventure.teleporter.interaction.server;
 import com.hypixel.hytale.builtin.adventure.teleporter.TeleporterPlugin;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
+import org.joml.Vector3d;
 
 public class UsedTeleporter implements Component<EntityStore> {
    @Nullable
@@ -58,7 +58,7 @@ public class UsedTeleporter implements Component<EntityStore> {
    public Component<EntityStore> clone() {
       UsedTeleporter clone = new UsedTeleporter();
       clone.destinationWorldUuid = this.destinationWorldUuid;
-      clone.destinationPosition = this.destinationPosition.clone();
+      clone.destinationPosition = new Vector3d(this.destinationPosition);
       clone.clearOutXZ = this.clearOutXZ;
       clone.clearOutXZSquared = this.clearOutXZSquared;
       clone.clearOutY = this.clearOutY;

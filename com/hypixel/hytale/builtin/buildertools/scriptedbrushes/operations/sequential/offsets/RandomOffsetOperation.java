@@ -7,10 +7,10 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.command.system.arguments.types.RelativeIntegerRange;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class RandomOffsetOperation extends SequenceBrushOperation {
    public static final BuilderCodec<RandomOffsetOperation> CODEC = BuilderCodec.builder(RandomOffsetOperation.class, RandomOffsetOperation::new)

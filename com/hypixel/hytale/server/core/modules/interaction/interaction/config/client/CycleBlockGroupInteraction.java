@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockSoundEvent;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionSyncData;
@@ -34,6 +33,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class CycleBlockGroupInteraction extends SimpleBlockInteraction {
    private static final int SET_SETTINGS = 256;
@@ -76,7 +76,7 @@ public class CycleBlockGroupInteraction extends SimpleBlockInteraction {
 
             assert blockChunkComponent != null;
 
-            BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(targetBlock.getY());
+            BlockSection blockSection = blockChunkComponent.getSectionAtBlockY(targetBlock.y());
             GameplayConfig gameplayConfig = world.getGameplayConfig();
             WorldConfig worldConfig = gameplayConfig.getWorldConfig();
             boolean blockBreakingAllowed = worldConfig.isBlockBreakingAllowed();
@@ -98,7 +98,7 @@ public class CycleBlockGroupInteraction extends SimpleBlockInteraction {
                               && hotbarComponent != null
                               && ItemUtils.canDecreaseItemStackDurability(ref, commandBuffer)
                               && !heldItem.isUnbreakable()) {
-                              playerComponent.updateItemStackDurability(
+                              ItemUtils.updateItemStackDurability(
                                  ref,
                                  heldItem,
                                  hotbarComponent.getInventory(),
@@ -110,7 +110,7 @@ public class CycleBlockGroupInteraction extends SimpleBlockInteraction {
 
                            int newBlockId = BlockType.getAssetMap().getIndex(nextBlockType.getId());
                            int rotation = worldChunkComponent.getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
-                           worldChunkComponent.setBlock(targetBlock.getX(), targetBlock.getY(), targetBlock.getZ(), newBlockId, nextBlockType, rotation, 0, 256);
+                           worldChunkComponent.setBlock(targetBlock.x(), targetBlock.y(), targetBlock.z(), newBlockId, nextBlockType, rotation, 0, 256);
                            state.state = InteractionState.NotFinished;
                            BlockSoundSet soundSet = BlockSoundSet.getAssetMap().getAsset(nextBlockType.getBlockSoundSetIndex());
                            if (soundSet != null) {

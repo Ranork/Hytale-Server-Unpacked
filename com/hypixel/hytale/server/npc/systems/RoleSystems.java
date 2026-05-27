@@ -16,11 +16,8 @@ import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.component.system.tick.TickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.entity.Frozen;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -55,6 +52,9 @@ import java.util.Set;
 import java.util.Map.Entry;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class RoleSystems {
    private static final ThreadLocal<List<Ref<EntityStore>>> ENTITY_LIST = ThreadLocal.withInitial(ReferenceArrayList::new);
@@ -333,6 +333,11 @@ public class RoleSystems {
          role.updateMotionControllers(null, modelComponent.getModel(), boundingBoxComponent.getBoundingBox(), null);
          role.clearOnce();
          role.getActiveMotionController().activate();
+         String activeMC = npcComponent.getActiveMotionControllerName();
+         if (activeMC != null) {
+            role.setActiveMotionController(null, npcComponent, activeMC, null);
+         }
+
          holder.ensureComponent(InteractionModule.get().getChainingDataComponent());
       }
 
@@ -481,7 +486,7 @@ public class RoleSystems {
             Vector3d npcPosition = transformComponent.getPosition();
             double npcMidHeight = boundingBoxComponent.getBoundingBox().max.y / 2.0;
             HeadRotation headRotation = commandBuffer.getComponent(npcRef, HeadRotation.getComponentType());
-            double heading = headRotation != null ? headRotation.getRotation().getYaw() : transformComponent.getRotation().getYaw();
+            double heading = headRotation != null ? headRotation.getRotation().yaw() : transformComponent.getRotation().yaw();
             sensorDataList.sort((a, b) -> Double.compare(b.range(), a.range()));
             double discStackOffset = 0.1;
 
@@ -634,9 +639,8 @@ public class RoleSystems {
          Matrix4d matrix = new Matrix4d();
          matrix.identity();
          matrix.translate(x, y, z);
-         Matrix4d tmp = new Matrix4d();
-         matrix.rotateAxis(yawAngle, 0.0, 1.0, 0.0, tmp);
-         matrix.rotateAxis(pitchAngle, 0.0, 0.0, 1.0, tmp);
+         matrix.rotate(-yawAngle, 0.0, 1.0, 0.0);
+         matrix.rotate(-pitchAngle, 0.0, 0.0, 1.0);
          DebugUtils.addDisc(world, matrix, outerRadius, innerRadius, color, 0.8F, 0.1F, 0);
       }
 

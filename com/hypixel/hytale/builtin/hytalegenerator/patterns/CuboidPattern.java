@@ -1,8 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class CuboidPattern extends Pattern {
    @Nonnull
@@ -26,7 +27,7 @@ public class CuboidPattern extends Pattern {
       this.subPattern = subPattern;
       this.min = min;
       this.max = max;
-      this.bounds_voxelGrid = new Bounds3i(min, max.clone().add(Vector3i.ALL_ONES));
+      this.bounds_voxelGrid = new Bounds3i(min, new Vector3i(max).add(Vector3iUtil.ALL_ONES));
       this.bounds_voxelGrid.stack(subPattern.getBounds_voxelGrid());
       this.rScanMin = new Vector3i();
       this.rScanMax = new Vector3i();
@@ -36,9 +37,9 @@ public class CuboidPattern extends Pattern {
 
    @Override
    public boolean matches(@Nonnull Pattern.Context context) {
-      this.rScanMin.assign(this.min).add(context.position);
-      this.rScanMax.assign(this.max).add(context.position);
-      this.rChildPosition.assign(context.position);
+      this.rScanMin.set(this.min).add(context.position);
+      this.rScanMax.set(this.max).add(context.position);
+      this.rChildPosition.set(context.position);
       this.rChildContext.assign(context);
       this.rChildContext.position = this.rChildPosition;
 

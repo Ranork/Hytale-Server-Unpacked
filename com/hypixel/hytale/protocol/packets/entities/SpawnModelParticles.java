@@ -4,10 +4,12 @@ import com.hypixel.hytale.protocol.ModelParticle;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,35 +51,39 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
 
    @Nonnull
    public static SpawnModelParticles deserialize(@Nonnull ByteBuf buf, int offset) {
-      SpawnModelParticles obj = new SpawnModelParticles();
-      byte nullBits = buf.getByte(offset);
-      obj.entityId = buf.getIntLE(offset + 1);
-      int pos = offset + 5;
-      if ((nullBits & 1) != 0) {
-         int modelParticlesCount = VarInt.peek(buf, pos);
-         if (modelParticlesCount < 0) {
-            throw ProtocolException.negativeLength("ModelParticles", modelParticlesCount);
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("SpawnModelParticles", 5, buf.readableBytes() - offset);
+      } else {
+         SpawnModelParticles obj = new SpawnModelParticles();
+         byte nullBits = buf.getByte(offset);
+         obj.entityId = buf.getIntLE(offset + 1);
+         int pos = offset + 5;
+         if ((nullBits & 1) != 0) {
+            int modelParticlesCount = VarInt.peek(buf, pos);
+            if (modelParticlesCount < 0) {
+               throw ProtocolException.invalidVarInt("ModelParticles");
+            }
+
+            int modelParticlesVarLen = VarInt.size(modelParticlesCount);
+            if (modelParticlesCount > 4096000) {
+               throw ProtocolException.arrayTooLong("ModelParticles", modelParticlesCount, 4096000);
+            }
+
+            if (pos + modelParticlesVarLen + modelParticlesCount * 34L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("ModelParticles", pos + modelParticlesVarLen + modelParticlesCount * 34, buf.readableBytes());
+            }
+
+            pos += modelParticlesVarLen;
+            obj.modelParticles = new ModelParticle[modelParticlesCount];
+
+            for (int i = 0; i < modelParticlesCount; i++) {
+               obj.modelParticles[i] = ModelParticle.deserialize(buf, pos);
+               pos += ModelParticle.computeBytesConsumed(buf, pos);
+            }
          }
 
-         if (modelParticlesCount > 4096000) {
-            throw ProtocolException.arrayTooLong("ModelParticles", modelParticlesCount, 4096000);
-         }
-
-         int modelParticlesVarLen = VarInt.size(modelParticlesCount);
-         if (pos + modelParticlesVarLen + modelParticlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("ModelParticles", pos + modelParticlesVarLen + modelParticlesCount * 34, buf.readableBytes());
-         }
-
-         pos += modelParticlesVarLen;
-         obj.modelParticles = new ModelParticle[modelParticlesCount];
-
-         for (int i = 0; i < modelParticlesCount; i++) {
-            obj.modelParticles[i] = ModelParticle.deserialize(buf, pos);
-            pos += ModelParticle.computeBytesConsumed(buf, pos);
-         }
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -85,7 +91,7 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos += ModelParticle.computeBytesConsumed(buf, pos);
@@ -93,6 +99,98 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   public static int getEntityId(MemorySegment mem) {
+      return getEntityId(mem, 0);
+   }
+
+   public static int getEntityId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 1));
+   }
+
+   @Nullable
+   public static ModelParticle[] getModelParticles(MemorySegment mem) {
+      return getModelParticles(mem, 0);
+   }
+
+   @Nullable
+   public static ModelParticle[] getModelParticles(MemorySegment mem, int offset) {
+      if (!hasModelParticles(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 5;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("ModelParticles", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("ModelParticles", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("ModelParticles", off + lenOffset + len, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               ModelParticle[] data = new ModelParticle[len];
+
+               for (int i = 0; i < len; i++) {
+                  data[i] = ModelParticle.toObject(mem, off);
+                  off += data[i].computeSize();
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   public static boolean hasModelParticles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static SpawnModelParticles toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static SpawnModelParticles toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("SpawnModelParticles", offset + 5, (int)mem.byteSize());
+      } else {
+         ModelParticle[] modelParticles = null;
+         if (hasModelParticles(mem, offset)) {
+            int off = offset + 5;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("ModelParticles", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.arrayTooLong("ModelParticles", len, 4096000);
+            }
+
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("ModelParticles", off + lenOffset + len, (int)mem.byteSize());
+            }
+
+            off += lenOffset;
+            modelParticles = new ModelParticle[len];
+
+            for (int i = 0; i < len; i++) {
+               modelParticles[i] = ModelParticle.toObject(mem, off);
+               off += modelParticles[i].computeSize();
+            }
+         }
+
+         return new SpawnModelParticles(mem.get(PacketIO.PROTO_INT, (long)(offset + 1)), modelParticles);
+      }
    }
 
    @Override
@@ -115,6 +213,34 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
             item.serialize(buf);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.modelParticles != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 1), this.entityId);
+      int varOffset = offset + 5;
+      if (this.modelParticles != null) {
+         if (this.modelParticles.length > 4096000) {
+            throw ProtocolException.arrayTooLong("ModelParticles", this.modelParticles.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.modelParticles.length);
+         int modelParticlesValueOffset = 0;
+
+         for (int i = 0; i < this.modelParticles.length; i++) {
+            modelParticlesValueOffset += this.modelParticles[i].serialize(mem, varOffset + modelParticlesValueOffset);
+         }
+
+         varOffset += modelParticlesValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -149,7 +275,7 @@ public class SpawnModelParticles implements Packet, ToClientPacket {
                return ValidationResult.error("ModelParticles exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(modelParticlesCount);
 
             for (int i = 0; i < modelParticlesCount; i++) {
                ValidationResult structResult = ModelParticle.validateStructure(buffer, pos);

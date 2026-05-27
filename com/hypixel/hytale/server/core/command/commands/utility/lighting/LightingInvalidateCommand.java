@@ -4,8 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -18,6 +16,8 @@ import com.hypixel.hytale.server.core.universe.world.lighting.ChunkLightingManag
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class LightingInvalidateCommand extends AbstractWorldCommand {
    @Nonnull
@@ -53,7 +53,7 @@ public class LightingInvalidateCommand extends AbstractWorldCommand {
          assert transformComponent != null;
 
          Vector3d position = transformComponent.getPosition();
-         long chunkIndex = ChunkUtil.indexChunkFromBlock((int)position.getX(), (int)position.getZ());
+         long chunkIndex = ChunkUtil.indexChunkFromBlock((int)position.x(), (int)position.z());
          int chunkX = ChunkUtil.xOfChunkIndex(chunkIndex);
          int chunkZ = ChunkUtil.zOfChunkIndex(chunkIndex);
          Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(chunkIndex);
@@ -71,7 +71,7 @@ public class LightingInvalidateCommand extends AbstractWorldCommand {
 
          assert blockChunkComponent != null;
 
-         int chunkY = MathUtil.floor(position.getY()) >> 5;
+         int chunkY = MathUtil.floor(position.y()) >> 5;
          BlockSection section = blockChunkComponent.getSectionAtBlockY(chunkY);
          section.invalidateLocalLight();
          blockChunkComponent.invalidateChunkSection(chunkY);

@@ -9,11 +9,7 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.server.core.asset.type.environment.config.Environment;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
+import com.hypixel.hytale.server.core.util.io.MemorySegmentUtil;
 import it.unimi.dsi.fastutil.ints.Int2IntFunction;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
@@ -22,6 +18,7 @@ import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.Int2LongMap.Entry;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public class EnvironmentChunk implements Component<ChunkStore> {
@@ -129,41 +126,54 @@ public class EnvironmentChunk implements Component<ChunkStore> {
    }
 
    private byte[] serialize() {
-      ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
+      int size = 4;
+      ObjectIterator results = this.counts.int2LongEntrySet().iterator();
 
-      try {
-         buf.writeInt(this.counts.size());
-         ObjectIterator t = this.counts.int2LongEntrySet().iterator();
-
-         while (t.hasNext()) {
-            Entry entry = (Entry)t.next();
-            int environmentId = entry.getIntKey();
-            Environment environment = Environment.getAssetMap().getAsset(environmentId);
-            String key = environment != null ? environment.getId() : Environment.UNKNOWN.getId();
-            buf.writeInt(environmentId);
-            ByteBufUtil.writeUTF(buf, key);
-         }
-
-         for (int i = 0; i < this.columns.length; i++) {
-            this.columns[i].serialize(buf, (environmentIdx, buf0) -> buf0.writeInt(environmentIdx));
-         }
-
-         return ByteBufUtil.getBytesRelease(buf);
-      } catch (Throwable var7) {
-         buf.release();
-         throw SneakyThrow.sneakyThrow(var7);
+      while (results.hasNext()) {
+         Entry entry = (Entry)results.next();
+         Environment environment = Environment.getAssetMap().getAsset(entry.getIntKey());
+         String key = environment != null ? environment.getId() : Environment.UNKNOWN.getId();
+         size += 4 + MemorySegmentUtil.utf8Size(key);
       }
+
+      for (int i = 0; i < this.columns.length; i++) {
+         size += 4 + 8 * this.columns[i].maxys_size() + 4;
+      }
+
+      byte[] resultsx = new byte[size];
+      MemorySegment data = MemorySegment.ofArray(resultsx);
+      data.set(MemorySegmentUtil.INT_BE, 0L, this.counts.size());
+      int offset = 4;
+      ObjectIterator var14 = this.counts.int2LongEntrySet().iterator();
+
+      while (var14.hasNext()) {
+         Entry entry = (Entry)var14.next();
+         int environmentId = entry.getIntKey();
+         Environment environment = Environment.getAssetMap().getAsset(environmentId);
+         String key = environment != null ? environment.getId() : Environment.UNKNOWN.getId();
+         data.set(MemorySegmentUtil.INT_BE, (long)offset, environmentId);
+         offset += 4 + MemorySegmentUtil.writeUTF(data, offset + 4, key);
+      }
+
+      for (int i = 0; i < this.columns.length; i++) {
+         offset += this.columns[i].serialize(data, offset);
+      }
+
+      return resultsx;
    }
 
    private void deserialize(@Nonnull byte[] bytes) {
-      ByteBuf buf = Unpooled.wrappedBuffer(bytes);
+      MemorySegment data = MemorySegment.ofArray(bytes);
       this.counts.clear();
-      int mappingCount = buf.readInt();
+      int mappingCount = data.get(MemorySegmentUtil.INT_BE, 0L);
+      int offset = 4;
       Int2IntMap idMapping = new Int2IntOpenHashMap(mappingCount);
 
       for (int i = 0; i < mappingCount; i++) {
-         int serialId = buf.readInt();
-         String key = ByteBufUtil.readUTF(buf);
+         int serialId = data.get(MemorySegmentUtil.INT_BE, (long)offset);
+         offset += 4;
+         String key = MemorySegmentUtil.readUTF(data, offset);
+         offset += MemorySegmentUtil.utf8Size(data, offset);
          int environmentId = Environment.getIndexOrUnknown(key, "Failed to find environment '%s' when deserializing environment chunk", key);
          idMapping.put(serialId, environmentId);
          this.counts.put(environmentId, 0L);
@@ -171,7 +181,7 @@ public class EnvironmentChunk implements Component<ChunkStore> {
 
       for (int i = 0; i < this.columns.length; i++) {
          EnvironmentColumn column = this.columns[i];
-         column.deserialize(buf, buf0 -> idMapping.get(buf0.readInt()));
+         offset += column.deserialize(data, offset, idMapping);
 
          for (int x = 0; x < column.size(); x++) {
             this.counts.mergeLong(column.getValue(x), 1L, Long::sum);
@@ -180,13 +190,21 @@ public class EnvironmentChunk implements Component<ChunkStore> {
    }
 
    public byte[] serializeProtocol() {
-      ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
+      int size = 0;
 
       for (int i = 0; i < this.columns.length; i++) {
-         this.columns[i].serializeProtocol(buf);
+         size += 2 + (this.columns[i].maxys_size() + 1) * 2 * 2;
       }
 
-      return ByteBufUtil.getBytesRelease(buf);
+      byte[] results = new byte[size];
+      MemorySegment data = MemorySegment.ofArray(results);
+      int offset = 0;
+
+      for (int i = 0; i < this.columns.length; i++) {
+         offset += this.columns[i].serializeProtocol(data, offset);
+      }
+
+      return results;
    }
 
    public void trim() {

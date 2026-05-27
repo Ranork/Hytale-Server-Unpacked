@@ -3,9 +3,9 @@ package com.hypixel.hytale.builtin.hytalegenerator.propdistributions;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public abstract class PropDistribution {
    public abstract void distribute(@Nonnull PropDistribution.Context var1);

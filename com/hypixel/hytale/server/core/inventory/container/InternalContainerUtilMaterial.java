@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.inventory.transaction.TagSlotTransaction;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -68,11 +69,13 @@ public class InternalContainerUtilMaterial {
             int quantityRemaining = material.getQuantity();
 
             for (short i = 0; i < itemContainer.getCapacity() && quantityRemaining > 0; i++) {
-               MaterialQuantity clone = material.clone(quantityRemaining);
-               MaterialSlotTransaction transaction = internal_removeMaterialFromSlot(itemContainer, i, clone, false, filter);
-               if (transaction.succeeded()) {
-                  list.add(transaction);
-                  quantityRemaining = transaction.getRemainder();
+               if (!isSlotExcluded(itemContainer, i, material)) {
+                  MaterialQuantity clone = material.clone(quantityRemaining);
+                  MaterialSlotTransaction transaction = internal_removeMaterialFromSlot(itemContainer, i, clone, false, filter);
+                  if (transaction.succeeded()) {
+                     list.add(transaction);
+                     quantityRemaining = transaction.getRemainder();
+                  }
                }
             }
 
@@ -81,6 +84,20 @@ public class InternalContainerUtilMaterial {
             );
          }
       );
+   }
+
+   private static boolean isSlotExcluded(@Nonnull ItemContainer itemContainer, short slot, @Nonnull MaterialQuantity material) {
+      if (material.getItemId() != null) {
+         return false;
+      } else {
+         Set<String> excluded = material.getExcludedItemIds();
+         if (excluded != null && !excluded.isEmpty()) {
+            ItemStack stack = itemContainer.internal_getSlot(slot);
+            return stack != null && excluded.contains(stack.getItemId());
+         } else {
+            return false;
+         }
+      }
    }
 
    protected static ListTransaction<MaterialTransaction> internal_removeMaterials(
@@ -139,10 +156,20 @@ public class InternalContainerUtilMaterial {
          return InternalContainerUtilItemStack.testRemoveItemStackFromItems(
             container, material.toItemStack(), testQuantityRemaining, filter, (a, b) -> ItemStack.isEquivalentType(a, b)
          );
-      } else {
+      } else if (material.getExcludedItemIds() == null) {
          return material.getTagIndex() != Integer.MIN_VALUE
             ? InternalContainerUtilTag.testRemoveTagFromItems(container, material.getTagIndex(), testQuantityRemaining, filter)
             : InternalContainerUtilResource.testRemoveResourceFromItems(container, material.toResource(), testQuantityRemaining, filter);
+      } else {
+         int remaining = testQuantityRemaining;
+
+         for (short i = 0; i < container.getCapacity() && remaining > 0; i++) {
+            if (!isSlotExcluded(container, i, material)) {
+               remaining = testRemoveMaterialFromSlot(container, i, material, remaining, filter);
+            }
+         }
+
+         return remaining;
       }
    }
 
@@ -153,10 +180,25 @@ public class InternalContainerUtilMaterial {
          return InternalContainerUtilItemStack.testRemoveItemStackSlotFromItems(
             container, material.toItemStack(), testQuantityRemaining, filter, (a, b) -> ItemStack.isEquivalentType(a, b)
          );
-      } else {
+      } else if (material.getExcludedItemIds() == null) {
          return material.getTagIndex() != Integer.MIN_VALUE
             ? InternalContainerUtilTag.testRemoveTagSlotFromItems(container, material.getTagIndex(), testQuantityRemaining, filter)
             : InternalContainerUtilResource.testRemoveResourceSlotFromItems(container, material.toResource(), testQuantityRemaining, filter);
+      } else {
+         TestRemoveItemSlotResult result = new TestRemoveItemSlotResult(testQuantityRemaining);
+
+         for (short i = 0; i < container.getCapacity() && result.quantityRemaining > 0; i++) {
+            if (!isSlotExcluded(container, i, material)) {
+               int newValue = testRemoveMaterialFromSlot(container, i, material, result.quantityRemaining, filter);
+               if (newValue != result.quantityRemaining) {
+                  int diff = result.quantityRemaining - newValue;
+                  result.quantityRemaining = newValue;
+                  result.picked.put(i, diff);
+               }
+            }
+         }
+
+         return result;
       }
    }
 

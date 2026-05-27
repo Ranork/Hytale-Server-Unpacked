@@ -17,7 +17,9 @@ public class WorldConfigSaveSystem extends DelayedSystem<EntityStore> {
    @Override
    public void delayedTick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
       World world = store.getExternalData().getWorld();
-      saveWorldConfigAndResources(world).join();
+      if (!world.isSavingLocked()) {
+         saveWorldConfigAndResources(world).join();
+      }
    }
 
    @Nonnull

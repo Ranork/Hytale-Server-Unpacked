@@ -1,10 +1,10 @@
 package com.hypixel.hytale.math.util;
 
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class MathUtil {
    public static final double EPSILON_DOUBLE = Math.ulp(1.0);
@@ -526,39 +526,39 @@ public class MathUtil {
       return (ax - x) * (by - y) - (ay - y) * (bx - x) >= 0.0 ? 1 : -1;
    }
 
-   public static Vector3f getRotationForHitNormal(Vector3f normal) {
+   public static Rotation3f getRotationForHitNormal(Vector3d normal) {
       if (normal == null) {
-         return Vector3f.ZERO;
-      } else if (normal.y == 1.0F) {
-         return Vector3f.ZERO;
-      } else if (normal.y == -1.0F) {
-         return new Vector3f(0.0F, 0.0F, (float) Math.PI);
-      } else if (normal.x == 1.0F) {
-         return new Vector3f(0.0F, 0.0F, (float) (-Math.PI / 2));
-      } else if (normal.x == -1.0F) {
-         return new Vector3f(0.0F, 0.0F, (float) (Math.PI / 2));
-      } else if (normal.z == 1.0F) {
-         return new Vector3f((float) (Math.PI / 2), 0.0F, 0.0F);
+         return new Rotation3f(Rotation3f.IDENTITY);
+      } else if (normal.y == 1.0) {
+         return new Rotation3f(Rotation3f.IDENTITY);
+      } else if (normal.y == -1.0) {
+         return new Rotation3f(0.0F, 0.0F, (float) Math.PI);
+      } else if (normal.x == 1.0) {
+         return new Rotation3f(0.0F, 0.0F, (float) (-Math.PI / 2));
+      } else if (normal.x == -1.0) {
+         return new Rotation3f(0.0F, 0.0F, (float) (Math.PI / 2));
+      } else if (normal.z == 1.0) {
+         return new Rotation3f((float) (Math.PI / 2), 0.0F, 0.0F);
       } else {
-         return normal.z == -1.0F ? new Vector3f((float) (-Math.PI / 2), 0.0F, 0.0F) : Vector3f.ZERO;
+         return normal.z == -1.0 ? new Rotation3f((float) (-Math.PI / 2), 0.0F, 0.0F) : new Rotation3f(Rotation3f.IDENTITY);
       }
    }
 
-   public static String getNameForHitNormal(Vector3f normal) {
+   public static String getNameForHitNormal(Vector3d normal) {
       if (normal == null) {
          return "UP";
-      } else if (normal.y == 1.0F) {
+      } else if (normal.y == 1.0) {
          return "UP";
-      } else if (normal.y == -1.0F) {
+      } else if (normal.y == -1.0) {
          return "DOWN";
-      } else if (normal.x == 1.0F) {
+      } else if (normal.x == 1.0) {
          return "WEST";
-      } else if (normal.x == -1.0F) {
+      } else if (normal.x == -1.0) {
          return "EAST";
-      } else if (normal.z == 1.0F) {
+      } else if (normal.z == 1.0) {
          return "NORTH";
       } else {
-         return normal.z == -1.0F ? "SOUTH" : "UP";
+         return normal.z == -1.0 ? "SOUTH" : "UP";
       }
    }
 

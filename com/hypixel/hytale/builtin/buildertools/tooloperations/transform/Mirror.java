@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.buildertools.tooloperations.transform;
 
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushAxis;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class Mirror implements Transform {
    public static final Transform X = new Mirror(Axis.X);
@@ -41,14 +41,14 @@ public class Mirror implements Transform {
    }
 
    public static Transform forDirection(@Nonnull Vector3i direction, boolean negativeY) {
-      if (direction.getX() != 0) {
+      if (direction.x() != 0) {
          return X;
-      } else if (direction.getZ() != 0) {
+      } else if (direction.z() != 0) {
          return Z;
-      } else if (direction.getY() > 0) {
+      } else if (direction.y() > 0) {
          return Y;
       } else {
-         return direction.getY() < 0 && negativeY ? Y : NONE;
+         return direction.y() < 0 && negativeY ? Y : NONE;
       }
    }
 }

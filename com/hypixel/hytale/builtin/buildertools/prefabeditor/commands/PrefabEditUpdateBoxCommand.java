@@ -6,7 +6,6 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditSessionMan
 import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadata;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -18,6 +17,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class PrefabEditUpdateBoxCommand extends AbstractPlayerCommand {
    @Nonnull

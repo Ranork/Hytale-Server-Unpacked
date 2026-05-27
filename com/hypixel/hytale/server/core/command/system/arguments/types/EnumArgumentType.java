@@ -2,8 +2,10 @@ package com.hypixel.hytale.server.core.command.system.arguments.types;
 
 import com.hypixel.hytale.common.util.StringUtil;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.command.system.CommandUtil;
 import com.hypixel.hytale.server.core.command.system.ParseResult;
+import com.hypixel.hytale.server.core.command.system.suggestion.SuggestionResult;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
@@ -48,6 +50,22 @@ public class EnumArgumentType<E extends Enum<E>> extends SingleArgumentType<E> {
             )
       );
       return null;
+   }
+
+   @Override
+   public void suggest(@Nonnull CommandSender sender, @Nonnull String textAlreadyEntered, int numParametersTyped, @Nonnull SuggestionResult result) {
+      String lowerInput = textAlreadyEntered.toLowerCase();
+
+      for (String enumName : this.enumNames) {
+         if (enumName.toLowerCase().startsWith(lowerInput)) {
+            result.suggest(enumName.toLowerCase());
+         }
+      }
+   }
+
+   @Override
+   public int getSuggestionValueCount() {
+      return this.enumConstants.length;
    }
 
    @Nonnull

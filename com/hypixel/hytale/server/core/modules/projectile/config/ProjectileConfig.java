@@ -12,10 +12,9 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.map.EnumMapCodec;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.InteractionType;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -29,6 +28,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class ProjectileConfig
    implements JsonAssetWithMap<String, DefaultAssetMap<String, ProjectileConfig>>,
@@ -55,7 +56,7 @@ public class ProjectileConfig
       .appendInherited(new KeyedCodec<>("LaunchForce", Codec.DOUBLE), (o, i) -> o.launchForce = i, o -> o.launchForce, (o, p) -> o.launchForce = p.launchForce)
       .add()
       .<Vector3f>appendInherited(
-         new KeyedCodec<>("SpawnOffset", ProtocolCodecs.VECTOR3F), (o, i) -> o.spawnOffset = i, o -> o.spawnOffset, (o, p) -> o.spawnOffset = p.spawnOffset
+         new KeyedCodec<>("SpawnOffset", Vector3fUtil.CODEC), (o, i) -> o.spawnOffset = i, o -> o.spawnOffset, (o, p) -> o.spawnOffset = p.spawnOffset
       )
       .addValidator(Validators.nonNull())
       .add()

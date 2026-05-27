@@ -20,6 +20,7 @@ abstract class OAuthFlow {
       if (!this.future.isDone()) {
          this.errorMessage = errorMessage;
          this.result = OAuthResult.FAILED;
+         this.future.complete(this.result);
       }
    }
 

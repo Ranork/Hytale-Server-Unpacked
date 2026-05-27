@@ -17,7 +17,6 @@ import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.MovementSettings;
 import com.hypixel.hytale.protocol.MovementStates;
@@ -41,6 +40,7 @@ import com.hypixel.hytale.server.core.util.PositionUtil;
 import java.util.List;
 import java.util.Set;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class KnockbackPredictionSystems {
    public static boolean DEBUG_KNOCKBACK_POSITION = false;
@@ -87,18 +87,18 @@ public class KnockbackPredictionSystems {
          Vector3d client = knockbackSimulationComponent.getClientPosition();
          Vector3d clientLast = knockbackSimulationComponent.getClientLastPosition();
          Vector3d relativeMovement = knockbackSimulationComponent.getRelativeMovement();
-         clientLast.assign(client);
+         clientLast.set(client);
          boolean hasWishMovement = false;
          if (!queue.isEmpty()) {
             for (int i = 0; i < queue.size(); i++) {
                PlayerInput.InputUpdate update = queue.get(i);
                if (update instanceof PlayerInput.AbsoluteMovement abs) {
-                  client.assign(abs.getX(), abs.getY(), abs.getZ());
+                  client.set(abs.getX(), abs.getY(), abs.getZ());
                } else if (update instanceof PlayerInput.RelativeMovement rel) {
                   client.add(rel.getX(), rel.getY(), rel.getZ());
                } else if (update instanceof PlayerInput.WishMovement wish) {
                   hasWishMovement = true;
-                  relativeMovement.assign(wish.getX(), wish.getY(), wish.getZ());
+                  relativeMovement.set(wish.getX(), wish.getY(), wish.getZ());
                } else {
                   if (!(update instanceof PlayerInput.SetMovementStates)) {
                      continue;
@@ -117,7 +117,7 @@ public class KnockbackPredictionSystems {
             }
 
             if (!hasWishMovement) {
-               relativeMovement.assign(client).subtract(clientLast);
+               relativeMovement.set(client).sub(clientLast);
                if (knockbackSimulationComponent.hadWishMovement()) {
                   knockbackSimulationComponent.setClientFinished(true);
                }
@@ -219,8 +219,8 @@ public class KnockbackPredictionSystems {
 
          assert transformComponent != null;
 
-         component.getClientPosition().assign(transformComponent.getPosition());
-         component.getSimPosition().assign(transformComponent.getPosition());
+         component.getClientPosition().set(transformComponent.getPosition());
+         component.getSimPosition().set(transformComponent.getPosition());
          MovementStatesComponent movementStatesComponent = commandBuffer.getComponent(ref, MovementStatesComponent.getComponentType());
 
          assert movementStatesComponent != null;
@@ -376,7 +376,7 @@ public class KnockbackPredictionSystems {
                      knockbackSimulationComponent.setJumpCombo(Math.min(knockbackSimulationComponent.getJumpCombo() + 1, 3));
                   }
                } else {
-                  Vector3d checkPosition = simPos.clone();
+                  Vector3d checkPosition = new Vector3d(simPos);
                   checkPosition.y += 0.1F;
                   movementStates.falling = velocity.y < 0.0 && CollisionModule.get().validatePosition(world, hitBox, checkPosition, new CollisionResult()) != 0;
                   if (movementStates.falling) {
@@ -401,7 +401,7 @@ public class KnockbackPredictionSystems {
                         );
                         break;
                      case Set:
-                        velocity.assign(requestedVelocity);
+                        velocity.set(requestedVelocity);
                   }
 
                   PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
@@ -420,23 +420,23 @@ public class KnockbackPredictionSystems {
                      );
                }
 
-               requestedVelocity.assign(0.0);
+               requestedVelocity.zero();
                knockbackSimulationComponent.setRequestedVelocityChangeType(null);
                Vector3d movementOffset = knockbackSimulationComponent.getMovementOffset();
-               movementOffset.assign(0.0);
+               movementOffset.zero();
                if (knockbackSimulationComponent.hadWishMovement()) {
                   float converter = this.convertWishMovement(knockbackSimulationComponent, movementStates, movementManagerSettings);
-                  velocity.addScaled(rel, converter);
+                  velocity.fma(converter, rel);
                } else {
-                  movementOffset.addScaled(rel, friction);
-                  rel.assign(0.0);
+                  movementOffset.fma(friction, rel);
+                  rel.zero();
                }
 
-               movementOffset.addScaled(velocity, 0.016666668F);
+               movementOffset.fma(0.016666668F, velocity);
                this.applyMovementOffset(world, hitBox, knockbackSimulationComponent, movementStates, movementOffset);
                Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
                if (time < 0.2F) {
-                  Vector3d move = Vector3d.lerp(knockbackSimulationComponent.getClientPosition(), simPos, time / 0.2F);
+                  Vector3d move = knockbackSimulationComponent.getClientPosition().lerp(simPos, time / 0.2F, new Vector3d());
                   playerComponent.moveTo(ref, move.x, move.y, move.z, commandBuffer);
                } else {
                   playerComponent.moveTo(ref, simPos.x, simPos.y, simPos.z, commandBuffer);
@@ -545,7 +545,7 @@ public class KnockbackPredictionSystems {
          @Nonnull Vector3d movementOffset
       ) {
          int moveCycles = (int)Math.ceil(movementOffset.length() / 0.25);
-         Vector3d cycleMovementOffset = moveCycles == 1 ? movementOffset : movementOffset.clone().scale(1.0F / moveCycles);
+         Vector3d cycleMovementOffset = moveCycles == 1 ? movementOffset : new Vector3d(movementOffset).mul(1.0F / moveCycles);
          simulation.setWasOnGround(movementStates.onGround);
 
          for (int i = 0; i < moveCycles; i++) {
@@ -563,7 +563,7 @@ public class KnockbackPredictionSystems {
          Vector3d simPos = simulation.getSimPosition();
          Vector3d velocity = simulation.getSimVelocity();
          Vector3d checkPosition = simulation.getCheckPosition();
-         checkPosition.assign(simPos);
+         checkPosition.set(simPos);
          CollisionResult collisionResult = simulation.getCollisionResult();
          collisionResult.reset();
          checkPosition.y = checkPosition.y + offset.y;
@@ -612,7 +612,7 @@ public class KnockbackPredictionSystems {
             }
          }
 
-         simPos.assign(checkPosition);
+         simPos.set(checkPosition);
       }
 
       private boolean checkCollision(
@@ -625,7 +625,7 @@ public class KnockbackPredictionSystems {
          @Nonnull CollisionResult result
       ) {
          Vector3d tempPosition = simulation.getTempPosition();
-         tempPosition.assign(position);
+         tempPosition.set(position);
          tempPosition.add(0.0, 1.0E-4F, 0.0);
          return CollisionModule.get().validatePosition(world, hitBox, tempPosition, result) != 0;
       }

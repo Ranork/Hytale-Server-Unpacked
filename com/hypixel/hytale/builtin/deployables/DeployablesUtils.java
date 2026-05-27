@@ -9,8 +9,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.AnimationSlot;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.entities.PlayAnimation;
@@ -45,6 +44,7 @@ import java.util.UUID;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class DeployablesUtils {
    @Nonnull
@@ -56,8 +56,8 @@ public class DeployablesUtils {
       @Nonnull Store<EntityStore> store,
       @Nonnull DeployableConfig config,
       @Nonnull Ref<EntityStore> deployerRef,
-      @Nonnull Vector3f position,
-      @Nonnull Vector3f rotation,
+      @Nonnull Vector3d position,
+      @Nonnull Rotation3f rotation,
       @Nonnull String spawnFace
    ) {
       Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
@@ -70,7 +70,7 @@ public class DeployablesUtils {
 
       holder.addComponent(DeployableComponent.getComponentType(), new DeployableComponent());
       holder.addComponent(TransformComponent.getComponentType(), new TransformComponent());
-      holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(Vector3f.FORWARD));
+      holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(Rotation3f.IDENTITY));
       holder.addComponent(UUIDComponent.getComponentType(), new UUIDComponent(UUID.randomUUID()));
       holder.addComponent(EntityStatMap.getComponentType(), new EntityStatMap());
       holder.addComponent(ModelComponent.getComponentType(), new ModelComponent(model));

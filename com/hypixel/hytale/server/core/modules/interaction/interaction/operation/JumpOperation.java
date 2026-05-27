@@ -5,7 +5,6 @@ import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -20,7 +19,6 @@ public class JumpOperation implements Operation {
    @Override
    public void tick(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull LivingEntity entity,
       boolean firstRun,
       float time,
       @Nonnull InteractionType type,
@@ -34,7 +32,6 @@ public class JumpOperation implements Operation {
    @Override
    public void simulateTick(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull LivingEntity entity,
       boolean firstRun,
       float time,
       @Nonnull InteractionType type,

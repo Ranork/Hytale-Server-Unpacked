@@ -22,6 +22,7 @@ public class PlayerEffectClearCommand extends AbstractPlayerCommand {
    public PlayerEffectClearCommand() {
       super("clear", "server.commands.player.effect.clear.desc");
       this.requirePermission(HytalePermissions.fromCommand("player.effect.clear.self"));
+      this.setPermissionGroups("hytale:Builder");
       this.addUsageVariant(new PlayerEffectClearCommand.PlayerEffectClearOtherCommand());
    }
 
@@ -45,6 +46,7 @@ public class PlayerEffectClearCommand extends AbstractPlayerCommand {
       PlayerEffectClearOtherCommand() {
          super("server.commands.player.effect.clear.other.desc");
          this.requirePermission(HytalePermissions.fromCommand("player.effect.clear.other"));
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

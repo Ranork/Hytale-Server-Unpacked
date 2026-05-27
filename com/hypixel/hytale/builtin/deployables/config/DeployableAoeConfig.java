@@ -10,10 +10,10 @@ import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.entityeffect.config.EntityEffect;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.effect.EffectControllerComponent;
+import com.hypixel.hytale.server.core.entity.group.EntityGroup;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.Damage;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
@@ -24,9 +24,13 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class DeployableAoeConfig extends DeployableConfig {
    @Nonnull
@@ -172,16 +176,22 @@ public class DeployableAoeConfig extends DeployableConfig {
       @Nonnull final Store<EntityStore> store,
       @Nonnull final CommandBuffer<EntityStore> commandBuffer,
       @Nonnull final Ref<EntityStore> deployableRef,
-      @Nonnull DeployableComponent deployableComponent,
+      @Nonnull final DeployableComponent deployableComponent,
       @Nonnull Vector3d position,
       float radius,
       @Nonnull final DamageCause damageCause
    ) {
       var attackConsumer = new Consumer<Ref<EntityStore>>() {
+         {
+            Objects.requireNonNull(DeployableAoeConfig.this);
+         }
+
          public void accept(@Nonnull Ref<EntityStore> entityStoreRef) {
             if (entityStoreRef != deployableRef) {
-               DeployableAoeConfig.this.attackTarget(entityStoreRef, deployableRef, damageCause, commandBuffer);
-               DeployableAoeConfig.this.applyEffectToTarget(store, entityStoreRef);
+               if (DeployableAoeConfig.this.canAttackEntity(entityStoreRef, deployableComponent, store)) {
+                  DeployableAoeConfig.this.attackTarget(entityStoreRef, deployableComponent.getOwner(), damageCause, commandBuffer);
+                  DeployableAoeConfig.this.applyEffectToTarget(store, entityStoreRef);
+               }
             }
          }
       };
@@ -236,9 +246,26 @@ public class DeployableAoeConfig extends DeployableConfig {
       }
    }
 
-   protected boolean canAttackEntity(@Nonnull Ref<EntityStore> targetRef, @Nonnull DeployableComponent deployable) {
-      boolean isOwner = targetRef.equals(deployable.getOwner());
-      return !isOwner || this.attackOwner;
+   protected boolean canAttackEntity(@Nonnull Ref<EntityStore> targetRef, @Nonnull DeployableComponent deployable, @Nonnull Store<EntityStore> store) {
+      if (!this.attackOwner) {
+         UUID ownerUUID = deployable.getOwnerUUID();
+         if (ownerUUID != null) {
+            UUIDComponent targetUUID = store.getComponent(targetRef, UUIDComponent.getComponentType());
+            if (targetUUID != null && ownerUUID.equals(targetUUID.getUuid())) {
+               return false;
+            }
+         }
+      }
+
+      if (!this.attackTeam) {
+         Ref<EntityStore> ownerRef = deployable.getOwner();
+         if (ownerRef != null && ownerRef.isValid()) {
+            EntityGroup ownerGroup = store.getComponent(ownerRef, EntityGroup.getComponentType());
+            return ownerGroup == null || !ownerGroup.isMember(targetRef);
+         }
+      }
+
+      return this.attackEnemies;
    }
 
    protected float getRadius(@Nonnull Store<EntityStore> store, @Nonnull Instant startInstant) {

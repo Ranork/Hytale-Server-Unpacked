@@ -22,6 +22,7 @@ public class DroplistCommand extends CommandBase {
 
    public DroplistCommand() {
       super("droplist", "server.commands.droplist.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

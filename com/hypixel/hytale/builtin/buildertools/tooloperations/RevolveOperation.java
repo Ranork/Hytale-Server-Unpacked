@@ -9,8 +9,8 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteraction;
 import com.hypixel.hytale.protocol.packets.interface_.NotificationStyle;
 import com.hypixel.hytale.server.core.Message;
@@ -33,6 +33,9 @@ import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector3i;
 
 public class RevolveOperation extends ToolOperation {
    private Vector3f center;
@@ -55,25 +58,22 @@ public class RevolveOperation extends ToolOperation {
    public RevolveOperation(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       super(ref, packet, componentAccessor);
-      PlayerRef playerRefComponent = componentAccessor.getComponent(this.playerRef, PlayerRef.getComponentType());
-
-      assert playerRefComponent != null;
-
-      BuilderToolsPlugin.BuilderState state = BuilderToolsPlugin.getState(player, playerRefComponent);
+      BuilderToolsPlugin.BuilderState state = BuilderToolsPlugin.getState(player, playerRef);
       BlockSelection selection = state.getSelection();
       if (selection == null) {
-         BuilderToolsPlugin.sendFeedback(Message.translation("server.builderTools.noSelection"), player, NotificationStyle.Warning, componentAccessor);
+         BuilderToolsPlugin.sendFeedback(Message.translation("server.builderTools.noSelection"), playerRef, NotificationStyle.Warning, componentAccessor);
       } else if (!selection.hasSelectionBounds()) {
-         BuilderToolsPlugin.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), player, NotificationStyle.Warning, componentAccessor);
+         BuilderToolsPlugin.sendFeedback(Message.translation("server.builderTools.noSelectionBounds"), playerRef, NotificationStyle.Warning, componentAccessor);
       } else {
          OverridableChunkAccessor accessor = this.edit.getAccessor();
-         String fullRevolve = (String)this.args.tool().getOrDefault("aSampling", "neighbor");
+         String fullRevolve = (String)this.args.tool().getOrDefault("aSampling", "structural");
          switch (fullRevolve) {
-            case "reverse":
+            case "natural":
                this.samplingMode = RevolveOperation.Sampling.Reverse;
                break;
             case "none":
@@ -97,7 +97,8 @@ public class RevolveOperation extends ToolOperation {
             default:
                switch (min) {
                   case 0:
-                     this.center = playerRefComponent.getTransform().getPosition().toVector3f().floor().add(0.5F, 0.5F, 0.5F);
+                     Vector3d position = playerRef.getTransform().getPosition();
+                     this.center = new Vector3f((float)position.x, (float)position.y, (float)position.z).floor().add(0.5F, 0.5F, 0.5F);
                      break;
                   default:
                      this.center = new Vector3f(this.x + 0.5F, this.y + this.originOffsetY, this.z + 0.5F);
@@ -108,14 +109,14 @@ public class RevolveOperation extends ToolOperation {
                   customDistancex = (Integer)this.args.tool().getOrDefault("fDistance", 20);
                }
 
-               Vector3i minx = Vector3i.min(selection.getSelectionMin(), selection.getSelectionMax());
-               Vector3i max = Vector3i.max(selection.getSelectionMin(), selection.getSelectionMax());
-               int xMin = minx.getX();
-               int xMax = max.getX();
-               int yMin = minx.getY();
-               int yMax = max.getY();
-               int zMin = minx.getZ();
-               int zMax = max.getZ();
+               Vector3i minx = Vector3iUtil.min(selection.getSelectionMin(), selection.getSelectionMax());
+               Vector3i max = Vector3iUtil.max(selection.getSelectionMin(), selection.getSelectionMax());
+               int xMin = minx.x();
+               int xMax = max.x();
+               int yMin = minx.y();
+               int yMax = max.y();
+               int zMin = minx.z();
+               int zMax = max.z();
                this.currentSelection = new BlockSelection();
                this.bufferX = xMax - xMin + 1;
                int bufferY = yMax - yMin + 1;
@@ -188,7 +189,7 @@ public class RevolveOperation extends ToolOperation {
                   } else {
                      BuilderToolsPlugin.sendFeedback(
                         Message.translation("server.builderTools.errorTooManyEntities").param("count", 1000),
-                        player,
+                        playerRef,
                         NotificationStyle.Warning,
                         componentAccessor
                      );
@@ -352,9 +353,9 @@ public class RevolveOperation extends ToolOperation {
       Store<EntityStore> entityStore = world.getEntityStore().getStore();
       this.currentSelection.forEachEntity(entityHolder -> {
          TransformComponent t = entityHolder.getComponent(TransformComponent.getComponentType());
-         double x = t.getPosition().getX();
-         double y = t.getPosition().getY();
-         double z = t.getPosition().getZ();
+         double x = t.getPosition().x();
+         double y = t.getPosition().y();
+         double z = t.getPosition().z();
          double deltaX = x + this.currentSelection.getX() - this.center.x;
          double deltaZ = z + this.currentSelection.getZ() - this.center.z;
 
@@ -364,14 +365,14 @@ public class RevolveOperation extends ToolOperation {
             float yawRad = (float)Math.toRadians(-degrees[c]);
             Holder<EntityStore> copy = entityHolder.clone();
             TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
-            Vector3f bodyRot = transformComponent.getRotation();
+            Rotation3f bodyRot = transformComponent.getRotation();
             bodyRot.addYaw(yawRad);
             HeadRotation headRotComp = copy.getComponent(HeadRotation.getComponentType());
             if (headRotComp != null) {
                headRotComp.getRotation().addYaw(yawRad);
             }
 
-            transformComponent.getPosition().assign(rotatedX + this.center.x, y + this.currentSelection.getY(), rotatedZ + this.center.z);
+            transformComponent.getPosition().set(rotatedX + this.center.x, y + this.currentSelection.getY(), rotatedZ + this.center.z);
             copy.putComponent(UUIDComponent.getComponentType(), new UUIDComponent(UUID.randomUUID()));
             copy.removeComponent(EntityTrackerSystems.Visible.getComponentType());
             copy.removeComponent(NetworkId.getComponentType());
@@ -416,7 +417,7 @@ public class RevolveOperation extends ToolOperation {
    private void rotate(Vector3i v, int c, double x, int y, double z, double[] sin, double[] cos) {
       double rx = x * cos[c] - z * sin[c];
       double rz = x * sin[c] + z * cos[c];
-      v.assign((int)Math.floor(rx + this.center.x), y + this.currentSelection.getY(), (int)Math.floor(rz + this.center.z));
+      v.set((int)Math.floor(rx + this.center.x), y + this.currentSelection.getY(), (int)Math.floor(rz + this.center.z));
    }
 
    private void reverseSample() {
@@ -467,7 +468,7 @@ public class RevolveOperation extends ToolOperation {
    }
 
    @Override
-   public boolean execute0(int x, int y, int z) {
+   protected boolean executeBlock(int x, int y, int z) {
       return false;
    }
 

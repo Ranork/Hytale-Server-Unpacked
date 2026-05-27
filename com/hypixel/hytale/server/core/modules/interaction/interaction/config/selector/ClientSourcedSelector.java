@@ -3,13 +3,13 @@ package com.hypixel.hytale.server.core.modules.interaction.interaction.config.se
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.consumer.TriIntConsumer;
-import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.protocol.SelectedHitEntity;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import javax.annotation.Nonnull;
+import org.joml.Vector4d;
 
 @Deprecated
 public class ClientSourcedSelector implements Selector {
@@ -40,7 +40,7 @@ public class ClientSourcedSelector implements Selector {
          for (SelectedHitEntity info : hits) {
             Ref<EntityStore> targetRef = store.getRefFromNetworkId(info.networkId);
             if (targetRef != null) {
-               consumer.accept(targetRef, new Vector4d(info.hitLocation.x, info.hitLocation.y, info.hitLocation.z, 0.0));
+               consumer.accept(targetRef, new Vector4d(info.hitLocation.x(), info.hitLocation.y(), info.hitLocation.z(), 0.0));
             }
          }
       }

@@ -7,9 +7,10 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.Position;
@@ -21,19 +22,21 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class TransformComponent implements Component<EntityStore> {
    @Nonnull
    public static final BuilderCodec<TransformComponent> CODEC = BuilderCodec.builder(TransformComponent.class, TransformComponent::new)
-      .append(new KeyedCodec<>("Position", Vector3d.CODEC), (o, i) -> o.position.assign(i), o -> o.position)
+      .append(new KeyedCodec<>("Position", Vector3dUtil.CODEC), (o, i) -> o.position.set(i), o -> o.position)
       .add()
-      .append(new KeyedCodec<>("Rotation", Vector3f.ROTATION), (o, i) -> o.rotation.assign(i), o -> o.rotation)
+      .append(new KeyedCodec<>("Rotation", Rotation3f.CODEC), (o, i) -> o.rotation.set(i), o -> o.rotation)
       .add()
       .build();
    @Nonnull
    private final Vector3d position = new Vector3d();
    @Nonnull
-   private final Vector3f rotation = new Vector3f();
+   private final Rotation3f rotation = new Rotation3f();
    @Nonnull
    private final ModelTransform sentTransform = new ModelTransform(new Position(), new Direction(), new Direction());
    @Nullable
@@ -49,9 +52,9 @@ public class TransformComponent implements Component<EntityStore> {
    public TransformComponent() {
    }
 
-   public TransformComponent(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
-      this.position.assign(position);
-      this.rotation.assign(rotation);
+   public TransformComponent(@Nonnull Vector3dc position, @Nonnull Rotation3fc rotation) {
+      this.position.set(position);
+      this.rotation.set(rotation);
    }
 
    @Nonnull
@@ -59,34 +62,34 @@ public class TransformComponent implements Component<EntityStore> {
       return this.position;
    }
 
-   public void setPosition(@Nonnull Vector3d position) {
-      this.position.assign(position);
+   public void setPosition(@Nonnull Vector3dc position) {
+      this.position.set(position);
    }
 
-   public void teleportPosition(@Nonnull Vector3d position) {
-      double x = position.getX();
+   public void teleportPosition(@Nonnull Vector3dc position) {
+      double x = position.x();
       if (!Double.isNaN(x)) {
-         this.position.setX(x);
+         this.position.x = x;
       }
 
-      double y = position.getY();
+      double y = position.y();
       if (!Double.isNaN(y)) {
-         this.position.setY(y);
+         this.position.y = y;
       }
 
-      double z = position.getZ();
+      double z = position.z();
       if (!Double.isNaN(z)) {
-         this.position.setZ(z);
+         this.position.z = z;
       }
    }
 
    @Nonnull
-   public Vector3f getRotation() {
+   public Rotation3f getRotation() {
       return this.rotation;
    }
 
-   public void setRotation(@Nonnull Vector3f rotation) {
-      this.rotation.assign(rotation);
+   public void setRotation(@Nonnull Rotation3f rotation) {
+      this.rotation.set(rotation);
    }
 
    @Nonnull
@@ -94,18 +97,18 @@ public class TransformComponent implements Component<EntityStore> {
       return new Transform(this.position, this.rotation);
    }
 
-   public void teleportRotation(@Nonnull Vector3f rotation) {
-      float yaw = rotation.getYaw();
+   public void teleportRotation(@Nonnull Rotation3f rotation) {
+      float yaw = rotation.yaw();
       if (!Float.isNaN(yaw)) {
          this.rotation.setYaw(yaw);
       }
 
-      float pitch = rotation.getPitch();
+      float pitch = rotation.pitch();
       if (!Float.isNaN(pitch)) {
          this.rotation.setPitch(pitch);
       }
 
-      float roll = rotation.getRoll();
+      float roll = rotation.roll();
       if (!Float.isNaN(roll)) {
          this.rotation.setRoll(roll);
       }

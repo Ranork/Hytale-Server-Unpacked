@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -37,27 +38,35 @@ public class PortalDef {
 
    @Nonnull
    public static PortalDef deserialize(@Nonnull ByteBuf buf, int offset) {
-      PortalDef obj = new PortalDef();
-      byte nullBits = buf.getByte(offset);
-      obj.explorationSeconds = buf.getIntLE(offset + 1);
-      obj.breachSeconds = buf.getIntLE(offset + 5);
-      int pos = offset + 9;
-      if ((nullBits & 1) != 0) {
-         int nameKeyLen = VarInt.peek(buf, pos);
-         if (nameKeyLen < 0) {
-            throw ProtocolException.negativeLength("NameKey", nameKeyLen);
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("PortalDef", 9, buf.readableBytes() - offset);
+      } else {
+         PortalDef obj = new PortalDef();
+         byte nullBits = buf.getByte(offset);
+         obj.explorationSeconds = buf.getIntLE(offset + 1);
+         obj.breachSeconds = buf.getIntLE(offset + 5);
+         int pos = offset + 9;
+         if ((nullBits & 1) != 0) {
+            int nameKeyLen = VarInt.peek(buf, pos);
+            if (nameKeyLen < 0) {
+               throw ProtocolException.invalidVarInt("NameKey");
+            }
+
+            int nameKeyVarLen = VarInt.size(nameKeyLen);
+            if (nameKeyLen > 4096000) {
+               throw ProtocolException.stringTooLong("NameKey", nameKeyLen, 4096000);
+            }
+
+            if (pos + nameKeyVarLen + nameKeyLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("NameKey", pos + nameKeyVarLen + nameKeyLen, buf.readableBytes());
+            }
+
+            obj.nameKey = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+            pos += nameKeyVarLen + nameKeyLen;
          }
 
-         if (nameKeyLen > 4096000) {
-            throw ProtocolException.stringTooLong("NameKey", nameKeyLen, 4096000);
-         }
-
-         int nameKeyVarLen = VarInt.length(buf, pos);
-         obj.nameKey = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += nameKeyVarLen + nameKeyLen;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -65,10 +74,61 @@ public class PortalDef {
       int pos = offset + 9;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static String getNameKey(MemorySegment mem) {
+      return getNameKey(mem, 0);
+   }
+
+   @Nullable
+   public static String getNameKey(MemorySegment mem, int offset) {
+      return hasNameKey(mem, offset) ? PacketIO.readVarString("NameKey", mem, offset + 9, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static int getExplorationSeconds(MemorySegment mem) {
+      return getExplorationSeconds(mem, 0);
+   }
+
+   public static int getExplorationSeconds(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 1));
+   }
+
+   public static int getBreachSeconds(MemorySegment mem) {
+      return getBreachSeconds(mem, 0);
+   }
+
+   public static int getBreachSeconds(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 5));
+   }
+
+   public static boolean hasNameKey(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static PortalDef toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PortalDef toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PortalDef", offset + 9, (int)mem.byteSize());
+      } else {
+         return new PortalDef(
+            hasNameKey(mem, offset) ? PacketIO.readVarString("NameKey", mem, offset + 9, 4096000, PacketIO.UTF8) : null,
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 5))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -83,6 +143,23 @@ public class PortalDef {
       if (this.nameKey != null) {
          PacketIO.writeVarString(buf, this.nameKey, 4096000);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.nameKey != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 1), this.explorationSeconds);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 5), this.breachSeconds);
+      int varOffset = offset + 9;
+      if (this.nameKey != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.nameKey, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {
@@ -110,7 +187,7 @@ public class PortalDef {
                return ValidationResult.error("NameKey exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(nameKeyLen);
             pos += nameKeyLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading NameKey");

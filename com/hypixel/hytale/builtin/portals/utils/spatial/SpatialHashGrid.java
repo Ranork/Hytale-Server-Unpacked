@@ -1,8 +1,6 @@
 package com.hypixel.hytale.builtin.portals.utils.spatial;
 
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collection;
@@ -10,9 +8,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import org.joml.Vector3i;
 
 public class SpatialHashGrid<T> {
    private final double cellSize;
@@ -23,8 +25,8 @@ public class SpatialHashGrid<T> {
       this.cellSize = cellSize;
    }
 
-   private Vector3i cellFor(Vector3d p) {
-      return new Vector3i(MathUtil.floor(p.x / this.cellSize), MathUtil.floor(p.y / this.cellSize), MathUtil.floor(p.z / this.cellSize));
+   private Vector3i cellFor(Vector3dc p) {
+      return new Vector3i(MathUtil.floor(p.x() / this.cellSize), MathUtil.floor(p.y() / this.cellSize), MathUtil.floor(p.z() / this.cellSize));
    }
 
    public Collection<? extends T> getAll() {
@@ -41,7 +43,7 @@ public class SpatialHashGrid<T> {
 
    public void add(Vector3d pos, T value) {
       Vector3i cell = this.cellFor(pos);
-      SpatialHashGrid.Entry<T> entry = new SpatialHashGrid.Entry<>(pos.clone(), cell, value);
+      SpatialHashGrid.Entry<T> entry = new SpatialHashGrid.Entry<>(new Vector3d(pos), cell, value);
       this.index.put(value, entry);
       this.grid.computeIfAbsent(cell, x -> new ObjectArrayList()).add(entry);
    }
@@ -82,7 +84,7 @@ public class SpatialHashGrid<T> {
       if (entry != null) {
          Vector3i oldCell = entry.cell;
          Vector3i newCell = this.cellFor(newPos);
-         entry.pos.assign(newPos);
+         entry.pos.set(newPos);
          if (!oldCell.equals(newCell)) {
             List<SpatialHashGrid.Entry<T>> oldBucket = this.grid.get(oldCell);
             oldBucket.remove(entry);
@@ -101,7 +103,7 @@ public class SpatialHashGrid<T> {
       double radiusSq = radius * radius;
       this.query(center, radius, bucket -> {
          for (SpatialHashGrid.Entry<T> entry : bucket) {
-            if (entry.pos.distanceSquaredTo(center) <= radiusSq) {
+            if (entry.pos.distanceSquared(center) <= radiusSq) {
                out.put(entry.value, entry.pos);
             }
          }
@@ -114,13 +116,19 @@ public class SpatialHashGrid<T> {
    @Nullable
    public T findClosest(final Vector3d center, double searchRadius) {
       var closestVisitor = new SpatialHashGrid.CellVisitor<T>() {
-         double closestDist = Double.MAX_VALUE;
-         T closest = (T)null;
+         double closestDist;
+         T closest;
+
+         {
+            Objects.requireNonNull(SpatialHashGrid.this);
+            this.closestDist = Double.MAX_VALUE;
+            this.closest = null;
+         }
 
          @Override
          public boolean visit(List<SpatialHashGrid.Entry<T>> bucket) {
             for (SpatialHashGrid.Entry<T> entry : bucket) {
-               double dist = entry.pos.distanceSquaredTo(center);
+               double dist = entry.pos.distanceSquared(center);
                if (dist <= this.closestDist) {
                   this.closestDist = dist;
                   this.closest = entry.value;
@@ -136,13 +144,19 @@ public class SpatialHashGrid<T> {
 
    public boolean hasAnyWithin(final Vector3d center, final double radius) {
       var withinVisitor = new SpatialHashGrid.CellVisitor<T>() {
-         final double radiusSq = radius * radius;
-         boolean hasWithin = false;
+         final double radiusSq;
+         boolean hasWithin;
+
+         {
+            Objects.requireNonNull(SpatialHashGrid.this);
+            this.radiusSq = radius * radius;
+            this.hasWithin = false;
+         }
 
          @Override
          public boolean visit(List<SpatialHashGrid.Entry<T>> bucket) {
             for (SpatialHashGrid.Entry<T> entry : bucket) {
-               double dist = entry.pos.distanceSquaredTo(center);
+               double dist = entry.pos.distanceSquared(center);
                if (dist <= this.radiusSq) {
                   this.hasWithin = true;
                   return false;
@@ -168,7 +182,7 @@ public class SpatialHashGrid<T> {
       for (int x = minX; x <= maxX; x++) {
          for (int y = minY; y <= maxY; y++) {
             for (int z = minZ; z <= maxZ; z++) {
-               lookup.assign(x, y, z);
+               lookup.set(x, y, z);
                List<SpatialHashGrid.Entry<T>> bucket = this.grid.get(lookup);
                if (bucket != null) {
                   boolean keepGoing = visitor.visit(bucket);

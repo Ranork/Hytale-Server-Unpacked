@@ -22,6 +22,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class HytaleLoggerBackend extends LoggerBackend {
+   @Nullable
    public static Function<String, Level> LOG_LEVEL_LOADER;
    public static final PrintStream REAL_SOUT = System.out;
    public static final PrintStream REAL_SERR = System.err;
@@ -29,9 +30,11 @@ public class HytaleLoggerBackend extends LoggerBackend {
    private static final HytaleLoggerBackend ROOT_LOGGER = new HytaleLoggerBackend("Hytale", null);
    private static final int OFF_VALUE = Level.OFF.intValue();
    private final String name;
+   @Nullable
    private final HytaleLoggerBackend parent;
    @Nonnull
    private Level level = Level.INFO;
+   @Nullable
    private BiConsumer<Level, Level> onLevelChange;
    @Nullable
    private HytaleSentryHandler sentryHandler;
@@ -44,7 +47,7 @@ public class HytaleLoggerBackend extends LoggerBackend {
       this.parent = ROOT_LOGGER;
    }
 
-   protected HytaleLoggerBackend(String name, HytaleLoggerBackend parent) {
+   protected HytaleLoggerBackend(String name, @Nullable HytaleLoggerBackend parent) {
       this.name = name;
       this.parent = parent;
    }

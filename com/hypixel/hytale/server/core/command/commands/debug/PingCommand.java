@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.connection.PongType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -28,7 +27,7 @@ public class PingCommand extends AbstractTargetPlayerCommand {
 
    public PingCommand() {
       super("ping", "server.commands.ping.desc");
-      this.setPermissionGroup(GameMode.Adventure);
+      this.setPermissionGroups("hytale:Adventurer");
       this.addSubCommand(new PingCommand.Clear());
       this.addSubCommand(new PingCommand.Graph());
    }
@@ -95,7 +94,7 @@ public class PingCommand extends AbstractTargetPlayerCommand {
 
       public Clear() {
          super("clear", "server.commands.ping.clear.desc");
-         this.setPermissionGroup(GameMode.Adventure);
+         this.setPermissionGroups("hytale:Adventurer");
          this.addAliases("reset");
       }
 
@@ -128,7 +127,7 @@ public class PingCommand extends AbstractTargetPlayerCommand {
 
       public Graph() {
          super("graph", "server.commands.ping.graph.desc");
-         this.setPermissionGroup(GameMode.Adventure);
+         this.setPermissionGroups("hytale:Adventurer");
       }
 
       @Override

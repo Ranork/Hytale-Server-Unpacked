@@ -10,9 +10,9 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.util.TrigMathUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.RailConfig;
 import com.hypixel.hytale.protocol.RailPoint;
@@ -40,6 +40,9 @@ import java.util.Collections;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3fc;
+import org.joml.Vector3i;
 
 public class SpawnMinecartInteraction extends SimpleBlockInteraction {
    public static final BuilderCodec<SpawnMinecartInteraction> CODEC = BuilderCodec.builder(
@@ -73,12 +76,12 @@ public class SpawnMinecartInteraction extends SimpleBlockInteraction {
    ) {
       Ref<EntityStore> ref = context.getEntity();
       Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
-      Vector3d targetPosition = targetBlock.toVector3d();
+      Vector3d targetPosition = Vector3iUtil.toVector3d(targetBlock);
       targetPosition.add(0.5, 0.5, 0.5);
-      Vector3f rotation = new Vector3f();
+      Rotation3f rotation = new Rotation3f();
       HeadRotation headRotation = commandBuffer.getComponent(ref, HeadRotation.getComponentType());
       if (headRotation != null) {
-         rotation.setYaw(headRotation.getRotation().getYaw());
+         rotation.setYaw(headRotation.getRotation().yaw());
       }
 
       WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(targetBlock.x, targetBlock.z));
@@ -87,7 +90,7 @@ public class SpawnMinecartInteraction extends SimpleBlockInteraction {
          int blockRotation = chunk.getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
          RailConfig railConfig = block.getRailConfig(blockRotation);
          if (railConfig != null) {
-            alignToRail(targetBlock, targetPosition, rotation, rotation.getYaw(), railConfig);
+            alignToRail(targetBlock, targetPosition, rotation, rotation.yaw(), railConfig);
          } else {
             BlockBoundingBoxes.RotatedVariantBoxes bounding = BlockBoundingBoxes.getAssetMap().getAsset(block.getHitboxTypeIndex()).get(blockRotation);
             targetPosition.add(0.0, bounding.getBoundingBox().max.y - 0.5, 0.0);
@@ -119,46 +122,64 @@ public class SpawnMinecartInteraction extends SimpleBlockInteraction {
    ) {
    }
 
-   private static void alignToRail(@Nonnull Vector3i targetBlock, @Nonnull Vector3d target, @Nonnull Vector3f rotation, float yaw, @Nonnull RailConfig config) {
+   private static void alignToRail(@Nonnull Vector3i targetBlock, @Nonnull Vector3d target, @Nonnull Rotation3f rotation, float yaw, @Nonnull RailConfig config) {
       RailPoint[] points = config.points;
       double smallestDistance = Double.MAX_VALUE;
       double ox = target.x;
       double oy = target.y;
       double oz = target.z;
-      Vector3d facingDir = new Vector3d();
-      facingDir.assign(yaw, 0.0);
+      double fx = -TrigMathUtil.sin(yaw);
+      double fz = -TrigMathUtil.cos(yaw);
 
       for (int index = 0; index < points.length - 1; index++) {
-         RailPoint p = points[index];
-         RailPoint p2 = points[index + 1];
-         Vector3d point = new Vector3d(targetBlock.x + p.point.x, targetBlock.y + p.point.y, targetBlock.z + p.point.z);
-         Vector3d point2 = new Vector3d(targetBlock.x + p2.point.x, targetBlock.y + p2.point.y, targetBlock.z + p2.point.z);
-         Vector3d dir = point2.clone().subtract(point);
-         double maxLength = dir.length();
-         dir.normalize();
-         Vector3d toPoint = target.clone().subtract(point);
-         double distance = dir.dot(toPoint);
-         Vector3d pointOnLine = point.clone();
-         pointOnLine.addScaled(dir, Math.min(maxLength, Math.max(0.0, distance)));
-         double pointDist = pointOnLine.distanceSquaredTo(target);
+         Vector3fc p = points[index].point;
+         Vector3fc p2 = points[index + 1].point;
+         double p1x = targetBlock.x + p.x();
+         double p1y = targetBlock.y + p.y();
+         double p1z = targetBlock.z + p.z();
+         double p2x = targetBlock.x + p2.x();
+         double p2y = targetBlock.y + p2.y();
+         double p2z = targetBlock.z + p2.z();
+         double dx = p2x - p1x;
+         double dy = p2y - p1y;
+         double dz = p2z - p1z;
+         double maxLength = Math.sqrt(dx * dx + dy * dy + dz * dz);
+         double invLen = 1.0 / maxLength;
+         dx *= invLen;
+         dy *= invLen;
+         dz *= invLen;
+         double tx = target.x - p1x;
+         double ty = target.y - p1y;
+         double tz = target.z - p1z;
+         double distance = dx * tx + dy * ty + dz * tz;
+         double t = Math.min(maxLength, Math.max(0.0, distance));
+         double clx = p1x + dx * t;
+         double cly = p1y + dy * t;
+         double clz = p1z + dz * t;
+         double ex = clx - target.x;
+         double ey = cly - target.y;
+         double ez = clz - target.z;
+         double pointDist = ex * ex + ey * ey + ez * ez;
          if (pointDist >= 0.0 && pointDist <= 0.8F && pointDist < smallestDistance) {
-            ox = pointOnLine.x;
-            oy = pointOnLine.y;
-            oz = pointOnLine.z;
+            ox = clx;
+            oy = cly;
+            oz = clz;
             smallestDistance = pointDist;
-            if (facingDir.dot(dir) < 0.0) {
-               dir.scale(-1.0);
+            if (fx * dx + fz * dz < 0.0) {
+               dx = -dx;
+               dy = -dy;
+               dz = -dz;
             }
 
-            float newYaw = (float)(Math.atan2(dir.x, dir.z) + Math.PI);
-            float newPitch = (float)Math.asin(dir.y);
+            float newYaw = (float)(Math.atan2(dx, dz) + Math.PI);
+            float newPitch = (float)Math.asin(dy);
             rotation.setYaw(newYaw);
             rotation.setPitch(newPitch);
          }
       }
 
       if (!(smallestDistance >= Double.MAX_VALUE)) {
-         target.assign(ox, oy, oz);
+         target.set(ox, oy, oz);
       }
    }
 }

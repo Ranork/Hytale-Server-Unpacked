@@ -15,6 +15,7 @@ public class SpawnSetDefaultCommand extends AbstractWorldCommand {
 
    public SpawnSetDefaultCommand() {
       super("default", "server.commands.spawn.set.default.desc");
+      this.setPermissionGroups("hytale:Admin");
    }
 
    @Override

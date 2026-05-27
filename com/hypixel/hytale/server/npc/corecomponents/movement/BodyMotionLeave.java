@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.corecomponents.movement;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.corecomponents.movement.builders.BuilderBodyMotionLeave;
@@ -10,6 +9,7 @@ import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.navigation.AStarBase;
 import com.hypixel.hytale.server.npc.navigation.AStarNode;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class BodyMotionLeave extends BodyMotionFindBase<AStarBase> {
    protected final double distanceSquared;

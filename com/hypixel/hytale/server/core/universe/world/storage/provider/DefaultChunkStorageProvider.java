@@ -32,6 +32,11 @@ public class DefaultChunkStorageProvider implements IChunkStorageProvider<Object
    }
 
    @Override
+   public void delete(@Nonnull Object o, @Nonnull Store<ChunkStore> store) throws IOException {
+      ((IChunkStorageProvider<Object>)this.provider).delete(o, store);
+   }
+
+   @Override
    public void close(@Nonnull Object o, @NonNullDecl Store<ChunkStore> store) throws IOException {
       ((IChunkStorageProvider<Object>)this.provider).close(o, store);
    }

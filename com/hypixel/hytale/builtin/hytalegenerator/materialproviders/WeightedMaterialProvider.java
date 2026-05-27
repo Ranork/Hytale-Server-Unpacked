@@ -27,6 +27,7 @@ public class WeightedMaterialProvider<V> extends MaterialProvider<V> {
    @Override
    public V getVoxelTypeAt(@Nonnull MaterialProvider.Context context) {
       int localSeed = this.rngField.get(context.position.x, context.position.y, context.position.z);
+      this.random.setSeed(localSeed);
       if (this.weightedMap.size() != 0 && !(this.random.nextDouble() < this.noneProbability)) {
          MaterialProvider<V> pick = this.weightedMap.pick(this.random);
          return pick.getVoxelTypeAt(context);

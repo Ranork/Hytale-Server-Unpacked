@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.engine;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 @FunctionalInterface
 public interface TerrainDensityProvider {

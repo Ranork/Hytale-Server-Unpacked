@@ -1,9 +1,9 @@
 package com.hypixel.hytale.server.worldgen.cave.shape.distorted;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.logic.GeneralNoise;
 import com.hypixel.hytale.server.worldgen.cave.CaveType;
 import com.hypixel.hytale.server.worldgen.util.bounds.IWorldBounds;
+import org.joml.Vector3d;
 
 public interface DistortedShape extends IWorldBounds {
    Vector3d getStart();

@@ -4,8 +4,11 @@ import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -48,16 +51,20 @@ public class AssetEditorPopupNotification implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorPopupNotification deserialize(@Nonnull ByteBuf buf, int offset) {
-      AssetEditorPopupNotification obj = new AssetEditorPopupNotification();
-      byte nullBits = buf.getByte(offset);
-      obj.type = AssetEditorPopupNotificationType.fromValue(buf.getByte(offset + 1));
-      int pos = offset + 2;
-      if ((nullBits & 1) != 0) {
-         obj.message = FormattedMessage.deserialize(buf, pos);
-         pos += FormattedMessage.computeBytesConsumed(buf, pos);
-      }
+      if (buf.readableBytes() - offset < 2) {
+         throw ProtocolException.bufferTooSmall("AssetEditorPopupNotification", 2, buf.readableBytes() - offset);
+      } else {
+         AssetEditorPopupNotification obj = new AssetEditorPopupNotification();
+         byte nullBits = buf.getByte(offset);
+         obj.type = AssetEditorPopupNotificationType.fromValue(buf.getByte(offset + 1));
+         int pos = offset + 2;
+         if ((nullBits & 1) != 0) {
+            obj.message = FormattedMessage.deserialize(buf, pos);
+            pos += FormattedMessage.computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -68,6 +75,48 @@ public class AssetEditorPopupNotification implements Packet, ToClientPacket {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 2L;
+   }
+
+   public static AssetEditorPopupNotificationType getType(MemorySegment mem) {
+      return getType(mem, 0);
+   }
+
+   public static AssetEditorPopupNotificationType getType(MemorySegment mem, int offset) {
+      return AssetEditorPopupNotificationType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1)));
+   }
+
+   @Nullable
+   public static FormattedMessage getMessage(MemorySegment mem) {
+      return getMessage(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getMessage(MemorySegment mem, int offset) {
+      return hasMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + 2) : null;
+   }
+
+   public static boolean hasMessage(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorPopupNotification toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorPopupNotification toObject(MemorySegment mem, int offset) {
+      if (offset + 2 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorPopupNotification", offset + 2, (int)mem.byteSize());
+      } else {
+         return new AssetEditorPopupNotification(
+            AssetEditorPopupNotificationType.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1))),
+            hasMessage(mem, offset) ? FormattedMessage.toObject(mem, offset + 2) : null
+         );
+      }
    }
 
    @Override
@@ -85,6 +134,23 @@ public class AssetEditorPopupNotification implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.message != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), (byte)this.type.getValue());
+      int varOffset = offset + 2;
+      if (this.message != null) {
+         varOffset += this.message.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
       int size = 2;
       if (this.message != null) {
@@ -99,17 +165,22 @@ public class AssetEditorPopupNotification implements Packet, ToClientPacket {
          return ValidationResult.error("Buffer too small: expected at least 2 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
-         int pos = offset + 2;
-         if ((nullBits & 1) != 0) {
-            ValidationResult messageResult = FormattedMessage.validateStructure(buffer, pos);
-            if (!messageResult.isValid()) {
-               return ValidationResult.error("Invalid Message: " + messageResult.error());
+         int v = buffer.getByte(offset + 1) & 255;
+         if (v >= 4) {
+            return ValidationResult.error("Invalid AssetEditorPopupNotificationType value for Type");
+         } else {
+            v = offset + 2;
+            if ((nullBits & 1) != 0) {
+               ValidationResult messageResult = FormattedMessage.validateStructure(buffer, v);
+               if (!messageResult.isValid()) {
+                  return ValidationResult.error("Invalid Message: " + messageResult.error());
+               }
+
+               v += FormattedMessage.computeBytesConsumed(buffer, v);
             }
 
-            pos += FormattedMessage.computeBytesConsumed(buffer, pos);
+            return ValidationResult.OK;
          }
-
-         return ValidationResult.OK;
       }
    }
 

@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -35,20 +38,34 @@ public class DeployableConfig {
 
    @Nonnull
    public static DeployableConfig deserialize(@Nonnull ByteBuf buf, int offset) {
-      DeployableConfig obj = new DeployableConfig();
-      byte nullBits = buf.getByte(offset);
-      obj.allowPlaceOnWalls = buf.getByte(offset + 1) != 0;
-      if ((nullBits & 1) != 0) {
-         int varPos0 = offset + 10 + buf.getIntLE(offset + 2);
-         obj.model = Model.deserialize(buf, varPos0);
-      }
+      if (buf.readableBytes() - offset < 10) {
+         throw ProtocolException.bufferTooSmall("DeployableConfig", 10, buf.readableBytes() - offset);
+      } else {
+         DeployableConfig obj = new DeployableConfig();
+         byte nullBits = buf.getByte(offset);
+         obj.allowPlaceOnWalls = buf.getByte(offset + 1) != 0;
+         if ((nullBits & 1) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 2);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 10) {
+               throw ProtocolException.invalidOffset("Model", varPosBase0, buf.readableBytes());
+            }
 
-      if ((nullBits & 2) != 0) {
-         int varPos1 = offset + 10 + buf.getIntLE(offset + 6);
-         obj.modelPreview = Model.deserialize(buf, varPos1);
-      }
+            int varPos0 = offset + 10 + varPosBase0;
+            obj.model = Model.deserialize(buf, varPos0);
+         }
 
-      return obj;
+         if ((nullBits & 2) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 6);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 10) {
+               throw ProtocolException.invalidOffset("ModelPreview", varPosBase1, buf.readableBytes());
+            }
+
+            int varPos1 = offset + 10 + varPosBase1;
+            obj.modelPreview = Model.deserialize(buf, varPos1);
+         }
+
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -56,6 +73,10 @@ public class DeployableConfig {
       int maxEnd = 10;
       if ((nullBits & 1) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 2);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("Model", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 10 + fieldOffset0;
          pos0 += Model.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
@@ -65,6 +86,10 @@ public class DeployableConfig {
 
       if ((nullBits & 2) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 6);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 10) {
+            throw ProtocolException.invalidOffset("ModelPreview", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 10 + fieldOffset1;
          pos1 += Model.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
@@ -73,6 +98,73 @@ public class DeployableConfig {
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 10L;
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 2, 10, "Model")) : null;
+   }
+
+   @Nullable
+   public static Model getModelPreview(MemorySegment mem) {
+      return getModelPreview(mem, 0);
+   }
+
+   @Nullable
+   public static Model getModelPreview(MemorySegment mem, int offset) {
+      return hasModelPreview(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 6, 10, "ModelPreview")) : null;
+   }
+
+   public static boolean getAllowPlaceOnWalls(MemorySegment mem) {
+      return getAllowPlaceOnWalls(mem, 0);
+   }
+
+   public static boolean getAllowPlaceOnWalls(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1));
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasModelPreview(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static DeployableConfig toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static DeployableConfig toObject(MemorySegment mem, int offset) {
+      if (offset + 10 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DeployableConfig", offset + 10, (int)mem.byteSize());
+      } else {
+         return new DeployableConfig(
+            hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 2, 10, "Model")) : null,
+            hasModelPreview(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 6, 10, "ModelPreview")) : null,
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -108,6 +200,36 @@ public class DeployableConfig {
       }
    }
 
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.modelPreview != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.allowPlaceOnWalls);
+      int varOffset = offset + 10;
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 2), varOffset - offset - 10);
+         varOffset += this.model.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 2), -1);
+      }
+
+      if (this.modelPreview != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 6), varOffset - offset - 10);
+         varOffset += this.modelPreview.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 6), -1);
+      }
+
+      return varOffset - offset;
+   }
+
    public int computeSize() {
       int size = 10;
       if (this.model != null) {
@@ -128,15 +250,11 @@ public class DeployableConfig {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 1) != 0) {
             int modelOffset = buffer.getIntLE(offset + 2);
-            if (modelOffset < 0) {
+            if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 10) {
                return ValidationResult.error("Invalid offset for Model");
             }
 
             int pos = offset + 10 + modelOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Model");
-            }
-
             ValidationResult modelResult = Model.validateStructure(buffer, pos);
             if (!modelResult.isValid()) {
                return ValidationResult.error("Invalid Model: " + modelResult.error());
@@ -147,21 +265,17 @@ public class DeployableConfig {
 
          if ((nullBits & 2) != 0) {
             int modelPreviewOffset = buffer.getIntLE(offset + 6);
-            if (modelPreviewOffset < 0) {
+            if (modelPreviewOffset < 0 || modelPreviewOffset > buffer.writerIndex() - offset - 10) {
                return ValidationResult.error("Invalid offset for ModelPreview");
             }
 
-            int posx = offset + 10 + modelPreviewOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for ModelPreview");
-            }
-
-            ValidationResult modelPreviewResult = Model.validateStructure(buffer, posx);
+            int pos = offset + 10 + modelPreviewOffset;
+            ValidationResult modelPreviewResult = Model.validateStructure(buffer, pos);
             if (!modelPreviewResult.isValid()) {
                return ValidationResult.error("Invalid ModelPreview: " + modelPreviewResult.error());
             }
 
-            posx += Model.computeBytesConsumed(buffer, posx);
+            pos += Model.computeBytesConsumed(buffer, pos);
          }
 
          return ValidationResult.OK;

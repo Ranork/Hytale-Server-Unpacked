@@ -7,6 +7,7 @@ import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatValue;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsModule;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.DefaultEntityStatTypes;
@@ -124,15 +125,17 @@ public class EntitySupport {
    }
 
    public static void setDisplayName(@Nonnull Holder<EntityStore> holder, @Nullable String displayName, boolean override) {
-      DisplayNameComponent displayNameComponent = holder.getComponent(DisplayNameComponent.getComponentType());
-      if (displayNameComponent != null) {
-         Message displayNameMessage = displayNameComponent.getDisplayName();
-         if (displayNameMessage != null && !displayNameMessage.getAnsiMessage().isEmpty() && !override) {
+      PersistentDisplayName persistentDisplayName = holder.getComponent(PersistentDisplayName.getComponentType());
+      if (persistentDisplayName != null) {
+         Message existing = persistentDisplayName.getDisplayName();
+         if (existing != null && !existing.getAnsiMessage().isEmpty() && !override) {
             return;
          }
       }
 
-      holder.putComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(Message.raw(displayName != null ? displayName : "")));
+      Message message = displayName != null ? Message.raw(displayName) : null;
+      holder.putComponent(PersistentDisplayName.getComponentType(), new PersistentDisplayName(message));
+      holder.putComponent(DisplayNameComponent.getComponentType(), new DisplayNameComponent(message));
       if (displayName != null) {
          Nameplate nameplateComponent = holder.ensureAndGetComponent(Nameplate.getComponentType());
          nameplateComponent.setText(displayName);
@@ -161,17 +164,17 @@ public class EntitySupport {
       @Nonnull Ref<EntityStore> ref, @Nullable String displayName, boolean override, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (ref.isValid()) {
-         DisplayNameComponent displayNameComponent = componentAccessor.getComponent(ref, DisplayNameComponent.getComponentType());
-         if (displayNameComponent != null) {
-            Message displayNameMessage = displayNameComponent.getDisplayName();
-            if (displayNameMessage != null && !displayNameMessage.getAnsiMessage().isEmpty() && !override) {
+         PersistentDisplayName persistentDisplayName = componentAccessor.getComponent(ref, PersistentDisplayName.getComponentType());
+         if (persistentDisplayName != null) {
+            Message existing = persistentDisplayName.getDisplayName();
+            if (existing != null && !existing.getAnsiMessage().isEmpty() && !override) {
                return;
             }
          }
 
-         componentAccessor.putComponent(
-            ref, DisplayNameComponent.getComponentType(), new DisplayNameComponent(Message.raw(displayName != null ? displayName : ""))
-         );
+         Message message = displayName != null ? Message.raw(displayName) : null;
+         componentAccessor.putComponent(ref, PersistentDisplayName.getComponentType(), new PersistentDisplayName(message));
+         componentAccessor.putComponent(ref, DisplayNameComponent.getComponentType(), new DisplayNameComponent(message));
          if (displayName != null) {
             Nameplate nameplateComponent = componentAccessor.ensureAndGetComponent(ref, Nameplate.getComponentType());
             nameplateComponent.setText(displayName);

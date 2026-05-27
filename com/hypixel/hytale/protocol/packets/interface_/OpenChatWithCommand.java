@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -46,25 +47,33 @@ public class OpenChatWithCommand implements Packet, ToClientPacket {
 
    @Nonnull
    public static OpenChatWithCommand deserialize(@Nonnull ByteBuf buf, int offset) {
-      OpenChatWithCommand obj = new OpenChatWithCommand();
-      byte nullBits = buf.getByte(offset);
-      int pos = offset + 1;
-      if ((nullBits & 1) != 0) {
-         int commandLen = VarInt.peek(buf, pos);
-         if (commandLen < 0) {
-            throw ProtocolException.negativeLength("Command", commandLen);
+      if (buf.readableBytes() - offset < 1) {
+         throw ProtocolException.bufferTooSmall("OpenChatWithCommand", 1, buf.readableBytes() - offset);
+      } else {
+         OpenChatWithCommand obj = new OpenChatWithCommand();
+         byte nullBits = buf.getByte(offset);
+         int pos = offset + 1;
+         if ((nullBits & 1) != 0) {
+            int commandLen = VarInt.peek(buf, pos);
+            if (commandLen < 0) {
+               throw ProtocolException.invalidVarInt("Command");
+            }
+
+            int commandVarLen = VarInt.size(commandLen);
+            if (commandLen > 4096000) {
+               throw ProtocolException.stringTooLong("Command", commandLen, 4096000);
+            }
+
+            if (pos + commandVarLen + commandLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Command", pos + commandVarLen + commandLen, buf.readableBytes());
+            }
+
+            obj.command = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
+            pos += commandVarLen + commandLen;
          }
 
-         if (commandLen > 4096000) {
-            throw ProtocolException.stringTooLong("Command", commandLen, 4096000);
-         }
-
-         int commandVarLen = VarInt.length(buf, pos);
-         obj.command = PacketIO.readVarString(buf, pos, PacketIO.UTF8);
-         pos += commandVarLen + commandLen;
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -72,10 +81,41 @@ public class OpenChatWithCommand implements Packet, ToClientPacket {
       int pos = offset + 1;
       if ((nullBits & 1) != 0) {
          int sl = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos) + sl;
+         pos += VarInt.size(sl) + sl;
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 1L;
+   }
+
+   @Nullable
+   public static String getCommand(MemorySegment mem) {
+      return getCommand(mem, 0);
+   }
+
+   @Nullable
+   public static String getCommand(MemorySegment mem, int offset) {
+      return hasCommand(mem, offset) ? PacketIO.readVarString("Command", mem, offset + 1, 4096000, PacketIO.UTF8) : null;
+   }
+
+   public static boolean hasCommand(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static OpenChatWithCommand toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static OpenChatWithCommand toObject(MemorySegment mem, int offset) {
+      if (offset + 1 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("OpenChatWithCommand", offset + 1, (int)mem.byteSize());
+      } else {
+         return new OpenChatWithCommand(hasCommand(mem, offset) ? PacketIO.readVarString("Command", mem, offset + 1, 4096000, PacketIO.UTF8) : null);
+      }
    }
 
    @Override
@@ -89,6 +129,22 @@ public class OpenChatWithCommand implements Packet, ToClientPacket {
       if (this.command != null) {
          PacketIO.writeVarString(buf, this.command, 4096000);
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.command != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      int varOffset = offset + 1;
+      if (this.command != null) {
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.command, 4096000);
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -117,7 +173,7 @@ public class OpenChatWithCommand implements Packet, ToClientPacket {
                return ValidationResult.error("Command exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(commandLen);
             pos += commandLen;
             if (pos > buffer.writerIndex()) {
                return ValidationResult.error("Buffer overflow reading Command");

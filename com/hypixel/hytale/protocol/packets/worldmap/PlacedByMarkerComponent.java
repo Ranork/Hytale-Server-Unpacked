@@ -2,8 +2,10 @@ package com.hypixel.hytale.protocol.packets.worldmap;
 
 import com.hypixel.hytale.protocol.FormattedMessage;
 import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nonnull;
@@ -34,12 +36,16 @@ public class PlacedByMarkerComponent extends MapMarkerComponent {
 
    @Nonnull
    public static PlacedByMarkerComponent deserialize(@Nonnull ByteBuf buf, int offset) {
-      PlacedByMarkerComponent obj = new PlacedByMarkerComponent();
-      obj.playerId = PacketIO.readUUID(buf, offset + 0);
-      int pos = offset + 16;
-      obj.name = FormattedMessage.deserialize(buf, pos);
-      pos += FormattedMessage.computeBytesConsumed(buf, pos);
-      return obj;
+      if (buf.readableBytes() - offset < 16) {
+         throw ProtocolException.bufferTooSmall("PlacedByMarkerComponent", 16, buf.readableBytes() - offset);
+      } else {
+         PlacedByMarkerComponent obj = new PlacedByMarkerComponent();
+         obj.playerId = PacketIO.readUUID(buf, offset + 0);
+         int pos = offset + 16;
+         obj.name = FormattedMessage.deserialize(buf, pos);
+         pos += FormattedMessage.computeBytesConsumed(buf, pos);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -48,12 +54,52 @@ public class PlacedByMarkerComponent extends MapMarkerComponent {
       return pos - offset;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 16L;
+   }
+
+   public static FormattedMessage getName(MemorySegment mem) {
+      return getName(mem, 0);
+   }
+
+   public static FormattedMessage getName(MemorySegment mem, int offset) {
+      return FormattedMessage.toObject(mem, offset + 16);
+   }
+
+   public static UUID getPlayerId(MemorySegment mem) {
+      return getPlayerId(mem, 0);
+   }
+
+   public static UUID getPlayerId(MemorySegment mem, int offset) {
+      return PacketIO.readUUID(mem, offset + 0);
+   }
+
+   public static PlacedByMarkerComponent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static PlacedByMarkerComponent toObject(MemorySegment mem, int offset) {
+      if (offset + 16 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("PlacedByMarkerComponent", offset + 16, (int)mem.byteSize());
+      } else {
+         return new PlacedByMarkerComponent(FormattedMessage.toObject(mem, offset + 16), PacketIO.readUUID(mem, offset + 0));
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       PacketIO.writeUUID(buf, this.playerId);
       this.name.serialize(buf);
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      PacketIO.writeUUID(mem, offset + 0, this.playerId);
+      int varOffset = offset + 16;
+      varOffset += this.name.serialize(mem, varOffset);
+      return varOffset - offset;
    }
 
    @Override

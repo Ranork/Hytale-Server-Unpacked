@@ -6,12 +6,13 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.entity.reference.PersistentRef;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.spawning.SpawningPlugin;
 import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class SpawnMarkerBlock implements Component<ChunkStore> {
    public static final BuilderCodec<SpawnMarkerBlock> CODEC = BuilderCodec.builder(SpawnMarkerBlock.class, SpawnMarkerBlock::new)
@@ -76,7 +77,7 @@ public class SpawnMarkerBlock implements Component<ChunkStore> {
          .addValidatorLate(() -> SpawnMarker.VALIDATOR_CACHE.getValidator().late())
          .add()
          .<Vector3i>appendInherited(
-            new KeyedCodec<>("MarkerOffset", Vector3i.CODEC),
+            new KeyedCodec<>("MarkerOffset", Vector3iUtil.CODEC),
             (spawn, o) -> spawn.markerOffset = o,
             spawn -> spawn.markerOffset,
             (spawn, parent) -> spawn.markerOffset = parent.markerOffset

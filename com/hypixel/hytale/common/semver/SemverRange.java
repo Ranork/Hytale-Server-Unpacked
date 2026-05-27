@@ -1,13 +1,12 @@
 package com.hypixel.hytale.common.semver;
 
 import com.hypixel.hytale.codec.Codec;
-import com.hypixel.hytale.codec.function.FunctionCodec;
 import java.util.Objects;
 import java.util.StringJoiner;
 import javax.annotation.Nonnull;
 
 public class SemverRange implements SemverSatisfies {
-   public static final Codec<SemverRange> CODEC = new FunctionCodec<>(Codec.STRING, SemverRange::fromString, SemverRange::toString);
+   public static final Codec<SemverRange> CODEC = SemverRangeCodec.INSTANCE;
    public static final SemverRange WILDCARD = new SemverRange(new SemverSatisfies[0], true);
    private final SemverSatisfies[] comparators;
    private final boolean and;
@@ -26,11 +25,35 @@ public class SemverRange implements SemverSatisfies {
             }
          }
 
+         return this.comparators.length == 0 ? true : matchesPreReleaseRule(semver, this.comparators);
+      } else {
+         for (SemverSatisfies child : this.comparators) {
+            if (child instanceof SemverComparator sc) {
+               if (sc.satisfies(semver) && matchesPreReleaseRule(semver, new SemverSatisfies[]{sc})) {
+                  return true;
+               }
+            } else if (child.satisfies(semver)) {
+               return true;
+            }
+         }
+
+         return false;
+      }
+   }
+
+   private static boolean matchesPreReleaseRule(@Nonnull Semver version, @Nonnull SemverSatisfies[] set) {
+      if (!version.hasPreRelease()) {
          return true;
       } else {
-         for (SemverSatisfies comparatorx : this.comparators) {
-            if (comparatorx.satisfies(semver)) {
-               return true;
+         for (SemverSatisfies s : set) {
+            if (s instanceof SemverComparator sc) {
+               Semver target = sc.getCompareTo();
+               if (target.hasPreRelease()
+                  && target.getMajor() == version.getMajor()
+                  && target.getMinor() == version.getMinor()
+                  && target.getPatch() == version.getPatch()) {
+                  return true;
+               }
             }
          }
 
@@ -40,13 +63,17 @@ public class SemverRange implements SemverSatisfies {
 
    @Override
    public String toString() {
-      StringJoiner joiner = new StringJoiner(" || ");
+      if (this.comparators.length == 0) {
+         return "*";
+      } else {
+         StringJoiner joiner = new StringJoiner(this.and ? " " : " || ");
 
-      for (SemverSatisfies comparator : this.comparators) {
-         joiner.add(comparator.toString());
+         for (SemverSatisfies comparator : this.comparators) {
+            joiner.add(comparator.toString());
+         }
+
+         return joiner.toString();
       }
-
-      return joiner.toString();
    }
 
    @Nonnull
@@ -58,27 +85,36 @@ public class SemverRange implements SemverSatisfies {
    public static SemverRange fromString(String str, boolean strict) {
       Objects.requireNonNull(str, "String can't be null!");
       str = str.trim();
-      if (!str.isBlank() && !"*".equals(str)) {
-         String[] split = str.split("\\|\\|");
+      if (!str.isEmpty() && !"*".equals(str)) {
+         String[] split = str.split("\\|\\|", -1);
          SemverSatisfies[] comparators = new SemverSatisfies[split.length];
 
          for (int i = 0; i < split.length; i++) {
             String subRange = split[i].trim();
+            if (subRange.isEmpty()) {
+               throw new IllegalArgumentException("Sub-range is empty (input: '" + str + "')");
+            }
+
             if (subRange.contains(" - ")) {
                String[] range = subRange.split(" - ");
                if (range.length != 2) {
-                  throw new IllegalArgumentException("Range has an invalid number of arguments!");
+                  throw new IllegalArgumentException("Hyphen range '" + subRange + "' must have exactly one ' - ' separator");
                }
 
                comparators[i] = new SemverRange(
                   new SemverSatisfies[]{
-                     new SemverComparator(SemverComparator.ComparisonType.GTE, Semver.fromString(range[0], strict)),
-                     new SemverComparator(SemverComparator.ComparisonType.LTE, Semver.fromString(range[1], strict))
+                     new SemverComparator(SemverComparator.ComparisonType.GTE, Semver.fromString(range[0].trim(), strict)),
+                     new SemverComparator(SemverComparator.ComparisonType.LTE, Semver.fromString(range[1].trim(), strict))
                   },
                   true
                );
             } else if (subRange.charAt(0) == '~') {
-               Semver semver = Semver.fromString(subRange.substring(1), strict);
+               String rest = subRange.substring(1).trim();
+               if (rest.isEmpty()) {
+                  throw new IllegalArgumentException("Tilde range '~' has no version (input: '" + subRange + "')");
+               }
+
+               Semver semver = Semver.fromString(rest, strict);
                if (semver.getMinor() > 0L) {
                   comparators[i] = new SemverRange(
                      new SemverSatisfies[]{
@@ -97,7 +133,12 @@ public class SemverRange implements SemverSatisfies {
                   );
                }
             } else if (subRange.charAt(0) == '^') {
-               Semver semver = Semver.fromString(subRange.substring(1), strict);
+               String restx = subRange.substring(1).trim();
+               if (restx.isEmpty()) {
+                  throw new IllegalArgumentException("Caret range '^' has no version (input: '" + subRange + "')");
+               }
+
+               Semver semver = Semver.fromString(restx, strict);
                if (semver.getMajor() > 0L) {
                   comparators[i] = new SemverRange(
                      new SemverSatisfies[]{
@@ -123,39 +164,51 @@ public class SemverRange implements SemverSatisfies {
                      true
                   );
                }
-            } else if (SemverComparator.ComparisonType.hasAPrefix(subRange)) {
-               comparators[i] = SemverComparator.fromString(subRange);
             } else if (!subRange.contains(" ")) {
-               Semver semver = Semver.fromString(subRange.replace("x", "0").replace("*", "0"), strict);
-               if (semver.getPatch() == 0L && semver.getMinor() == 0L && semver.getMajor() == 0L) {
-                  comparators[i] = new SemverComparator(SemverComparator.ComparisonType.GTE, new Semver(0L, 0L, 0L));
-               } else if (semver.getPatch() == 0L && semver.getMinor() == 0L) {
-                  comparators[i] = new SemverRange(
-                     new SemverSatisfies[]{
-                        new SemverComparator(SemverComparator.ComparisonType.GTE, semver),
-                        new SemverComparator(SemverComparator.ComparisonType.LT, new Semver(semver.getMajor() + 1L, 0L, 0L, null, null))
-                     },
-                     true
-                  );
+               if (SemverComparator.ComparisonType.hasAPrefix(subRange)) {
+                  comparators[i] = SemverComparator.fromString(subRange);
                } else {
-                  if (semver.getPatch() != 0L) {
-                     throw new IllegalArgumentException("Invalid X-Range! " + subRange);
-                  }
+                  Semver semver = Semver.fromString(subRange.replace("x", "0").replace("*", "0"), strict);
+                  if (semver.getPatch() == 0L && semver.getMinor() == 0L && semver.getMajor() == 0L) {
+                     comparators[i] = new SemverComparator(SemverComparator.ComparisonType.GTE, new Semver(0L, 0L, 0L));
+                  } else if (semver.getPatch() == 0L && semver.getMinor() == 0L) {
+                     comparators[i] = new SemverRange(
+                        new SemverSatisfies[]{
+                           new SemverComparator(SemverComparator.ComparisonType.GTE, semver),
+                           new SemverComparator(SemverComparator.ComparisonType.LT, new Semver(semver.getMajor() + 1L, 0L, 0L, null, null))
+                        },
+                        true
+                     );
+                  } else {
+                     if (semver.getPatch() != 0L) {
+                        throw new IllegalArgumentException(
+                           "Bare version '"
+                              + subRange
+                              + "' is not a valid range. Use '="
+                              + subRange
+                              + "' for an exact match, or '^"
+                              + subRange
+                              + "' / '~"
+                              + subRange
+                              + "' for a range. Bare ranges only work when the patch is zero (e.g. '1.2.0' or '1.x')."
+                        );
+                     }
 
-                  comparators[i] = new SemverRange(
-                     new SemverSatisfies[]{
-                        new SemverComparator(SemverComparator.ComparisonType.GTE, semver),
-                        new SemverComparator(SemverComparator.ComparisonType.LT, new Semver(semver.getMajor(), semver.getMinor() + 1L, 0L, null, null))
-                     },
-                     true
-                  );
+                     comparators[i] = new SemverRange(
+                        new SemverSatisfies[]{
+                           new SemverComparator(SemverComparator.ComparisonType.GTE, semver),
+                           new SemverComparator(SemverComparator.ComparisonType.LT, new Semver(semver.getMajor(), semver.getMinor() + 1L, 0L, null, null))
+                        },
+                        true
+                     );
+                  }
                }
             } else {
-               String[] comparatorStrings = subRange.split(" ");
+               String[] comparatorStrings = subRange.split("\\s+");
                SemverSatisfies[] comparatorsAnd = new SemverSatisfies[comparatorStrings.length];
 
                for (int y = 0; y < comparatorStrings.length; y++) {
-                  comparatorsAnd[i] = SemverComparator.fromString(comparatorStrings[i]);
+                  comparatorsAnd[y] = SemverComparator.fromString(comparatorStrings[y]);
                }
 
                comparators[i] = new SemverRange(comparatorsAnd, true);

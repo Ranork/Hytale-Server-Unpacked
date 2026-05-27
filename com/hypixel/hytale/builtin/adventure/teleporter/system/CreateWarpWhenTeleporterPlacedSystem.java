@@ -11,9 +11,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
@@ -29,6 +28,7 @@ import java.time.Instant;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class CreateWarpWhenTeleporterPlacedSystem extends RefChangeSystem<ChunkStore, PlacedByInteractionComponent> {
    @Nonnull
@@ -107,12 +107,9 @@ public class CreateWarpWhenTeleporterPlacedSystem extends RefChangeSystem<ChunkS
          Rotation rotationYaw = rotationTuple.yaw();
          float warpRotationYaw = (float)rotationYaw.getRadians() + (float)Math.toRadians(180.0);
          Vector3d warpPosition = new Vector3d(x, y, z).add(0.5, 0.65, 0.5);
-         Transform warpTransform = new Transform(warpPosition, new Vector3f(Float.NaN, warpRotationYaw, Float.NaN));
-         String warpId = name.toLowerCase();
+         Transform warpTransform = new Transform(warpPosition, new Rotation3f(Float.NaN, warpRotationYaw, Float.NaN));
          Warp warp = new Warp(warpTransform, name, worldChunk.getWorld(), "*Teleporter", Instant.now());
-         TeleportPlugin teleportPlugin = TeleportPlugin.get();
-         teleportPlugin.getWarps().put(warpId, warp);
-         teleportPlugin.saveWarps();
+         TeleportPlugin.get().addWarp(warp, false);
       }
    }
 

@@ -1,10 +1,10 @@
 package com.hypixel.hytale.server.core.modules.collision;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class EntityContactData {
    protected final Vector3d collisionPoint = new Vector3d();
@@ -12,6 +12,7 @@ public class EntityContactData {
    protected double collisionEnd;
    @Nullable
    protected Ref<EntityStore> entityReference;
+   @Nullable
    protected String collisionDetailName;
 
    @Nonnull
@@ -32,12 +33,13 @@ public class EntityContactData {
       return this.entityReference;
    }
 
+   @Nullable
    public String getCollisionDetailName() {
       return this.collisionDetailName;
    }
 
-   public void assign(@Nonnull Vector3d position, double start, double end, Ref<EntityStore> entity, String collisionDetailName) {
-      this.collisionPoint.assign(position);
+   public void assign(@Nonnull Vector3d position, double start, double end, Ref<EntityStore> entity, @Nullable String collisionDetailName) {
+      this.collisionPoint.set(position);
       this.collisionStart = start;
       this.collisionEnd = end;
       this.entityReference = entity;

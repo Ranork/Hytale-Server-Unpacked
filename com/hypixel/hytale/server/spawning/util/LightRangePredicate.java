@@ -3,7 +3,6 @@ package com.hypixel.hytale.server.spawning.util;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
@@ -12,6 +11,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.spawning.assets.spawns.LightType;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class LightRangePredicate {
    private byte lightValueMin;
@@ -138,9 +138,9 @@ public class LightRangePredicate {
    }
 
    public boolean test(@Nonnull World world, @Nonnull Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      int x = MathUtil.floor(position.getX());
-      int y = MathUtil.floor(position.getY());
-      int z = MathUtil.floor(position.getZ());
+      int x = MathUtil.floor(position.x());
+      int y = MathUtil.floor(position.y());
+      int z = MathUtil.floor(position.z());
       WorldTimeResource worldTimeResource = componentAccessor.getResource(WorldTimeResource.getResourceType());
       WorldChunk chunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
       return chunk != null && this.test(chunk.getBlockChunk(), x, y, z, worldTimeResource.getSunlightFactor());

@@ -6,7 +6,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.collision.BoxBlockIntersectionEvaluator;
 import com.hypixel.hytale.server.core.modules.collision.CollisionFilter;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
@@ -19,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PositionProbeBase {
    private static final int lastWaterCheckDistanceMinSquared = 25;

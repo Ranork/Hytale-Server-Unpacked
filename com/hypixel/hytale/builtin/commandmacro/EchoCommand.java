@@ -13,6 +13,7 @@ public class EchoCommand extends CommandBase {
 
    public EchoCommand() {
       super("echo", "server.commands.echos.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

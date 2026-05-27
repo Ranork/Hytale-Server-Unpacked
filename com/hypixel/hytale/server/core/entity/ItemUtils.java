@@ -5,26 +5,36 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.SoundCategory;
+import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.ecs.DropItemEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.InteractivelyPickupItemEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.SimpleItemContainer;
+import com.hypixel.hytale.server.core.inventory.transaction.ItemStackSlotTransaction;
 import com.hypixel.hytale.server.core.inventory.transaction.ItemStackTransaction;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
+import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.SoundUtil;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.TempAssetIdUtil;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ItemUtils {
    @Nonnull
@@ -40,21 +50,23 @@ public class ItemUtils {
          Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
          if (playerComponent != null) {
             Holder<EntityStore> pickupItemHolder = null;
-            ItemStackTransaction transaction = playerComponent.giveItem(itemStack, ref, componentAccessor);
+            ItemStackTransaction transaction = Player.giveItem(itemStack, ref, componentAccessor);
             ItemStack remainder = transaction.getRemainder();
             if (remainder != null && !remainder.isEmpty()) {
                int quantity = itemStack.getQuantity() - remainder.getQuantity();
                if (quantity > 0) {
                   ItemStack itemStackClone = itemStack.withQuantity(quantity);
-                  playerComponent.notifyPickupItem(ref, itemStackClone, null, componentAccessor);
-                  if (origin != null) {
-                     pickupItemHolder = ItemComponent.generatePickedUpItem(itemStackClone, origin, componentAccessor, ref);
+                  if (itemStackClone != null) {
+                     Player.notifyPickupItem(ref, itemStackClone, null, componentAccessor);
+                     if (origin != null) {
+                        pickupItemHolder = ItemComponent.generatePickedUpItem(itemStackClone, origin, componentAccessor, ref);
+                     }
                   }
                }
 
                dropItem(ref, remainder, componentAccessor);
             } else {
-               playerComponent.notifyPickupItem(ref, itemStack, null, componentAccessor);
+               Player.notifyPickupItem(ref, itemStack, null, componentAccessor);
                if (origin != null) {
                   pickupItemHolder = ItemComponent.generatePickedUpItem(itemStack, origin, componentAccessor, ref);
                }
@@ -83,8 +95,8 @@ public class ItemUtils {
          itemStack = event.getItemStack();
          if (!itemStack.isEmpty() && itemStack.isValid()) {
             HeadRotation headRotationComponent = componentAccessor.getComponent(ref, HeadRotation.getComponentType());
-            Vector3f rotation = headRotationComponent != null ? headRotationComponent.getRotation() : new Vector3f(0.0F, 0.0F, 0.0F);
-            Vector3d direction = Transform.getDirection(rotation.getPitch(), rotation.getYaw());
+            Rotation3f rotation = headRotationComponent != null ? headRotationComponent.getRotation() : new Rotation3f(0.0F, 0.0F, 0.0F);
+            Vector3d direction = Transform.getDirection(rotation.pitch(), rotation.yaw());
             return throwItem(ref, componentAccessor, itemStack, direction, throwSpeed);
          } else {
             LOGGER.at(Level.WARNING).log("Attempted to throw invalid item %s at %s by %s", itemStack, throwSpeed, ref.getIndex());
@@ -116,13 +128,13 @@ public class ItemUtils {
                eyeHeight = modelComponent.getModel().getEyeHeight(ref, store);
             }
 
-            Vector3d throwPosition = transformComponent.getPosition().clone();
+            Vector3d throwPosition = new Vector3d(transformComponent.getPosition());
             throwPosition.add(0.0, eyeHeight, 0.0).add(throwDirection);
             Holder<EntityStore> itemEntityHolder = ItemComponent.generateItemDrop(
                store,
                itemStack,
                throwPosition,
-               Vector3f.ZERO,
+               Rotation3f.IDENTITY,
                (float)throwDirection.x * throwSpeed,
                (float)throwDirection.y * throwSpeed,
                (float)throwDirection.z * throwSpeed
@@ -156,5 +168,63 @@ public class ItemUtils {
    public static boolean canApplyItemStackPenalties(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor) {
       Player playerComponent = accessor.getComponent(ref, Player.getComponentType());
       return playerComponent != null ? playerComponent.getGameMode() != GameMode.Creative : true;
+   }
+
+   @Nonnull
+   public static ItemStackSlotTransaction updateItemStackDurability(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull ItemStack itemStack,
+      ItemContainer container,
+      int slotId,
+      double durabilityChange,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      ItemStack updatedItemStack = itemStack.withIncreasedDurability(durabilityChange);
+      ItemStackSlotTransaction transaction = container.replaceItemStackInSlot((short)slotId, itemStack, updatedItemStack);
+      if (transaction.getSlotAfter().isBroken() && !itemStack.isBroken()) {
+         PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
+         if (playerRefComponent != null) {
+            playerRefComponent.sendMessage(
+               Message.translation("server.general.repair.itemBroken").param("itemName", itemStack.getDisplayName()).color("#ff5555")
+            );
+            int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
+            SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
+         }
+      }
+
+      return transaction;
+   }
+
+   @Nullable
+   public static ItemStackSlotTransaction decreaseItemStackDurability(
+      @Nonnull Ref<EntityStore> ref, @Nullable ItemStack itemStack, int inventoryId, int slotId, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      if (!canDecreaseItemStackDurability(ref, componentAccessor)) {
+         return null;
+      } else if (itemStack == null || itemStack.isEmpty() || itemStack.getItem() == Item.UNKNOWN) {
+         return null;
+      } else if (itemStack.isBroken()) {
+         return null;
+      } else {
+         Item item = itemStack.getItem();
+         ItemContainer section = InventoryUtils.getSectionById(ref, inventoryId, componentAccessor);
+         if (section == null) {
+            return null;
+         } else if (item.getArmor() != null) {
+            ItemStackSlotTransaction transaction = updateItemStackDurability(ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor);
+            if (transaction.getSlotAfter().isBroken()) {
+               EntityStatMap entityStatMap = componentAccessor.getComponent(ref, EntityStatMap.getComponentType());
+               if (entityStatMap != null) {
+                  entityStatMap.getStatModifiersManager().scheduleRecalculate();
+               }
+            }
+
+            return transaction;
+         } else {
+            return item.getWeapon() != null
+               ? updateItemStackDurability(ref, itemStack, section, slotId, -item.getDurabilityLossOnHit(), componentAccessor)
+               : null;
+         }
+      }
    }
 }

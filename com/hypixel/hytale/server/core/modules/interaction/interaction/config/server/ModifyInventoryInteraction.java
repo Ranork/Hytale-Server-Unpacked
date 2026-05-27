@@ -116,74 +116,75 @@ public class ModifyInventoryInteraction extends SimpleInstantInteraction {
    protected void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       Ref<EntityStore> ref = context.getEntity();
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
-      Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-      if (playerComponent == null) {
-         context.getState().state = InteractionState.Failed;
-      } else {
-         boolean hasRequiredGameMode = this.requiredGameMode == null || playerComponent.getGameMode() == this.requiredGameMode;
-         if (hasRequiredGameMode) {
-            CombinedItemContainer combinedHotbarFirst = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
-            if (this.itemToRemove != null) {
-               ItemStackTransaction removeItemStack = combinedHotbarFirst.removeItemStack(this.itemToRemove, true, true);
-               if (!removeItemStack.succeeded()) {
-                  context.getState().state = InteractionState.Failed;
-                  return;
+
+      assert commandBuffer != null;
+
+      if (this.requiredGameMode != null) {
+         Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
+         if (playerComponent == null || playerComponent.getGameMode() != this.requiredGameMode) {
+            return;
+         }
+      }
+
+      CombinedItemContainer combinedHotbarFirst = InventoryComponent.getCombined(commandBuffer, ref, InventoryComponent.HOTBAR_STORAGE_BACKPACK);
+      if (this.itemToRemove != null) {
+         ItemStackTransaction removeItemStack = combinedHotbarFirst.removeItemStack(this.itemToRemove, true, true);
+         if (!removeItemStack.succeeded()) {
+            context.getState().state = InteractionState.Failed;
+            return;
+         }
+      }
+
+      ItemStack heldItem = context.getHeldItem();
+      if (heldItem != null && this.adjustHeldItemQuantity != 0) {
+         if (this.adjustHeldItemQuantity < 0) {
+            ItemStackSlotTransaction slotTransaction = context.getHeldItemContainer()
+               .removeItemStackFromSlot(context.getHeldItemSlot(), heldItem, -this.adjustHeldItemQuantity);
+            if (!slotTransaction.succeeded()) {
+               context.getState().state = InteractionState.Failed;
+               return;
+            }
+
+            context.setHeldItem(slotTransaction.getSlotAfter());
+         } else {
+            SimpleItemContainer.addOrDropItemStack(commandBuffer, ref, combinedHotbarFirst, heldItem.withQuantity(this.adjustHeldItemQuantity));
+         }
+      }
+
+      if (this.itemToAdd != null) {
+         SimpleItemContainer.addOrDropItemStack(commandBuffer, ref, combinedHotbarFirst, this.itemToAdd);
+      }
+
+      if (this.adjustHeldItemDurability != 0.0) {
+         ItemStack item = context.getHeldItem();
+         if (item != null) {
+            ItemStack newItem = item.withIncreasedDurability(this.adjustHeldItemDurability);
+            boolean justBroke = newItem.isBroken() && !item.isBroken();
+            if (newItem.isBroken() && this.brokenItem != null) {
+               if (this.brokenItem.equals("Empty")) {
+                  newItem = null;
+               } else if (!this.brokenItem.equals(item.getItemId())) {
+                  newItem = new ItemStack(this.brokenItem, 1);
                }
             }
 
-            ItemStack heldItem = context.getHeldItem();
-            if (heldItem != null && this.adjustHeldItemQuantity != 0) {
-               if (this.adjustHeldItemQuantity < 0) {
-                  ItemStackSlotTransaction slotTransaction = context.getHeldItemContainer()
-                     .removeItemStackFromSlot(context.getHeldItemSlot(), heldItem, -this.adjustHeldItemQuantity);
-                  if (!slotTransaction.succeeded()) {
-                     context.getState().state = InteractionState.Failed;
-                     return;
-                  }
-
-                  context.setHeldItem(slotTransaction.getSlotAfter());
-               } else {
-                  SimpleItemContainer.addOrDropItemStack(commandBuffer, ref, combinedHotbarFirst, heldItem.withQuantity(this.adjustHeldItemQuantity));
+            boolean isTransformation = this.brokenItem != null && !this.brokenItem.equals(item.getItemId());
+            boolean shouldNotify = this.notifyOnBreak != null ? this.notifyOnBreak : !isTransformation;
+            if (justBroke && shouldNotify) {
+               PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+               if (playerRefComponent != null) {
+                  String messageKey = this.notifyOnBreakMessage != null ? this.notifyOnBreakMessage : "server.general.repair.itemBroken";
+                  playerRefComponent.sendMessage(Message.translation(messageKey).param("itemName", item.getDisplayName()).color("#ff5555"));
+                  int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
+                  SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
                }
             }
 
-            if (this.itemToAdd != null) {
-               SimpleItemContainer.addOrDropItemStack(commandBuffer, ref, combinedHotbarFirst, this.itemToAdd);
-            }
-
-            if (this.adjustHeldItemDurability != 0.0) {
-               ItemStack item = context.getHeldItem();
-               if (item != null) {
-                  ItemStack newItem = item.withIncreasedDurability(this.adjustHeldItemDurability);
-                  boolean justBroke = newItem.isBroken() && !item.isBroken();
-                  if (newItem.isBroken() && this.brokenItem != null) {
-                     if (this.brokenItem.equals("Empty")) {
-                        newItem = null;
-                     } else if (!this.brokenItem.equals(item.getItemId())) {
-                        newItem = new ItemStack(this.brokenItem, 1);
-                     }
-                  }
-
-                  boolean isTransformation = this.brokenItem != null && !this.brokenItem.equals(item.getItemId());
-                  boolean shouldNotify = this.notifyOnBreak != null ? this.notifyOnBreak : !isTransformation;
-                  if (justBroke && shouldNotify) {
-                     Message itemNameMessage = Message.translation(item.getItem().getTranslationKey());
-                     String messageKey = this.notifyOnBreakMessage != null ? this.notifyOnBreakMessage : "server.general.repair.itemBroken";
-                     playerComponent.sendMessage(Message.translation(messageKey).param("itemName", itemNameMessage).color("#ff5555"));
-                     PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-                     if (playerRefComponent != null) {
-                        int soundEventIndex = TempAssetIdUtil.getSoundEventIndex("SFX_Item_Break");
-                        SoundUtil.playSoundEvent2dToPlayer(playerRefComponent, soundEventIndex, SoundCategory.UI);
-                     }
-                  }
-
-                  ItemStackSlotTransaction slotTransaction = context.getHeldItemContainer().setItemStackForSlot(context.getHeldItemSlot(), newItem);
-                  if (!slotTransaction.succeeded()) {
-                     context.getState().state = InteractionState.Failed;
-                  } else {
-                     context.setHeldItem(newItem);
-                  }
-               }
+            ItemStackSlotTransaction slotTransaction = context.getHeldItemContainer().setItemStackForSlot(context.getHeldItemSlot(), newItem);
+            if (!slotTransaction.succeeded()) {
+               context.getState().state = InteractionState.Failed;
+            } else {
+               context.setHeldItem(newItem);
             }
          }
       }

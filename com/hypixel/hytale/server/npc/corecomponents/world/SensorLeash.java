@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.corecomponents.world;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
@@ -13,6 +12,7 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SensorLeash extends SensorBase {
    protected final double range;
@@ -36,7 +36,7 @@ public class SensorLeash extends SensorBase {
 
          NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
          Vector3d leashPoint = npcComponent.getLeashPoint();
-         if (transformComponent.getPosition().distanceSquaredTo(leashPoint) > this.rangeSq) {
+         if (transformComponent.getPosition().distanceSquared(leashPoint) > this.rangeSq) {
             this.positionProvider.setTarget(leashPoint);
             return true;
          } else {

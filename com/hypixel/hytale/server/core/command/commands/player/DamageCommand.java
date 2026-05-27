@@ -30,6 +30,7 @@ public class DamageCommand extends AbstractPlayerCommand {
       super("damage", "server.commands.damage.desc");
       this.addAliases("hurt");
       this.requirePermission(HytalePermissions.fromCommand("damage.self"));
+      this.setPermissionGroups("hytale:Builder");
       this.addUsageVariant(new DamageCommand.DamageOtherCommand());
    }
 
@@ -63,6 +64,7 @@ public class DamageCommand extends AbstractPlayerCommand {
       DamageOtherCommand() {
          super("server.commands.damage.other.desc");
          this.requirePermission(HytalePermissions.fromCommand("damage.other"));
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

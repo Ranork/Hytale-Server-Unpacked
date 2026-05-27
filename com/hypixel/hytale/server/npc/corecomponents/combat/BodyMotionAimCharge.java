@@ -4,8 +4,7 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -19,6 +18,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.util.AimingData;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BodyMotionAimCharge extends BodyMotionBase {
    protected static final ComponentType<EntityStore, TransformComponent> TRANSFORM_COMPONENT_TYPE = TransformComponent.getComponentType();
@@ -64,20 +64,20 @@ public class BodyMotionAimCharge extends BodyMotionBase {
             this.aimingData.clearSolution();
             return true;
          } else {
-            this.direction.subtract(selfPosition);
-            this.direction.setLength(this.aimingData.getChargeDistance());
-            double x = this.direction.getX();
-            double y = this.direction.getY();
-            double z = this.direction.getZ();
+            this.direction.sub(selfPosition);
+            this.direction.normalize(this.aimingData.getChargeDistance());
+            double x = this.direction.x();
+            double y = this.direction.y();
+            double z = this.direction.z();
             float yaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
             float pitch = PhysicsMath.pitchFromDirection(x, y, z);
             desiredSteering.setYaw(yaw);
             desiredSteering.setPitch(pitch);
             desiredSteering.setRelativeTurnSpeed(this.relativeTurnSpeed);
             TransformComponent transformComponent = componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
-            Vector3f bodyRotation = transformComponent.getRotation();
+            Rotation3f bodyRotation = transformComponent.getRotation();
             this.aimingData.setOrientation(yaw, pitch);
-            if (!this.aimingData.isOnTarget(bodyRotation.getYaw(), bodyRotation.getPitch(), this.aimingData.getDesiredHitAngle())) {
+            if (!this.aimingData.isOnTarget(bodyRotation.yaw(), bodyRotation.pitch(), this.aimingData.getDesiredHitAngle())) {
                this.aimingData.clearSolution();
                return true;
             } else {

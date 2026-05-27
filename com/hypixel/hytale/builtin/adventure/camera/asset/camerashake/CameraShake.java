@@ -65,6 +65,8 @@ public class CameraShake implements NetworkSerializable<com.hypixel.hytale.proto
 
    public CameraShake(@Nonnull String id) {
       this.id = id;
+      this.firstPerson = CameraShakeConfig.NONE;
+      this.thirdPerson = CameraShakeConfig.NONE;
    }
 
    @Nonnull

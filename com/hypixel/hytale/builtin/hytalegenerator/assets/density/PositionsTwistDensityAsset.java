@@ -11,8 +11,9 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PositionsTwistDensityAsset extends DensityAsset {
    @Nonnull
@@ -25,7 +26,7 @@ public class PositionsTwistDensityAsset extends DensityAsset {
       .add()
       .append(new KeyedCodec<>("TwistCurve", CurveAsset.CODEC, true), (asset, v) -> asset.pinchCurveAsset = v, asset -> asset.pinchCurveAsset)
       .add()
-      .append(new KeyedCodec<>("TwistAxis", Vector3d.CODEC, true), (asset, v) -> asset.twistAxis = v, asset -> asset.twistAxis)
+      .append(new KeyedCodec<>("TwistAxis", Vector3dUtil.CODEC, true), (asset, v) -> asset.twistAxis = v, asset -> asset.twistAxis)
       .add()
       .<Double>append(new KeyedCodec<>("MaxDistance", Codec.DOUBLE, true), (asset, v) -> asset.maxDistance = v, asset -> asset.maxDistance)
       .addValidator(Validators.greaterThanOrEqual(0.0))
@@ -35,8 +36,11 @@ public class PositionsTwistDensityAsset extends DensityAsset {
       .append(new KeyedCodec<>("ZeroPositionsY", Codec.BOOLEAN, true), (asset, v) -> asset.zeroPositionsY = v, asset -> asset.zeroPositionsY)
       .add()
       .build();
+   @Nonnull
    private PositionProviderAsset positionProviderAsset = new ListPositionProviderAsset();
+   @Nonnull
    private CurveAsset pinchCurveAsset = new ConstantCurveAsset();
+   @Nonnull
    private Vector3d twistAxis = new Vector3d();
    private double maxDistance;
    private boolean normalizeDistance;

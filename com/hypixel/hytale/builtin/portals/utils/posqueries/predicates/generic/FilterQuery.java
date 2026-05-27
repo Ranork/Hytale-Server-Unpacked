@@ -3,12 +3,12 @@ package com.hypixel.hytale.builtin.portals.utils.posqueries.predicates.generic;
 import com.hypixel.hytale.builtin.portals.utils.posqueries.PositionPredicate;
 import com.hypixel.hytale.builtin.portals.utils.posqueries.SpatialQuery;
 import com.hypixel.hytale.builtin.portals.utils.posqueries.SpatialQueryDebug;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class FilterQuery implements SpatialQuery {
    private final SpatialQuery query;

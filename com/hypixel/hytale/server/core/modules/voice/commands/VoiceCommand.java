@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 import com.hypixel.hytale.server.core.modules.voice.VoiceModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -32,11 +33,13 @@ public class VoiceCommand extends AbstractCommandCollection {
 
    private class VoiceEnabledCommand extends AbstractCommand {
       @Nonnull
-      private final RequiredArg<Boolean> enabledArg = this.withRequiredArg("enabled", "server.commands.voice.enabled.arg.desc", ArgTypes.BOOLEAN);
+      private final RequiredArg<Boolean> enabledArg;
 
       public VoiceEnabledCommand() {
+         Objects.requireNonNull(VoiceCommand.this);
          super("enabled", "server.commands.voice.enabled.desc");
-         this.setPermissionGroup(null);
+         this.enabledArg = this.withRequiredArg("enabled", "server.commands.voice.enabled.arg.desc", ArgTypes.BOOLEAN);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -52,11 +55,13 @@ public class VoiceCommand extends AbstractCommandCollection {
 
    private class VoiceFullVolumeDistanceCommand extends AbstractCommand {
       @Nonnull
-      private final RequiredArg<Float> distanceArg = this.withRequiredArg("blocks", "server.commands.voice.fullvolumedistance.arg.desc", ArgTypes.FLOAT);
+      private final RequiredArg<Float> distanceArg;
 
       public VoiceFullVolumeDistanceCommand() {
+         Objects.requireNonNull(VoiceCommand.this);
          super("fullvolumedistance", "server.commands.voice.fullvolumedistance.desc");
-         this.setPermissionGroup(null);
+         this.distanceArg = this.withRequiredArg("blocks", "server.commands.voice.fullvolumedistance.arg.desc", ArgTypes.FLOAT);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -76,11 +81,13 @@ public class VoiceCommand extends AbstractCommandCollection {
 
    private class VoiceMaxDistanceCommand extends AbstractCommand {
       @Nonnull
-      private final RequiredArg<Float> distanceArg = this.withRequiredArg("blocks", "server.commands.voice.maxdistance.arg.desc", ArgTypes.FLOAT);
+      private final RequiredArg<Float> distanceArg;
 
       public VoiceMaxDistanceCommand() {
+         Objects.requireNonNull(VoiceCommand.this);
          super("maxdistance", "server.commands.voice.maxdistance.desc");
-         this.setPermissionGroup(null);
+         this.distanceArg = this.withRequiredArg("blocks", "server.commands.voice.maxdistance.arg.desc", ArgTypes.FLOAT);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -100,13 +107,13 @@ public class VoiceCommand extends AbstractCommandCollection {
 
    private class VoiceMuteCommand extends AbstractAsyncCommand {
       @Nonnull
-      private final RequiredArg<ProfileServiceClient.PublicGameProfile> playerArg = this.withRequiredArg(
-         "player", "server.commands.voice.mute.arg.desc", ArgTypes.GAME_PROFILE_LOOKUP
-      );
+      private final RequiredArg<ProfileServiceClient.PublicGameProfile> playerArg;
 
       public VoiceMuteCommand() {
+         Objects.requireNonNull(VoiceCommand.this);
          super("mute", "server.commands.voice.mute.desc");
-         this.setPermissionGroup(null);
+         this.playerArg = this.withRequiredArg("player", "server.commands.voice.mute.arg.desc", ArgTypes.GAME_PROFILE_LOOKUP);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nonnull
@@ -132,8 +139,9 @@ public class VoiceCommand extends AbstractCommandCollection {
 
    private class VoiceMutedListCommand extends AbstractCommand {
       public VoiceMutedListCommand() {
+         Objects.requireNonNull(VoiceCommand.this);
          super("muted", "server.commands.voice.muted.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -156,8 +164,9 @@ public class VoiceCommand extends AbstractCommandCollection {
 
    private class VoiceStatusCommand extends AbstractCommand {
       public VoiceStatusCommand() {
+         Objects.requireNonNull(VoiceCommand.this);
          super("status", "server.commands.voice.status.desc");
-         this.setPermissionGroup(null);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nullable
@@ -178,13 +187,13 @@ public class VoiceCommand extends AbstractCommandCollection {
 
    private class VoiceUnmuteCommand extends AbstractAsyncCommand {
       @Nonnull
-      private final RequiredArg<ProfileServiceClient.PublicGameProfile> playerArg = this.withRequiredArg(
-         "player", "server.commands.voice.unmute.arg.desc", ArgTypes.GAME_PROFILE_LOOKUP
-      );
+      private final RequiredArg<ProfileServiceClient.PublicGameProfile> playerArg;
 
       public VoiceUnmuteCommand() {
+         Objects.requireNonNull(VoiceCommand.this);
          super("unmute", "server.commands.voice.unmute.desc");
-         this.setPermissionGroup(null);
+         this.playerArg = this.withRequiredArg("player", "server.commands.voice.unmute.arg.desc", ArgTypes.GAME_PROFILE_LOOKUP);
+         this.setPermissionGroups("hytale:Admin");
       }
 
       @Nonnull

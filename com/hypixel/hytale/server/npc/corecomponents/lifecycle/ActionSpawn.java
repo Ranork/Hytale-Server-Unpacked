@@ -3,8 +3,7 @@ package com.hypixel.hytale.server.npc.corecomponents.lifecycle;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
@@ -31,6 +30,7 @@ import it.unimi.dsi.fastutil.Pair;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ActionSpawn extends ActionBase {
    protected final float spawnDirection;
@@ -46,7 +46,7 @@ public class ActionSpawn extends ActionBase {
    protected final double minDelay;
    protected final double maxDelay;
    protected final Vector3d position = new Vector3d();
-   protected final Vector3f rotation = new Vector3f();
+   protected final Rotation3f rotation = new Rotation3f();
    protected final boolean launchAtTarget;
    protected final boolean pitchHigh;
    protected final Vector3d targetPosition = new Vector3d();
@@ -171,30 +171,30 @@ public class ActionSpawn extends ActionBase {
 
       ModelComponent modelComponent = store.getComponent(ref, ModelComponent.getComponentType());
       Vector3d position = transformComponent.getPosition();
-      Vector3f bodyRotation = transformComponent.getRotation();
+      Rotation3f bodyRotation = transformComponent.getRotation();
       double x;
       double z;
       double y;
       if (this.launchAtTarget) {
          float eyeHeight = modelComponent != null ? modelComponent.getModel().getEyeHeight() : 0.0F;
-         x = position.getX();
-         z = position.getZ();
-         y = position.getY() + eyeHeight;
+         x = position.x();
+         z = position.z();
+         y = position.y() + eyeHeight;
       } else {
          double distance = RandomExtra.randomRange(this.minDistance, this.maxDistance);
-         float yaw = bodyRotation.getYaw() + this.yaw0;
+         float yaw = bodyRotation.yaw() + this.yaw0;
          if (!this.fanOut) {
             yaw += RandomExtra.randomRange(0.0F, this.spawnAngle);
          }
 
-         x = position.getX() + PhysicsMath.headingX(yaw) * distance;
-         z = position.getZ() + PhysicsMath.headingZ(yaw) * distance;
-         y = position.getY();
+         x = position.x() + PhysicsMath.headingX(yaw) * distance;
+         z = position.z() + PhysicsMath.headingZ(yaw) * distance;
+         y = position.y();
       }
 
       if (spawningContext.set(world, x, y, z) && spawningContext.canSpawn() == SpawnTestResult.TEST_OK) {
-         this.position.assign(spawningContext.xSpawn, spawningContext.ySpawn, spawningContext.zSpawn);
-         this.rotation.assign(bodyRotation);
+         this.position.set(spawningContext.xSpawn, spawningContext.ySpawn, spawningContext.zSpawn);
+         this.rotation.set(bodyRotation);
          FlockAsset flockDefinition = this.flock != null ? FlockAsset.getAssetMap().getAsset(this.flock) : null;
          Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCPlugin.get()
             .spawnEntity(store, this.roleIndex, this.position, this.rotation, spawningContext.getModel(), this::postSpawn);
@@ -265,19 +265,22 @@ public class ActionSpawn extends ActionBase {
 
          Role role = npcComponent.getRole();
          Vector3d position = transformComponent.getPosition();
-         this.launchDirection.assign(this.targetPosition).subtract(position).normalize();
-         double distance = position.distanceTo(this.targetPosition);
+         this.launchDirection.set(this.targetPosition).sub(position).normalize();
          if (role.getActiveMotionController() instanceof MotionControllerFly flyController) {
-            double endVelocity = flyController.getMinSpeedAfterForceSquared();
+            double distance = position.distance(this.targetPosition);
+            double endVelocity = flyController.getExternalVelocityStopThresholdSquared();
             double acceleration = -flyController.getDampingDeceleration();
             double v0 = Math.sqrt(endVelocity - 2.0 * acceleration * distance);
-            this.launchDirection.scale(v0);
-            role.forceVelocity(this.launchDirection, null, false);
+            this.launchDirection.mul(v0);
+            role.setVelocity(this.launchDirection, null, false);
          } else {
+            double dx = this.targetPosition.x - position.x;
+            double dz = this.targetPosition.z - position.z;
+            double distance = Math.sqrt(dx * dx + dz * dz);
             double height = this.targetPosition.y - position.y;
-            double gravity = role.getActiveMotionController().getGravity() * 5.0;
-            double throwSpeed = AimingHelper.ensurePossibleThrowSpeed(distance, height, gravity, 1.0);
-            if (!AimingHelper.computePitch(distance, height, throwSpeed, gravity, this.pitch)) {
+            double gravity = 32.0;
+            double throwSpeed = AimingHelper.ensurePossibleThrowSpeed(distance, height, 32.0, 1.0);
+            if (!AimingHelper.computePitch(distance, height, throwSpeed, 32.0, this.pitch)) {
                throw new IllegalStateException(
                   String.format(
                      "Error in computing pitch with distance %s, height %s, and speed %s despite ensuring possible throw speed", distance, height, throwSpeed
@@ -286,8 +289,8 @@ public class ActionSpawn extends ActionBase {
             } else {
                float heading = PhysicsMath.headingFromDirection(this.launchDirection.x, this.launchDirection.z);
                PhysicsMath.vectorFromAngles(heading, this.pitchHigh ? this.pitch[1] : this.pitch[0], this.launchDirection).normalize();
-               this.launchDirection.scale(throwSpeed);
-               role.forceVelocity(this.launchDirection, null, true);
+               this.launchDirection.mul(throwSpeed);
+               role.setVelocity(this.launchDirection, null, true);
             }
          }
       }

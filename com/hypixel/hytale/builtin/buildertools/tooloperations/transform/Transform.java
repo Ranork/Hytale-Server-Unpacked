@@ -1,6 +1,6 @@
 package com.hypixel.hytale.builtin.buildertools.tooloperations.transform;
 
-import com.hypixel.hytale.math.vector.Vector3i;
+import org.joml.Vector3i;
 
 public interface Transform {
    Transform NONE = vec -> {};

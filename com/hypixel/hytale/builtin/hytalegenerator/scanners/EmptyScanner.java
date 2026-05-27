@@ -2,8 +2,8 @@ package com.hypixel.hytale.builtin.hytalegenerator.scanners;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
-import com.hypixel.hytale.math.vector.Vector3i;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class EmptyScanner extends Scanner {
    public static final EmptyScanner INSTANCE = new EmptyScanner();

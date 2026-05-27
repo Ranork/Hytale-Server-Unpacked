@@ -4,7 +4,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -25,6 +25,7 @@ import com.hypixel.hytale.server.npc.sensorinfo.InfoProvider;
 import com.hypixel.hytale.server.npc.sensorinfo.PositionProvider;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SensorBlock extends SensorBase {
    protected final double range;
@@ -62,13 +63,13 @@ public class SensorBlock extends SensorBase {
 
          BlockTarget target = role.getWorldSupport().getCachedBlockTarget(this.blockSet);
          Vector3d position = target.getPosition();
-         if (!position.equals(Vector3d.MIN)) {
+         if (!position.equals(Vector3dUtil.MIN)) {
             WorldChunk targetChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(position.x, position.z));
             if (targetChunk != null) {
                BlockSection section = targetChunk.getBlockChunk().getSectionAtBlockY(MathUtil.floor(position.y));
                if (section.getLocalChangeCounter() == target.getChunkChangeRevision()
                   || section.get(MathUtil.floor(position.x), MathUtil.floor(position.y), MathUtil.floor(position.z)) == target.getFoundBlockType()) {
-                  if (!(Math.abs(entityPos.y - position.y) > this.yRange) && !(entityPos.distanceSquaredTo(position) > this.range * this.range)) {
+                  if (!(Math.abs(entityPos.y - position.y) > this.yRange) && !(entityPos.distanceSquared(position) > this.range * this.range)) {
                      this.positionProvider.setTarget(position);
                      return true;
                   } else {
@@ -89,7 +90,7 @@ public class SensorBlock extends SensorBase {
             this.positionProvider.clear();
             return false;
          } else {
-            position.assign(blockData.getXCentre(), blockData.getYCentre(), blockData.getZCentre());
+            position.set(blockData.getXCentre(), blockData.getYCentre(), blockData.getZCentre());
             int blockTypeId = blockData.getBlockType();
             target.setFoundBlockType(blockTypeId);
             target.setChunkChangeRevision(blockData.getChunkSection().getLocalChangeCounter());
@@ -97,7 +98,7 @@ public class SensorBlock extends SensorBase {
             if (this.reserveBlock || !blockType.isAllowsMultipleUsers()) {
                ResourceView resourceView = store.getResource(Blackboard.getResourceType())
                   .getView(ResourceView.class, ResourceView.indexViewFromWorldPosition(position));
-               resourceView.reserveBlock(npcComponent, blockData.getX(), blockData.getY(), blockData.getZ());
+               resourceView.reserveBlock(ref, blockData.getX(), blockData.getY(), blockData.getZ());
                target.setReservationHolder(resourceView);
                Blackboard.LOGGER.at(Level.FINE).log("Entity %s reserved block from set %s at %s", npcComponent.getRoleName(), this.blockSet, position);
             }

@@ -3,16 +3,16 @@ package com.hypixel.hytale.math.hitdetection;
 import com.hypixel.hytale.math.shape.Quad4d;
 import com.hypixel.hytale.math.shape.Triangle4d;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector4d;
 import java.util.Random;
+import org.joml.Vector4d;
 
 public class HitDetectionBuffer {
    private static final int VECTOR_BUFFER_SIZE = 16;
    public Random random = new FastRandom();
-   public Vector4d hitPosition = new Vector4d();
-   public Vector4d tempHitPosition = new Vector4d();
+   public Vector4d hitPosition = new Vector4d().zero();
+   public Vector4d tempHitPosition = new Vector4d().zero();
    public Quad4d transformedQuad;
-   public Vector4d transformedPoint = new Vector4d();
+   public Vector4d transformedPoint = new Vector4d().zero();
    public Triangle4d visibleTriangle;
    public Vector4dBufferList vertexList1;
    public Vector4dBufferList vertexList2;

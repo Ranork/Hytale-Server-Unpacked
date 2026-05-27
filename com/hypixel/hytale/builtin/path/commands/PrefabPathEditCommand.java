@@ -11,7 +11,6 @@ import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -42,17 +41,18 @@ public class PrefabPathEditCommand extends AbstractPlayerCommand {
       if (this.pathIdArg.provided(context)) {
          pathId = this.pathIdArg.get(context);
       } else {
-         Ref<EntityStore> entityRef = TargetUtil.getTargetEntity(ref, store);
-         if (entityRef == null || !entityRef.isValid()) {
+         Ref<EntityStore> targetRef = TargetUtil.getTargetEntity(ref, store);
+         if (targetRef == null || !targetRef.isValid()) {
             return;
          }
 
-         if (!(EntityUtils.getEntity(ref, store) instanceof PatrolPathMarkerEntity pathMarkerEntity)) {
+         PatrolPathMarkerEntity targetMarkerEntityComponent = store.getComponent(ref, PatrolPathMarkerEntity.getComponentType());
+         if (targetMarkerEntityComponent == null) {
             context.sendMessage(MESSAGE_COMMANDS_NPC_PATH_EDIT_NO_ENTITY_IN_VIEW);
             return;
          }
 
-         pathId = pathMarkerEntity.getPathId();
+         pathId = targetMarkerEntityComponent.getPathId();
       }
 
       WorldPathData worldPathData = store.getResource(WorldPathData.getResourceType());

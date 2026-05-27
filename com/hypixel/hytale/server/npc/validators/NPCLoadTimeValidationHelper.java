@@ -22,6 +22,7 @@ public class NPCLoadTimeValidationHelper {
    private final Set<Class<? extends MotionController>> providedMotionControllers = new HashSet<>();
    private final Set<Class<? extends MotionController>> requiredMotionControllers = new HashSet<>();
    private final ArrayDeque<HashSet<String>> seenFilterStack = new ArrayDeque<>();
+   private final ArrayDeque<Set<Class<?>>> precedingProviderStack = new ArrayDeque<>();
    private final ValueStoreValidator valueStoreValidator = new ValueStoreValidator();
    @Nullable
    private Set<String> prioritiserProvidedFilterTypes;
@@ -166,6 +167,36 @@ public class NPCLoadTimeValidationHelper {
          errors.add(
             String.format("%s: Off-hand inventory too small for slot %d, requested by %s. Actual size is %d", this.fileName, slot, context, this.offHandSize)
          );
+         return false;
+      }
+   }
+
+   public void pushPrecedingScope() {
+      this.precedingProviderStack.push(new HashSet<>());
+   }
+
+   public void popPrecedingScope() {
+      this.precedingProviderStack.pop();
+   }
+
+   public void registerPrecedingProvider(Class<?> clazz) {
+      Set<Class<?>> current = this.precedingProviderStack.peek();
+      if (current != null) {
+         current.add(clazz);
+      }
+   }
+
+   public boolean checkPrecedingProvided(Class<?> required) {
+      Set<Class<?>> current = this.precedingProviderStack.peek();
+      if (current == null) {
+         return false;
+      } else {
+         for (Class<?> c : current) {
+            if (required.isAssignableFrom(c)) {
+               return true;
+            }
+         }
+
          return false;
       }
    }

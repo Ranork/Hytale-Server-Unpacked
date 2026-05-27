@@ -3,13 +3,14 @@ package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 import com.hypixel.hytale.builtin.hytalegenerator.MaterialSet;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class MaterialSetPattern extends Pattern {
    @Nonnull
-   private static final Bounds3i BOUNDS_VOXEL_GRID = new Bounds3i(new Vector3i(), Vector3i.ALL_ONES);
+   private static final Bounds3i BOUNDS_VOXEL_GRID = new Bounds3i(new Vector3i(), Vector3iUtil.ALL_ONES);
    @Nonnull
    private final MaterialSet materialSet;
 

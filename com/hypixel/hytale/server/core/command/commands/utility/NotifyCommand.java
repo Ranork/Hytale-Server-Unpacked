@@ -45,7 +45,7 @@ public class NotifyCommand extends CommandBase {
          message = Message.raw(messageString);
       }
 
-      Message senderName = Message.raw(context.sender().getDisplayName());
+      Message senderName = Message.raw(context.sender().getUsername());
       NotificationUtil.sendNotificationToUniverse(message, senderName, "announcement", null, style);
    }
 }

@@ -10,6 +10,9 @@ import com.hypixel.hytale.math.util.TrigMathUtil;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import org.joml.Vector3i;
 
 public class Transform {
    @Nonnull
@@ -93,7 +96,7 @@ public class Transform {
    @Nonnull
    protected Vector3d position;
    @Nonnull
-   protected Vector3f rotation;
+   protected Rotation3f rotation;
    public static final int X_IS_RELATIVE = 1;
    public static final int Y_IS_RELATIVE = 2;
    public static final int Z_IS_RELATIVE = 4;
@@ -103,33 +106,37 @@ public class Transform {
    public static final int RELATIVE_TO_BLOCK = 64;
 
    public Transform() {
-      this(new Vector3d(), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(new Vector3d(), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Transform(@Nonnull Vector3i position) {
-      this(new Vector3d(position), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(new Vector3d(position), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Transform(@Nonnull Vector3d position) {
-      this(new Vector3d(position), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(new Vector3d(position), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Transform(double x, double y, double z) {
-      this(new Vector3d(x, y, z), new Vector3f(Float.NaN, Float.NaN, Float.NaN));
+      this(new Vector3d(x, y, z), new Rotation3f(Float.NaN, Float.NaN, Float.NaN));
    }
 
    public Transform(double x, double y, double z, float pitch, float yaw, float roll) {
-      this(new Vector3d(x, y, z), new Vector3f(pitch, yaw, roll));
+      this(new Vector3d(x, y, z), new Rotation3f(pitch, yaw, roll));
    }
 
-   public Transform(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public Transform(@Nonnull Transform transform) {
+      this(new Vector3d(transform.position), new Rotation3f(transform.rotation));
+   }
+
+   public Transform(@Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
       this.position = position;
       this.rotation = rotation;
    }
 
-   public void assign(@Nonnull Transform transform) {
-      this.position.assign(transform.getPosition());
-      this.rotation.assign(transform.getRotation());
+   public void set(@Nonnull Transform transform) {
+      this.position.set(transform.position);
+      this.rotation.set(transform.rotation);
    }
 
    @Nonnull
@@ -137,22 +144,22 @@ public class Transform {
       return this.position;
    }
 
-   public void setPosition(@Nonnull Vector3d position) {
-      this.position = position;
+   public void setPosition(@Nonnull Vector3dc position) {
+      this.position.set(position);
    }
 
    @Nonnull
-   public Vector3f getRotation() {
+   public Rotation3f getRotation() {
       return this.rotation;
    }
 
-   public void setRotation(@Nonnull Vector3f rotation) {
-      this.rotation = rotation;
+   public void setRotation(@Nonnull Rotation3fc rotation) {
+      this.rotation.set(rotation);
    }
 
    @Nonnull
    public Vector3d getDirection() {
-      return getDirection(this.rotation.getPitch(), this.rotation.getYaw());
+      return getDirection(this.rotation.pitch(), this.rotation.yaw());
    }
 
    @Nonnull
@@ -172,7 +179,7 @@ public class Transform {
 
    @Nonnull
    public Vector3i getAxisDirection() {
-      return this.getAxisDirection(this.rotation.getPitch(), this.rotation.getYaw());
+      return this.getAxisDirection(this.rotation.pitch(), this.rotation.yaw());
    }
 
    @Nonnull
@@ -193,16 +200,16 @@ public class Transform {
    @Nonnull
    public Axis getAxis() {
       Vector3i axisDirection = this.getAxisDirection();
-      if (axisDirection.getX() != 0) {
+      if (axisDirection.x() != 0) {
          return Axis.X;
       } else {
-         return axisDirection.getY() != 0 ? Axis.Y : Axis.Z;
+         return axisDirection.y() != 0 ? Axis.Y : Axis.Z;
       }
    }
 
    @Nonnull
    public Transform clone() {
-      return new Transform(this.position.clone(), this.rotation.clone());
+      return new Transform(new Vector3d(this.position), new Rotation3f(this.rotation));
    }
 
    @Override
@@ -230,45 +237,47 @@ public class Transform {
    }
 
    public static void applyMaskedRelativeTransform(
-      @Nonnull Transform transform, byte relativeMask, @Nonnull Vector3d sourcePosition, @Nonnull Vector3f sourceRotation, @Nonnull Vector3i blockPosition
+      @Nonnull Transform transform, byte relativeMask, @Nonnull Vector3d sourcePosition, @Nonnull Rotation3f sourceRotation, @Nonnull Vector3i blockPosition
    ) {
       if (relativeMask != 0) {
+         Vector3d position = transform.position;
          if ((relativeMask & 64) != 0) {
             if ((relativeMask & 1) != 0) {
-               transform.getPosition().setX(transform.getPosition().getX() + blockPosition.getX());
+               position.x = position.x() + blockPosition.x();
             }
 
             if ((relativeMask & 2) != 0) {
-               transform.getPosition().setY(transform.getPosition().getY() + blockPosition.getY());
+               position.y = position.y() + blockPosition.y();
             }
 
             if ((relativeMask & 4) != 0) {
-               transform.getPosition().setZ(transform.getPosition().getZ() + blockPosition.getZ());
+               position.z = position.z() + blockPosition.z();
             }
          } else {
             if ((relativeMask & 1) != 0) {
-               transform.getPosition().setX(transform.getPosition().getX() + sourcePosition.getX());
+               position.x = position.x() + sourcePosition.x();
             }
 
             if ((relativeMask & 2) != 0) {
-               transform.getPosition().setY(transform.getPosition().getY() + sourcePosition.getY());
+               position.y = position.y() + sourcePosition.y();
             }
 
             if ((relativeMask & 4) != 0) {
-               transform.getPosition().setZ(transform.getPosition().getZ() + sourcePosition.getZ());
+               position.z = position.z() + sourcePosition.z();
             }
          }
 
+         Rotation3f rotation = transform.rotation;
          if ((relativeMask & 8) != 0) {
-            transform.getRotation().setYaw(transform.getRotation().getYaw() + sourceRotation.getYaw());
+            rotation.setYaw(rotation.yaw() + sourceRotation.yaw());
          }
 
          if ((relativeMask & 16) != 0) {
-            transform.getRotation().setPitch(transform.getRotation().getPitch() + sourceRotation.getPitch());
+            rotation.setPitch(rotation.pitch() + sourceRotation.pitch());
          }
 
          if ((relativeMask & 32) != 0) {
-            transform.getRotation().setRoll(transform.getRotation().getRoll() + sourceRotation.getRoll());
+            rotation.setRoll(rotation.roll() + sourceRotation.roll());
          }
       }
    }

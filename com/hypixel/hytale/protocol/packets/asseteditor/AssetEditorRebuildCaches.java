@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol.packets.asseteditor;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -38,17 +41,83 @@ public class AssetEditorRebuildCaches {
 
    @Nonnull
    public static AssetEditorRebuildCaches deserialize(@Nonnull ByteBuf buf, int offset) {
-      AssetEditorRebuildCaches obj = new AssetEditorRebuildCaches();
-      obj.blockTextures = buf.getByte(offset + 0) != 0;
-      obj.models = buf.getByte(offset + 1) != 0;
-      obj.modelTextures = buf.getByte(offset + 2) != 0;
-      obj.mapGeometry = buf.getByte(offset + 3) != 0;
-      obj.itemIcons = buf.getByte(offset + 4) != 0;
-      return obj;
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("AssetEditorRebuildCaches", 5, buf.readableBytes() - offset);
+      } else {
+         AssetEditorRebuildCaches obj = new AssetEditorRebuildCaches();
+         obj.blockTextures = buf.getByte(offset + 0) != 0;
+         obj.models = buf.getByte(offset + 1) != 0;
+         obj.modelTextures = buf.getByte(offset + 2) != 0;
+         obj.mapGeometry = buf.getByte(offset + 3) != 0;
+         obj.itemIcons = buf.getByte(offset + 4) != 0;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 5;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   public static boolean getBlockTextures(MemorySegment mem) {
+      return getBlockTextures(mem, 0);
+   }
+
+   public static boolean getBlockTextures(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0));
+   }
+
+   public static boolean getModels(MemorySegment mem) {
+      return getModels(mem, 0);
+   }
+
+   public static boolean getModels(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1));
+   }
+
+   public static boolean getModelTextures(MemorySegment mem) {
+      return getModelTextures(mem, 0);
+   }
+
+   public static boolean getModelTextures(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 2));
+   }
+
+   public static boolean getMapGeometry(MemorySegment mem) {
+      return getMapGeometry(mem, 0);
+   }
+
+   public static boolean getMapGeometry(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 3));
+   }
+
+   public static boolean getItemIcons(MemorySegment mem) {
+      return getItemIcons(mem, 0);
+   }
+
+   public static boolean getItemIcons(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_BOOL, (long)(offset + 4));
+   }
+
+   public static AssetEditorRebuildCaches toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorRebuildCaches toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorRebuildCaches", offset + 5, (int)mem.byteSize());
+      } else {
+         return new AssetEditorRebuildCaches(
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 2)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 3)),
+            mem.get(PacketIO.PROTO_BOOL, (long)(offset + 4))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -57,6 +126,15 @@ public class AssetEditorRebuildCaches {
       buf.writeByte(this.modelTextures ? 1 : 0);
       buf.writeByte(this.mapGeometry ? 1 : 0);
       buf.writeByte(this.itemIcons ? 1 : 0);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_BOOL, offset + 0, this.blockTextures);
+      mem.set(PacketIO.PROTO_BOOL, offset + 1, this.models);
+      mem.set(PacketIO.PROTO_BOOL, offset + 2, this.modelTextures);
+      mem.set(PacketIO.PROTO_BOOL, offset + 3, this.mapGeometry);
+      mem.set(PacketIO.PROTO_BOOL, offset + 4, this.itemIcons);
+      return 5;
    }
 
    public int computeSize() {

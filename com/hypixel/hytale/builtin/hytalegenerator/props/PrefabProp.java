@@ -1,5 +1,6 @@
 package com.hypixel.hytale.builtin.hytalegenerator.props;
 
+import com.hypixel.hytale.builtin.hytalegenerator.BlockMask;
 import com.hypixel.hytale.builtin.hytalegenerator.EntityPlacementData;
 import com.hypixel.hytale.builtin.hytalegenerator.WeightedMap;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
@@ -7,25 +8,37 @@ import com.hypixel.hytale.builtin.hytalegenerator.material.FluidMaterial;
 import com.hypixel.hytale.builtin.hytalegenerator.material.Material;
 import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.material.SolidMaterial;
+import com.hypixel.hytale.builtin.hytalegenerator.patterns.ConstantPattern;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality.RotatedPosition;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.directionality.StaticDirectionality;
+import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.PrefabMoldingConfiguration;
 import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.PrefabPropUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.RngField;
 import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
+import com.hypixel.hytale.builtin.hytalegenerator.scanners.DirectScanner;
 import com.hypixel.hytale.common.util.ExceptionUtil;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.PrefabBufferCall;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
+import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
+import java.util.function.Function;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabProp extends Prop {
    @Nonnull
@@ -38,7 +51,10 @@ public class PrefabProp extends Prop {
    private final RngField rngField;
    @Nonnull
    private final FastRandom random;
-   private final int prefabId;
+   @Nonnull
+   private final List<com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.PrefabProp> childProps;
+   @Nonnull
+   private final List<RotatedPosition> childPositions;
    @Nonnull
    private final Vector3i rPrefabPosition;
    @Nonnull
@@ -47,36 +63,77 @@ public class PrefabProp extends Prop {
    private final Vector3i rWorldPosition;
    @Nonnull
    private final Vector3d rEntityWorldPosition;
+   @Nonnull
+   private final RotatedPosition rRotatedWorldPosition;
 
-   public PrefabProp(@Nonnull WeightedMap<List<IPrefabBuffer>> prefabPool, @Nonnull MaterialCache materialCache, @Nonnull SeedBox seedBox) {
+   public PrefabProp(
+      @Nonnull WeightedMap<List<IPrefabBuffer>> prefabPool,
+      @Nonnull MaterialCache materialCache,
+      @Nonnull SeedBox seedBox,
+      @Nullable Function<String, List<IPrefabBuffer>> childPrefabLoader
+   ) {
       this.materialCache = materialCache;
       this.rngField = new RngField(seedBox.createSupplier().get());
       this.random = new FastRandom();
+      this.childProps = new ArrayList<>(0);
+      this.childPositions = new ArrayList<>(0);
       this.prefabPool = new WeightedMap<>();
       this.writeBounds = new Bounds3i();
-      prefabPool.forEach((sourceList, weight) -> {
-         if (!sourceList.isEmpty()) {
-            List<IPrefabBuffer> prefabList = new ArrayList<>();
+      prefabPool.forEach(
+         (sourceList, weight) -> {
+            if (!sourceList.isEmpty()) {
+               List<IPrefabBuffer> prefabList = new ArrayList<>();
 
-            for (IPrefabBuffer prefab : sourceList) {
-               assert prefab != null;
+               for (IPrefabBuffer prefab : sourceList) {
+                  assert prefab != null;
 
-               if (prefab == null) {
-                  return;
+                  if (prefab == null) {
+                     return;
+                  }
+
+                  prefabList.add(prefab);
+                  this.writeBounds.encompass(getWriteBounds(prefab));
+                  PrefabBuffer.ChildPrefab[] childPrefabs = prefab.getChildPrefabs();
+                  int childId = 0;
+
+                  for (PrefabBuffer.ChildPrefab child : childPrefabs) {
+                     RotatedPosition childPosition = new RotatedPosition(child.getX(), child.getY(), child.getZ(), child.getRotation());
+                     String childPath = child.getPath().replace('.', '/');
+                     childPath = childPath.replace("*", "");
+                     List<IPrefabBuffer> childPrefabBuffers = childPrefabLoader.apply(childPath);
+                     WeightedMap<List<IPrefabBuffer>> weightedChildPrefabs = new WeightedMap<>();
+                     weightedChildPrefabs.add(childPrefabBuffers, 1.0);
+                     StaticDirectionality childDirectionality = new StaticDirectionality(child.getRotation(), ConstantPattern.INSTANCE_TRUE);
+                     com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.PrefabProp childProp = new com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.PrefabProp(
+                        weightedChildPrefabs,
+                        new DirectScanner(),
+                        childDirectionality,
+                        materialCache,
+                        new BlockMask(),
+                        PrefabMoldingConfiguration.none(),
+                        childPrefabLoader,
+                        seedBox.child(String.valueOf(childId++)),
+                        true
+                     );
+                     this.childProps.add(childProp);
+                     this.childPositions.add(childPosition);
+                     Bounds3i localChildBounds = childProp.getWriteBounds_voxelGrid().clone();
+                     localChildBounds.offset(childPosition.x, childPosition.y, childPosition.z);
+                     RotationTuple prefabRotationTuple = RotationTuple.of(childPosition.rotation.getRotation(), Rotation.None, Rotation.None);
+                     localChildBounds.applyRotationAroundVoxel(prefabRotationTuple, Vector3iUtil.ZERO);
+                     this.writeBounds.encompass(localChildBounds);
+                  }
                }
 
-               prefabList.add(prefab);
-               this.writeBounds.encompass(getWriteBounds(prefab));
+               this.prefabPool.add(prefabList, weight);
             }
-
-            this.prefabPool.add(prefabList, weight);
          }
-      });
-      this.prefabId = this.hashCode();
+      );
       this.rPrefabPosition = new Vector3i();
       this.rColumnPredicate = new PrefabProp.IntersectingColumnPredicate<>();
       this.rWorldPosition = new Vector3i();
       this.rEntityWorldPosition = new Vector3d();
+      this.rRotatedWorldPosition = new RotatedPosition(0, 0, 0, PrefabRotation.ROTATION_0);
    }
 
    @Override
@@ -87,38 +144,39 @@ public class PrefabProp extends Prop {
          this.random.setSeed(this.rngField.get(context.position.x, context.position.y, context.position.z));
          PrefabBufferCall callInstance = new PrefabBufferCall(this.random, PrefabRotation.ROTATION_0);
          IPrefabBuffer prefab = this.pickPrefab(this.random);
-         this.rPrefabPosition.assign(context.position);
+         this.rPrefabPosition.set(context.position);
          this.rColumnPredicate.bounds.assign(context.materialWriteSpace.getBounds());
          this.rColumnPredicate.bounds.offsetOpposite(context.position);
+         int prefabInstanceId = Objects.hash(context.position.x, context.position.y, context.position.z, prefab.hashCode());
 
          try {
             prefab.forEach(
                this.rColumnPredicate,
                (x, y, z, blockId, holder, support, rotation, filler, call, fluidId, fluidLevel) -> {
-                  this.rWorldPosition.assign(x + context.position.x, y + context.position.y, z + context.position.z);
+                  this.rWorldPosition.set(x + context.position.x, y + context.position.y, z + context.position.z);
                   if (context.materialWriteSpace.getBounds().contains(this.rWorldPosition)) {
                      SolidMaterial solid = this.materialCache.getSolidMaterial(blockId, support, rotation, filler, holder != null ? holder.clone() : null);
                      FluidMaterial fluid = this.materialCache.getFluidMaterial(fluidId, (byte)fluidLevel);
                      Material material = this.materialCache.getMaterial(solid, fluid);
-                     if (filler == 0) {
-                        context.materialWriteSpace.set(material, this.rWorldPosition);
-                     }
+                     context.materialWriteSpace.set(material, this.rWorldPosition);
                   }
                },
                (cx, cz, entityWrappers, buffer) -> {
                   if (entityWrappers != null) {
-                     for (int i = 0; i < entityWrappers.length; i++) {
-                        TransformComponent transformComp = entityWrappers[i].getComponent(TransformComponent.getComponentType());
+                     for (int ix = 0; ix < entityWrappers.length; ix++) {
+                        TransformComponent transformComp = entityWrappers[ix].getComponent(TransformComponent.getComponentType());
                         if (transformComp != null) {
-                           buffer.rotation.rotate(transformComp.getPosition());
+                           Vector3d localPosition = new Vector3d(transformComp.getPosition());
+                           buffer.rotation.rotate(localPosition);
+                           this.rEntityWorldPosition.set(localPosition).add(context.position.x, context.position.y, context.position.z);
                            if (context.entityWriteBuffer.getBounds().contains(this.rEntityWorldPosition)
                               && context.materialWriteSpace.getBounds().contains(this.rEntityWorldPosition)) {
-                              Holder<EntityStore> entityClone = entityWrappers[i].clone();
+                              Holder<EntityStore> entityClone = entityWrappers[ix].clone();
                               transformComp = entityClone.getComponent(TransformComponent.getComponentType());
                               if (transformComp != null) {
-                                 transformComp.getPosition().assign(this.rEntityWorldPosition);
+                                 transformComp.getPosition().set(this.rEntityWorldPosition);
                                  EntityPlacementData placementData = new EntityPlacementData(
-                                    new Vector3i(), PrefabRotation.ROTATION_0, entityClone, this.prefabId
+                                    new Vector3i(), PrefabRotation.ROTATION_0, entityClone, prefabInstanceId
                                  );
                                  context.entityWriteBuffer.addEntity(placementData);
                               }
@@ -130,11 +188,23 @@ public class PrefabProp extends Prop {
                (x, y, z, path, fitHeightmap, inheritSeed, inheritHeightCondition, weights, rotation, t) -> {},
                callInstance
             );
-         } catch (Exception var6) {
+         } catch (Exception var9) {
             String msg = "Couldn't place prefab prop.";
             msg = msg + "\n";
-            msg = msg + ExceptionUtil.toStringWithStack(var6);
+            msg = msg + ExceptionUtil.toStringWithStack(var9);
             ((HytaleLogger.Api)HytaleLogger.getLogger().atWarning()).log(msg);
+         }
+
+         this.rRotatedWorldPosition.x = context.position.x;
+         this.rRotatedWorldPosition.y = context.position.y;
+         this.rRotatedWorldPosition.z = context.position.z;
+
+         for (int i = 0; i < this.childProps.size(); i++) {
+            com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.prefab.PrefabProp prop = this.childProps.get(i);
+            RotatedPosition childPosition = this.childPositions.get(i).getRelativeTo(this.rRotatedWorldPosition);
+            Vector3i rotatedChildPositionVec = new Vector3i(childPosition.x, childPosition.y, childPosition.z);
+            this.rRotatedWorldPosition.rotation.rotate(rotatedChildPositionVec);
+            prop.place(childPosition, context.materialWriteSpace, context.entityWriteBuffer);
          }
 
          return true;
@@ -150,10 +220,9 @@ public class PrefabProp extends Prop {
 
    @Nonnull
    private static Bounds3i getWriteBounds(@Nonnull IPrefabBuffer prefab) {
-      Vector3i max = PrefabPropUtil.getMax(prefab, PrefabRotation.ROTATION_0);
-      max.add(1, 1, 1);
-      Vector3i min = PrefabPropUtil.getMin(prefab, PrefabRotation.ROTATION_0);
-      return new Bounds3i(min, max);
+      Bounds3i bounds = PrefabPropUtil.getTotalBounds(prefab);
+      bounds.max.add(1, 1, 1);
+      return bounds;
    }
 
    @NonNullDecl

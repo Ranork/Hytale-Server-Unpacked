@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class HitboxCollisionCommand extends AbstractCommandCollection {
    public HitboxCollisionCommand() {
       super("hitboxcollision", "server.commands.hitboxcollision.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new HitboxCollisionAddCommand());
       this.addSubCommand(new HitboxCollisionRemoveCommand());
    }

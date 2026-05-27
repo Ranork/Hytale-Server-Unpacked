@@ -13,7 +13,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.ParticleUtil;
@@ -28,6 +27,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public final class VoidSpawnerSystems {
    @Nonnull
@@ -55,7 +55,7 @@ public final class VoidSpawnerSystems {
 
             for (int i = 0; i < spawnBeacons.size(); i++) {
                String spawnBeacon = spawnBeacons.get(i);
-               Vector3d beaconPos = position.clone().add(0.0, 0.5 + 0.1 * i, 0.0);
+               Vector3d beaconPos = new Vector3d(position).add(0.0, 0.5 + 0.1 * i, 0.0);
                int beaconAssetId = BeaconNPCSpawn.getAssetMap().getIndexOrDefault(spawnBeacon, -1);
                if (beaconAssetId == -1) {
                   HytaleLogger.getLogger().at(Level.WARNING).log("No asset found for spawn beacon \"" + spawnBeacon + "\" in GameplayConfig for portal world");

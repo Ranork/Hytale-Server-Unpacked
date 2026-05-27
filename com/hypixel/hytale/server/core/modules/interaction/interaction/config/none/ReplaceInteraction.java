@@ -104,23 +104,16 @@ public class ReplaceInteraction extends Interaction {
 
    @Override
    public boolean walk(@Nonnull Collector collector, @Nonnull InteractionContext context) {
-      if (this.defaultValue != null
-         && InteractionManager.walkInteractions(
-            collector, context, TAG_DEFAULT, RootInteraction.getRootInteractionOrUnknown(this.defaultValue).getInteractionIds()
-         )) {
-         return true;
+      Map<String, String> vars = context.getInteractionVars();
+      String varId = vars != null ? vars.get(this.variable) : null;
+      if (varId != null) {
+         return InteractionManager.walkInteractions(collector, context, TAG_VARS, RootInteraction.getRootInteractionOrUnknown(varId).getInteractionIds());
       } else {
-         Map<String, String> vars = context.getInteractionVars();
-         if (vars == null) {
-            return false;
-         } else {
-            String interactionIds = vars.get(this.variable);
-            return interactionIds == null
-               ? false
-               : InteractionManager.walkInteractions(
-                  collector, context, TAG_VARS, RootInteraction.getRootInteractionOrUnknown(interactionIds).getInteractionIds()
-               );
-         }
+         return this.defaultValue != null
+            ? InteractionManager.walkInteractions(
+               collector, context, TAG_DEFAULT, RootInteraction.getRootInteractionOrUnknown(this.defaultValue).getInteractionIds()
+            )
+            : false;
       }
    }
 

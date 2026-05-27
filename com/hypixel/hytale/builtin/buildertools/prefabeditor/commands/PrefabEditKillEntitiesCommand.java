@@ -8,8 +8,6 @@ import com.hypixel.hytale.builtin.buildertools.prefabeditor.PrefabEditingMetadat
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -19,6 +17,8 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class PrefabEditKillEntitiesCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -45,7 +45,7 @@ public class PrefabEditKillEntitiesCommand extends AbstractPlayerCommand {
          } else {
             Vector3i selectionMax = selectedPrefab.getMaxPoint();
             Vector3i selectionMin = selectedPrefab.getMinPoint();
-            Vector3i lengths = selectionMax.subtract(selectionMin);
+            Vector3i lengths = selectionMax.sub(selectionMin);
             Vector3d min = new Vector3d(selectionMin.x, selectionMin.y, selectionMin.z);
             Vector3d max = new Vector3d(selectionMax.x + 1, selectionMax.y + 1, selectionMax.z + 1);
             List<Ref<EntityStore>> entitiesInBox = TargetUtil.getAllEntitiesInBox(min, max, store);

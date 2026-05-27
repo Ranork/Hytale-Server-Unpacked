@@ -7,9 +7,9 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.LegacyValidator;
-import com.hypixel.hytale.math.vector.Vector2d;
 import java.util.HashSet;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class ManualCurveAsset extends CurveAsset {
    @Nonnull

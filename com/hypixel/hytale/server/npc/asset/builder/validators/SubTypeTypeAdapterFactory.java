@@ -12,6 +12,7 @@ import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -51,6 +52,10 @@ public class SubTypeTypeAdapterFactory implements TypeAdapterFactory {
          final Map<Class<?>, Entry<String, TypeAdapter<?>>> delegateMap = new HashMap<>();
          this.classToName.forEach((aClass, name) -> delegateMap.put((Class<?>)aClass, Map.entry(name, gson.getDelegateAdapter(this, TypeToken.get(aClass)))));
          return (new TypeAdapter<T>() {
+               {
+                  Objects.requireNonNull(SubTypeTypeAdapterFactory.this);
+               }
+
                public void write(JsonWriter out, @Nonnull T value) throws IOException {
                   Entry<String, TypeAdapter<?>> entry = delegateMap.get(value.getClass());
                   if (entry == null) {

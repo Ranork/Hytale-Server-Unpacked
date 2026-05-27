@@ -2,8 +2,8 @@ package com.hypixel.hytale.server.npc.blackboard.view;
 
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public abstract class BlockRegionView<ViewType extends IBlackboardView<ViewType>> implements IBlackboardView<ViewType> {
    public static final int BITS = 7;
@@ -44,8 +44,8 @@ public abstract class BlockRegionView<ViewType extends IBlackboardView<ViewType>
    }
 
    public static long indexViewFromWorldPosition(@Nonnull Vector3d pos) {
-      int blackboardX = toRegionalBlackboardCoordinate(MathUtil.floor(pos.getX()));
-      int blackboardZ = toRegionalBlackboardCoordinate(MathUtil.floor(pos.getZ()));
+      int blackboardX = toRegionalBlackboardCoordinate(MathUtil.floor(pos.x()));
+      int blackboardZ = toRegionalBlackboardCoordinate(MathUtil.floor(pos.z()));
       return indexView(blackboardX, blackboardZ);
    }
 

@@ -8,6 +8,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -49,45 +50,53 @@ public class AssetEditorFetchAutoCompleteDataReply implements Packet, ToClientPa
 
    @Nonnull
    public static AssetEditorFetchAutoCompleteDataReply deserialize(@Nonnull ByteBuf buf, int offset) {
-      AssetEditorFetchAutoCompleteDataReply obj = new AssetEditorFetchAutoCompleteDataReply();
-      byte nullBits = buf.getByte(offset);
-      obj.token = buf.getIntLE(offset + 1);
-      int pos = offset + 5;
-      if ((nullBits & 1) != 0) {
-         int resultsCount = VarInt.peek(buf, pos);
-         if (resultsCount < 0) {
-            throw ProtocolException.negativeLength("Results", resultsCount);
-         }
-
-         if (resultsCount > 4096000) {
-            throw ProtocolException.arrayTooLong("Results", resultsCount, 4096000);
-         }
-
-         int resultsVarLen = VarInt.size(resultsCount);
-         if (pos + resultsVarLen + resultsCount * 1L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Results", pos + resultsVarLen + resultsCount * 1, buf.readableBytes());
-         }
-
-         pos += resultsVarLen;
-         obj.results = new String[resultsCount];
-
-         for (int i = 0; i < resultsCount; i++) {
-            int strLen = VarInt.peek(buf, pos);
-            if (strLen < 0) {
-               throw ProtocolException.negativeLength("results[" + i + "]", strLen);
+      if (buf.readableBytes() - offset < 5) {
+         throw ProtocolException.bufferTooSmall("AssetEditorFetchAutoCompleteDataReply", 5, buf.readableBytes() - offset);
+      } else {
+         AssetEditorFetchAutoCompleteDataReply obj = new AssetEditorFetchAutoCompleteDataReply();
+         byte nullBits = buf.getByte(offset);
+         obj.token = buf.getIntLE(offset + 1);
+         int pos = offset + 5;
+         if ((nullBits & 1) != 0) {
+            int resultsCount = VarInt.peek(buf, pos);
+            if (resultsCount < 0) {
+               throw ProtocolException.invalidVarInt("Results");
             }
 
-            if (strLen > 4096000) {
-               throw ProtocolException.stringTooLong("results[" + i + "]", strLen, 4096000);
+            int resultsVarLen = VarInt.size(resultsCount);
+            if (resultsCount > 4096000) {
+               throw ProtocolException.arrayTooLong("Results", resultsCount, 4096000);
             }
 
-            int strVarLen = VarInt.length(buf, pos);
-            obj.results[i] = PacketIO.readVarString(buf, pos);
-            pos += strVarLen + strLen;
+            if (pos + resultsVarLen + resultsCount * 1L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Results", pos + resultsVarLen + resultsCount * 1, buf.readableBytes());
+            }
+
+            pos += resultsVarLen;
+            obj.results = new String[resultsCount];
+
+            for (int i = 0; i < resultsCount; i++) {
+               int strLen = VarInt.peek(buf, pos);
+               if (strLen < 0) {
+                  throw ProtocolException.invalidVarInt("results[" + i + "]");
+               }
+
+               int strVarLen = VarInt.size(strLen);
+               if (strLen > 4096000) {
+                  throw ProtocolException.stringTooLong("results[" + i + "]", strLen, 4096000);
+               }
+
+               if (pos + strVarLen + strLen > buf.readableBytes()) {
+                  throw ProtocolException.bufferTooSmall("results[" + i + "]", pos + strVarLen + strLen, buf.readableBytes());
+               }
+
+               obj.results[i] = PacketIO.readVarString(buf, pos);
+               pos += strVarLen + strLen;
+            }
          }
+
+         return obj;
       }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -95,15 +104,111 @@ public class AssetEditorFetchAutoCompleteDataReply implements Packet, ToClientPa
       int pos = offset + 5;
       if ((nullBits & 1) != 0) {
          int arrLen = VarInt.peek(buf, pos);
-         pos += VarInt.length(buf, pos);
+         pos += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             int sl = VarInt.peek(buf, pos);
-            pos += VarInt.length(buf, pos) + sl;
+            pos += VarInt.size(sl) + sl;
          }
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 5L;
+   }
+
+   public static int getToken(MemorySegment mem) {
+      return getToken(mem, 0);
+   }
+
+   public static int getToken(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 1));
+   }
+
+   @Nullable
+   public static String[] getResults(MemorySegment mem) {
+      return getResults(mem, 0);
+   }
+
+   @Nullable
+   public static String[] getResults(MemorySegment mem, int offset) {
+      if (!hasResults(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + 5;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Results", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Results", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Results", off + lenOffset + len, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               String[] data = new String[len];
+
+               for (int i = 0; i < len; i++) {
+                  long sp = VarInt.getWithLength(mem, off);
+                  int n = (int)sp + (int)(sp >>> 32);
+                  data[i] = PacketIO.readVarString("Results", mem, off, 16384000, PacketIO.UTF8);
+                  off += n;
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   public static boolean hasResults(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static AssetEditorFetchAutoCompleteDataReply toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorFetchAutoCompleteDataReply toObject(MemorySegment mem, int offset) {
+      if (offset + 5 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorFetchAutoCompleteDataReply", offset + 5, (int)mem.byteSize());
+      } else {
+         String[] results = null;
+         if (hasResults(mem, offset)) {
+            int off = offset + 5;
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("Results", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.arrayTooLong("Results", len, 4096000);
+            }
+
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Results", off + lenOffset + len, (int)mem.byteSize());
+            }
+
+            off += lenOffset;
+            results = new String[len];
+
+            for (int i = 0; i < len; i++) {
+               long sp = VarInt.getWithLength(mem, off);
+               int n = (int)sp + (int)(sp >>> 32);
+               results[i] = PacketIO.readVarString("Results", mem, off, 16384000, PacketIO.UTF8);
+               off += n;
+            }
+         }
+
+         return new AssetEditorFetchAutoCompleteDataReply(mem.get(PacketIO.PROTO_INT, (long)(offset + 1)), results);
+      }
    }
 
    @Override
@@ -126,6 +231,34 @@ public class AssetEditorFetchAutoCompleteDataReply implements Packet, ToClientPa
             PacketIO.writeVarString(buf, item, 4096000);
          }
       }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.results != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 1), this.token);
+      int varOffset = offset + 5;
+      if (this.results != null) {
+         if (this.results.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Results", this.results.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.results.length);
+         int resultsValueOffset = 0;
+
+         for (int i = 0; i < this.results.length; i++) {
+            resultsValueOffset += PacketIO.writeVarString(mem, varOffset + resultsValueOffset, this.results[i], 16384000);
+         }
+
+         varOffset += resultsValueOffset;
+      }
+
+      return varOffset - offset;
    }
 
    @Override
@@ -160,7 +293,7 @@ public class AssetEditorFetchAutoCompleteDataReply implements Packet, ToClientPa
                return ValidationResult.error("Results exceeds max length 4096000");
             }
 
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(resultsCount);
 
             for (int i = 0; i < resultsCount; i++) {
                int strLen = VarInt.peek(buffer, pos);
@@ -168,7 +301,7 @@ public class AssetEditorFetchAutoCompleteDataReply implements Packet, ToClientPa
                   return ValidationResult.error("Invalid string length in Results");
                }
 
-               pos += VarInt.length(buffer, pos);
+               pos += VarInt.size(strLen);
                pos += strLen;
                if (pos > buffer.writerIndex()) {
                   return ValidationResult.error("Buffer overflow reading string in Results");

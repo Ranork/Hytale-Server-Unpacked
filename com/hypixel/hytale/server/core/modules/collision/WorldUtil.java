@@ -85,41 +85,35 @@ public final class WorldUtil {
                   BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
                   if (blockType != null && !blockType.isUnknown()) {
                      double relativeY = y - blockY;
-                     String blockTypeKey = blockType.getId();
-                     BlockType blockTypeAsset = BlockType.getAssetMap().getAsset(blockTypeKey);
-                     if (blockTypeAsset == null) {
-                        return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);
-                     } else {
-                        BlockMaterial blockTypeMaterial = blockType.getMaterial();
-                        int filler = blockSection.getFiller(blockX, blockY, blockZ);
-                        int rotation = blockSection.getRotationIndex(blockX, blockY, blockZ);
-                        if (filler != 0 && blockTypeAsset.getMaterial() == BlockMaterial.Solid) {
-                           BlockBoundingBoxes boundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
-                           if (boundingBoxes == null) {
-                              return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);
-                           }
-
-                           BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = boundingBoxes.get(rotation);
-                           int fillerX = FillerBlockUtil.unpackX(filler);
-                           int fillerY = FillerBlockUtil.unpackY(filler);
-                           int fillerZ = FillerBlockUtil.unpackZ(filler);
-                           if (rotatedBoxes.containsPosition(x - blockX + fillerX, relativeY + fillerY, z - blockZ + fillerZ)) {
-                              return MathUtil.packLong(BlockMaterial.Solid.ordinal(), fluidId);
-                           }
-                        } else if (blockTypeMaterial == BlockMaterial.Solid) {
-                           BlockBoundingBoxes boundingBoxesx = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
-                           if (boundingBoxesx == null) {
-                              return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);
-                           }
-
-                           BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = boundingBoxesx.get(rotation);
-                           if (rotatedBoxes.containsPosition(x - blockX, relativeY, z - blockZ)) {
-                              return MathUtil.packLong(BlockMaterial.Solid.ordinal(), fluidId);
-                           }
+                     BlockMaterial blockTypeMaterial = blockType.getMaterial();
+                     int filler = blockSection.getFiller(blockX, blockY, blockZ);
+                     int rotation = blockSection.getRotationIndex(blockX, blockY, blockZ);
+                     if (filler != 0 && blockTypeMaterial == BlockMaterial.Solid) {
+                        BlockBoundingBoxes boundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
+                        if (boundingBoxes == null) {
+                           return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);
                         }
 
-                        return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);
+                        BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = boundingBoxes.get(rotation);
+                        int fillerX = FillerBlockUtil.unpackX(filler);
+                        int fillerY = FillerBlockUtil.unpackY(filler);
+                        int fillerZ = FillerBlockUtil.unpackZ(filler);
+                        if (rotatedBoxes.containsPosition(x - blockX + fillerX, relativeY + fillerY, z - blockZ + fillerZ)) {
+                           return MathUtil.packLong(BlockMaterial.Solid.ordinal(), fluidId);
+                        }
+                     } else if (blockTypeMaterial == BlockMaterial.Solid) {
+                        BlockBoundingBoxes boundingBoxesx = BlockBoundingBoxes.getAssetMap().getAsset(blockType.getHitboxTypeIndex());
+                        if (boundingBoxesx == null) {
+                           return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);
+                        }
+
+                        BlockBoundingBoxes.RotatedVariantBoxes rotatedBoxes = boundingBoxesx.get(rotation);
+                        if (rotatedBoxes.containsPosition(x - blockX, relativeY, z - blockZ)) {
+                           return MathUtil.packLong(BlockMaterial.Solid.ordinal(), fluidId);
+                        }
                      }
+
+                     return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);
                   } else {
                      return MathUtil.packLong(BlockMaterial.Empty.ordinal(), fluidId);
                   }

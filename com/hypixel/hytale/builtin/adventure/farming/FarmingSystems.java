@@ -6,13 +6,11 @@ import com.hypixel.hytale.builtin.adventure.farming.config.stages.BlockStateFarm
 import com.hypixel.hytale.builtin.adventure.farming.config.stages.BlockTypeFarmingStageData;
 import com.hypixel.hytale.builtin.adventure.farming.states.CoopBlock;
 import com.hypixel.hytale.builtin.adventure.farming.states.FarmingBlock;
-import com.hypixel.hytale.builtin.adventure.farming.states.FarmingBlockState;
 import com.hypixel.hytale.builtin.adventure.farming.states.TilledSoilBlock;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
@@ -20,8 +18,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.Rangef;
 import com.hypixel.hytale.server.core.asset.type.blocktick.BlockTickStrategy;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -34,6 +31,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
+import com.hypixel.hytale.server.core.universe.world.chunk.ChunkFlag;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
@@ -47,6 +45,8 @@ import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class FarmingSystems {
    private static boolean hasCropAbove(@Nonnull BlockChunk blockChunk, int x, int y, int z) {
@@ -137,11 +137,11 @@ public class FarmingSystems {
                   Vector3i coopPosition = coopResidentComponent.getCoopLocation();
                   World world = commandBuffer.getExternalData().getWorld();
                   long chunkIndex = ChunkUtil.indexChunkFromBlock(coopPosition.x, coopPosition.z);
-                  WorldChunk worldChunkComponent = world.getChunkIfLoaded(chunkIndex);
-                  if (worldChunkComponent != null) {
-                     Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(chunkIndex);
-                     if (chunkRef != null && chunkRef.isValid()) {
-                        Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+                  Ref<ChunkStore> chunkRef = world.getChunkStore().getChunkReference(chunkIndex);
+                  if (chunkRef != null && chunkRef.isValid()) {
+                     Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
+                     WorldChunk worldChunkComponent = chunkStore.getComponent(chunkRef, WorldChunk.getComponentType());
+                     if (worldChunkComponent != null && worldChunkComponent.is(ChunkFlag.TICKING)) {
                         ChunkColumn chunkColumnComponent = chunkStore.getComponent(chunkRef, ChunkColumn.getComponentType());
                         if (chunkColumnComponent != null) {
                            BlockChunk blockChunkComponent = chunkStore.getComponent(chunkRef, BlockChunk.getComponentType());
@@ -199,30 +199,6 @@ public class FarmingSystems {
          if (coopResidentComponent.getMarkedForDespawn()) {
             commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
          }
-      }
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class MigrateFarming extends BlockModule.MigrationSystem {
-      @Override
-      public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
-         FarmingBlockState oldState = holder.getComponent(FarmingPlugin.get().getFarmingBlockStateComponentType());
-         FarmingBlock farming = new FarmingBlock();
-         farming.setGrowthProgress(oldState.getCurrentFarmingStageIndex());
-         farming.setCurrentStageSet(oldState.getCurrentFarmingStageSetName());
-         farming.setSpreadRate(oldState.getSpreadRate());
-         holder.putComponent(FarmingBlock.getComponentType(), farming);
-         holder.removeComponent(FarmingPlugin.get().getFarmingBlockStateComponentType());
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<ChunkStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
-      }
-
-      @Nullable
-      @Override
-      public Query<ChunkStore> getQuery() {
-         return FarmingPlugin.get().getFarmingBlockStateComponentType();
       }
    }
 
@@ -761,13 +737,13 @@ public class FarmingSystems {
             long chunkIndex = ChunkUtil.indexChunkFromBlock(worldX, worldZ);
             WorldChunk chunk = world.getChunkIfInMemory(chunkIndex);
             double blockRotation = chunk.getRotation(worldX, worldY, worldZ).yaw().getRadians();
-            Vector3d spawnOffset = new Vector3d().assign(coopAsset.getResidentSpawnOffset()).rotateY((float)blockRotation);
+            Vector3d spawnOffset = new Vector3d().set(coopAsset.getResidentSpawnOffset()).rotateY((float)blockRotation);
             Vector3i coopLocation = new Vector3i(worldX, worldY, worldZ);
             boolean tryCapture = coopAsset.getCaptureWildNPCsInRange();
             float captureRange = coopAsset.getWildCaptureRadius();
             if (tryCapture && captureRange >= 0.0F) {
                world.execute(() -> {
-                  for (Ref<EntityStore> entity : TargetUtil.getAllEntitiesInSphere(coopLocation.toVector3d(), captureRange, store)) {
+                  for (Ref<EntityStore> entity : TargetUtil.getAllEntitiesInSphere(Vector3iUtil.toVector3d(coopLocation), captureRange, store)) {
                      coopBlock.tryPutWildResidentFromWild(store, entity, worldTimeResource, coopLocation);
                   }
                });
@@ -777,7 +753,7 @@ public class FarmingSystems {
                world.execute(() -> coopBlock.ensureNoResidentsInWorld(store));
             } else {
                world.execute(() -> {
-                  coopBlock.ensureSpawnResidentsInWorld(world, store, coopLocation.toVector3d(), spawnOffset);
+                  coopBlock.ensureSpawnResidentsInWorld(world, store, Vector3iUtil.toVector3d(coopLocation), spawnOffset);
                   coopBlock.generateProduceToInventory(worldTimeResource);
                   Vector3i blockPos = new Vector3i(worldX, worldY, worldZ);
                   BlockType currentBlockType = world.getBlockType(blockPos);

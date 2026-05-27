@@ -65,6 +65,7 @@ public class NPCCommand extends AbstractCommandCollection {
 
    public NPCCommand() {
       super("npc", "server.commands.npc");
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addSubCommand(new NPCAllCommand());
       this.addSubCommand(new NPCAppearanceCommand());
       this.addSubCommand(new NPCAttackCommand());

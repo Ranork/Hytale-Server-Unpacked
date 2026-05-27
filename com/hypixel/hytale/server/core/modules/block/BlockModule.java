@@ -82,7 +82,6 @@ public class BlockModule extends JavaPlugin {
       });
       chunkStoreRegistry.registerSystem(new BlockModule.BlockStateInfoRefSystem(this.blockStateInfoComponentType));
       this.launchPadComponentType = chunkStoreRegistry.registerComponent(LaunchPad.class, "LaunchPad", LaunchPad.CODEC);
-      chunkStoreRegistry.registerSystem(new BlockModule.MigrateLaunchPad());
       this.respawnBlockComponentType = chunkStoreRegistry.registerComponent(RespawnBlock.class, "RespawnBlock", RespawnBlock.CODEC);
       chunkStoreRegistry.registerSystem(new RespawnBlock.OnRemove());
       this.itemContainerBlockComponentType = chunkStoreRegistry.registerComponent(ItemContainerBlock.class, "ItemContainerBlock", ItemContainerBlock.CODEC);
@@ -113,6 +112,8 @@ public class BlockModule extends JavaPlugin {
       Ref<ChunkStore> blockRef = chunk.getBlockComponentEntity(x, y, z);
       if (blockRef != null) {
          return blockRef;
+      } else if (chunk.getFiller(x, y, z) != 0) {
+         return null;
       } else {
          BlockType blockType = chunk.getBlockType(x, y, z);
          if (blockType == null) {
@@ -407,6 +408,7 @@ public class BlockModule extends JavaPlugin {
             if (blockComponentChunk != null) {
                switch (reason) {
                   case REMOVE:
+                  case BUILDER_TOOLS_UNDO:
                      blockComponentChunk.removeEntityReference(blockStateInfoComponent.getIndex(), ref);
                      break;
                   case UNLOAD:
@@ -472,31 +474,6 @@ public class BlockModule extends JavaPlugin {
          ItemContainerBlock itemContainerBlock = unknownComponents.removeComponent("container", ItemContainerBlock.CODEC);
          if (itemContainerBlock != null) {
             holder.putComponent(ItemContainerBlock.getComponentType(), itemContainerBlock);
-         }
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<ChunkStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
-      }
-
-      @Nullable
-      @Override
-      public Query<ChunkStore> getQuery() {
-         return ChunkStore.REGISTRY.getUnknownComponentType();
-      }
-   }
-
-   @Deprecated(forRemoval = true)
-   public static class MigrateLaunchPad extends BlockModule.MigrationSystem {
-      @Override
-      public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
-         UnknownComponents<ChunkStore> unknownComponents = holder.getComponent(ChunkStore.REGISTRY.getUnknownComponentType());
-
-         assert unknownComponents != null;
-
-         LaunchPad launchPadComponent = unknownComponents.removeComponent("launchPad", LaunchPad.CODEC);
-         if (launchPadComponent != null) {
-            holder.putComponent(LaunchPad.getComponentType(), launchPadComponent);
          }
       }
 

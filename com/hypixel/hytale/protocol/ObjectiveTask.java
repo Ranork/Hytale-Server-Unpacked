@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,17 +37,21 @@ public class ObjectiveTask {
 
    @Nonnull
    public static ObjectiveTask deserialize(@Nonnull ByteBuf buf, int offset) {
-      ObjectiveTask obj = new ObjectiveTask();
-      byte nullBits = buf.getByte(offset);
-      obj.currentCompletion = buf.getIntLE(offset + 1);
-      obj.completionNeeded = buf.getIntLE(offset + 5);
-      int pos = offset + 9;
-      if ((nullBits & 1) != 0) {
-         obj.taskDescriptionKey = FormattedMessage.deserialize(buf, pos);
-         pos += FormattedMessage.computeBytesConsumed(buf, pos);
-      }
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ObjectiveTask", 9, buf.readableBytes() - offset);
+      } else {
+         ObjectiveTask obj = new ObjectiveTask();
+         byte nullBits = buf.getByte(offset);
+         obj.currentCompletion = buf.getIntLE(offset + 1);
+         obj.completionNeeded = buf.getIntLE(offset + 5);
+         int pos = offset + 9;
+         if ((nullBits & 1) != 0) {
+            obj.taskDescriptionKey = FormattedMessage.deserialize(buf, pos);
+            pos += FormattedMessage.computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -55,6 +62,57 @@ public class ObjectiveTask {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   @Nullable
+   public static FormattedMessage getTaskDescriptionKey(MemorySegment mem) {
+      return getTaskDescriptionKey(mem, 0);
+   }
+
+   @Nullable
+   public static FormattedMessage getTaskDescriptionKey(MemorySegment mem, int offset) {
+      return hasTaskDescriptionKey(mem, offset) ? FormattedMessage.toObject(mem, offset + 9) : null;
+   }
+
+   public static int getCurrentCompletion(MemorySegment mem) {
+      return getCurrentCompletion(mem, 0);
+   }
+
+   public static int getCurrentCompletion(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 1));
+   }
+
+   public static int getCompletionNeeded(MemorySegment mem) {
+      return getCompletionNeeded(mem, 0);
+   }
+
+   public static int getCompletionNeeded(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 5));
+   }
+
+   public static boolean hasTaskDescriptionKey(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static ObjectiveTask toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ObjectiveTask toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ObjectiveTask", offset + 9, (int)mem.byteSize());
+      } else {
+         return new ObjectiveTask(
+            hasTaskDescriptionKey(mem, offset) ? FormattedMessage.toObject(mem, offset + 9) : null,
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 5))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -69,6 +127,23 @@ public class ObjectiveTask {
       if (this.taskDescriptionKey != null) {
          this.taskDescriptionKey.serialize(buf);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.taskDescriptionKey != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 1), this.currentCompletion);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 5), this.completionNeeded);
+      int varOffset = offset + 9;
+      if (this.taskDescriptionKey != null) {
+         varOffset += this.taskDescriptionKey.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

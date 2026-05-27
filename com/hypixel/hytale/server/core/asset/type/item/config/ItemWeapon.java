@@ -5,6 +5,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.map.MapCodec;
+import com.hypixel.hytale.server.core.asset.type.item.config.damageData.DamageBreakdown;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatMap;
 import com.hypixel.hytale.server.core.modules.entitystats.EntityStatsModule;
@@ -51,6 +52,21 @@ public class ItemWeapon implements NetworkSerializable<com.hypixel.hytale.protoc
    @Nullable
    protected int[] entityStatsToClear;
    protected boolean renderDualWielded;
+   @Nullable
+   protected transient DamageBreakdown basicDamageBreakdown;
+   @Nullable
+   protected transient DamageBreakdown ultimateDamageBreakdown;
+
+   public ItemWeapon() {
+   }
+
+   public ItemWeapon(@Nonnull ItemWeapon other) {
+      this.rawStatModifiers = other.rawStatModifiers;
+      this.statModifiers = other.statModifiers;
+      this.rawEntityStatsToClear = other.rawEntityStatsToClear;
+      this.entityStatsToClear = other.entityStatsToClear;
+      this.renderDualWielded = other.renderDualWielded;
+   }
 
    @Nullable
    public Int2ObjectMap<StaticModifier[]> getStatModifiers() {
@@ -61,9 +77,33 @@ public class ItemWeapon implements NetworkSerializable<com.hypixel.hytale.protoc
       return this.entityStatsToClear;
    }
 
+   @Nullable
+   public DamageBreakdown getBasicDamageBreakdown() {
+      return this.basicDamageBreakdown;
+   }
+
+   public void setBasicDamageBreakdown(@Nullable DamageBreakdown basicDamageBreakdown) {
+      this.basicDamageBreakdown = basicDamageBreakdown;
+   }
+
+   @Nullable
+   public DamageBreakdown getUltimateDamageBreakdown() {
+      return this.ultimateDamageBreakdown;
+   }
+
+   public void setUltimateDamageBreakdown(@Nullable DamageBreakdown ultimateDamageBreakdown) {
+      this.ultimateDamageBreakdown = ultimateDamageBreakdown;
+   }
+
    @Nonnull
    public com.hypixel.hytale.protocol.ItemWeapon toPacket() {
-      return new com.hypixel.hytale.protocol.ItemWeapon(this.entityStatsToClear, EntityStatMap.toPacket(this.statModifiers), this.renderDualWielded);
+      return new com.hypixel.hytale.protocol.ItemWeapon(
+         this.entityStatsToClear,
+         EntityStatMap.toPacket(this.statModifiers),
+         this.renderDualWielded,
+         this.basicDamageBreakdown != null ? this.basicDamageBreakdown.toPacket() : null,
+         this.ultimateDamageBreakdown != null ? this.ultimateDamageBreakdown.toPacket() : null
+      );
    }
 
    @Nonnull

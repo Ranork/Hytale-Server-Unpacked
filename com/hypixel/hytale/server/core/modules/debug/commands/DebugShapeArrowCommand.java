@@ -2,9 +2,7 @@ package com.hypixel.hytale.server.core.modules.debug.commands;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.matrix.Matrix4d;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -20,6 +18,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class DebugShapeArrowCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -57,18 +58,17 @@ public class DebugShapeArrowCommand extends AbstractPlayerCommand {
 
       assert headRotationComponent != null;
 
-      Vector3f headRotation = headRotationComponent.getRotation();
-      float lookYaw = headRotation.getYaw();
-      float lookPitch = headRotation.getPitch();
-      Matrix4d tmp = new Matrix4d();
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      float lookYaw = headRotation.yaw();
+      float lookPitch = headRotation.pitch();
       float eyeHeight = model != null ? model.getEyeHeight(ref, store) : 0.0F;
       ThreadLocalRandom random = ThreadLocalRandom.current();
       Vector3f color = new Vector3f(random.nextFloat(), random.nextFloat(), random.nextFloat());
       Matrix4d matrix = new Matrix4d();
       matrix.identity();
       matrix.translate(pos.x, pos.y + eyeHeight, pos.z);
-      matrix.rotateAxis(-lookYaw, 0.0, 1.0, 0.0, tmp);
-      matrix.rotateAxis((Math.PI / 2) - lookPitch, 1.0, 0.0, 0.0, tmp);
+      matrix.rotate(lookYaw, 0.0, 1.0, 0.0);
+      matrix.rotate(-((Math.PI / 2) - lookPitch), 1.0, 0.0, 0.0);
       int flags = DebugShapeSubCommand.buildFlags(context, this.fadeFlag, this.noWireframeFlag, this.noSolidFlag);
       DebugUtils.addArrow(world, matrix, color, 1.0, 30.0F, flags);
       context.sendMessage(MESSAGE_COMMANDS_DEBUG_SHAPE_ARROW_SUCCESS);

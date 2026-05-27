@@ -1,6 +1,5 @@
 package com.hypixel.hytale.server.worldgen.climate;
 
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.server.worldgen.util.LogUtil;
 import com.hypixel.hytale.server.worldgen.zone.Zone;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
@@ -10,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2i;
 
 public class UniqueClimateGenerator {
    public static final UniqueClimateGenerator EMPTY = new UniqueClimateGenerator(

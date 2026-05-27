@@ -4,7 +4,8 @@ import com.hypixel.hytale.codec.codecs.EnumCodec;
 
 public enum SupportDropType {
    BREAK,
-   DESTROY;
+   DESTROY,
+   FALL;
 
    public static final EnumCodec<SupportDropType> CODEC = new EnumCodec<>(SupportDropType.class);
 }

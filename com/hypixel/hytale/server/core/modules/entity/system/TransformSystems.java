@@ -12,8 +12,8 @@ import com.hypixel.hytale.component.SystemGroup;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.Position;
@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class TransformSystems {
    public static class EntityTrackerUpdate extends EntityTickingSystem<EntityStore> {
@@ -75,8 +76,8 @@ public class TransformSystems {
          HeadRotation headRotationComponent = archetypeChunk.getComponent(index, this.headRotationComponentType);
          ModelTransform sentTransform = transformComponent.getSentTransform();
          Vector3d position = transformComponent.getPosition();
-         Vector3f headRotation = headRotationComponent != null ? headRotationComponent.getRotation() : Vector3f.ZERO;
-         Vector3f bodyRotation = transformComponent.getRotation();
+         Rotation3fc headRotation = (Rotation3fc)(headRotationComponent != null ? headRotationComponent.getRotation() : Rotation3f.IDENTITY);
+         Rotation3f bodyRotation = transformComponent.getRotation();
          Position sentPosition = sentTransform.position;
          Direction sentLookOrientation = sentTransform.lookOrientation;
          Direction sentBodyOrientation = sentTransform.bodyOrientation;
@@ -88,6 +89,9 @@ public class TransformSystems {
             PositionUtil.assign(sentBodyOrientation, bodyRotation);
             queueUpdatesFor(archetypeChunk.getReferenceTo(index), sentTransform, visibleComponent.visibleTo, false);
          } else if (!visibleComponent.newlyVisibleTo.isEmpty()) {
+            PositionUtil.assign(sentPosition, position);
+            PositionUtil.assign(sentLookOrientation, headRotation);
+            PositionUtil.assign(sentBodyOrientation, bodyRotation);
             queueUpdatesFor(archetypeChunk.getReferenceTo(index), sentTransform, visibleComponent.newlyVisibleTo, true);
          }
       }

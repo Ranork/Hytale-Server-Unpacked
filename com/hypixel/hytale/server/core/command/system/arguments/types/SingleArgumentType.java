@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.core.command.system.arguments.types;
 
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.ParseResult;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -30,6 +31,10 @@ public abstract class SingleArgumentType<DataType> extends ArgumentType<DataType
    @Nonnull
    public WrappedArgumentType<DataType> withOverriddenUsage(@Nonnull String usage, @Nullable String... examples) {
       return new WrappedArgumentType<DataType>(this.getName(), this, usage, examples) {
+         {
+            Objects.requireNonNull(SingleArgumentType.this);
+         }
+
          @Override
          public DataType parse(String input, ParseResult parseResult) {
             return this.wrappedArgumentType.parse(new String[]{input}, parseResult);
@@ -40,6 +45,10 @@ public abstract class SingleArgumentType<DataType> extends ArgumentType<DataType
    @Nonnull
    public WrappedArgumentType<DataType> withOverriddenUsage(@Nonnull String usage) {
       return new WrappedArgumentType<DataType>(this.getName(), this, usage, this.examples) {
+         {
+            Objects.requireNonNull(SingleArgumentType.this);
+         }
+
          @Override
          public DataType parse(String input, ParseResult parseResult) {
             return this.wrappedArgumentType.parse(new String[]{input}, parseResult);

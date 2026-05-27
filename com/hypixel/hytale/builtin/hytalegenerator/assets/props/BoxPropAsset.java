@@ -11,13 +11,14 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.props.deprecated.BoxProp;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BoxPropAsset extends PropAsset {
    @Nonnull
    public static final BuilderCodec<BoxPropAsset> CODEC = BuilderCodec.builder(BoxPropAsset.class, BoxPropAsset::new, PropAsset.ABSTRACT_CODEC)
-      .append(new KeyedCodec<>("Range", Vector3i.CODEC, true), (asset, v) -> asset.range = v, asset -> asset.range)
+      .append(new KeyedCodec<>("Range", Vector3iUtil.CODEC, true), (asset, v) -> asset.range = v, asset -> asset.range)
       .add()
       .append(new KeyedCodec<>("Material", MaterialAsset.CODEC, true), (asset, value) -> asset.materialAsset = value, asset -> asset.materialAsset)
       .add()

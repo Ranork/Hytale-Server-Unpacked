@@ -1,7 +1,5 @@
 package com.hypixel.hytale.server.worldgen.prefab.unique;
 
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.condition.IBlockFluidCondition;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateRndCondition;
@@ -11,6 +9,8 @@ import com.hypixel.hytale.server.worldgen.biome.Biome;
 import com.hypixel.hytale.server.worldgen.util.condition.BlockMaskCondition;
 import java.util.Random;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
 
 public class UniquePrefabConfiguration {
    protected final ICoordinateRndCondition heightCondition;

@@ -436,7 +436,7 @@ public class ChargingInteraction extends Interaction {
          + super.toString();
    }
 
-   private static class ChargingTag implements CollectorTag {
+   public static final class ChargingTag implements CollectorTag {
       private final float seconds;
 
       private ChargingTag(float seconds) {

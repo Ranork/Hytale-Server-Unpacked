@@ -3,11 +3,11 @@ package com.hypixel.hytale.server.npc.navigation;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.ProbeMoveData;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class AStarWithTarget extends AStarBase {
    @Nonnull
@@ -39,7 +39,7 @@ public class AStarWithTarget extends AStarBase {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       AStarBase.Progress progress = super.initComputePath(ref, start, evaluator, motionController, probeMoveData, nodePoolProvider, componentAccessor);
-      this.targetPosition.assign(end);
+      this.targetPosition.set(end);
       this.targetPositionIndex = this.positionToIndex(this.targetPosition);
       return progress;
    }

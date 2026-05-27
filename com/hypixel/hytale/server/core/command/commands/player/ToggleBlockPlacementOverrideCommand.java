@@ -15,6 +15,7 @@ public class ToggleBlockPlacementOverrideCommand extends AbstractPlayerCommand {
    public ToggleBlockPlacementOverrideCommand() {
       super("toggleBlockPlacementOverride", "server.commands.toggleBlockPlacementOverride.desc");
       this.addAliases("tbpo", "togglePlacement");
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

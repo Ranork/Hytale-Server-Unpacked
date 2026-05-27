@@ -4,11 +4,8 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
 import com.hypixel.hytale.procedurallib.condition.IHeightThresholdInterpreter;
@@ -64,6 +61,9 @@ import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2i;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldGen, MetricProvider, IWorldMapProvider {
    public static final int TINT_INTERPOLATION_RADIUS = 4;
@@ -145,10 +145,10 @@ public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldG
             if (entry.isSpawnLocation()) {
                Vector3i position = entry.getPosition();
                Vector3d spawnPosition = new Vector3d(entry.getSpawnOffset());
-               Vector3f spawnRotation = new Vector3f(Vector3f.ZERO);
+               Rotation3f spawnRotation = new Rotation3f();
                entry.getRotation().rotate(spawnPosition);
                spawnRotation.addYaw(-entry.getRotation().getYaw());
-               list.add(new Transform(spawnPosition.add(position).add(0.5, 0.0, 0.5), spawnRotation));
+               list.add(new Transform(spawnPosition.add(position.x, position.y, position.z).add(0.5, 0.0, 0.5), spawnRotation));
             }
          }
 
@@ -234,9 +234,9 @@ public class ChunkGenerator implements IBenchmarkableWorldGen, ValidatableWorldG
             double time = (end + start) / 1.0E9;
             double avg = this.timings.reportChunk(end + start);
             if (avg != this.timings.getWarmupValue()) {
-               LogUtil.getLogger().at(Level.FINE).log("Time taken: %s (avg: %s) (%s)", time, avg, this.timings);
+               LogUtil.getLogger().at(Level.FINEST).log("Time taken: %s (avg: %s) (%s)", time, avg, this.timings);
             } else {
-               LogUtil.getLogger().at(Level.FINE).log("Time taken: %s (warming up)", time);
+               LogUtil.getLogger().at(Level.FINEST).log("Time taken: %s (warming up)", time);
             }
 
             return generatedChunk;

@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.worldgen.loader;
 
 import com.google.gson.JsonElement;
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.procedurallib.file.AssetLoader;
 import com.hypixel.hytale.procedurallib.file.FileIO;
 import com.hypixel.hytale.procedurallib.json.CoordinateRandomizerJsonLoader;
@@ -18,6 +17,7 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import javax.annotation.Nonnull;
 import javax.imageio.ImageIO;
+import org.joml.Vector2i;
 
 public class MaskProviderJsonLoader extends JsonLoader<SeedStringResource, MaskProvider> {
    public static final AssetLoader<BufferedImage> IMAGE_LOADER = new AssetLoader<BufferedImage>() {
@@ -67,8 +67,8 @@ public class MaskProviderJsonLoader extends JsonLoader<SeedStringResource, MaskP
       return new FuzzyZoom(
          new CoordinateRandomizerJsonLoader<>(this.seed, this.dataFolder, this.json).load(),
          new PixelProvider(mask),
-         (double)this.zoomSize.getX() / mask.getWidth(),
-         (double)this.zoomSize.getY() / mask.getHeight(),
+         (double)this.zoomSize.x() / mask.getWidth(),
+         (double)this.zoomSize.y() / mask.getHeight(),
          this.worldOffset.x,
          this.worldOffset.y
       );

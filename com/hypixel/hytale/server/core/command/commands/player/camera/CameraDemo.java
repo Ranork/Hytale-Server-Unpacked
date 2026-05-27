@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.math.iterator.BlockIterator;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.ClientCameraView;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.MouseButtonState;
@@ -15,7 +14,6 @@ import com.hypixel.hytale.protocol.MovementForceRotationType;
 import com.hypixel.hytale.protocol.PositionDistanceOffsetType;
 import com.hypixel.hytale.protocol.RotationType;
 import com.hypixel.hytale.protocol.ServerCameraSettings;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.protocol.packets.camera.SetServerCamera;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -29,6 +27,8 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
+import org.joml.Vector3i;
 
 public class CameraDemo {
    public static final CameraDemo INSTANCE = new CameraDemo();
@@ -92,9 +92,9 @@ public class CameraDemo {
                         return true;
                      });
                   } else {
-                     int x = targetBlock.getX();
-                     int z = targetBlock.getZ();
-                     world.getChunk(ChunkUtil.indexChunkFromBlock(x, z)).setBlock(x, targetBlock.getY(), z, blockId);
+                     int x = targetBlock.x();
+                     int z = targetBlock.z();
+                     world.getChunk(ChunkUtil.indexChunkFromBlock(x, z)).setBlock(x, targetBlock.y(), z, blockId);
                   }
                }
             } else if (event.getMouseButton().mouseButtonType == MouseButtonType.Right) {
@@ -104,9 +104,9 @@ public class CameraDemo {
                      return true;
                   });
                } else {
-                  int x = targetBlock.getX();
-                  int z = targetBlock.getZ();
-                  world.getChunk(ChunkUtil.indexChunkFromBlock(x, z)).setBlock(x, targetBlock.getY(), z, 0);
+                  int x = targetBlock.x();
+                  int z = targetBlock.z();
+                  world.getChunk(ChunkUtil.indexChunkFromBlock(x, z)).setBlock(x, targetBlock.y(), z, 0);
                }
             } else if (event.getMouseButton().mouseButtonType == MouseButtonType.Left
                && event.getItemInHand() != null
@@ -120,21 +120,21 @@ public class CameraDemo {
 
                if (!lastTargetBlock.equals(targetBlock)) {
                   BlockIterator.iterateFromTo(
-                     lastTargetBlock.getX(),
-                     lastTargetBlock.getY() + 1,
-                     lastTargetBlock.getZ(),
-                     targetBlock.getX(),
-                     targetBlock.getY() + 1,
-                     targetBlock.getZ(),
+                     lastTargetBlock.x(),
+                     lastTargetBlock.y() + 1,
+                     lastTargetBlock.z(),
+                     targetBlock.x(),
+                     targetBlock.y() + 1,
+                     targetBlock.z(),
                      (xx, y, zx, px, py, pz, qx, qy, qz) -> {
                         world.getChunk(ChunkUtil.indexChunkFromBlock(xx, zx)).setBlock(xx, y, zx, blockId);
                         return true;
                      }
                   );
                } else {
-                  int x = targetBlock.getX();
-                  int z = targetBlock.getZ();
-                  world.getChunk(ChunkUtil.indexChunkFromBlock(x, z)).setBlock(x, targetBlock.getY() + 1, z, blockIdx);
+                  int x = targetBlock.x();
+                  int z = targetBlock.z();
+                  world.getChunk(ChunkUtil.indexChunkFromBlock(x, z)).setBlock(x, targetBlock.y() + 1, z, blockIdx);
                }
             }
          }

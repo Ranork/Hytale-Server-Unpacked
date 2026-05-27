@@ -1,7 +1,5 @@
 package com.hypixel.hytale.server.npc.asset.builder;
 
-import com.google.gson.JsonElement;
-import com.hypixel.hytale.codec.ExtraInfo;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import java.util.Map;
@@ -15,11 +13,6 @@ public class BuilderTemplateInteractionVars extends BuilderCodecObjectHelper<Map
 
    public Map<String, String> build() {
       throw new UnsupportedOperationException();
-   }
-
-   @Override
-   public void readConfig(@Nonnull JsonElement data, @Nonnull ExtraInfo extraInfo) {
-      super.readConfig(data, extraInfo);
    }
 
    @Nullable

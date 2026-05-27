@@ -4,7 +4,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import com.hypixel.hytale.server.core.asset.type.ambiencefx.config.AmbienceFX;
+import com.hypixel.hytale.server.core.asset.type.musiccontainer.config.MusicContainer;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -32,9 +32,10 @@ public class VoidEventConfig {
          "Certain event characteristics happen over stages that can be defined here. Stages are spread in time. Only one stage is \"active\" at a time."
       )
       .add()
-      .<String>append(new KeyedCodec<>("MusicAmbienceFX", Codec.STRING), (config, o) -> config.musicAmbienceFX = o, config -> config.musicAmbienceFX)
-      .documentation("The ID of an AmbienceFX which will be used for the music during the event")
-      .addValidator(AmbienceFX.VALIDATOR_CACHE.getValidator())
+      .<String>append(
+         new KeyedCodec<>("MusicContainer", MusicContainer.CHILD_ASSET_CODEC), (config, o) -> config.musicContainerId = o, config -> config.musicContainerId
+      )
+      .documentation("The ID of a MusicContainer to use as forced music during the event")
       .add()
       .afterDecode(VoidEventConfig::processConfig)
       .build();
@@ -42,7 +43,9 @@ public class VoidEventConfig {
    private InvasionPortalConfig portalConfig;
    private VoidEventStage[] stages;
    private List<VoidEventStage> stagesSortedByStartTime;
-   private String musicAmbienceFX;
+   @Nullable
+   private String musicContainerId;
+   private transient int musicContainerIndex;
 
    public int getDurationSeconds() {
       return this.durationSeconds;
@@ -64,9 +67,8 @@ public class VoidEventConfig {
       return this.stagesSortedByStartTime;
    }
 
-   @Nullable
-   public String getMusicAmbienceFX() {
-      return this.musicAmbienceFX;
+   public int getMusicContainerIndex() {
+      return this.musicContainerIndex;
    }
 
    private void processConfig() {
@@ -74,6 +76,9 @@ public class VoidEventConfig {
       if (this.stages != null) {
          Collections.addAll(this.stagesSortedByStartTime, this.stages);
          this.stagesSortedByStartTime.sort(Comparator.comparingInt(VoidEventStage::getSecondsInto));
+         if (this.musicContainerId != null) {
+            this.musicContainerIndex = MusicContainer.getAssetMap().getIndex(this.musicContainerId);
+         }
       }
    }
 }

@@ -2,5 +2,6 @@ package com.hypixel.hytale.component;
 
 public enum RemoveReason {
    REMOVE,
-   UNLOAD;
+   UNLOAD,
+   BUILDER_TOOLS_UNDO;
 }

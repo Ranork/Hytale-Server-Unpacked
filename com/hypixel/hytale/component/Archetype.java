@@ -14,8 +14,8 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
    private final int count;
    @Nonnull
    private final ComponentType<ECS_TYPE, ?>[] componentTypes;
-   @Nonnull
-   private final ExactArchetypeQuery<ECS_TYPE> exactQuery = new ExactArchetypeQuery<>(this);
+   @Nullable
+   private ExactArchetypeQuery<ECS_TYPE> exactQuery;
 
    public static <ECS_TYPE> Archetype<ECS_TYPE> empty() {
       return EMPTY;
@@ -153,6 +153,10 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
 
    @Nonnull
    public ExactArchetypeQuery<ECS_TYPE> asExactQuery() {
+      if (this.exactQuery == null) {
+         this.exactQuery = new ExactArchetypeQuery<>(this);
+      }
+
       return this.exactQuery;
    }
 
@@ -170,23 +174,22 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
 
    @SafeVarargs
    public static <ECS_TYPE> Archetype<ECS_TYPE> of(@Nonnull ComponentType<ECS_TYPE, ?>... componentTypes) {
-      if (componentTypes.length == 0) {
+      int componentTypesLen = componentTypes.length;
+      if (componentTypesLen == 0) {
          return EMPTY;
       } else {
-         for (int i = 0; i < componentTypes.length; i++) {
-            ComponentType<ECS_TYPE, ?> componentType = componentTypes[i];
-            if (componentType == null) {
-               throw new IllegalArgumentException("ComponentType in Archetype cannot be null (Index: " + i + ")");
-            }
-         }
-
          ComponentRegistry<ECS_TYPE> registry = componentTypes[0].getRegistry();
          int minIndex = Integer.MAX_VALUE;
          int maxIndex = Integer.MIN_VALUE;
 
-         for (int ix = 0; ix < componentTypes.length; ix++) {
-            componentTypes[ix].validateRegistry(registry);
-            int index = componentTypes[ix].getIndex();
+         for (int itr = 0; itr < componentTypesLen; itr++) {
+            ComponentType<ECS_TYPE, ?> componentType = componentTypes[itr];
+            if (componentType == null) {
+               throw new IllegalArgumentException("ComponentType in Archetype cannot be null (Index: " + itr + ")");
+            }
+
+            componentType.validateRegistry(registry);
+            int index = componentType.getIndex();
             if (index < minIndex) {
                minIndex = index;
             }
@@ -194,21 +197,20 @@ public class Archetype<ECS_TYPE> implements Query<ECS_TYPE> {
             if (index > maxIndex) {
                maxIndex = index;
             }
-
-            for (int n = ix + 1; n < componentTypes.length; n++) {
-               if (componentTypes[ix] == componentTypes[n]) {
-                  throw new IllegalArgumentException("ComponentType provided multiple times! " + Arrays.toString((Object[])componentTypes));
-               }
-            }
          }
 
          ComponentType<ECS_TYPE, ?>[] arr = new ComponentType[maxIndex + 1];
 
-         for (ComponentType<ECS_TYPE, ?> componentType : componentTypes) {
-            arr[componentType.getIndex()] = componentType;
+         for (ComponentType<ECS_TYPE, ?> componentTypex : componentTypes) {
+            int indexx = componentTypex.getIndex();
+            if (arr[indexx] != null) {
+               throw new IllegalArgumentException("ComponentType provided multiple times! " + Arrays.toString((Object[])componentTypes));
+            }
+
+            arr[indexx] = componentTypex;
          }
 
-         return new Archetype<>(minIndex, componentTypes.length, arr);
+         return new Archetype<>(minIndex, componentTypesLen, arr);
       }
    }
 

@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class AnchorDensity extends Density {
    @Nullable
@@ -28,10 +28,10 @@ public class AnchorDensity extends Density {
       } else {
          if (this.isReversed) {
             this.rChildPosition
-               .assign(context.position.x + context.densityAnchor.x, context.position.y + context.densityAnchor.y, context.position.z + context.densityAnchor.z);
+               .set(context.position.x + context.densityAnchor.x, context.position.y + context.densityAnchor.y, context.position.z + context.densityAnchor.z);
          } else {
             this.rChildPosition
-               .assign(context.position.x - context.densityAnchor.x, context.position.y - context.densityAnchor.y, context.position.z - context.densityAnchor.z);
+               .set(context.position.x - context.densityAnchor.x, context.position.y - context.densityAnchor.y, context.position.z - context.densityAnchor.z);
          }
 
          this.rChildContext.assign(context);

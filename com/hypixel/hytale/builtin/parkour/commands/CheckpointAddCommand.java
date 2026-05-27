@@ -6,8 +6,7 @@ import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -27,6 +26,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import java.util.UUID;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class CheckpointAddCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -54,7 +54,7 @@ public class CheckpointAddCommand extends AbstractPlayerCommand {
          assert transformComponent != null;
 
          Vector3d position = transformComponent.getPosition();
-         Vector3f rotation = transformComponent.getRotation();
+         Rotation3f rotation = transformComponent.getRotation();
          Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
          holder.addComponent(ParkourCheckpoint.getComponentType(), new ParkourCheckpoint(index));
          Model model = ParkourPlugin.get().getParkourCheckpointModel();

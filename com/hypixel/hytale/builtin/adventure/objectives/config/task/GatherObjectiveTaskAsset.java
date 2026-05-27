@@ -4,8 +4,8 @@ import com.hypixel.hytale.builtin.adventure.objectives.config.taskcondition.Task
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class GatherObjectiveTaskAsset extends CountObjectiveTaskAsset {
    @Nonnull

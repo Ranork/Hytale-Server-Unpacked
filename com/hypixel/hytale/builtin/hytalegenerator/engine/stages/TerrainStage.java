@@ -20,12 +20,14 @@ import com.hypixel.hytale.builtin.hytalegenerator.material.MaterialCache;
 import com.hypixel.hytale.builtin.hytalegenerator.materialproviders.MaterialProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.workerindexer.WorkerIndexer;
 import com.hypixel.hytale.builtin.hytalegenerator.worldstructure.WorldStructure;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class TerrainStage implements Stage {
    public static final double DEFAULT_BACKGROUND_DENSITY = 0.0;
@@ -91,8 +93,8 @@ public class TerrainStage implements Stage {
          workerIndexer.getWorkerCount(), () -> new FloatContainer3d(StagedChunkGenerator.SINGLE_BUFFER_TILE_BOUNDS_BUFFER_GRID, 0.0F)
       );
       this.inputBounds_bufferGrid = GridUtils.createColumnBounds_bufferGrid(new Vector3i(), 0, 40);
-      this.inputBounds_bufferGrid.min.subtract(Vector3i.ALL_ONES);
-      this.inputBounds_bufferGrid.max.add(Vector3i.ALL_ONES);
+      this.inputBounds_bufferGrid.min.sub(Vector3iUtil.ALL_ONES);
+      this.inputBounds_bufferGrid.max.add(Vector3iUtil.ALL_ONES);
       GridUtils.setBoundsYToWorldHeight_bufferGrid(this.inputBounds_bufferGrid);
    }
 
@@ -142,7 +144,7 @@ public class TerrainStage implements Stage {
       Bounds3i bounds_voxelGrid = densityBuffer.getBounds_voxelGrid();
       Vector3i position_voxelGrid = new Vector3i(bounds_voxelGrid.min);
       Density.Context densityContext = new Density.Context();
-      densityContext.position = position_voxelGrid.toVector3d();
+      densityContext.position = Vector3iUtil.toVector3d(position_voxelGrid);
 
       for (position_voxelGrid.x = bounds_voxelGrid.min.x; position_voxelGrid.x < bounds_voxelGrid.max.x; position_voxelGrid.x++) {
          densityContext.position.x = position_voxelGrid.x;
@@ -150,7 +152,6 @@ public class TerrainStage implements Stage {
          for (position_voxelGrid.z = bounds_voxelGrid.min.z; position_voxelGrid.z < bounds_voxelGrid.max.z; position_voxelGrid.z++) {
             densityContext.position.z = position_voxelGrid.z;
             position_voxelGrid.y = 0;
-            position_voxelGrid.dropHash();
             Integer biomeIdAtOrigin = biomeSpace.get(position_voxelGrid);
 
             assert biomeIdAtOrigin != null;
@@ -169,7 +170,6 @@ public class TerrainStage implements Stage {
                Density density = biome.getTerrainDensity();
                if (isFirstBiome) {
                   for (position_voxelGrid.y = bounds_voxelGrid.min.y; position_voxelGrid.y < bounds_voxelGrid.max.y; position_voxelGrid.y++) {
-                     position_voxelGrid.dropHash();
                      densityContext.position.y = position_voxelGrid.y;
                      float densityValue = (float)density.process(densityContext);
                      float scaledDensityValue = densityValue * biomeWeight.weight;
@@ -179,7 +179,6 @@ public class TerrainStage implements Stage {
 
                if (!isFirstBiome) {
                   for (position_voxelGrid.y = bounds_voxelGrid.min.y; position_voxelGrid.y < bounds_voxelGrid.max.y; position_voxelGrid.y++) {
-                     position_voxelGrid.dropHash();
                      densityContext.position.y = position_voxelGrid.y;
                      float bufferDensityValue = densityBuffer.get(position_voxelGrid);
                      float densityValue = (float)density.process(densityContext);
@@ -216,7 +215,7 @@ public class TerrainStage implements Stage {
          return 0.0F;
       } else {
          Density.Context densityContext = new Density.Context();
-         densityContext.position = position_voxelGrid.toVector3d();
+         densityContext.position = Vector3iUtil.toVector3d(position_voxelGrid);
          Integer biomeIdAtOrigin = biomeSpace.get(position_voxelGrid.x, 0, position_voxelGrid.z);
 
          assert biomeIdAtOrigin != null;
@@ -228,6 +227,7 @@ public class TerrainStage implements Stage {
          for (TerrainStage.BiomeWeights.Entry biomeWeight : biomeWeights.entries) {
             Biome biome = biomeRegistry.getObject(biomeWeight.biomeId);
             Density density = biome.getTerrainDensity();
+            densityContext.distanceToBiomeEdge = biomeDistances.distanceToClosestOtherBiome(biomeWeight.biomeId);
             float densityValue = (float)density.process(densityContext);
             float scaledDensityValue = densityValue * biomeWeight.weight;
             densityResult += scaledDensityValue;
@@ -262,7 +262,7 @@ public class TerrainStage implements Stage {
 
             for (position_voxelGrid.y = bounds_voxelGrid.min.y; position_voxelGrid.y < bounds_voxelGrid.max.y; position_voxelGrid.y++) {
                int i = position_voxelGrid.y - bounds_voxelGrid.min.y;
-               context.position.assign(position_voxelGrid);
+               context.position.set(position_voxelGrid);
                context.density = densityBuffer.get(position_voxelGrid);
                context.depthIntoFloor = columnData.depthIntoFloor[i];
                context.depthIntoCeiling = columnData.depthIntoCeiling[i];
@@ -367,6 +367,8 @@ public class TerrainStage implements Stage {
       FloatContainer3d densityBuffer;
 
       ColumnData(int bottom, int topExclusive, @Nonnull FloatContainer3d densityBuffer) {
+         Objects.requireNonNull(TerrainStage.this);
+         super();
          this.topExclusive = topExclusive;
          this.bottom = bottom;
          this.densityBuffer = densityBuffer;

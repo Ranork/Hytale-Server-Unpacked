@@ -3,8 +3,11 @@ package com.hypixel.hytale.protocol.packets.inventory;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -47,15 +50,61 @@ public class DropItemStack implements Packet, ToServerPacket {
 
    @Nonnull
    public static DropItemStack deserialize(@Nonnull ByteBuf buf, int offset) {
-      DropItemStack obj = new DropItemStack();
-      obj.inventorySectionId = buf.getIntLE(offset + 0);
-      obj.slotId = buf.getIntLE(offset + 4);
-      obj.quantity = buf.getIntLE(offset + 8);
-      return obj;
+      if (buf.readableBytes() - offset < 12) {
+         throw ProtocolException.bufferTooSmall("DropItemStack", 12, buf.readableBytes() - offset);
+      } else {
+         DropItemStack obj = new DropItemStack();
+         obj.inventorySectionId = buf.getIntLE(offset + 0);
+         obj.slotId = buf.getIntLE(offset + 4);
+         obj.quantity = buf.getIntLE(offset + 8);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 12;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 12L;
+   }
+
+   public static int getInventorySectionId(MemorySegment mem) {
+      return getInventorySectionId(mem, 0);
+   }
+
+   public static int getInventorySectionId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static int getSlotId(MemorySegment mem) {
+      return getSlotId(mem, 0);
+   }
+
+   public static int getSlotId(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 4));
+   }
+
+   public static int getQuantity(MemorySegment mem) {
+      return getQuantity(mem, 0);
+   }
+
+   public static int getQuantity(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 8));
+   }
+
+   public static DropItemStack toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static DropItemStack toObject(MemorySegment mem, int offset) {
+      if (offset + 12 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("DropItemStack", offset + 12, (int)mem.byteSize());
+      } else {
+         return new DropItemStack(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 0)), mem.get(PacketIO.PROTO_INT, (long)(offset + 4)), mem.get(PacketIO.PROTO_INT, (long)(offset + 8))
+         );
+      }
    }
 
    @Override
@@ -63,6 +112,14 @@ public class DropItemStack implements Packet, ToServerPacket {
       buf.writeIntLE(this.inventorySectionId);
       buf.writeIntLE(this.slotId);
       buf.writeIntLE(this.quantity);
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.inventorySectionId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 4), this.slotId);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 8), this.quantity);
+      return 12;
    }
 
    @Override

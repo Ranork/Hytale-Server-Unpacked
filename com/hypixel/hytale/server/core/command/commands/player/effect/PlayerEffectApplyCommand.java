@@ -33,6 +33,7 @@ public class PlayerEffectApplyCommand extends AbstractPlayerCommand {
    public PlayerEffectApplyCommand() {
       super("apply", "server.commands.player.effect.apply.desc");
       this.requirePermission(HytalePermissions.fromCommand("player.effect.apply.self"));
+      this.setPermissionGroups("hytale:Builder");
       this.addUsageVariant(new PlayerEffectApplyCommand.PlayerEffectApplyOtherCommand());
    }
 
@@ -67,6 +68,7 @@ public class PlayerEffectApplyCommand extends AbstractPlayerCommand {
       PlayerEffectApplyOtherCommand() {
          super("server.commands.player.effect.apply.other.desc");
          this.requirePermission(HytalePermissions.fromCommand("player.effect.apply.other"));
+         this.setPermissionGroups("hytale:WorldEditor");
       }
 
       @Override

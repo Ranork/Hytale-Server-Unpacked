@@ -9,7 +9,7 @@ import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionData;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.collision.CollisionResult;
@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ItemPhysicsSystem extends EntityTickingSystem<EntityStore> {
    @Nonnull
@@ -82,7 +83,7 @@ public class ItemPhysicsSystem extends EntityTickingSystem<EntityStore> {
       Vector3d position = transformComponent.getPosition();
       Vector3d scaledVelocity = itemPhysicsComponent.scaledVelocity;
       CollisionResult collisionResult = itemPhysicsComponent.collisionResult;
-      velocityComponent.assignVelocityTo(scaledVelocity).scale(dt);
+      velocityComponent.assignVelocityTo(scaledVelocity).mul(dt);
       BoundingBox boundingBoxComponent = archetypeChunk.getComponent(index, this.boundingBoxComponentType);
 
       assert boundingBoxComponent != null;
@@ -96,22 +97,22 @@ public class ItemPhysicsSystem extends EntityTickingSystem<EntityStore> {
 
       BlockCollisionData blockCollisionData = collisionResult.getFirstBlockCollision();
       if (blockCollisionData != null) {
-         if (blockCollisionData.collisionNormal.equals(Vector3d.UP)) {
+         if (blockCollisionData.collisionNormal.equals(Vector3dUtil.UP)) {
             velocityComponent.setZero();
-            position.assign(blockCollisionData.collisionPoint);
+            position.set(blockCollisionData.collisionPoint);
          } else {
             Vector3d velocity = velocityComponent.getVelocity();
             double dot = velocity.dot(blockCollisionData.collisionNormal);
-            Vector3d velocityToCancel = blockCollisionData.collisionNormal.clone().scale(dot);
-            velocity.subtract(velocityToCancel);
+            Vector3d velocityToCancel = new Vector3d(blockCollisionData.collisionNormal).mul(dot);
+            velocity.sub(velocityToCancel);
          }
       } else {
-         velocityComponent.assignVelocityTo(scaledVelocity).scale(dt);
+         velocityComponent.assignVelocityTo(scaledVelocity).mul(dt);
          position.add(scaledVelocity);
       }
 
       collisionResult.reset();
-      if (position.getY() < -32.0) {
+      if (position.y() < -32.0) {
          LOGGER.at(Level.WARNING).log("Item fell out of the world %s", archetypeChunk.getReferenceTo(index));
          commandBuffer.removeEntity(archetypeChunk.getReferenceTo(index), RemoveReason.REMOVE);
       }

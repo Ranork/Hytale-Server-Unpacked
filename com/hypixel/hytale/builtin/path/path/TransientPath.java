@@ -1,9 +1,8 @@
 package com.hypixel.hytale.builtin.path.path;
 
 import com.hypixel.hytale.builtin.path.waypoint.RelativeWaypointDefinition;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.modules.physics.util.PhysicsMath;
 import com.hypixel.hytale.server.core.universe.world.path.IPath;
 import com.hypixel.hytale.server.core.universe.world.path.SimplePathWaypoint;
@@ -14,15 +13,16 @@ import java.util.Queue;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class TransientPath implements IPath<SimplePathWaypoint> {
    protected final List<SimplePathWaypoint> waypoints = new ObjectArrayList();
 
-   public void addWaypoint(@Nonnull Vector3d position, @Nonnull Vector3f rotation) {
+   public void addWaypoint(@Nonnull Vector3d position, @Nonnull Rotation3f rotation) {
       this.waypoints
          .add(
             new SimplePathWaypoint(
-               (short)this.waypoints.size(), new Transform(position.x, position.y, position.z, rotation.getPitch(), rotation.getYaw(), rotation.getRoll())
+               (short)this.waypoints.size(), new Transform(position.x, position.y, position.z, rotation.pitch(), rotation.yaw(), rotation.roll())
             )
          );
    }
@@ -56,19 +56,19 @@ public class TransientPath implements IPath<SimplePathWaypoint> {
 
    @Nonnull
    public static IPath<SimplePathWaypoint> buildPath(
-      @Nonnull Vector3d origin, @Nonnull Vector3f rotation, @Nonnull Queue<RelativeWaypointDefinition> instructions, double scale
+      @Nonnull Vector3d origin, @Nonnull Rotation3f rotation, @Nonnull Queue<RelativeWaypointDefinition> instructions, double scale
    ) {
       TransientPath path = new TransientPath();
       path.addWaypoint(origin, rotation);
       Vector3d position = new Vector3d(origin);
       Vector3d directionVector = new Vector3d();
-      Vector3f rotationVector = new Vector3f(rotation);
+      Rotation3f rotationVector = new Rotation3f(rotation);
 
       while (!instructions.isEmpty()) {
          RelativeWaypointDefinition instruction = instructions.poll();
          rotationVector.addYaw(instruction.getRotation());
-         directionVector.assign(PhysicsMath.headingX(rotationVector.getYaw()), 0.0, PhysicsMath.headingZ(rotationVector.getYaw()));
-         directionVector.setLength(instruction.getDistance() * scale);
+         directionVector.set(PhysicsMath.headingX(rotationVector.yaw()), 0.0, PhysicsMath.headingZ(rotationVector.yaw()));
+         directionVector.normalize(instruction.getDistance() * scale);
          position.add(directionVector);
          path.addWaypoint(position, rotationVector);
       }

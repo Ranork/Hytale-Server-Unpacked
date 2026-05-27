@@ -1,25 +1,26 @@
 package com.hypixel.hytale.math.hitdetection;
 
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.shape.Quad4d;
 import com.hypixel.hytale.math.shape.Triangle4d;
-import com.hypixel.hytale.math.vector.Vector4d;
+import com.hypixel.hytale.math.vector.Vector4dUtil;
 import java.util.Arrays;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Matrix4d;
+import org.joml.Vector4d;
 
 public class HitDetectionExecutor {
    public static final HytaleLogger log = HytaleLogger.forEnclosingClass();
    private static final Vector4d[] VERTEX_POINTS = new Vector4d[]{
-      Vector4d.newPosition(0.0, 1.0, 1.0),
-      Vector4d.newPosition(0.0, 1.0, 0.0),
-      Vector4d.newPosition(1.0, 1.0, 1.0),
-      Vector4d.newPosition(1.0, 1.0, 0.0),
-      Vector4d.newPosition(0.0, 0.0, 1.0),
-      Vector4d.newPosition(0.0, 0.0, 0.0),
-      Vector4d.newPosition(1.0, 0.0, 1.0),
-      Vector4d.newPosition(1.0, 0.0, 0.0)
+      new Vector4d(0.0, 1.0, 1.0, 1.0),
+      new Vector4d(0.0, 1.0, 0.0, 1.0),
+      new Vector4d(1.0, 1.0, 1.0, 1.0),
+      new Vector4d(1.0, 1.0, 0.0, 1.0),
+      new Vector4d(0.0, 0.0, 1.0, 1.0),
+      new Vector4d(0.0, 0.0, 0.0, 1.0),
+      new Vector4d(1.0, 0.0, 1.0, 1.0),
+      new Vector4d(1.0, 0.0, 0.0, 1.0)
    };
    public static final Quad4d[] CUBE_QUADS = new Quad4d[]{
       new Quad4d(VERTEX_POINTS, 0, 1, 3, 2),
@@ -34,7 +35,7 @@ public class HitDetectionExecutor {
    @Nonnull
    private final Matrix4d invPvMatrix = new Matrix4d();
    @Nonnull
-   private final Vector4d origin = new Vector4d();
+   private final Vector4d origin = new Vector4d().zero();
    @Nonnull
    private final HitDetectionBuffer buffer = new HitDetectionBuffer();
    private MatrixProvider projectionProvider;
@@ -72,16 +73,16 @@ public class HitDetectionExecutor {
 
    @Nonnull
    public HitDetectionExecutor setOrigin(double x, double y, double z) {
-      this.origin.assign(x, y, z, 1.0);
+      this.origin.set(x, y, z, 1.0);
       return this;
    }
 
    private void setupMatrices(@Nonnull Matrix4d modelMatrix) {
       Matrix4d projectionMatrix = this.projectionProvider.getMatrix();
       Matrix4d viewMatrix = this.viewProvider.getMatrix();
-      this.pvmMatrix.assign(projectionMatrix).multiply(viewMatrix);
-      this.invPvMatrix.assign(this.pvmMatrix).invert();
-      this.pvmMatrix.multiply(modelMatrix);
+      this.pvmMatrix.set(projectionMatrix).mul(viewMatrix);
+      this.invPvMatrix.set(this.pvmMatrix).invert();
+      this.pvmMatrix.mul(modelMatrix);
    }
 
    public boolean test(@Nonnull Vector4d point, @Nonnull Matrix4d modelMatrix) {
@@ -104,13 +105,13 @@ public class HitDetectionExecutor {
    }
 
    private boolean testPoint(@Nonnull Vector4d point) {
-      this.pvmMatrix.multiply(point, this.buffer.transformedPoint);
-      if (!this.buffer.transformedPoint.isInsideFrustum()) {
+      this.pvmMatrix.transform(point, this.buffer.transformedPoint);
+      if (!Vector4dUtil.isInsideFrustum(this.buffer.transformedPoint)) {
          return false;
       } else {
          Vector4d hit = this.buffer.transformedPoint;
-         this.invPvMatrix.multiply(hit);
-         hit.perspectiveTransform();
+         this.invPvMatrix.transform(hit);
+         Vector4dUtil.perspectiveTransform(hit);
          return this.losProvider.test(this.origin.x, this.origin.y, this.origin.z, hit.x, hit.y, hit.z);
       }
    }
@@ -133,15 +134,15 @@ public class HitDetectionExecutor {
                this.buffer.visibleTriangle.getRandom(this.buffer.random, hit);
             }
 
-            this.invPvMatrix.multiply(hit);
-            hit.perspectiveTransform();
+            this.invPvMatrix.transform(hit);
+            Vector4dUtil.perspectiveTransform(hit);
             double dx = this.origin.x - hit.x;
             double dy = this.origin.y - hit.y;
             double dz = this.origin.z - hit.z;
             double distanceSquared = dx * dx + dy * dy + dz * dz;
             if (!(distanceSquared >= minDistanceSquared) && this.losProvider.test(this.origin.x, this.origin.y, this.origin.z, hit.x, hit.y, hit.z)) {
                minDistanceSquared = distanceSquared;
-               this.buffer.hitPosition.assign(hit);
+               this.buffer.hitPosition.set(hit);
             }
          }
       }
@@ -160,10 +161,10 @@ public class HitDetectionExecutor {
          Vector4dBufferList auxillaryList = this.buffer.vertexList2;
          vertices.clear();
          auxillaryList.clear();
-         vertices.next().assign(quad.getA());
-         vertices.next().assign(quad.getB());
-         vertices.next().assign(quad.getC());
-         vertices.next().assign(quad.getD());
+         vertices.next().set(quad.getA());
+         vertices.next().set(quad.getB());
+         vertices.next().set(quad.getC());
+         vertices.next().set(quad.getD());
          if (this.clipPolygonAxis(0) && this.clipPolygonAxis(1) && this.clipPolygonAxis(2)) {
             Vector4d initialVertex = vertices.get(0);
             int i = 1;
@@ -207,7 +208,7 @@ public class HitDetectionExecutor {
          }
 
          if (inside) {
-            result.next().assign(vertex);
+            result.next().set(vertex);
          }
 
          previousVertex = vertex;

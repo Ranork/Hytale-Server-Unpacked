@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.worldgen.zoom;
 
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.server.worldgen.util.LogUtil;
 import com.hypixel.hytale.server.worldgen.zone.Zone;
 import java.awt.image.BufferedImage;
@@ -12,6 +11,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2i;
 
 public class ExactZoom {
    @Nonnull

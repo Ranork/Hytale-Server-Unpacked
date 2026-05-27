@@ -3,7 +3,7 @@ package com.hypixel.hytale.server.worldgen.cave;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.procedurallib.condition.ConstantIntCondition;
 import com.hypixel.hytale.procedurallib.condition.DefaultCoordinateCondition;
 import com.hypixel.hytale.procedurallib.condition.ICoordinateCondition;
@@ -23,6 +23,7 @@ import com.hypixel.hytale.server.worldgen.util.condition.flag.Int2FlagsCondition
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class CaveGenerator {
    private final CaveType[] caveTypes;
@@ -157,12 +158,12 @@ public class CaveGenerator {
    protected Vector3d getChildOrigin(@Nonnull CaveNode parentNode, @Nullable PrefabRotation parentRotation, @Nonnull CaveNodeType.CaveNodeChildEntry childEntry) {
       Vector3d vector = parentNode.getEnd();
       Vector3d anchor = childEntry.getAnchor();
-      if (anchor == Vector3d.ZERO) {
+      if (anchor.equals(Vector3dUtil.ZERO)) {
          return vector;
       } else {
-         vector.assign(anchor);
+         vector.set(anchor);
          if (parentRotation != null && parentRotation != PrefabRotation.ROTATION_0) {
-            vector.subtract(0.5, 0.5, 0.5);
+            vector.sub(0.5, 0.5, 0.5);
             parentRotation.rotate(vector);
             vector.add(0.5, 0.5, 0.5);
          }
@@ -263,8 +264,8 @@ public class CaveGenerator {
       } else if (mask == CaveBiomeMaskFlags.DEFAULT_DENY) {
          return 0;
       } else {
-         int x = MathUtil.floor(vec.getX());
-         int z = MathUtil.floor(vec.getZ());
+         int x = MathUtil.floor(vec.x());
+         int z = MathUtil.floor(vec.z());
          ZoneBiomeResult biomeResult = chunkGenerator.getZoneBiomeResultAt(seed, x, z);
          return mask.eval(biomeResult.getBiome().getId());
       }

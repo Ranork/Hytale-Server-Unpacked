@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -34,17 +37,21 @@ public class ForkedChainId {
 
    @Nonnull
    public static ForkedChainId deserialize(@Nonnull ByteBuf buf, int offset) {
-      ForkedChainId obj = new ForkedChainId();
-      byte nullBits = buf.getByte(offset);
-      obj.entryIndex = buf.getIntLE(offset + 1);
-      obj.subIndex = buf.getIntLE(offset + 5);
-      int pos = offset + 9;
-      if ((nullBits & 1) != 0) {
-         obj.forkedId = deserialize(buf, pos);
-         pos += computeBytesConsumed(buf, pos);
-      }
+      if (buf.readableBytes() - offset < 9) {
+         throw ProtocolException.bufferTooSmall("ForkedChainId", 9, buf.readableBytes() - offset);
+      } else {
+         ForkedChainId obj = new ForkedChainId();
+         byte nullBits = buf.getByte(offset);
+         obj.entryIndex = buf.getIntLE(offset + 1);
+         obj.subIndex = buf.getIntLE(offset + 5);
+         int pos = offset + 9;
+         if ((nullBits & 1) != 0) {
+            obj.forkedId = deserialize(buf, pos);
+            pos += computeBytesConsumed(buf, pos);
+         }
 
-      return obj;
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -55,6 +62,57 @@ public class ForkedChainId {
       }
 
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 9L;
+   }
+
+   public static int getEntryIndex(MemorySegment mem) {
+      return getEntryIndex(mem, 0);
+   }
+
+   public static int getEntryIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 1));
+   }
+
+   public static int getSubIndex(MemorySegment mem) {
+      return getSubIndex(mem, 0);
+   }
+
+   public static int getSubIndex(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 5));
+   }
+
+   @Nullable
+   public static ForkedChainId getForkedId(MemorySegment mem) {
+      return getForkedId(mem, 0);
+   }
+
+   @Nullable
+   public static ForkedChainId getForkedId(MemorySegment mem, int offset) {
+      return hasForkedId(mem, offset) ? toObject(mem, offset + 9) : null;
+   }
+
+   public static boolean hasForkedId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static ForkedChainId toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static ForkedChainId toObject(MemorySegment mem, int offset) {
+      if (offset + 9 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("ForkedChainId", offset + 9, (int)mem.byteSize());
+      } else {
+         return new ForkedChainId(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 1)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 5)),
+            hasForkedId(mem, offset) ? toObject(mem, offset + 9) : null
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -69,6 +127,23 @@ public class ForkedChainId {
       if (this.forkedId != null) {
          this.forkedId.serialize(buf);
       }
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.forkedId != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 1), this.entryIndex);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 5), this.subIndex);
+      int varOffset = offset + 9;
+      if (this.forkedId != null) {
+         varOffset += this.forkedId.serialize(mem, varOffset);
+      }
+
+      return varOffset - offset;
    }
 
    public int computeSize() {

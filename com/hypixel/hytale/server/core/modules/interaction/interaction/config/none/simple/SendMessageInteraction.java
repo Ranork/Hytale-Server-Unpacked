@@ -8,12 +8,10 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
-import com.hypixel.hytale.server.core.receiver.IMessageReceiver;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -53,15 +51,17 @@ public class SendMessageInteraction extends SimpleInstantInteraction {
       assert commandBuffer != null;
 
       Ref<EntityStore> ref = context.getOwningEntity();
-      Entity entity = EntityUtils.getEntity(ref, commandBuffer);
-      if (entity instanceof IMessageReceiver messageReceiver) {
+      PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+      if (playerRefComponent != null) {
          if (this.key != null) {
-            messageReceiver.sendMessage(Message.translation(this.key));
+            playerRefComponent.sendMessage(Message.translation(this.key));
          } else {
-            messageReceiver.sendMessage(Message.raw(this.message));
+            playerRefComponent.sendMessage(Message.raw(this.message));
          }
       } else {
-         HytaleLogger.getLogger().at(Level.INFO).log("SendMessageInteraction: %s for %s", this.message != null ? this.message : this.key, entity);
+         HytaleLogger.getLogger()
+            .at(Level.INFO)
+            .log("SendMessageInteraction: '%s' for entity %s", this.message != null ? this.message : this.key, ref.getIndex());
       }
    }
 

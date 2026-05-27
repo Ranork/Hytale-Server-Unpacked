@@ -1,8 +1,8 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ZOverrideDensity extends Density {
    @Nonnull
@@ -22,7 +22,7 @@ public class ZOverrideDensity extends Density {
 
    @Override
    public double process(@Nonnull Density.Context context) {
-      this.rChildPosition.assign(context.position.x, context.position.y, this.value);
+      this.rChildPosition.set(context.position.x, context.position.y, this.value);
       this.rChildContext.assign(context);
       this.rChildContext.position = this.rChildPosition;
       return this.input.process(this.rChildContext);

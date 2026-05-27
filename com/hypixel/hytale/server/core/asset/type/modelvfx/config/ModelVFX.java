@@ -14,15 +14,16 @@ import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.ValidatorCache;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.math.vector.Vector2fUtil;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.CurveType;
 import com.hypixel.hytale.protocol.EffectDirection;
 import com.hypixel.hytale.protocol.LoopOption;
 import com.hypixel.hytale.protocol.SwitchTo;
-import com.hypixel.hytale.protocol.Vector2f;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
+import org.joml.Vector2f;
 
 public class ModelVFX
    implements JsonAssetWithMap<String, IndexedLookupTableAssetMap<String, ModelVFX>>,
@@ -47,7 +48,7 @@ public class ModelVFX
       .addValidator(Validators.nonNull())
       .add()
       .addField(new KeyedCodec<>("AnimationDuration", Codec.FLOAT), (modelVFX, d) -> modelVFX.animationDuration = d, modelVFX -> modelVFX.animationDuration)
-      .addField(new KeyedCodec<>("AnimationRange", ProtocolCodecs.VECTOR2F), (modelVFX, d) -> modelVFX.animationRange = d, modelVFX -> modelVFX.animationRange)
+      .addField(new KeyedCodec<>("AnimationRange", Vector2fUtil.CODEC), (modelVFX, d) -> modelVFX.animationRange = d, modelVFX -> modelVFX.animationRange)
       .<LoopOption>append(
          new KeyedCodec<>("LoopOption", new EnumCodec<>(LoopOption.class)), (modelVFX, s) -> modelVFX.loopOption = s, modelVFX -> modelVFX.loopOption
       )
@@ -68,10 +69,8 @@ public class ModelVFX
          (modelVFX, b) -> modelVFX.useProgressiveHighlight = b,
          modelVFX -> modelVFX.useProgressiveHighlight
       )
-      .addField(new KeyedCodec<>("NoiseScale", ProtocolCodecs.VECTOR2F), (modelVFX, d) -> modelVFX.noiseScale = d, modelVFX -> modelVFX.noiseScale)
-      .addField(
-         new KeyedCodec<>("NoiseScrollSpeed", ProtocolCodecs.VECTOR2F), (modelVFX, d) -> modelVFX.noiseScrollSpeed = d, modelVFX -> modelVFX.noiseScrollSpeed
-      )
+      .addField(new KeyedCodec<>("NoiseScale", Vector2fUtil.CODEC), (modelVFX, d) -> modelVFX.noiseScale = d, modelVFX -> modelVFX.noiseScale)
+      .addField(new KeyedCodec<>("NoiseScrollSpeed", Vector2fUtil.CODEC), (modelVFX, d) -> modelVFX.noiseScrollSpeed = d, modelVFX -> modelVFX.noiseScrollSpeed)
       .addField(new KeyedCodec<>("PostColor", ProtocolCodecs.COLOR), (modelVFX, o) -> modelVFX.postColor = o, modelVFX -> modelVFX.postColor)
       .<Float>append(new KeyedCodec<>("PostColorOpacity", Codec.FLOAT), (modelVFX, d) -> modelVFX.postColorOpacity = d, modelVFX -> modelVFX.postColorOpacity)
       .addValidator(Validators.range(0.0F, 1.0F))

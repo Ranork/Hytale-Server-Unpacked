@@ -2,12 +2,18 @@ package com.hypixel.hytale.server.npc.movement.controllers;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.server.core.modules.collision.CollisionConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.function.Predicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class ProbeMoveData {
    @Nonnull
@@ -20,13 +26,15 @@ public class ProbeMoveData {
    public final Vector3d targetPosition;
    @Nonnull
    public final Vector3d directionComponentSelector;
-   public boolean isAvoidingBlockDamage = true;
-   public boolean isRelaxedMoveConstraints = false;
-   public boolean onGround;
-   public boolean isSavingSegments = false;
-   public int segmentCount = 0;
+   private final EnumSet<RelaxedConstraint> relaxedConstraints = EnumSet.noneOf(RelaxedConstraint.class);
    @Nullable
-   public ProbeMoveData.Segment[] segments = null;
+   private Predicate<CollisionConfig> blockCollisionFilter;
+   public boolean edgeBlocked;
+   public boolean isSavingSegments;
+   public int segmentCount;
+   @Nullable
+   public ProbeMoveData.Segment[] segments;
+   public boolean debugCollision;
 
    public ProbeMoveData() {
       this.probeDirection = new Vector3d();
@@ -47,40 +55,43 @@ public class ProbeMoveData {
       }
    }
 
-   public boolean isAvoidingBlockDamage() {
-      return this.isAvoidingBlockDamage;
+   @Nonnull
+   public EnumSet<RelaxedConstraint> getRelaxedConstraints() {
+      return this.relaxedConstraints;
    }
 
-   public void setAvoidingBlockDamage(boolean avoid) {
-      this.isAvoidingBlockDamage = avoid;
+   public void setRelaxedConstraints(@Nonnull EnumSet<RelaxedConstraint> constraints) {
+      this.relaxedConstraints.clear();
+      this.relaxedConstraints.addAll(constraints);
    }
 
-   public boolean isRelaxedMoveConstraints() {
-      return this.isRelaxedMoveConstraints;
+   @Nullable
+   public Predicate<CollisionConfig> getBlockCollisionFilter() {
+      return this.blockCollisionFilter;
    }
 
-   public void setRelaxedMoveConstraints(boolean relaxedMoveConstraints) {
-      this.isRelaxedMoveConstraints = relaxedMoveConstraints;
+   public void setBlockCollisionFilter(@Nullable Predicate<CollisionConfig> filter) {
+      this.blockCollisionFilter = filter;
    }
 
    @Nonnull
-   public ProbeMoveData setPosition(@Nonnull Vector3d position) {
-      this.probePosition.assign(position);
-      this.initialPosition.assign(position);
+   public ProbeMoveData setPosition(@Nonnull Vector3dc position) {
+      this.probePosition.set(position);
+      this.initialPosition.set(position);
       return this;
    }
 
    @Nonnull
-   public ProbeMoveData setDirection(@Nonnull Vector3d direction) {
-      this.probeDirection.assign(direction);
-      this.targetPosition.assign(this.probePosition).add(this.probeDirection);
+   public ProbeMoveData setDirection(@Nonnull Vector3dc direction) {
+      this.probeDirection.set(direction);
+      this.targetPosition.set(this.probePosition).add(this.probeDirection);
       return this;
    }
 
    @Nonnull
-   public ProbeMoveData setTargetPosition(@Nonnull Vector3d targetPosition) {
-      this.targetPosition.assign(targetPosition);
-      this.probeDirection.assign(targetPosition).subtract(this.probePosition);
+   public ProbeMoveData setTargetPosition(@Nonnull Vector3dc targetPosition) {
+      this.targetPosition.set(targetPosition);
+      this.probeDirection.set(targetPosition).sub(this.probePosition);
       return this;
    }
 
@@ -129,7 +140,7 @@ public class ProbeMoveData {
       if (this.segmentCount < 2) {
          return false;
       } else if (distance <= 0.0) {
-         result.assign(this.segments[0].position);
+         result.set(this.segments[0].position);
          return true;
       } else {
          int index = 1;
@@ -145,20 +156,21 @@ public class ProbeMoveData {
          }
 
          if (segment.distance <= distance) {
-            result.assign(segment.position);
+            result.set(segment.position);
             return true;
          } else if (segment.type.canInterpolate()) {
             double lambda = (distance - prevSegment.distance) / (segment.distance - prevSegment.distance);
             NPCPhysicsMath.lerp(prevSegment.position, segment.position, lambda, result);
             return true;
          } else {
-            result.assign(prevSegment.position);
+            result.set(prevSegment.position);
             return true;
          }
       }
    }
 
    public boolean startProbing() {
+      this.edgeBlocked = false;
       if (this.isSavingSegments) {
          this.segmentCount = 0;
       }
@@ -166,35 +178,35 @@ public class ProbeMoveData {
       return this.isSavingSegments;
    }
 
-   public void addStartSegment(@Nonnull Vector3d position, boolean onGround) {
+   public void addStartSegment(@Nonnull Vector3dc position, boolean onGround) {
       this.newSegment().initAsStartSegment(position, onGround);
    }
 
-   public void addEndSegment(@Nonnull Vector3d position, boolean onGround, double distance) {
+   public void addEndSegment(@Nonnull Vector3dc position, boolean onGround, double distance) {
       this.newSegment().initAsEndSegment(position, onGround, distance);
    }
 
-   public void addBlockedGroundSegment(@Nonnull Vector3d position, double distance, @Nonnull Vector3d normal, int blockId) {
+   public void addBlockedGroundSegment(@Nonnull Vector3dc position, double distance, @Nonnull Vector3dc normal, int blockId) {
       this.newSegment().initAsBlockedGroundSegment(position, distance, normal, blockId);
    }
 
-   public void addHitGroundSegment(@Nonnull Vector3d position, double distance, @Nonnull Vector3d normal, int blockId) {
+   public void addHitGroundSegment(@Nonnull Vector3dc position, double distance, @Nonnull Vector3dc normal, int blockId) {
       this.newSegment().initAsHitGroundSegment(position, distance, normal, blockId);
    }
 
-   public void addHitWallSegment(@Nonnull Vector3d position, boolean onGround, double distance, @Nonnull Vector3d normal, int blockId) {
+   public void addHitWallSegment(@Nonnull Vector3dc position, boolean onGround, double distance, @Nonnull Vector3dc normal, int blockId) {
       this.newSegment().initAsHitWallSegment(position, onGround, distance, normal, blockId);
    }
 
-   public void addMoveSegment(@Nonnull Vector3d position, boolean onGround, double distance) {
+   public void addMoveSegment(@Nonnull Vector3dc position, boolean onGround, double distance) {
       this.newSegment().initAsMoveSegment(position, onGround, distance);
    }
 
-   public void addClimbSegment(@Nonnull Vector3d position, double distance, int blockId) {
+   public void addClimbSegment(@Nonnull Vector3dc position, double distance, int blockId) {
       this.newSegment().initAsClimbSegment(position, distance, blockId);
    }
 
-   public void addHitEdgeSegment(@Nonnull Vector3d position, double distance) {
+   public void addHitEdgeSegment(@Nonnull Vector3dc position, double distance) {
       this.newSegment().initAsHitEdgeSegment(position, distance);
    }
 
@@ -203,6 +215,7 @@ public class ProbeMoveData {
    }
 
    public void addBlockedDropSegment(@Nonnull Vector3d position, double distance) {
+      this.edgeBlocked = true;
       this.newSegment().initAsBlockedDropSegment(position, distance);
    }
 
@@ -211,11 +224,81 @@ public class ProbeMoveData {
    }
 
    public void changeSegmentToBlockedEdge() {
+      this.edgeBlocked = true;
       this.segments[this.segmentCount - 1].type = ProbeMoveData.Segment.Type.BLOCKED_EDGE;
    }
 
    public double getLastDistance() {
       return this.segments[this.segmentCount - 1].distance;
+   }
+
+   @Nonnull
+   public String dump() {
+      StringBuilder sb = new StringBuilder();
+      sb.append("ProbeMoveData")
+         .append("\nprobePosition=")
+         .append(Vector3dUtil.formatShortString(this.probePosition))
+         .append(", probeDirection=")
+         .append(Vector3dUtil.formatShortString(this.probeDirection))
+         .append(", initialPosition=")
+         .append(Vector3dUtil.formatShortString(this.initialPosition))
+         .append(", targetPosition=")
+         .append(Vector3dUtil.formatShortString(this.targetPosition))
+         .append("\ndirectionComponentSelector=")
+         .append(Vector3dUtil.formatShortString(this.directionComponentSelector))
+         .append(", edgeBlocked=")
+         .append(this.edgeBlocked)
+         .append(", isSavingSegments=")
+         .append(this.isSavingSegments)
+         .append(", segmentCount=")
+         .append(this.segmentCount)
+         .append("\nrelaxedConstraints=")
+         .append(this.relaxedConstraints)
+         .append(", blockCollisionFilter=")
+         .append(this.blockCollisionFilter != null ? "set" : "none");
+      if (this.segments != null && this.segmentCount > 0) {
+         int maxIndex = Math.min(this.segmentCount, this.segments.length);
+         if (maxIndex <= 0) {
+            sb.append("\nsegments=none");
+            return sb.toString();
+         } else {
+            sb.append("\nsegments:");
+
+            for (int i = 0; i < maxIndex; i++) {
+               ProbeMoveData.Segment segment = this.segments[i];
+               if (segment == null) {
+                  sb.append("\nsegment[").append(i).append("]=null");
+               } else {
+                  sb.append("\nsegment[")
+                     .append(i)
+                     .append("]: type=")
+                     .append(segment.type)
+                     .append(", distance=")
+                     .append(segment.distance)
+                     .append(", onGround=")
+                     .append(segment.onGround)
+                     .append(", blockId=")
+                     .append(segment.blockId)
+                     .append(", position=")
+                     .append(Vector3dUtil.formatShortString(segment.position))
+                     .append(", normal=")
+                     .append(Vector3dUtil.formatShortString(segment.normal));
+                  if (segment.type == ProbeMoveData.Segment.Type.CLIMB
+                     || segment.type == ProbeMoveData.Segment.Type.DROP
+                     || segment.type == ProbeMoveData.Segment.Type.BLOCKED_DROP) {
+                     ProbeMoveData.Segment previousSegment = i > 0 ? this.segments[i - 1] : null;
+                     double previousY = previousSegment != null ? previousSegment.position.y : this.initialPosition.y;
+                     sb.append(", dy=").append(segment.position.y - previousY);
+                  }
+               }
+            }
+
+            return sb.toString();
+         }
+      } else {
+         sb.append("\nsegments=none");
+         return sb.toString();
+      }
    }
 
    protected ProbeMoveData.Segment newSegment() {
@@ -238,91 +321,91 @@ public class ProbeMoveData {
       public boolean onGround;
       public int blockId;
 
-      public void initAsStartSegment(@Nonnull Vector3d position, boolean onGround) {
+      public void initAsStartSegment(@Nonnull Vector3dc position, boolean onGround) {
          this.type = ProbeMoveData.Segment.Type.START;
-         this.position.assign(position);
-         this.normal.assign(Vector3d.ZERO);
+         this.position.set(position);
+         this.normal.zero();
          this.distance = 0.0;
          this.onGround = onGround;
          this.blockId = Integer.MIN_VALUE;
       }
 
-      public void initAsEndSegment(@Nonnull Vector3d position, boolean onGround, double distance) {
+      public void initAsEndSegment(@Nonnull Vector3dc position, boolean onGround, double distance) {
          this.type = ProbeMoveData.Segment.Type.END;
-         this.position.assign(position);
-         this.normal.assign(Vector3d.ZERO);
+         this.position.set(position);
+         this.normal.zero();
          this.distance = distance;
          this.onGround = onGround;
          this.blockId = Integer.MIN_VALUE;
       }
 
-      public void initAsBlockedGroundSegment(@Nonnull Vector3d position, double distance, @Nonnull Vector3d normal, int blockId) {
+      public void initAsBlockedGroundSegment(@Nonnull Vector3dc position, double distance, @Nonnull Vector3dc normal, int blockId) {
          this.type = ProbeMoveData.Segment.Type.BLOCKED_GROUND;
-         this.position.assign(position);
-         this.normal.assign(normal);
+         this.position.set(position);
+         this.normal.set(normal);
          this.distance = distance;
          this.onGround = true;
          this.blockId = blockId;
       }
 
-      public void initAsHitGroundSegment(@Nonnull Vector3d position, double distance, @Nonnull Vector3d normal, int blockId) {
+      public void initAsHitGroundSegment(@Nonnull Vector3dc position, double distance, @Nonnull Vector3dc normal, int blockId) {
          this.type = ProbeMoveData.Segment.Type.HIT_GROUND;
-         this.position.assign(position);
-         this.normal.assign(normal);
+         this.position.set(position);
+         this.normal.set(normal);
          this.distance = distance;
          this.onGround = true;
          this.blockId = blockId;
       }
 
-      public void initAsHitWallSegment(@Nonnull Vector3d position, boolean onGround, double distance, @Nonnull Vector3d normal, int blockId) {
+      public void initAsHitWallSegment(@Nonnull Vector3dc position, boolean onGround, double distance, @Nonnull Vector3dc normal, int blockId) {
          this.type = ProbeMoveData.Segment.Type.HIT_WALL;
-         this.position.assign(position);
-         this.normal.assign(normal);
+         this.position.set(position);
+         this.normal.set(normal);
          this.distance = distance;
          this.onGround = onGround;
          this.blockId = blockId;
       }
 
-      public void initAsClimbSegment(@Nonnull Vector3d position, double distance, int blockId) {
+      public void initAsClimbSegment(@Nonnull Vector3dc position, double distance, int blockId) {
          this.type = ProbeMoveData.Segment.Type.CLIMB;
-         this.position.assign(position);
-         this.normal.assign(Vector3d.ZERO);
+         this.position.set(position);
+         this.normal.zero();
          this.distance = distance;
          this.onGround = true;
          this.blockId = blockId;
       }
 
-      public void initAsMoveSegment(@Nonnull Vector3d position, boolean onGround, double distance) {
+      public void initAsMoveSegment(@Nonnull Vector3dc position, boolean onGround, double distance) {
          this.type = ProbeMoveData.Segment.Type.MOVE;
-         this.position.assign(position);
-         this.normal.assign(Vector3d.ZERO);
+         this.position.set(position);
+         this.normal.zero();
          this.distance = distance;
          this.onGround = onGround;
          this.blockId = Integer.MIN_VALUE;
       }
 
-      public void initAsDropSegment(@Nonnull Vector3d position, double distance) {
+      public void initAsDropSegment(@Nonnull Vector3dc position, double distance) {
          this.type = ProbeMoveData.Segment.Type.DROP;
-         this.position.assign(position);
-         this.normal.assign(Vector3d.ZERO);
+         this.position.set(position);
+         this.normal.zero();
          this.distance = distance;
          this.onGround = true;
          this.blockId = Integer.MIN_VALUE;
       }
 
-      public void initAsBlockedDropSegment(@Nonnull Vector3d position, double distance) {
+      public void initAsBlockedDropSegment(@Nonnull Vector3dc position, double distance) {
          this.type = ProbeMoveData.Segment.Type.BLOCKED_DROP;
-         this.position.assign(position);
-         this.normal.assign(Vector3d.ZERO);
+         this.position.set(position);
+         this.normal.zero();
          this.distance = distance;
          this.onGround = false;
          this.blockId = Integer.MIN_VALUE;
       }
 
-      public void initAsHitEdgeSegment(@Nonnull Vector3d position, double distance) {
+      public void initAsHitEdgeSegment(@Nonnull Vector3dc position, double distance) {
          this.type = ProbeMoveData.Segment.Type.HIT_EDGE;
-         this.position.assign(position);
-         this.normal.assign(Vector3d.ZERO);
+         this.position.set(position);
+         this.normal.zero();
          this.distance = distance;
          this.onGround = true;
          this.blockId = Integer.MIN_VALUE;

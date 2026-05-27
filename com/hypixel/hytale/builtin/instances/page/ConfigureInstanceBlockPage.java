@@ -8,8 +8,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.protocol.packets.interface_.Page;
@@ -29,6 +28,7 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ConfigureInstanceBlockPage extends InteractiveCustomUIPage<ConfigureInstanceBlockPage.PageData> {
    @Nonnull
@@ -38,14 +38,14 @@ public class ConfigureInstanceBlockPage extends InteractiveCustomUIPage<Configur
    @Nullable
    private Vector3d positionOffset;
    @Nullable
-   private Vector3f rotation;
+   private Rotation3f rotation;
 
    public ConfigureInstanceBlockPage(@Nonnull PlayerRef playerRef, @Nonnull Ref<ChunkStore> ref) {
       super(playerRef, CustomPageLifetime.CanDismissOrCloseThroughInteraction, ConfigureInstanceBlockPage.PageData.CODEC);
       this.instanceBlock = ref.getStore().getComponent(ref, ConfigurableInstanceBlock.getComponentType());
       this.ref = ref;
-      this.positionOffset = this.instanceBlock.getPositionOffset() != null ? this.instanceBlock.getPositionOffset().clone() : null;
-      this.rotation = this.instanceBlock.getRotation() != null ? this.instanceBlock.getRotation().clone() : null;
+      this.positionOffset = this.instanceBlock.getPositionOffset() != null ? new Vector3d(this.instanceBlock.getPositionOffset()) : null;
+      this.rotation = this.instanceBlock.getRotation() != null ? new Rotation3f(this.instanceBlock.getRotation()) : null;
    }
 
    @Override
@@ -128,7 +128,7 @@ public class ConfigureInstanceBlockPage extends InteractiveCustomUIPage<Configur
             if (data.rotation) {
                this.instanceBlock
                   .setRotation(
-                     new Vector3f(
+                     new Rotation3f(
                         data.rotationPitch * (float) (Math.PI / 180.0),
                         data.rotationYaw * (float) (Math.PI / 180.0),
                         data.rotationRoll * (float) (Math.PI / 180.0)
@@ -155,7 +155,7 @@ public class ConfigureInstanceBlockPage extends InteractiveCustomUIPage<Configur
             break;
          case Rotation:
             if (data.rotation) {
-               this.rotation = new Vector3f();
+               this.rotation = new Rotation3f();
             } else {
                this.rotation = null;
             }

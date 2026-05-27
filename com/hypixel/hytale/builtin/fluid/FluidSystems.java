@@ -26,9 +26,7 @@ import com.hypixel.hytale.protocol.packets.world.SetFluidCmd;
 import com.hypixel.hytale.server.core.asset.type.blocktick.BlockTickStrategy;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.asset.type.fluid.FluidTicker;
-import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
-import com.hypixel.hytale.server.core.modules.migrations.ChunkColumnMigrationSystem;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
@@ -135,75 +133,6 @@ public class FluidSystems {
       @Override
       public Query<ChunkStore> getQuery() {
          return this.chunkColumnComponentType;
-      }
-   }
-
-   public static class MigrateFromColumn extends ChunkColumnMigrationSystem {
-      @Nonnull
-      private final ComponentType<ChunkStore, ChunkColumn> chunkColumnComponentType;
-      @Nonnull
-      private final ComponentType<ChunkStore, BlockChunk> blockChunkComponentType;
-      @Nonnull
-      private final ComponentType<ChunkStore, FluidSection> fluidSectionComponentType;
-      @Nonnull
-      private final Query<ChunkStore> query;
-      @Nonnull
-      private final Set<Dependency<ChunkStore>> dependencies = Set.of(new SystemDependency<>(Order.BEFORE, LegacyModule.MigrateLegacySections.class));
-
-      public MigrateFromColumn(
-         @Nonnull ComponentType<ChunkStore, ChunkColumn> chunkColumnComponentType,
-         @Nonnull ComponentType<ChunkStore, BlockChunk> blockChunkComponentType,
-         @Nonnull ComponentType<ChunkStore, FluidSection> fluidSectionComponentType
-      ) {
-         this.chunkColumnComponentType = chunkColumnComponentType;
-         this.blockChunkComponentType = blockChunkComponentType;
-         this.fluidSectionComponentType = fluidSectionComponentType;
-         this.query = Query.and(chunkColumnComponentType, blockChunkComponentType);
-      }
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
-         ChunkColumn chunkColumnComponent = holder.getComponent(this.chunkColumnComponentType);
-
-         assert chunkColumnComponent != null;
-
-         BlockChunk blockChunkComponent = holder.getComponent(this.blockChunkComponentType);
-
-         assert blockChunkComponent != null;
-
-         Holder<ChunkStore>[] sections = chunkColumnComponent.getSectionHolders();
-         if (sections != null) {
-            BlockSection[] legacySections = blockChunkComponent.getMigratedSections();
-            if (legacySections != null) {
-               for (int i = 0; i < sections.length; i++) {
-                  Holder<ChunkStore> section = sections[i];
-                  BlockSection paletteSection = legacySections[i];
-                  if (section != null && paletteSection != null) {
-                     FluidSection fluid = paletteSection.takeMigratedFluid();
-                     if (fluid != null) {
-                        section.putComponent(this.fluidSectionComponentType, fluid);
-                        blockChunkComponent.markNeedsSaving();
-                     }
-                  }
-               }
-            }
-         }
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<ChunkStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<ChunkStore> getQuery() {
-         return this.query;
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<ChunkStore>> getDependencies() {
-         return this.dependencies;
       }
    }
 
@@ -359,8 +288,6 @@ public class FluidSystems {
       private final ComponentType<ChunkStore, FluidSection> fluidSectionComponentType;
       @Nonnull
       private final Query<ChunkStore> query;
-      @Nonnull
-      private final Set<Dependency<ChunkStore>> dependencies = Set.of(new SystemDependency<>(Order.AFTER, FluidSystems.MigrateFromColumn.class));
 
       public SetupSection(
          @Nonnull ComponentType<ChunkStore, ChunkSection> chunkSectionComponentType, @Nonnull ComponentType<ChunkStore, FluidSection> fluidSectionComponentType
@@ -391,12 +318,6 @@ public class FluidSystems {
       @Override
       public Query<ChunkStore> getQuery() {
          return this.query;
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<ChunkStore>> getDependencies() {
-         return this.dependencies;
       }
    }
 

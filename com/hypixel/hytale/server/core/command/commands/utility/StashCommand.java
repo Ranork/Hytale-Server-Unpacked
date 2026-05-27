@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -22,6 +21,7 @@ import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class StashCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -36,6 +36,7 @@ public class StashCommand extends AbstractPlayerCommand {
 
    public StashCommand() {
       super("stash", "server.commands.stash.getDroplist.desc");
+      this.setPermissionGroups("hytale:WorldEditor");
    }
 
    @Override

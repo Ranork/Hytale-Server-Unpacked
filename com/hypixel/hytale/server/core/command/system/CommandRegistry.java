@@ -6,6 +6,7 @@ import com.hypixel.hytale.server.core.plugin.PluginBase;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class CommandRegistry extends Registry<CommandRegistration> {
    private final PluginBase plugin;
@@ -15,12 +16,14 @@ public class CommandRegistry extends Registry<CommandRegistration> {
       this.plugin = plugin;
    }
 
+   @Nullable
    public CommandRegistration registerCommand(@Nonnull AbstractCommand command) {
       this.checkPrecondition();
       if (this.plugin != null) {
          command.setOwner(this.plugin);
       }
 
-      return this.register(CommandManager.get().register(command));
+      CommandRegistration registration = CommandManager.get().register(command);
+      return registration == null ? null : this.register(registration);
    }
 }

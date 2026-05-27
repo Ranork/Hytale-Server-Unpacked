@@ -6,8 +6,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.AndQuery;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -28,7 +26,6 @@ import com.hypixel.hytale.server.core.universe.world.chunk.section.ChunkSection;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.blockpositions.BlockPositionProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.TargetUtil;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
 import com.hypixel.hytale.server.npc.blackboard.view.BlockRegionView;
@@ -39,6 +36,7 @@ import com.hypixel.hytale.server.npc.blackboard.view.interaction.InteractionView
 import com.hypixel.hytale.server.npc.blackboard.view.interaction.ReservationStatus;
 import com.hypixel.hytale.server.npc.blackboard.view.resource.ResourceView;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.BitSet;
@@ -46,7 +44,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.joml.Vector2i;
+import org.joml.Vector3i;
 
 public class NPCBlackboardCommand extends AbstractCommandCollection {
    public NPCBlackboardCommand() {
@@ -306,53 +305,12 @@ public class NPCBlackboardCommand extends AbstractCommandCollection {
       protected void execute(
          @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
       ) {
-         Ref<EntityStore> npcRef = this.getNPCRef(context, store);
-         if (npcRef != null) {
-            NPCEntity npcEntity = store.getComponent(npcRef, NPCEntity.getComponentType());
-
-            assert npcEntity != null;
-
+         Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCCommandUtils.getTargetNpc(context, this.entityArg, store);
+         if (npcPair != null) {
             Blackboard blackBoardResource = store.getResource(Blackboard.getResourceType());
             InteractionView reservationView = blackBoardResource.getView(InteractionView.class, 0L);
-            ReservationStatus reservationStatus = reservationView.getReservationStatus(npcRef, ref, store);
+            ReservationStatus reservationStatus = reservationView.getReservationStatus((Ref<EntityStore>)npcPair.first(), ref, store);
             context.sendMessage(Message.translation("server.commands.npc.blackboard.reservationStatus").param("status", reservationStatus.toString()));
-         }
-      }
-
-      @Nullable
-      private Ref<EntityStore> getNPCRef(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store) {
-         Ref<EntityStore> ref;
-         if (this.entityArg.provided(context)) {
-            ref = this.entityArg.get(store, context);
-         } else {
-            Ref<EntityStore> playerRef = context.senderAsPlayerRef();
-            if (playerRef == null || !playerRef.isValid()) {
-               context.sendMessage(Message.translation("server.commands.errors.playerOrArg").param("option", "entity"));
-               return null;
-            }
-
-            ref = TargetUtil.getTargetEntity(playerRef, store);
-            if (ref == null) {
-               context.sendMessage(Message.translation("server.commands.errors.no_entity_in_view").param("option", "entity"));
-               return null;
-            }
-         }
-
-         if (ref == null) {
-            return null;
-         } else {
-            NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
-            if (npcComponent == null) {
-               UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
-
-               assert uuidComponent != null;
-
-               UUID uuid = uuidComponent.getUuid();
-               context.sendMessage(Message.translation("server.commands.errors.not_npc").param("uuid", uuid.toString()));
-               return null;
-            } else {
-               return ref;
-            }
          }
       }
    }
@@ -380,55 +338,15 @@ public class NPCBlackboardCommand extends AbstractCommandCollection {
          assert uuidComponent != null;
 
          UUID playerUUID = uuidComponent.getUuid();
-         Ref<EntityStore> npcRef = this.getNPCRef(context, store);
-         if (npcRef != null) {
-            NPCEntity npcEntity = store.getComponent(npcRef, NPCEntity.getComponentType());
-
-            assert npcEntity != null;
-
+         Pair<Ref<EntityStore>, NPCEntity> npcPair = NPCCommandUtils.getTargetNpc(context, this.entityArg, store);
+         if (npcPair != null) {
+            NPCEntity npcEntity = (NPCEntity)npcPair.second();
             if (this.reserveArg.get(context)) {
                npcEntity.addReservation(playerUUID);
                context.sendMessage(Message.translation("server.commands.npc.blackboard.roleReserved").param("role", npcEntity.getRoleName()));
             } else {
                npcEntity.removeReservation(playerUUID);
                context.sendMessage(Message.translation("server.commands.npc.blackboard.roleReleased").param("role", npcEntity.getRoleName()));
-            }
-         }
-      }
-
-      @Nullable
-      private Ref<EntityStore> getNPCRef(@Nonnull CommandContext context, @Nonnull Store<EntityStore> store) {
-         Ref<EntityStore> ref;
-         if (this.entityArg.provided(context)) {
-            ref = this.entityArg.get(store, context);
-         } else {
-            Ref<EntityStore> playerRef = context.senderAsPlayerRef();
-            if (playerRef == null || !playerRef.isValid()) {
-               context.sendMessage(Message.translation("server.commands.errors.playerOrArg").param("option", "entity"));
-               return null;
-            }
-
-            ref = TargetUtil.getTargetEntity(playerRef, store);
-            if (ref == null) {
-               context.sendMessage(Message.translation("server.commands.errors.no_entity_in_view").param("option", "entity"));
-               return null;
-            }
-         }
-
-         if (ref == null) {
-            return null;
-         } else {
-            NPCEntity npcComponent = store.getComponent(ref, NPCEntity.getComponentType());
-            if (npcComponent == null) {
-               UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
-
-               assert uuidComponent != null;
-
-               UUID uuid = uuidComponent.getUuid();
-               context.sendMessage(Message.translation("server.commands.errors.not_npc").param("uuid", uuid.toString()));
-               return null;
-            } else {
-               return ref;
             }
          }
       }

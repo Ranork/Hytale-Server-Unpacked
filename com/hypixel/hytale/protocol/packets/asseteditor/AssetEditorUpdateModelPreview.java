@@ -5,8 +5,11 @@ import com.hypixel.hytale.protocol.Model;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToClientPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -15,9 +18,9 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
    public static final int PACKET_ID = 355;
    public static final boolean IS_COMPRESSED = false;
    public static final int NULLABLE_BIT_FIELD_SIZE = 1;
-   public static final int FIXED_BLOCK_SIZE = 30;
+   public static final int FIXED_BLOCK_SIZE = 29;
    public static final int VARIABLE_FIELD_COUNT = 3;
-   public static final int VARIABLE_BLOCK_START = 42;
+   public static final int VARIABLE_BLOCK_START = 41;
    public static final int MAX_SIZE = 1677721600;
    @Nullable
    public AssetPath assetPath;
@@ -59,36 +62,59 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
 
    @Nonnull
    public static AssetEditorUpdateModelPreview deserialize(@Nonnull ByteBuf buf, int offset) {
-      AssetEditorUpdateModelPreview obj = new AssetEditorUpdateModelPreview();
-      byte nullBits = buf.getByte(offset);
-      if ((nullBits & 1) != 0) {
-         obj.camera = AssetEditorPreviewCameraSettings.deserialize(buf, offset + 1);
-      }
+      if (buf.readableBytes() - offset < 41) {
+         throw ProtocolException.bufferTooSmall("AssetEditorUpdateModelPreview", 41, buf.readableBytes() - offset);
+      } else {
+         AssetEditorUpdateModelPreview obj = new AssetEditorUpdateModelPreview();
+         byte nullBits = buf.getByte(offset);
+         if ((nullBits & 1) != 0) {
+            obj.camera = AssetEditorPreviewCameraSettings.deserialize(buf, offset + 1);
+         }
 
-      if ((nullBits & 2) != 0) {
-         int varPos0 = offset + 42 + buf.getIntLE(offset + 30);
-         obj.assetPath = AssetPath.deserialize(buf, varPos0);
-      }
+         if ((nullBits & 2) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 29);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 41) {
+               throw ProtocolException.invalidOffset("AssetPath", varPosBase0, buf.readableBytes());
+            }
 
-      if ((nullBits & 4) != 0) {
-         int varPos1 = offset + 42 + buf.getIntLE(offset + 34);
-         obj.model = Model.deserialize(buf, varPos1);
-      }
+            int varPos0 = offset + 41 + varPosBase0;
+            obj.assetPath = AssetPath.deserialize(buf, varPos0);
+         }
 
-      if ((nullBits & 8) != 0) {
-         int varPos2 = offset + 42 + buf.getIntLE(offset + 38);
-         obj.block = BlockType.deserialize(buf, varPos2);
-      }
+         if ((nullBits & 4) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 33);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 41) {
+               throw ProtocolException.invalidOffset("Model", varPosBase1, buf.readableBytes());
+            }
 
-      return obj;
+            int varPos1 = offset + 41 + varPosBase1;
+            obj.model = Model.deserialize(buf, varPos1);
+         }
+
+         if ((nullBits & 8) != 0) {
+            int varPosBase2 = buf.getIntLE(offset + 37);
+            if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 41) {
+               throw ProtocolException.invalidOffset("Block", varPosBase2, buf.readableBytes());
+            }
+
+            int varPos2 = offset + 41 + varPosBase2;
+            obj.block = BlockType.deserialize(buf, varPos2);
+         }
+
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       byte nullBits = buf.getByte(offset);
-      int maxEnd = 42;
+      int maxEnd = 41;
       if ((nullBits & 2) != 0) {
-         int fieldOffset0 = buf.getIntLE(offset + 30);
-         int pos0 = offset + 42 + fieldOffset0;
+         int fieldOffset0 = buf.getIntLE(offset + 29);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 41) {
+            throw ProtocolException.invalidOffset("AssetPath", fieldOffset0, maxEnd);
+         }
+
+         int pos0 = offset + 41 + fieldOffset0;
          pos0 += AssetPath.computeBytesConsumed(buf, pos0);
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
@@ -96,8 +122,12 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 4) != 0) {
-         int fieldOffset1 = buf.getIntLE(offset + 34);
-         int pos1 = offset + 42 + fieldOffset1;
+         int fieldOffset1 = buf.getIntLE(offset + 33);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 41) {
+            throw ProtocolException.invalidOffset("Model", fieldOffset1, maxEnd);
+         }
+
+         int pos1 = offset + 41 + fieldOffset1;
          pos1 += Model.computeBytesConsumed(buf, pos1);
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
@@ -105,8 +135,12 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       }
 
       if ((nullBits & 8) != 0) {
-         int fieldOffset2 = buf.getIntLE(offset + 38);
-         int pos2 = offset + 42 + fieldOffset2;
+         int fieldOffset2 = buf.getIntLE(offset + 37);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 41) {
+            throw ProtocolException.invalidOffset("Block", fieldOffset2, maxEnd);
+         }
+
+         int pos2 = offset + 41 + fieldOffset2;
          pos2 += BlockType.computeBytesConsumed(buf, pos2);
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
@@ -114,6 +148,96 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 41L;
+   }
+
+   @Nullable
+   public static AssetPath getAssetPath(MemorySegment mem) {
+      return getAssetPath(mem, 0);
+   }
+
+   @Nullable
+   public static AssetPath getAssetPath(MemorySegment mem, int offset) {
+      return hasAssetPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 29, 41, "AssetPath")) : null;
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem) {
+      return getModel(mem, 0);
+   }
+
+   @Nullable
+   public static Model getModel(MemorySegment mem, int offset) {
+      return hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 33, 41, "Model")) : null;
+   }
+
+   @Nullable
+   public static BlockType getBlock(MemorySegment mem) {
+      return getBlock(mem, 0);
+   }
+
+   @Nullable
+   public static BlockType getBlock(MemorySegment mem, int offset) {
+      return hasBlock(mem, offset) ? BlockType.toObject(mem, offset + getValidatedOffset(mem, offset, 37, 41, "Block")) : null;
+   }
+
+   @Nullable
+   public static AssetEditorPreviewCameraSettings getCamera(MemorySegment mem) {
+      return getCamera(mem, 0);
+   }
+
+   @Nullable
+   public static AssetEditorPreviewCameraSettings getCamera(MemorySegment mem, int offset) {
+      return hasCamera(mem, offset) ? AssetEditorPreviewCameraSettings.toObject(mem, offset + 1) : null;
+   }
+
+   public static boolean hasCamera(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasAssetPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasBlock(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 8) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static AssetEditorUpdateModelPreview toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static AssetEditorUpdateModelPreview toObject(MemorySegment mem, int offset) {
+      if (offset + 41 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("AssetEditorUpdateModelPreview", offset + 41, (int)mem.byteSize());
+      } else {
+         return new AssetEditorUpdateModelPreview(
+            hasAssetPath(mem, offset) ? AssetPath.toObject(mem, offset + getValidatedOffset(mem, offset, 29, 41, "AssetPath")) : null,
+            hasModel(mem, offset) ? Model.toObject(mem, offset + getValidatedOffset(mem, offset, 33, 41, "Model")) : null,
+            hasBlock(mem, offset) ? BlockType.toObject(mem, offset + getValidatedOffset(mem, offset, 37, 41, "Block")) : null,
+            hasCamera(mem, offset) ? AssetEditorPreviewCameraSettings.toObject(mem, offset + 1) : null
+         );
+      }
    }
 
    @Override
@@ -140,7 +264,7 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
       if (this.camera != null) {
          this.camera.serialize(buf);
       } else {
-         buf.writeZero(29);
+         buf.writeZero(28);
       }
 
       int assetPathOffsetSlot = buf.writerIndex();
@@ -173,8 +297,59 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
    }
 
    @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.camera != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.assetPath != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.model != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.block != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      if (this.camera != null) {
+         this.camera.serialize(mem, offset + 1);
+      } else {
+         mem.asSlice(offset + 1, 28L).fill((byte)0);
+      }
+
+      int varOffset = offset + 41;
+      if (this.assetPath != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 29), varOffset - offset - 41);
+         varOffset += this.assetPath.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 29), -1);
+      }
+
+      if (this.model != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 33), varOffset - offset - 41);
+         varOffset += this.model.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 33), -1);
+      }
+
+      if (this.block != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 37), varOffset - offset - 41);
+         varOffset += this.block.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 37), -1);
+      }
+
+      return varOffset - offset;
+   }
+
+   @Override
    public int computeSize() {
-      int size = 42;
+      int size = 41;
       if (this.assetPath != null) {
          size += this.assetPath.computeSize();
       }
@@ -191,21 +366,17 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
-      if (buffer.readableBytes() - offset < 42) {
-         return ValidationResult.error("Buffer too small: expected at least 42 bytes");
+      if (buffer.readableBytes() - offset < 41) {
+         return ValidationResult.error("Buffer too small: expected at least 41 bytes");
       } else {
          byte nullBits = buffer.getByte(offset);
          if ((nullBits & 2) != 0) {
-            int assetPathOffset = buffer.getIntLE(offset + 30);
-            if (assetPathOffset < 0) {
+            int assetPathOffset = buffer.getIntLE(offset + 29);
+            if (assetPathOffset < 0 || assetPathOffset > buffer.writerIndex() - offset - 41) {
                return ValidationResult.error("Invalid offset for AssetPath");
             }
 
-            int pos = offset + 42 + assetPathOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for AssetPath");
-            }
-
+            int pos = offset + 41 + assetPathOffset;
             ValidationResult assetPathResult = AssetPath.validateStructure(buffer, pos);
             if (!assetPathResult.isValid()) {
                return ValidationResult.error("Invalid AssetPath: " + assetPathResult.error());
@@ -215,41 +386,33 @@ public class AssetEditorUpdateModelPreview implements Packet, ToClientPacket {
          }
 
          if ((nullBits & 4) != 0) {
-            int modelOffset = buffer.getIntLE(offset + 34);
-            if (modelOffset < 0) {
+            int modelOffset = buffer.getIntLE(offset + 33);
+            if (modelOffset < 0 || modelOffset > buffer.writerIndex() - offset - 41) {
                return ValidationResult.error("Invalid offset for Model");
             }
 
-            int posx = offset + 42 + modelOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Model");
-            }
-
-            ValidationResult modelResult = Model.validateStructure(buffer, posx);
+            int pos = offset + 41 + modelOffset;
+            ValidationResult modelResult = Model.validateStructure(buffer, pos);
             if (!modelResult.isValid()) {
                return ValidationResult.error("Invalid Model: " + modelResult.error());
             }
 
-            posx += Model.computeBytesConsumed(buffer, posx);
+            pos += Model.computeBytesConsumed(buffer, pos);
          }
 
          if ((nullBits & 8) != 0) {
-            int blockOffset = buffer.getIntLE(offset + 38);
-            if (blockOffset < 0) {
+            int blockOffset = buffer.getIntLE(offset + 37);
+            if (blockOffset < 0 || blockOffset > buffer.writerIndex() - offset - 41) {
                return ValidationResult.error("Invalid offset for Block");
             }
 
-            int posxx = offset + 42 + blockOffset;
-            if (posxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Block");
-            }
-
-            ValidationResult blockResult = BlockType.validateStructure(buffer, posxx);
+            int pos = offset + 41 + blockOffset;
+            ValidationResult blockResult = BlockType.validateStructure(buffer, pos);
             if (!blockResult.isValid()) {
                return ValidationResult.error("Invalid Block: " + blockResult.error());
             }
 
-            posxx += BlockType.computeBytesConsumed(buffer, posxx);
+            pos += BlockType.computeBytesConsumed(buffer, pos);
          }
 
          return ValidationResult.OK;

@@ -4,166 +4,157 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
-import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
+import com.hypixel.hytale.server.core.command.system.arguments.system.DefaultArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
+import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.ArgTypes;
-import com.hypixel.hytale.server.core.command.system.basecommands.AbstractCommandCollection;
+import com.hypixel.hytale.server.core.command.system.arguments.types.EnumArgumentType;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
+import com.hypixel.hytale.server.core.permissions.HytalePermissions;
+import com.hypixel.hytale.server.core.prefab.selection.mask.BlockPattern;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
-public class ExtendFaceCommand extends AbstractCommandCollection {
+public class ExtendFaceCommand extends AbstractPlayerCommand {
+   private static final EnumArgumentType<ExtendFaceCommand.Direction> DIRECTION_TYPE = new EnumArgumentType<>(
+      "server.commands.extendface.argtype.direction", ExtendFaceCommand.Direction.class
+   );
+   private static final EnumArgumentType<ExtendFaceCommand.ExtrudeFilter> FILTER_TYPE = new EnumArgumentType<>(
+      "server.commands.extendface.argtype.filter", ExtendFaceCommand.ExtrudeFilter.class
+   );
+   private static final EnumArgumentType<ExtendFaceCommand.ExtrudeStrategy> STRATEGY_TYPE = new EnumArgumentType<>(
+      "server.commands.extendface.argtype.strategy", ExtendFaceCommand.ExtrudeStrategy.class
+   );
+   @Nonnull
+   private final RequiredArg<Integer> xArg = this.withRequiredArg("x", "server.commands.extendface.x.desc", ArgTypes.INTEGER);
+   @Nonnull
+   private final RequiredArg<Integer> yArg = this.withRequiredArg("y", "server.commands.extendface.y.desc", ArgTypes.INTEGER);
+   @Nonnull
+   private final RequiredArg<Integer> zArg = this.withRequiredArg("z", "server.commands.extendface.z.desc", ArgTypes.INTEGER);
+   @Nonnull
+   private final RequiredArg<Integer> depthArg = this.withRequiredArg("depth", "server.commands.extendface.depth.desc", ArgTypes.INTEGER);
+   @Nonnull
+   private final RequiredArg<Integer> widthArg = this.withRequiredArg("width", "server.commands.extendface.width.desc", ArgTypes.INTEGER);
+   @Nonnull
+   private final RequiredArg<Integer> lengthArg = this.withRequiredArg("length", "server.commands.extendface.length.desc", ArgTypes.INTEGER);
+   @Nonnull
+   private final OptionalArg<ExtendFaceCommand.Direction> directionArg = this.withOptionalArg(
+      "direction", "server.commands.extendface.direction.desc", DIRECTION_TYPE
+   );
+   @Nonnull
+   private final OptionalArg<BlockPattern> patternArg = this.withOptionalArg("pattern", "server.commands.extendface.pattern.desc", ArgTypes.BLOCK_PATTERN);
+   @Nonnull
+   private final DefaultArg<ExtendFaceCommand.ExtrudeFilter> filterArg = this.withDefaultArg(
+      "filter", "server.commands.extendface.filter.desc", FILTER_TYPE, ExtendFaceCommand.ExtrudeFilter.ALL, "All"
+   );
+   @Nonnull
+   private final DefaultArg<ExtendFaceCommand.ExtrudeStrategy> strategyArg = this.withDefaultArg(
+      "strategy", "server.commands.extendface.strategy.desc", STRATEGY_TYPE, ExtendFaceCommand.ExtrudeStrategy.DEFAULT, "Default"
+   );
+   @Nonnull
+   private final FlagArg shrinkFlag = this.withFlagArg("shrink", "server.commands.extendface.shrink.desc");
+
    public ExtendFaceCommand() {
       super("extendface", "server.commands.extendface.desc");
-      this.setPermissionGroup(GameMode.Creative);
-      this.addUsageVariant(new ExtendFaceCommand.ExtendFaceBasicCommand());
-      this.addUsageVariant(new ExtendFaceCommand.ExtendFaceWithRegionCommand());
+      this.setPermissionGroups("hytale:WorldEditor");
+      this.requirePermission(HytalePermissions.EDITOR_SELECTION_MODIFY);
    }
 
-   private static class ExtendFaceBasicCommand extends AbstractPlayerCommand {
-      @Nonnull
-      private final RequiredArg<Integer> xArg = this.withRequiredArg("x", "server.commands.extendface.x.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> yArg = this.withRequiredArg("y", "server.commands.extendface.y.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> zArg = this.withRequiredArg("z", "server.commands.extendface.z.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> normalXArg = this.withRequiredArg("normalX", "server.commands.extendface.normalX.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> normalYArg = this.withRequiredArg("normalY", "server.commands.extendface.normalY.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> normalZArg = this.withRequiredArg("normalZ", "server.commands.extendface.normalZ.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> toolParamArg = this.withRequiredArg("toolParam", "server.commands.extendface.toolParam.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> shapeRangeArg = this.withRequiredArg("shapeRange", "server.commands.extendface.shapeRange.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<String> blockTypeArg = this.withRequiredArg("blockType", "server.commands.extendface.blockType.desc", ArgTypes.STRING);
+   @Override
+   protected void execute(
+      @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
+   ) {
+      Player playerComponent = store.getComponent(ref, Player.getComponentType());
 
-      public ExtendFaceBasicCommand() {
-         super("server.commands.extendface.desc");
-      }
+      assert playerComponent != null;
 
-      @Override
-      protected void execute(
-         @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
-      ) {
-         Player playerComponent = store.getComponent(ref, Player.getComponentType());
-
-         assert playerComponent != null;
-
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
-            int x = this.xArg.get(context);
-            int y = this.yArg.get(context);
-            int z = this.zArg.get(context);
-            int normalX = this.normalXArg.get(context);
-            int normalY = this.normalYArg.get(context);
-            int normalZ = this.normalZArg.get(context);
-            int toolParam = this.toolParamArg.get(context);
-            int shapeRange = this.shapeRangeArg.get(context);
-            String key = this.blockTypeArg.get(context);
-            if (BlockType.getAssetMap().getAsset(key) == null) {
-               context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", key).param("key", key));
-            } else {
-               int index = BlockType.getAssetMap().getIndex(key);
-               if (index == Integer.MIN_VALUE) {
-                  context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", key).param("key", key));
-               } else {
-                  BuilderToolsPlugin.addToQueue(
-                     playerComponent,
-                     playerRef,
-                     (r, s, componentAccessor) -> s.extendFace(x, y, z, normalX, normalY, normalZ, toolParam, shapeRange, index, null, null, componentAccessor)
-                  );
-               }
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
+         int x = this.xArg.get(context);
+         int y = this.yArg.get(context);
+         int z = this.zArg.get(context);
+         Vector3i normal;
+         if (this.directionArg.provided(context)) {
+            normal = this.directionArg.get(context).toNormal();
+         } else {
+            HeadRotation headRotation = store.getComponent(ref, HeadRotation.getComponentType());
+            if (headRotation == null) {
+               return;
             }
+
+            normal = headRotation.getAxisDirection();
          }
+
+         int depth = this.depthArg.get(context);
+         int width = this.widthArg.get(context);
+         int length = this.lengthArg.get(context);
+         boolean shrink = this.shrinkFlag.get(context);
+         BlockPattern pattern = this.patternArg.provided(context) && !shrink ? this.patternArg.get(context) : BlockPattern.EMPTY;
+         String filterMode = this.filterArg.get(context).toFilterMode();
+         String strategyMode = this.strategyArg.get(context).toStrategyMode();
+         BuilderToolsPlugin.addToQueue(
+            playerComponent,
+            playerRef,
+            (r, s, ca) -> s.extendOrShrinkFace(
+               x, y, z, normal.x(), normal.y(), normal.z(), depth, width, length, shrink, pattern, filterMode, strategyMode, 1, false, ca
+            )
+         );
       }
    }
 
-   private static class ExtendFaceWithRegionCommand extends AbstractPlayerCommand {
-      @Nonnull
-      private final RequiredArg<Integer> xArg = this.withRequiredArg("x", "server.commands.extendface.x.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> yArg = this.withRequiredArg("y", "server.commands.extendface.y.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> zArg = this.withRequiredArg("z", "server.commands.extendface.z.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> normalXArg = this.withRequiredArg("normalX", "server.commands.extendface.normalX.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> normalYArg = this.withRequiredArg("normalY", "server.commands.extendface.normalY.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> normalZArg = this.withRequiredArg("normalZ", "server.commands.extendface.normalZ.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> toolParamArg = this.withRequiredArg("toolParam", "server.commands.extendface.toolParam.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> shapeRangeArg = this.withRequiredArg("shapeRange", "server.commands.extendface.shapeRange.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<String> blockTypeArg = this.withRequiredArg("blockType", "server.commands.extendface.blockType.desc", ArgTypes.STRING);
-      @Nonnull
-      private final RequiredArg<Integer> xMinArg = this.withRequiredArg("xMin", "server.commands.extendface.xMin.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> yMinArg = this.withRequiredArg("yMin", "server.commands.extendface.yMin.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> zMinArg = this.withRequiredArg("zMin", "server.commands.extendface.zMin.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> xMaxArg = this.withRequiredArg("xMax", "server.commands.extendface.xMax.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> yMaxArg = this.withRequiredArg("yMax", "server.commands.extendface.yMax.desc", ArgTypes.INTEGER);
-      @Nonnull
-      private final RequiredArg<Integer> zMaxArg = this.withRequiredArg("zMax", "server.commands.extendface.zMax.desc", ArgTypes.INTEGER);
+   static enum Direction {
+      UP,
+      DOWN,
+      EAST,
+      WEST,
+      NORTH,
+      SOUTH;
 
-      public ExtendFaceWithRegionCommand() {
-         super("server.commands.extendface.desc");
+      public Vector3i toNormal() {
+         return switch (this) {
+            case UP -> new Vector3i(0, 1, 0);
+            case DOWN -> new Vector3i(0, -1, 0);
+            case EAST -> new Vector3i(1, 0, 0);
+            case WEST -> new Vector3i(-1, 0, 0);
+            case NORTH -> new Vector3i(0, 0, -1);
+            case SOUTH -> new Vector3i(0, 0, 1);
+         };
       }
+   }
 
-      @Override
-      protected void execute(
-         @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, @Nonnull World world
-      ) {
-         Player playerComponent = store.getComponent(ref, Player.getComponentType());
+   static enum ExtrudeFilter {
+      ALL,
+      SAME_MATERIAL,
+      SAME_SHAPE,
+      FULL_BLOCKS,
+      NOT_FULL_BLOCKS;
 
-         assert playerComponent != null;
+      public String toFilterMode() {
+         return switch (this) {
+            case ALL -> "All";
+            case SAME_MATERIAL -> "SameMaterial";
+            case SAME_SHAPE -> "SameShape";
+            case FULL_BLOCKS -> "FullBlocks";
+            case NOT_FULL_BLOCKS -> "NotFullBlocks";
+         };
+      }
+   }
 
-         if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
-            int x = this.xArg.get(context);
-            int y = this.yArg.get(context);
-            int z = this.zArg.get(context);
-            int normalX = this.normalXArg.get(context);
-            int normalY = this.normalYArg.get(context);
-            int normalZ = this.normalZArg.get(context);
-            int toolParam = this.toolParamArg.get(context);
-            int shapeRange = this.shapeRangeArg.get(context);
-            String key = this.blockTypeArg.get(context);
-            if (BlockType.getAssetMap().getAsset(key) == null) {
-               context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", key).param("key", key));
-            } else {
-               int index = BlockType.getAssetMap().getIndex(key);
-               if (index == Integer.MIN_VALUE) {
-                  context.sendMessage(Message.translation("server.builderTools.invalidBlockType").param("name", key).param("key", key));
-               } else {
-                  int xMin = this.xMinArg.get(context);
-                  int yMin = this.yMinArg.get(context);
-                  int zMin = this.zMinArg.get(context);
-                  int xMax = this.xMaxArg.get(context);
-                  int yMax = this.yMaxArg.get(context);
-                  int zMax = this.zMaxArg.get(context);
-                  Vector3i min = new Vector3i(xMin, yMin, zMin);
-                  Vector3i max = new Vector3i(xMax, yMax, zMax);
-                  BuilderToolsPlugin.addToQueue(
-                     playerComponent,
-                     playerRef,
-                     (r, s, componentAccessor) -> s.extendFace(x, y, z, normalX, normalY, normalZ, toolParam, shapeRange, index, min, max, componentAccessor)
-                  );
-               }
-            }
-         }
+   static enum ExtrudeStrategy {
+      ALL,
+      DEFAULT;
+
+      public String toStrategyMode() {
+         return switch (this) {
+            case ALL -> "All";
+            case DEFAULT -> "Default";
+         };
       }
    }
 }

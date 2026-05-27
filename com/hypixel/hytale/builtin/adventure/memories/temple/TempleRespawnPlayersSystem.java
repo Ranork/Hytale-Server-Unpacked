@@ -8,7 +8,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -19,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TempleRespawnPlayersSystem extends DelayedEntitySystem<EntityStore> {
    @Nonnull
@@ -54,7 +54,7 @@ public class TempleRespawnPlayersSystem extends DelayedEntitySystem<EntityStore>
          assert transformComponent != null;
 
          Vector3d position = transformComponent.getPosition();
-         if (!(position.getY() > config.getMinYRespawn())) {
+         if (!(position.y() > config.getMinYRespawn())) {
             Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
             ISpawnProvider spawnProvider = world.getWorldConfig().getSpawnProvider();
             Transform spawnTransform = spawnProvider.getSpawnPoint(ref, commandBuffer);

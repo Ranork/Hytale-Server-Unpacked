@@ -28,13 +28,13 @@ public class OpRemoveCommand extends CommandBase {
    protected void executeSync(@Nonnull CommandContext context) {
       UUID uuid = this.playerArg.get(context);
       PermissionsModule permissionsModule = PermissionsModule.get();
-      String opGroup = "OP";
+      String opGroup = "hytale:Admin";
       PlayerRef playerRef = Universe.get().getPlayer(uuid);
       String displayName = playerRef != null ? playerRef.getUsername() : uuid.toString();
       Message displayMessage = Message.raw(displayName).bold(true);
       Set<String> groups = permissionsModule.getGroupsForUser(uuid);
-      if (groups.contains("OP")) {
-         permissionsModule.removeUserFromGroup(uuid, "OP");
+      if (groups.contains("hytale:Admin")) {
+         permissionsModule.removeUserFromGroup(uuid, "hytale:Admin");
          context.sendMessage(Message.translation("server.commands.op.removed").param("username", displayMessage));
          if (playerRef != null) {
             playerRef.sendMessage(MESSAGE_COMMANDS_OP_REMOVED_TARGET);

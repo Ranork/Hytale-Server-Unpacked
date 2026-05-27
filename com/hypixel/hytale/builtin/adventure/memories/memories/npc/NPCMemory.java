@@ -22,10 +22,10 @@ import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.spatial.SpatialStructure;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.entities.SpawnModelParticles;
+import com.hypixel.hytale.protocol.packets.player.UpdateMemoriesCount;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
 import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
@@ -51,6 +51,7 @@ import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class NPCMemory extends Memory {
    @Nonnull
@@ -117,7 +118,7 @@ public class NPCMemory extends Memory {
    @Nonnull
    @Override
    public String getIconPath() {
-      return "UI/Custom/Pages/Memories/npcs/" + this.npcRole + ".png";
+      return "Icons/ModelsGenerated/" + this.npcRole + ".png";
    }
 
    @Nonnull
@@ -259,13 +260,14 @@ public class NPCMemory extends Memory {
                               null,
                               "NotificationIcons/MemoriesIcon.png"
                            );
+                           playerRefComponent.getPacketHandler().writeNoCache(new UpdateMemoriesCount(playerMemoriesComponent.getRecordedMemories().size()));
                            temp = new NPCMemory();
                            TransformComponent npcTransformComponent = commandBuffer.getComponent(npcRef, TransformComponent.getComponentType());
                            if (npcTransformComponent != null) {
                               MemoriesGameplayConfig memoriesGameplayConfig = MemoriesGameplayConfig.get(store.getExternalData().getWorld().getGameplayConfig());
                               if (memoriesGameplayConfig != null) {
                                  ItemStack memoryItemStack = new ItemStack(memoriesGameplayConfig.getMemoriesCatchItemId());
-                                 Vector3d memoryItemHolderPosition = npcTransformComponent.getPosition().clone();
+                                 Vector3d memoryItemHolderPosition = new Vector3d(npcTransformComponent.getPosition());
                                  BoundingBox boundingBoxComponent = commandBuffer.getComponent(npcRef, BoundingBox.getComponentType());
                                  if (boundingBoxComponent != null) {
                                     memoryItemHolderPosition.y = memoryItemHolderPosition.y + boundingBoxComponent.getBoundingBox().middleY();

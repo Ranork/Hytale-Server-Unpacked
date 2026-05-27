@@ -10,11 +10,12 @@ import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.ArrayVoxelSpace;
 import com.hypixel.hytale.builtin.hytalegenerator.voxelspace.VoxelSpace;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class DensityProp extends Prop {
    @Nonnull
@@ -45,7 +46,7 @@ public class DensityProp extends Prop {
       @Nonnull BlockMask placementMask,
       @Nonnull Material defaultMaterial
    ) {
-      this.range = range.clone();
+      this.range = new Vector3i(range);
       this.density = density;
       this.materialProvider = materialProvider;
       this.scanner = scanner;
@@ -82,16 +83,16 @@ public class DensityProp extends Prop {
 
    private void place(@Nonnull Vector3i position, @Nonnull VoxelSpace<Material> materialSpace) {
       Bounds3i bounds = materialSpace.getBounds();
-      Vector3i min = position.clone().add(-this.range.x, -this.range.y, -this.range.z);
-      Vector3i max = position.clone().add(this.range.x, this.range.y, this.range.z);
-      Vector3i writeMin = Vector3i.max(min, bounds.min);
-      Vector3i writeMax = Vector3i.min(max, bounds.max);
+      Vector3i min = new Vector3i(position).add(-this.range.x, -this.range.y, -this.range.z);
+      Vector3i max = new Vector3i(position).add(this.range.x, this.range.y, this.range.z);
+      Vector3i writeMin = Vector3iUtil.max(min, bounds.min);
+      Vector3i writeMax = Vector3iUtil.min(max, bounds.max);
       int bottomInclusive = min.y;
       int topExclusive = max.y;
       int height = topExclusive - bottomInclusive;
       ArrayVoxelSpace<Boolean> solidityBuffer = new ArrayVoxelSpace<>(new Bounds3i(min, max));
       Density.Context childContext = new Density.Context();
-      childContext.densityAnchor = position.toVector3d();
+      childContext.densityAnchor = Vector3iUtil.toVector3d(position);
       Vector3i itPosition = new Vector3i(position);
 
       for (itPosition.x = min.x; itPosition.x < max.x; itPosition.x++) {
@@ -173,7 +174,7 @@ public class DensityProp extends Prop {
                   int i = itPosition.y - bottomInclusive;
                   MaterialProvider.Context materialContext = new MaterialProvider.Context(
                      position, 0.0, depthIntoFloor[i], depthIntoCeiling[i], spaceAboveFloor[i], spaceBelowCeiling[i], functionPosition -> {
-                        childContext.position = functionPosition.toVector3d();
+                        childContext.position = Vector3iUtil.toVector3d(functionPosition);
                         return this.density.process(childContext);
                      }, childContext.distanceToBiomeEdge
                   );

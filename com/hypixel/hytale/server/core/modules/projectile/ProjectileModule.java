@@ -8,8 +8,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.Direction;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.SoundCategory;
@@ -52,6 +51,7 @@ import java.time.Duration;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ProjectileModule extends JavaPlugin {
    @Nonnull
@@ -113,13 +113,13 @@ public class ProjectileModule extends JavaPlugin {
       @Nonnull Vector3d direction
    ) {
       Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
-      Vector3f rotation = new Vector3f();
+      Rotation3f rotation = new Rotation3f();
       Direction rotationOffset = config.getSpawnRotationOffset();
       rotation.setYaw(PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(direction.x, direction.z)));
       rotation.setPitch(PhysicsMath.pitchFromDirection(direction.x, direction.y, direction.z));
       rotation.add(rotationOffset.pitch, rotationOffset.yaw, rotationOffset.roll);
-      PhysicsMath.vectorFromAngles(rotation.getYaw(), rotation.getPitch(), direction);
-      Vector3d offset = config.getCalculatedOffset(rotation.getPitch(), rotation.getYaw());
+      PhysicsMath.vectorFromAngles(rotation.yaw(), rotation.pitch(), direction);
+      Vector3d offset = config.getCalculatedOffset(rotation.pitch(), rotation.yaw());
       position.add(offset);
       holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(position, rotation));
       holder.addComponent(HeadRotation.getComponentType(), new HeadRotation(rotation));
@@ -139,7 +139,7 @@ public class ProjectileModule extends JavaPlugin {
       }
 
       holder.addComponent(Velocity.getComponentType(), new Velocity());
-      config.getPhysicsConfig().apply(holder, creatorRef, direction.clone().scale(config.getLaunchForce()), commandBuffer, predictionId != null);
+      config.getPhysicsConfig().apply(holder, creatorRef, new Vector3d(direction).mul(config.getLaunchForce()), commandBuffer, predictionId != null);
       holder.ensureComponent(EntityStore.REGISTRY.getNonSerializedComponentType());
       holder.addComponent(
          DespawnComponent.getComponentType(),

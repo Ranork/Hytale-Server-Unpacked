@@ -44,6 +44,7 @@ public class GiveArmorCommand extends AbstractAsyncCommand {
 
    public GiveArmorCommand() {
       super("armor", "server.commands.givearmor.desc");
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Nonnull

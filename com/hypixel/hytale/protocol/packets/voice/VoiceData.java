@@ -3,10 +3,12 @@ package com.hypixel.hytale.protocol.packets.voice;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.ToServerPacket;
+import com.hypixel.hytale.protocol.io.PacketIO;
 import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
 
@@ -50,29 +52,33 @@ public class VoiceData implements Packet, ToServerPacket {
 
    @Nonnull
    public static VoiceData deserialize(@Nonnull ByteBuf buf, int offset) {
-      VoiceData obj = new VoiceData();
-      obj.sequenceNumber = buf.getShortLE(offset + 0);
-      obj.timestamp = buf.getIntLE(offset + 2);
-      int pos = offset + 6;
-      int opusDataCount = VarInt.peek(buf, pos);
-      if (opusDataCount < 0) {
-         throw ProtocolException.negativeLength("OpusData", opusDataCount);
-      } else if (opusDataCount > 512) {
-         throw ProtocolException.arrayTooLong("OpusData", opusDataCount, 512);
+      if (buf.readableBytes() - offset < 6) {
+         throw ProtocolException.bufferTooSmall("VoiceData", 6, buf.readableBytes() - offset);
       } else {
-         int opusDataVarLen = VarInt.size(opusDataCount);
-         if (pos + opusDataVarLen + opusDataCount * 1L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("OpusData", pos + opusDataVarLen + opusDataCount * 1, buf.readableBytes());
+         VoiceData obj = new VoiceData();
+         obj.sequenceNumber = buf.getShortLE(offset + 0);
+         obj.timestamp = buf.getIntLE(offset + 2);
+         int pos = offset + 6;
+         int opusDataCount = VarInt.peek(buf, pos);
+         if (opusDataCount < 0) {
+            throw ProtocolException.invalidVarInt("OpusData");
          } else {
-            pos += opusDataVarLen;
-            obj.opusData = new byte[opusDataCount];
+            int opusDataVarLen = VarInt.size(opusDataCount);
+            if (opusDataCount > 512) {
+               throw ProtocolException.arrayTooLong("OpusData", opusDataCount, 512);
+            } else if (pos + opusDataVarLen + opusDataCount * 1L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("OpusData", pos + opusDataVarLen + opusDataCount * 1, buf.readableBytes());
+            } else {
+               pos += opusDataVarLen;
+               obj.opusData = new byte[opusDataCount];
 
-            for (int i = 0; i < opusDataCount; i++) {
-               obj.opusData[i] = buf.getByte(pos + i * 1);
+               for (int i = 0; i < opusDataCount; i++) {
+                  obj.opusData[i] = buf.getByte(pos + i * 1);
+               }
+
+               pos += opusDataCount * 1;
+               return obj;
             }
-
-            pos += opusDataCount * 1;
-            return obj;
          }
       }
    }
@@ -80,8 +86,82 @@ public class VoiceData implements Packet, ToServerPacket {
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int pos = offset + 6;
       int arrLen = VarInt.peek(buf, pos);
-      pos += VarInt.length(buf, pos) + arrLen * 1;
+      pos += VarInt.size(arrLen) + arrLen * 1;
       return pos - offset;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 6L;
+   }
+
+   public static short getSequenceNumber(MemorySegment mem) {
+      return getSequenceNumber(mem, 0);
+   }
+
+   public static short getSequenceNumber(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_SHORT, (long)(offset + 0));
+   }
+
+   public static int getTimestamp(MemorySegment mem) {
+      return getTimestamp(mem, 0);
+   }
+
+   public static int getTimestamp(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 2));
+   }
+
+   public static byte[] getOpusData(MemorySegment mem) {
+      return getOpusData(mem, 0);
+   }
+
+   public static byte[] getOpusData(MemorySegment mem, int offset) {
+      int off = offset + 6;
+      long packed = VarInt.getWithLength(mem, off);
+      int len = (int)packed;
+      if (len < 0) {
+         throw ProtocolException.negativeLength("OpusData", len);
+      } else if (len > 512) {
+         throw ProtocolException.arrayTooLong("OpusData", len, 512);
+      } else {
+         int lenOffset = (int)(packed >>> 32);
+         if (off + lenOffset + len * 1L > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall("OpusData", off + lenOffset + len * 1, (int)mem.byteSize());
+         } else {
+            off += lenOffset;
+            byte[] data = new byte[len];
+            MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, data, 0, len);
+            return data;
+         }
+      }
+   }
+
+   public static VoiceData toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static VoiceData toObject(MemorySegment mem, int offset) {
+      if (offset + 6 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("VoiceData", offset + 6, (int)mem.byteSize());
+      } else {
+         int off = offset + 6;
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("OpusData", len);
+         } else if (len > 512) {
+            throw ProtocolException.arrayTooLong("OpusData", len, 512);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len * 1L > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("OpusData", off + lenOffset + len * 1, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               byte[] opusData = new byte[len];
+               MemorySegment.copy(mem, PacketIO.PROTO_BYTE, off, opusData, 0, len);
+               return new VoiceData(mem.get(PacketIO.PROTO_SHORT, (long)(offset + 0)), mem.get(PacketIO.PROTO_INT, (long)(offset + 2)), opusData);
+            }
+         }
+      }
    }
 
    @Override
@@ -96,6 +176,21 @@ public class VoiceData implements Packet, ToServerPacket {
          for (byte item : this.opusData) {
             buf.writeByte(item);
          }
+      }
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_SHORT, (long)(offset + 0), this.sequenceNumber);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 2), this.timestamp);
+      int varOffset = offset + 6;
+      if (this.opusData.length > 512) {
+         throw ProtocolException.arrayTooLong("OpusData", this.opusData.length, 512);
+      } else {
+         varOffset += VarInt.set(mem, varOffset, this.opusData.length);
+         MemorySegment.copy(this.opusData, 0, mem, PacketIO.PROTO_BYTE, varOffset, this.opusData.length);
+         varOffset += this.opusData.length * 1;
+         return varOffset - offset;
       }
    }
 
@@ -116,7 +211,7 @@ public class VoiceData implements Packet, ToServerPacket {
          } else if (opusDataCount > 512) {
             return ValidationResult.error("OpusData exceeds max length 512");
          } else {
-            pos += VarInt.length(buffer, pos);
+            pos += VarInt.size(opusDataCount);
             pos += opusDataCount * 1;
             return pos > buffer.writerIndex() ? ValidationResult.error("Buffer overflow reading OpusData") : ValidationResult.OK;
          }

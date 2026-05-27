@@ -5,12 +5,13 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.validation.Validators;
+import com.hypixel.hytale.math.vector.Vector3fUtil;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.Direction;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.codec.ProtocolCodecs;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import javax.annotation.Nonnull;
+import org.joml.Vector3f;
 
 public class WorldParticle implements NetworkSerializable<com.hypixel.hytale.protocol.WorldParticle> {
    public static final String SYSTEM_ID_DOC = "The id of the particle system.";
@@ -32,7 +33,7 @@ public class WorldParticle implements NetworkSerializable<com.hypixel.hytale.pro
       .documentation("The scale of the particle system.")
       .add()
       .<Vector3f>append(
-         new KeyedCodec<>("PositionOffset", ProtocolCodecs.VECTOR3F), (particle, s) -> particle.positionOffset = s, particle -> particle.positionOffset
+         new KeyedCodec<>("PositionOffset", Vector3fUtil.CODEC), (particle, s) -> particle.positionOffset = s, particle -> particle.positionOffset
       )
       .documentation("The position offset from the spawn position.")
       .add()

@@ -8,11 +8,8 @@ import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.iterator.BlockIterator;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.modules.collision.CollisionMath;
 import com.hypixel.hytale.server.core.modules.collision.WorldUtil;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
@@ -32,6 +29,9 @@ import java.util.List;
 import java.util.function.IntPredicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public final class TargetUtil {
    private static final float ENTITY_TARGET_RADIUS = 8.0F;
@@ -62,6 +62,48 @@ public final class TargetUtil {
                   int blockId = blockSection.get(x, y, z);
                   int fluidId = WorldUtil.getFluidIdAtPosition(iBuffer.chunkStoreAccessor, iBuffer.currentChunkColumn, x, y, z);
                   return !blockIdPredicate.test(blockId, fluidId);
+               } else {
+                  return false;
+               }
+            } else {
+               return false;
+            }
+         }, buffer
+      );
+      return success ? null : new Vector3i(buffer.x, buffer.y, buffer.z);
+   }
+
+   @Nullable
+   public static Vector3i getTargetBlockOrigin(
+      @Nonnull World world,
+      @Nonnull BiIntPredicate blockIdPredicate,
+      double originX,
+      double originY,
+      double originZ,
+      double directionX,
+      double directionY,
+      double directionZ,
+      double maxDistance
+   ) {
+      TargetUtil.TargetBuffer buffer = new TargetUtil.TargetBuffer(world);
+      buffer.updateChunk((int)originX, (int)originZ);
+      boolean success = BlockIterator.iterate(
+         originX, originY, originZ, directionX, directionY, directionZ, maxDistance, (x, y, z, px, py, pz, qx, qy, qz, iBuffer) -> {
+            if (y >= 0 && y < 320) {
+               iBuffer.updateChunk(x, z);
+               if (iBuffer.currentBlockChunk != null && iBuffer.currentChunkColumn != null) {
+                  BlockSection blockSection = iBuffer.currentBlockChunk.getSectionAtBlockY(y);
+                  int blockId = blockSection.get(x, y, z);
+                  int fluidId = WorldUtil.getFluidIdAtPosition(iBuffer.chunkStoreAccessor, iBuffer.currentChunkColumn, x, y, z);
+                  if (blockIdPredicate.test(blockId, fluidId)) {
+                     return true;
+                  } else {
+                     int filler = blockSection.getFiller(x, y, z);
+                     iBuffer.x = x - FillerBlockUtil.unpackX(filler);
+                     iBuffer.y = y - FillerBlockUtil.unpackY(filler);
+                     iBuffer.z = z - FillerBlockUtil.unpackZ(filler);
+                     return false;
+                  }
                } else {
                   return false;
                }
@@ -157,6 +199,57 @@ public final class TargetUtil {
    }
 
    @Nullable
+   public static Vector3i getTargetBlockAvoidLocations(
+      @Nonnull World world,
+      @Nonnull IntPredicate blockIdPredicate,
+      double originX,
+      double originY,
+      double originZ,
+      double directionX,
+      double directionY,
+      double directionZ,
+      double maxDistance,
+      @Nonnull LinkedList<LongOpenHashSet> blocksToIgnore,
+      @Nonnull Vector3d hitPositionOut
+   ) {
+      TargetUtil.TargetBuffer buffer = new TargetUtil.TargetBuffer(world);
+      buffer.updateChunk((int)originX, (int)originZ);
+      boolean success = BlockIterator.iterate(
+         originX, originY, originZ, directionX, directionY, directionZ, maxDistance, (x, y, z, px, py, pz, qx, qy, qz, iBuffer) -> {
+            if (y >= 0 && y < 320) {
+               iBuffer.updateChunk(x, z);
+               if (iBuffer.currentBlockChunk == null) {
+                  return false;
+               } else {
+                  iBuffer.x = x;
+                  iBuffer.y = y;
+                  iBuffer.z = z;
+                  hitPositionOut.x = x + px;
+                  hitPositionOut.y = y + py;
+                  hitPositionOut.z = z + pz;
+                  BlockSection blockSection = iBuffer.currentBlockChunk.getSectionAtBlockY(y);
+                  int blockId = blockSection.get(x, y, z);
+                  if (blockId != 0) {
+                     long packedBlockLocation = BlockUtil.pack(x, y, z);
+
+                     for (LongOpenHashSet locations : blocksToIgnore) {
+                        if (locations.contains(packedBlockLocation)) {
+                           return true;
+                        }
+                     }
+                  }
+
+                  return !blockIdPredicate.test(blockId);
+               }
+            } else {
+               return false;
+            }
+         }, buffer
+      );
+      return success ? null : new Vector3i(buffer.x, buffer.y, buffer.z);
+   }
+
+   @Nullable
    public static Vector3i getTargetBlock(@Nonnull Ref<EntityStore> ref, double maxDistance, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       return getTargetBlock(ref, blockId -> blockId != 0, maxDistance, componentAccessor);
    }
@@ -170,6 +263,22 @@ public final class TargetUtil {
       Vector3d pos = transform.getPosition();
       Vector3d dir = transform.getDirection();
       return getTargetBlock(world, (id, _fluidId) -> blockIdPredicate.test(id), pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, maxDistance);
+   }
+
+   @Nullable
+   public static Vector3i getTargetBlockOrigin(@Nonnull Ref<EntityStore> ref, double maxDistance, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return getTargetBlockOrigin(ref, blockId -> blockId != 0, maxDistance, componentAccessor);
+   }
+
+   @Nullable
+   public static Vector3i getTargetBlockOrigin(
+      @Nonnull Ref<EntityStore> ref, @Nonnull IntPredicate blockIdPredicate, double maxDistance, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      World world = componentAccessor.getExternalData().getWorld();
+      Transform transform = getLook(ref, componentAccessor);
+      Vector3d pos = transform.getPosition();
+      Vector3d dir = transform.getDirection();
+      return getTargetBlockOrigin(world, (id, _fluidId) -> blockIdPredicate.test(id), pos.x, pos.y, pos.z, dir.x, dir.y, dir.z, maxDistance);
    }
 
    @Nullable
@@ -264,7 +373,7 @@ public final class TargetUtil {
 
                assert targetTransformComponent != null;
 
-               double distance = transformPosition.distanceSquaredTo(targetTransformComponent.getPosition());
+               double distance = transformPosition.distanceSquared(targetTransformComponent.getPosition());
                if (distance < minDist2) {
                   minDist2 = distance;
                   closest = targetRef;
@@ -293,10 +402,8 @@ public final class TargetUtil {
       assert headRotationComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      Vector3f headRotation = headRotationComponent.getRotation();
-      return new Transform(
-         position.getX(), position.getY() + eyeHeight, position.getZ(), headRotation.getPitch(), headRotation.getYaw(), headRotation.getRoll()
-      );
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      return new Transform(position.x(), position.y() + eyeHeight, position.z(), headRotation.pitch(), headRotation.yaw(), headRotation.roll());
    }
 
    private static boolean isHitByRay(
@@ -313,7 +420,7 @@ public final class TargetUtil {
          Box boundingBox = boundingBoxComponent.getBoundingBox();
          Vector3d position = transformComponent.getPosition();
          Vector2d minMax = new Vector2d();
-         return CollisionMath.intersectRayAABB(rayStart, rayDir, position.getX(), position.getY(), position.getZ(), boundingBox, minMax);
+         return CollisionMath.intersectRayAABB(rayStart, rayDir, position.x(), position.y(), position.z(), boundingBox, minMax);
       }
    }
 

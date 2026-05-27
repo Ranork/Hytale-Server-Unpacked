@@ -9,7 +9,6 @@ import com.hypixel.hytale.builtin.buildertools.tooloperations.transform.Transfor
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
@@ -29,6 +28,7 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BrushConfigCommandExecutor {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -177,9 +177,9 @@ public class BrushConfigCommandExecutor {
                   (x, y, z, unused) -> {
                      Transform transform = this.brushConfig.getTransform();
                      Vector3i transformOrigin = this.brushConfig.getTransformOrigin();
-                     this.transformVector.setX(x - transformOrigin.x);
-                     this.transformVector.setY(y - transformOrigin.y);
-                     this.transformVector.setZ(z - transformOrigin.z);
+                     this.transformVector.x = x - transformOrigin.x;
+                     this.transformVector.y = y - transformOrigin.y;
+                     this.transformVector.z = z - transformOrigin.z;
                      transform.apply(this.transformVector);
                      x = transformOrigin.x + this.transformVector.x;
                      y = transformOrigin.y + this.transformVector.y;

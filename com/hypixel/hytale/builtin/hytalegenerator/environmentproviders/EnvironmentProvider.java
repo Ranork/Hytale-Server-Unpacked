@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.hytalegenerator.environmentproviders;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public abstract class EnvironmentProvider {
    public abstract int getValue(@Nonnull EnvironmentProvider.Context var1);

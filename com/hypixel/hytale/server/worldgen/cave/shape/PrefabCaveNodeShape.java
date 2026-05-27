@@ -3,7 +3,7 @@ package com.hypixel.hytale.server.worldgen.cave.shape;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.HashUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
 import com.hypixel.hytale.server.worldgen.cave.Cave;
@@ -21,12 +21,14 @@ import java.util.List;
 import java.util.Random;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public class PrefabCaveNodeShape implements CaveNodeShape, IWorldBounds {
    private final CaveType caveType;
    @Nonnull
-   private final Vector3d o;
-   private final Vector3d e;
+   private final Vector3dc o;
+   private final Vector3dc e;
    @Nonnull
    private final WorldGenPrefabSupplier prefabSupplier;
    @Nonnull
@@ -41,8 +43,8 @@ public class PrefabCaveNodeShape implements CaveNodeShape, IWorldBounds {
 
    public PrefabCaveNodeShape(
       CaveType caveType,
-      @Nonnull Vector3d o,
-      Vector3d e,
+      @Nonnull Vector3dc o,
+      Vector3dc e,
       @Nonnull WorldGenPrefabSupplier prefabSupplier,
       @Nonnull PrefabRotation rotation,
       BlockMaskCondition configuration
@@ -55,12 +57,12 @@ public class PrefabCaveNodeShape implements CaveNodeShape, IWorldBounds {
       this.configuration = configuration;
       IPrefabBuffer prefab = prefabSupplier.get();
       IChunkBounds bounds = prefabSupplier.getBounds(prefab);
-      this.lowBoundX = MathUtil.floor(o.x + bounds.getLowBoundX(rotation));
-      this.lowBoundY = MathUtil.floor(o.y + prefab.getMinY());
-      this.lowBoundZ = MathUtil.floor(o.z + bounds.getLowBoundZ(rotation));
-      this.highBoundX = MathUtil.ceil(o.x + bounds.getHighBoundX(rotation));
-      this.highBoundY = MathUtil.ceil(o.y + prefab.getMaxY());
-      this.highBoundZ = MathUtil.ceil(o.z + bounds.getHighBoundZ(rotation));
+      this.lowBoundX = MathUtil.floor(o.x() + bounds.getLowBoundX(rotation));
+      this.lowBoundY = MathUtil.floor(o.y() + prefab.getMinY());
+      this.lowBoundZ = MathUtil.floor(o.z() + bounds.getLowBoundZ(rotation));
+      this.highBoundX = MathUtil.ceil(o.x() + bounds.getHighBoundX(rotation));
+      this.highBoundY = MathUtil.ceil(o.y() + prefab.getMaxY());
+      this.highBoundZ = MathUtil.ceil(o.z() + bounds.getHighBoundZ(rotation));
    }
 
    public CaveType getCaveType() {
@@ -73,20 +75,20 @@ public class PrefabCaveNodeShape implements CaveNodeShape, IWorldBounds {
    }
 
    @Nonnull
-   public Vector3d getO() {
+   public Vector3dc getO() {
       return this.o;
    }
 
    @Nonnull
    @Override
    public Vector3d getStart() {
-      return this.o.clone();
+      return new Vector3d(this.o);
    }
 
    @Nonnull
    @Override
    public Vector3d getEnd() {
-      return this.o.clone().add(this.e);
+      return new Vector3d(this.o).add(this.e);
    }
 
    @Nonnull
@@ -96,7 +98,7 @@ public class PrefabCaveNodeShape implements CaveNodeShape, IWorldBounds {
       double x = MathUtil.floor(anchor.x) + 0.5;
       double y = MathUtil.floor(anchor.y) + 0.5;
       double z = MathUtil.floor(anchor.z) + 0.5;
-      return anchor.assign(x, y, z);
+      return anchor.set(x, y, z);
    }
 
    @Nonnull
@@ -142,26 +144,26 @@ public class PrefabCaveNodeShape implements CaveNodeShape, IWorldBounds {
 
    @Override
    public double getFloorPosition(int seed, double x, double z) {
-      x -= this.o.x;
-      z -= this.o.z;
+      x -= this.o.x();
+      z -= this.o.z();
       return this.prefabSupplier.get().getMinYAt(this.rotation, (int)x, (int)z);
    }
 
    @Override
    public double getCeilingPosition(int seed, double x, double z) {
-      x -= this.o.x;
-      z -= this.o.z;
+      x -= this.o.x();
+      z -= this.o.z();
       return this.prefabSupplier.get().getMaxYAt(this.rotation, (int)x, (int)z);
    }
 
    @Override
    public void populateChunk(int seed, @Nonnull ChunkGeneratorExecution execution, @Nonnull Cave cave, @Nonnull CaveNode node, Random random) {
-      int x = MathUtil.floor(this.o.x);
-      int y = MathUtil.floor(this.o.y);
-      int z = MathUtil.floor(this.o.z);
+      int x = MathUtil.floor(this.o.x());
+      int y = MathUtil.floor(this.o.y());
+      int z = MathUtil.floor(this.o.z());
       int cx = x - ChunkUtil.minBlock(execution.getX());
       int cz = z - ChunkUtil.minBlock(execution.getZ());
-      long externalSeed = HashUtil.hash(Double.doubleToLongBits(this.o.x), Double.doubleToLongBits(this.o.z)) * 1406794441L;
+      long externalSeed = HashUtil.hash(Double.doubleToLongBits(this.o.x()), Double.doubleToLongBits(this.o.z())) * 1406794441L;
       PrefabPasteUtil.PrefabPasteBuffer buffer = ChunkGenerator.getResource().prefabBuffer;
       buffer.setSeed(seed, externalSeed);
       buffer.execution = execution;
@@ -228,9 +230,9 @@ public class PrefabCaveNodeShape implements CaveNodeShape, IWorldBounds {
          WorldGenPrefabSupplier prefab = this.prefabs.get(random.nextInt(this.prefabs.size()));
          if (parentNode == null) {
             PrefabRotation rotation = PrefabRotation.VALUES[random.nextInt(PrefabRotation.VALUES.length)];
-            return new PrefabCaveNodeShape(caveType, origin, Vector3d.ZERO, prefab, rotation, this.configuration);
+            return new PrefabCaveNodeShape(caveType, origin, Vector3dUtil.ZERO, prefab, rotation, this.configuration);
          } else {
-            Vector3d offset = childEntry.getOffset().clone();
+            Vector3d offset = new Vector3d(childEntry.getOffset());
             PrefabRotation rotation = childEntry.getRotation(random);
             if (parentNode.getShape() instanceof PrefabCaveNodeShape parentShape) {
                PrefabRotation parentRotation = parentShape.getPrefabRotation();
@@ -239,7 +241,7 @@ public class PrefabCaveNodeShape implements CaveNodeShape, IWorldBounds {
             }
 
             origin.add(offset);
-            return new PrefabCaveNodeShape(caveType, origin, Vector3d.ZERO, prefab, rotation, this.configuration);
+            return new PrefabCaveNodeShape(caveType, origin, Vector3dUtil.ZERO, prefab, rotation, this.configuration);
          }
       }
    }

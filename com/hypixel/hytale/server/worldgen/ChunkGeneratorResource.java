@@ -1,7 +1,6 @@
 package com.hypixel.hytale.server.worldgen;
 
 import com.hypixel.hytale.math.util.FastRandom;
-import com.hypixel.hytale.math.vector.Vector2d;
 import com.hypixel.hytale.procedurallib.logic.ResultBuffer;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
 import com.hypixel.hytale.server.worldgen.cache.CoordinateCache;
@@ -22,6 +21,7 @@ import it.unimi.dsi.fastutil.ints.IntList;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class ChunkGeneratorResource {
    @Nonnull
@@ -30,9 +30,7 @@ public class ChunkGeneratorResource {
    public final Random random2;
    @Nonnull
    public final IntList coverArray;
-   public final TimeoutCache<WorldGenPrefabSupplier, IPrefabBuffer> prefabs = new TimeoutCache<>(
-      30L, TimeUnit.SECONDS, this::getPrefab, (key, value) -> value.release()
-   );
+   public final TimeoutCache<WorldGenPrefabSupplier, IPrefabBuffer> prefabs = new TimeoutCache<>(30L, TimeUnit.SECONDS, this::getPrefab, (key, value) -> {});
    @Nonnull
    public final BlockPriorityChunk priorityChunk;
    @Nonnull

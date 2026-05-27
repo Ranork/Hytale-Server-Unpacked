@@ -2,7 +2,7 @@ package com.hypixel.hytale.server.npc.role;
 
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
@@ -12,32 +12,19 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class RoleUtils {
-   public static void setHotbarItems(@Nonnull NPCEntity npcComponent, @Nonnull String[] hotbarItems) {
-      Inventory inventory = npcComponent.getInventory();
-
-      for (byte i = 0; i < hotbarItems.length; i++) {
-         InventoryHelper.setHotbarItem(inventory, hotbarItems[i], i);
-      }
-   }
-
-   public static void setOffHandItems(@Nonnull NPCEntity npcComponent, @Nonnull String[] offHandItems) {
-      Inventory inventory = npcComponent.getInventory();
-
-      for (byte i = 0; i < offHandItems.length; i++) {
-         InventoryHelper.setOffHandItem(inventory, offHandItems[i], i);
-      }
-   }
-
    public static void setItemInHand(
       @Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nullable String itemInHand, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      if (!InventoryHelper.useItem(ref, npcComponent.getInventory(), itemInHand, componentAccessor)) {
+      if (!InventoryHelper.useItem(ref, itemInHand, componentAccessor)) {
          NPCPlugin.get().getLogger().at(Level.WARNING).log("NPC of type '%s': Failed to use item '%s'", npcComponent.getRoleName(), itemInHand);
       }
    }
 
-   public static void setArmor(@Nonnull NPCEntity npcComponent, @Nullable String armor) {
-      if (!InventoryHelper.useArmor(npcComponent.getInventory().getArmor(), armor)) {
+   public static void setArmor(
+      @Nonnull Ref<EntityStore> ref, @Nonnull NPCEntity npcComponent, @Nullable String armor, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      InventoryComponent.Armor armorComponent = componentAccessor.getComponent(ref, InventoryComponent.Armor.getComponentType());
+      if (armorComponent == null || !InventoryHelper.useArmor(armorComponent.getInventory(), armor)) {
          NPCPlugin.get().getLogger().at(Level.WARNING).log("NPC of type '%s': Failed to use armor '%s'", npcComponent.getRoleName(), armor);
       }
    }

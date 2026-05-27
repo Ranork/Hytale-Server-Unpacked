@@ -6,7 +6,6 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.spatial.SpatialResource;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.camera.CameraEffect;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
@@ -25,6 +24,7 @@ import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class DamageEffects implements NetworkSerializable<com.hypixel.hytale.protocol.DamageEffects> {
    public static final BuilderCodec<DamageEffects> CODEC = BuilderCodec.builder(DamageEffects.class, DamageEffects::new)
@@ -265,7 +265,7 @@ public class DamageEffects implements NetworkSerializable<com.hypixel.hytale.pro
    @Nonnull
    public com.hypixel.hytale.protocol.DamageEffects toPacket() {
       com.hypixel.hytale.protocol.ModelParticle[] modelParticlesProtocol = null;
-      if (!org.bouncycastle.util.Arrays.isNullOrEmpty(this.modelParticles)) {
+      if (this.modelParticles != null && this.modelParticles.length > 0) {
          modelParticlesProtocol = new com.hypixel.hytale.protocol.ModelParticle[this.modelParticles.length];
 
          for (int i = 0; i < this.modelParticles.length; i++) {
@@ -274,7 +274,7 @@ public class DamageEffects implements NetworkSerializable<com.hypixel.hytale.pro
       }
 
       com.hypixel.hytale.protocol.WorldParticle[] worldParticlesProtocol = null;
-      if (!org.bouncycastle.util.Arrays.isNullOrEmpty(this.worldParticles)) {
+      if (this.worldParticles != null && this.worldParticles.length > 0) {
          worldParticlesProtocol = new com.hypixel.hytale.protocol.WorldParticle[this.worldParticles.length];
 
          for (int i = 0; i < this.worldParticles.length; i++) {

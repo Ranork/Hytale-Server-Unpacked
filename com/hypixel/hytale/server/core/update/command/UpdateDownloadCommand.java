@@ -2,7 +2,10 @@ package com.hypixel.hytale.server.core.update.command;
 
 import com.hypixel.hytale.common.util.FormatUtil;
 import com.hypixel.hytale.common.util.java.ManifestUtil;
+import com.hypixel.hytale.server.core.Constants;
+import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.ShutdownReason;
 import com.hypixel.hytale.server.core.auth.ServerAuthManager;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -11,8 +14,10 @@ import com.hypixel.hytale.server.core.update.UpdateModule;
 import com.hypixel.hytale.server.core.update.UpdateService;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class UpdateDownloadCommand extends AbstractAsyncCommand {
    private static final Message MSG_NOT_AUTHENTICATED = Message.translation("server.commands.update.not_authenticated");
@@ -22,6 +27,7 @@ public class UpdateDownloadCommand extends AbstractAsyncCommand {
    private static final Message MSG_DOWNLOAD_COMPLETE = Message.translation("server.commands.update.download_complete");
    private static final Message MSG_DOWNLOAD_IN_PROGRESS = Message.translation("server.commands.update.download_in_progress");
    private static final Message MSG_INVALID_LAYOUT = Message.translation("server.commands.update.invalid_layout_download");
+   private static final Message MSG_BOOTSTRAP_COMPLETE = Message.translation("server.commands.update.bootstrap_complete");
    private final FlagArg forceFlag = this.withFlagArg("force", "server.commands.update.download.force.desc");
 
    public UpdateDownloadCommand() {
@@ -31,91 +37,152 @@ public class UpdateDownloadCommand extends AbstractAsyncCommand {
    @Nonnull
    @Override
    protected CompletableFuture<Void> executeAsync(@Nonnull CommandContext context) {
+      if (Constants.BOOTSTRAP) {
+         return runBootstrapInstall(context);
+      } else {
+         UpdateModule updateModule = UpdateModule.get();
+         if (updateModule != null && updateModule.isDownloadInProgress()) {
+            context.sendMessage(MSG_DOWNLOAD_IN_PROGRESS);
+            return CompletableFuture.completedFuture(null);
+         } else {
+            boolean force = this.forceFlag.get(context);
+            if (!UpdateService.isValidUpdateLayout() && !force) {
+               context.sendMessage(MSG_INVALID_LAYOUT);
+               return CompletableFuture.completedFuture(null);
+            } else {
+               ServerAuthManager authManager = ServerAuthManager.getInstance();
+               if (!authManager.hasSessionToken()) {
+                  context.sendMessage(MSG_NOT_AUTHENTICATED);
+                  return CompletableFuture.completedFuture(null);
+               } else {
+                  UpdateService updateService = new UpdateService();
+                  return updateService.checkForUpdate(UpdateService.getEffectivePatchline()).thenCompose(manifest -> {
+                     if (manifest == null) {
+                        context.sendMessage(MSG_CHECK_FAILED);
+                        return CompletableFuture.completedFuture(null);
+                     } else {
+                        if (updateModule != null) {
+                           updateModule.setLatestKnownVersion(manifest);
+                        }
+
+                        String currentVersion = ManifestUtil.getImplementationVersion();
+                        if (!force && currentVersion != null && currentVersion.equals(manifest.version)) {
+                           context.sendMessage(MSG_NO_UPDATE);
+                           return CompletableFuture.completedFuture(null);
+                        } else if (updateModule != null && !updateModule.tryAcquireDownloadLock()) {
+                           context.sendMessage(MSG_DOWNLOAD_IN_PROGRESS);
+                           return CompletableFuture.completedFuture(null);
+                        } else {
+                           context.sendMessage(Message.translation("server.commands.update.downloading").param("version", manifest.version));
+                           UpdateService.ProgressCallback progressCallback = progressCallback(context, updateModule);
+                           UpdateService.DownloadTask downloadTask = updateService.downloadUpdate(manifest, UpdateService.getStagingDir(), progressCallback);
+                           CompletableFuture<Boolean> downloadFuture = downloadTask.future().whenComplete((success, error) -> {
+                              if (updateModule != null) {
+                                 updateModule.releaseDownloadLock();
+                              }
+
+                              if (error instanceof CancellationException) {
+                                 UpdateService.deleteStagedUpdate();
+                              } else if (error == null && Boolean.TRUE.equals(success)) {
+                                 context.sendMessage(MSG_DOWNLOAD_COMPLETE);
+                                 if (!UpdateService.isValidUpdateLayout()) {
+                                    context.sendMessage(Message.translation("server.commands.update.download_setup_hint"));
+                                 }
+                              } else {
+                                 context.sendMessage(MSG_DOWNLOAD_FAILED);
+                                 UpdateService.deleteStagedUpdate();
+                              }
+                           });
+                           if (updateModule != null) {
+                              updateModule.setActiveDownload(downloadFuture, downloadTask.thread());
+                           }
+
+                           return downloadFuture.thenApply(v -> null);
+                        }
+                     }
+                  });
+               }
+            }
+         }
+      }
+   }
+
+   @Nonnull
+   public static CompletableFuture<Void> runBootstrapInstall(@Nonnull CommandContext context) {
       UpdateModule updateModule = UpdateModule.get();
       if (updateModule != null && updateModule.isDownloadInProgress()) {
          context.sendMessage(MSG_DOWNLOAD_IN_PROGRESS);
          return CompletableFuture.completedFuture(null);
       } else {
-         boolean force = this.forceFlag.get(context);
-         if (!UpdateService.isValidUpdateLayout() && !force) {
-            context.sendMessage(MSG_INVALID_LAYOUT);
+         ServerAuthManager authManager = ServerAuthManager.getInstance();
+         if (!authManager.hasSessionToken()) {
+            context.sendMessage(MSG_NOT_AUTHENTICATED);
             return CompletableFuture.completedFuture(null);
          } else {
-            ServerAuthManager authManager = ServerAuthManager.getInstance();
-            if (!authManager.hasSessionToken()) {
-               context.sendMessage(MSG_NOT_AUTHENTICATED);
-               return CompletableFuture.completedFuture(null);
-            } else {
-               UpdateService updateService = new UpdateService();
-               return updateService.checkForUpdate(UpdateService.getEffectivePatchline())
-                  .thenCompose(
-                     manifest -> {
-                        if (manifest == null) {
-                           context.sendMessage(MSG_CHECK_FAILED);
-                           return CompletableFuture.completedFuture(null);
+            UpdateService updateService = new UpdateService();
+            return updateService.checkForUpdate(UpdateService.getEffectivePatchline()).thenCompose(manifest -> {
+               if (manifest == null) {
+                  context.sendMessage(MSG_CHECK_FAILED);
+                  return CompletableFuture.completedFuture(null);
+               } else {
+                  if (updateModule != null) {
+                     updateModule.setLatestKnownVersion(manifest);
+                     if (!updateModule.tryAcquireDownloadLock()) {
+                        context.sendMessage(MSG_DOWNLOAD_IN_PROGRESS);
+                        return CompletableFuture.completedFuture(null);
+                     }
+                  }
+
+                  context.sendMessage(Message.translation("server.commands.update.downloading").param("version", manifest.version));
+                  UpdateService.ProgressCallback progressCallback = progressCallback(context, updateModule);
+                  UpdateService.DownloadTask downloadTask = updateService.performBootstrapInstall(manifest, progressCallback);
+                  CompletableFuture<Boolean> downloadFuture = downloadTask.future().whenComplete((success, error) -> {
+                     if (updateModule != null) {
+                        updateModule.releaseDownloadLock();
+                     }
+
+                     if (!(error instanceof CancellationException)) {
+                        if (error == null && Boolean.TRUE.equals(success)) {
+                           context.sendMessage(MSG_BOOTSTRAP_COMPLETE);
+                           scheduleBootstrapShutdown();
                         } else {
-                           if (updateModule != null) {
-                              updateModule.setLatestKnownVersion(manifest);
-                           }
-
-                           String currentVersion = ManifestUtil.getImplementationVersion();
-                           if (!force && currentVersion != null && currentVersion.equals(manifest.version)) {
-                              context.sendMessage(MSG_NO_UPDATE);
-                              return CompletableFuture.completedFuture(null);
-                           } else if (updateModule != null && !updateModule.tryAcquireDownloadLock()) {
-                              context.sendMessage(MSG_DOWNLOAD_IN_PROGRESS);
-                              return CompletableFuture.completedFuture(null);
-                           } else {
-                              context.sendMessage(Message.translation("server.commands.update.downloading").param("version", manifest.version));
-                              AtomicInteger lastPercent = new AtomicInteger(-1);
-                              UpdateService.DownloadTask downloadTask = updateService.downloadUpdate(
-                                 manifest,
-                                 UpdateService.getStagingDir(),
-                                 (percent, downloaded, total) -> {
-                                    if (updateModule != null) {
-                                       updateModule.updateDownloadProgress(downloaded, total);
-                                    }
-
-                                    int rounded = percent / 10 * 10;
-                                    if (rounded > lastPercent.get()) {
-                                       lastPercent.set(rounded);
-                                       context.sendMessage(
-                                          Message.translation("server.commands.update.download_progress")
-                                             .param("percent", String.valueOf(percent))
-                                             .param("downloaded", FormatUtil.bytesToString(downloaded))
-                                             .param("total", FormatUtil.bytesToString(total))
-                                       );
-                                    }
-                                 }
-                              );
-                              CompletableFuture<Boolean> downloadFuture = downloadTask.future().whenComplete((success, error) -> {
-                                 if (updateModule != null) {
-                                    updateModule.releaseDownloadLock();
-                                 }
-
-                                 if (error instanceof CancellationException) {
-                                    UpdateService.deleteStagedUpdate();
-                                 } else if (error == null && Boolean.TRUE.equals(success)) {
-                                    context.sendMessage(MSG_DOWNLOAD_COMPLETE);
-                                    if (!UpdateService.isValidUpdateLayout()) {
-                                       context.sendMessage(Message.translation("server.commands.update.download_setup_hint"));
-                                    }
-                                 } else {
-                                    context.sendMessage(MSG_DOWNLOAD_FAILED);
-                                    UpdateService.deleteStagedUpdate();
-                                 }
-                              });
-                              if (updateModule != null) {
-                                 updateModule.setActiveDownload(downloadFuture, downloadTask.thread());
-                              }
-
-                              return downloadFuture.thenApply(v -> null);
-                           }
+                           context.sendMessage(MSG_DOWNLOAD_FAILED);
                         }
                      }
-                  );
-            }
+                  });
+                  if (updateModule != null) {
+                     updateModule.setActiveDownload(downloadFuture, downloadTask.thread());
+                  }
+
+                  return downloadFuture.thenApply(v -> null);
+               }
+            });
          }
       }
+   }
+
+   @Nonnull
+   private static UpdateService.ProgressCallback progressCallback(@Nonnull CommandContext context, @Nullable UpdateModule updateModule) {
+      AtomicInteger lastPercent = new AtomicInteger(-1);
+      return (percent, downloaded, total) -> {
+         if (updateModule != null) {
+            updateModule.updateDownloadProgress(downloaded, total);
+         }
+
+         int rounded = percent / 10 * 10;
+         if (rounded > lastPercent.get()) {
+            lastPercent.set(rounded);
+            context.sendMessage(
+               Message.translation("server.commands.update.download_progress")
+                  .param("percent", String.valueOf(percent))
+                  .param("downloaded", FormatUtil.bytesToString(downloaded))
+                  .param("total", FormatUtil.bytesToString(total))
+            );
+         }
+      };
+   }
+
+   private static void scheduleBootstrapShutdown() {
+      CompletableFuture.delayedExecutor(500L, TimeUnit.MILLISECONDS).execute(() -> HytaleServer.get().shutdownServer(ShutdownReason.SHUTDOWN));
    }
 }

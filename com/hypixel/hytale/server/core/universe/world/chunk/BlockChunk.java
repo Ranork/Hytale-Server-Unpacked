@@ -15,8 +15,6 @@ import com.hypixel.hytale.function.predicate.ObjectPositionBlockFunction;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.CachedPacket;
 import com.hypixel.hytale.protocol.Opacity;
 import com.hypixel.hytale.protocol.ToClientPacket;
@@ -33,17 +31,14 @@ import com.hypixel.hytale.server.core.universe.world.chunk.palette.IntBytePalett
 import com.hypixel.hytale.server.core.universe.world.chunk.palette.ShortBytePalette;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
-import com.hypixel.hytale.server.core.util.io.ByteBufUtil;
-import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.Int2ShortMap.Entry;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
 import java.lang.ref.SoftReference;
 import java.time.Instant;
 import java.util.List;
@@ -52,6 +47,8 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class BlockChunk implements Component<ChunkStore> {
    public static final int VERSION = 3;
@@ -71,9 +68,6 @@ public class BlockChunk implements Component<ChunkStore> {
    private final IntBytePalette tint;
    @Deprecated(forRemoval = true)
    private BlockSection[] chunkSections;
-   @Nullable
-   @Deprecated(forRemoval = true)
-   private BlockSection[] migratedChunkSections;
    private EnvironmentChunk environments;
    private boolean needsPhysics = true;
    private boolean needsSaving = false;
@@ -204,9 +198,7 @@ public class BlockChunk implements Component<ChunkStore> {
 
          for (int i = 0; i < sections.length; i++) {
             Holder<ChunkStore> section = sections[i];
-            this.chunkSections[i] = this.migratedChunkSections != null
-               ? this.migratedChunkSections[i]
-               : section.ensureAndGetComponent(BlockSection.getComponentType());
+            this.chunkSections[i] = section.ensureAndGetComponent(BlockSection.getComponentType());
          }
       }
    }
@@ -468,48 +460,24 @@ public class BlockChunk implements Component<ChunkStore> {
       this.chunkSections[sectionIndex].invalidate();
    }
 
-   @Nullable
-   @Deprecated(forRemoval = true)
-   public BlockSection[] takeMigratedSections() {
-      BlockSection[] temp = this.migratedChunkSections;
-      this.migratedChunkSections = null;
-      return temp;
-   }
-
-   @Nullable
-   @Deprecated(forRemoval = true)
-   public BlockSection[] getMigratedSections() {
-      return this.migratedChunkSections;
-   }
-
    private byte[] serialize(ExtraInfo extraInfo) {
-      ByteBuf buf = ByteBufAllocator.DEFAULT.buffer();
-
-      try {
-         buf.writeBoolean(this.needsPhysics);
-         this.height.serialize(buf);
-         this.tint.serialize(buf);
-         return ByteBufUtil.getBytesRelease(buf);
-      } catch (Throwable var4) {
-         buf.release();
-         throw SneakyThrow.sneakyThrow(var4);
-      }
+      int heightBytes = this.height.byteSize();
+      byte[] result = new byte[1 + heightBytes + this.tint.byteSize()];
+      MemorySegment data = MemorySegment.ofArray(result);
+      data.set(ValueLayout.JAVA_BOOLEAN, 0L, this.needsPhysics);
+      this.height.serialize(data, 1);
+      this.tint.serialize(data, 1 + heightBytes);
+      return result;
    }
 
    private void deserialize(@Nonnull byte[] bytes, @Nonnull ExtraInfo extraInfo) {
-      ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-      this.needsPhysics = buf.readBoolean();
-      this.height.deserialize(buf);
-      this.tint.deserialize(buf);
-      if (extraInfo.getVersion() <= 2) {
-         int sections = buf.readInt();
-         this.migratedChunkSections = new BlockSection[sections];
-
-         for (int y = 0; y < sections; y++) {
-            BlockSection section = new BlockSection();
-            section.deserialize(BlockType.KEY_DESERIALIZER, buf, extraInfo.getVersion());
-            this.migratedChunkSections[y] = section;
-         }
+      if (extraInfo.getVersion() < 3) {
+         throw new IllegalArgumentException("Version not supported");
+      } else {
+         MemorySegment data = MemorySegment.ofArray(bytes);
+         this.needsPhysics = data.get(ValueLayout.JAVA_BOOLEAN, 0L);
+         int heightSize = this.height.deserialize(data, 1);
+         this.tint.deserialize(data, 1 + heightSize);
       }
    }
 

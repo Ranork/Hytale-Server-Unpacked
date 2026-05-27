@@ -3,8 +3,6 @@ package com.hypixel.hytale.builtin.mounts;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockMountType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.mountpoints.BlockMountPoint;
@@ -16,6 +14,8 @@ import java.util.Collection;
 import java.util.Map;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class BlockMountComponent implements Component<ChunkStore> {
    private BlockMountType type;
@@ -90,15 +90,15 @@ public class BlockMountComponent implements Component<ChunkStore> {
    }
 
    @Nullable
-   public BlockMountPoint findAvailableSeat(@Nonnull Vector3i targetBlock, @Nonnull BlockMountPoint[] choices, @Nonnull Vector3f whereWasClicked) {
+   public BlockMountPoint findAvailableSeat(@Nonnull Vector3i targetBlock, @Nonnull BlockMountPoint[] choices, @Nonnull Vector3d whereWasClicked) {
       this.clean();
       double minDistSq = Double.MAX_VALUE;
       BlockMountPoint closestSeat = null;
 
       for (BlockMountPoint choice : choices) {
          if (!this.entitiesByMountPoint.containsKey(choice)) {
-            Vector3f seatInWorldSpace = choice.computeWorldSpacePosition(targetBlock);
-            double distSq = whereWasClicked.distanceSquaredTo(seatInWorldSpace);
+            Vector3d seatInWorldSpace = choice.computeWorldSpacePosition(targetBlock);
+            double distSq = whereWasClicked.distanceSquared(seatInWorldSpace);
             if (distSq < minDistSq) {
                minDistSq = distSq;
                closestSeat = choice;

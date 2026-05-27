@@ -4,15 +4,16 @@ import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.ConstantVector
 import com.hypixel.hytale.builtin.hytalegenerator.vectorproviders.VectorProvider;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class ConstantVectorProviderAsset extends VectorProviderAsset {
    @Nonnull
    public static final BuilderCodec<ConstantVectorProviderAsset> CODEC = BuilderCodec.builder(
          ConstantVectorProviderAsset.class, ConstantVectorProviderAsset::new, ABSTRACT_CODEC
       )
-      .append(new KeyedCodec<>("Value", Vector3d.CODEC, true), (asset, value) -> asset.value = value, asset -> asset.value)
+      .append(new KeyedCodec<>("Value", Vector3dUtil.CODEC, true), (asset, value) -> asset.value = value, asset -> asset.value)
       .add()
       .build();
    private Vector3d value = new Vector3d();
@@ -21,7 +22,7 @@ public class ConstantVectorProviderAsset extends VectorProviderAsset {
    }
 
    public ConstantVectorProviderAsset(@Nonnull Vector3d vector) {
-      this.value.assign(vector);
+      this.value.set(vector);
    }
 
    @Nonnull

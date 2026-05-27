@@ -15,9 +15,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.event.EventPriority;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
@@ -65,6 +63,8 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class ProcessingBenchBlock implements Component<ChunkStore> {
    @Nonnull
@@ -91,14 +91,18 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
       .append(new KeyedCodec<>("LastTickGameTime", Codec.INSTANT), (state, t) -> state.lastTickGameTime = t, state -> state.lastTickGameTime)
       .add()
       .build();
+   @Nonnull
+   public static final String PROCESSING = "Processing";
+   @Nonnull
+   public static final String PROCESS_COMPLETED = "ProcessCompleted";
    private static final float MAX_UNLOAD_ELAPSED_SECONDS = 86400.0F;
    private static final float EJECT_VELOCITY = 2.0F;
    private static final float EJECT_SPREAD_VELOCITY = 1.0F;
    private static final float EJECT_VERTICAL_VELOCITY = 3.25F;
    @Nonnull
-   public static final String PROCESSING = "Processing";
+   private final Set<Short> processingSlots = new HashSet<>();
    @Nonnull
-   public static final String PROCESS_COMPLETED = "ProcessCompleted";
+   private final Set<Short> processingFuelSlots = new HashSet<>();
    private transient Bench bench;
    private transient ProcessingBench processingBench;
    private ItemContainer inputContainer;
@@ -109,10 +113,6 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
    private float fuelTime;
    private int lastConsumedFuelTotal;
    private int nextExtra = -1;
-   @Nonnull
-   private final Set<Short> processingSlots = new HashSet<>();
-   @Nonnull
-   private final Set<Short> processingFuelSlots = new HashSet<>();
    @Nullable
    private String recipeId;
    @Nullable
@@ -123,6 +123,13 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
 
    public static ComponentType<ChunkStore, ProcessingBenchBlock> getComponentType() {
       return CraftingPlugin.get().getProcessingBenchBlockComponentType();
+   }
+
+   @Nonnull
+   private static Vector3d getCenteredBlockPosition(@Nonnull BlockType blockType, int rotationIndex, int blockX, int blockY, int blockZ) {
+      Vector3d blockCenter = new Vector3d();
+      blockType.getBlockCenter(rotationIndex, blockCenter);
+      return blockCenter.add(blockX, blockY, blockZ);
    }
 
    @Nullable
@@ -159,10 +166,6 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
    @Nonnull
    public Set<Short> getProcessingFuelSlots() {
       return this.processingFuelSlots;
-   }
-
-   public void setInputProgress(float inputProgress) {
-      this.inputProgress = inputProgress;
    }
 
    @Nullable
@@ -356,6 +359,10 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
 
    public float getInputProgress() {
       return this.inputProgress;
+   }
+
+   public void setInputProgress(float inputProgress) {
+      this.inputProgress = inputProgress;
    }
 
    public void dropFuelItems(@Nonnull List<ItemStack> itemStacks) {
@@ -747,7 +754,7 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
          for (ItemStack item : itemStacks) {
             float velocityX = (float)(frontDir.x * 2.0 + 2.0 * (random.nextDouble() - 0.5));
             float velocityZ = (float)(frontDir.z * 2.0 + 2.0 * (random.nextDouble() - 0.5));
-            Holder<EntityStore> holder = ItemComponent.generateItemDrop(accessor, item, dropPosition, Vector3f.ZERO, velocityX, 3.25F, velocityZ);
+            Holder<EntityStore> holder = ItemComponent.generateItemDrop(accessor, item, dropPosition, Rotation3f.IDENTITY, velocityX, 3.25F, velocityZ);
             if (holder != null) {
                result.add(holder);
             }
@@ -755,13 +762,6 @@ public class ProcessingBenchBlock implements Component<ChunkStore> {
 
          return (Holder<EntityStore>[])result.toArray(Holder[]::new);
       }
-   }
-
-   @Nonnull
-   private static Vector3d getCenteredBlockPosition(@Nonnull BlockType blockType, int rotationIndex, int blockX, int blockY, int blockZ) {
-      Vector3d blockCenter = new Vector3d();
-      blockType.getBlockCenter(rotationIndex, blockCenter);
-      return blockCenter.add(blockX, blockY, blockZ);
    }
 
    public void sendProgress(float progress, @Nonnull Map<UUID, BenchWindow> windows) {

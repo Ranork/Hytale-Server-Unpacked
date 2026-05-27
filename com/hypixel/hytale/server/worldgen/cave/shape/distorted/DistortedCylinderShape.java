@@ -2,10 +2,10 @@ package com.hypixel.hytale.server.worldgen.cave.shape.distorted;
 
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.procedurallib.logic.GeneralNoise;
 import com.hypixel.hytale.server.worldgen.cave.shape.CaveNodeShapeUtils;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class DistortedCylinderShape extends AbstractDistortedExtrusion {
    protected static final double PITCH_COMPENSATION_MIN = 1.0;
@@ -74,7 +74,7 @@ public class DistortedCylinderShape extends AbstractDistortedExtrusion {
    @Nonnull
    @Override
    public Vector3d getStart() {
-      return this.o.clone();
+      return new Vector3d(this.o);
    }
 
    @Nonnull

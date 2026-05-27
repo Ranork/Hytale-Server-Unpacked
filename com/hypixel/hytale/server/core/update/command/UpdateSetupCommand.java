@@ -2,6 +2,7 @@ package com.hypixel.hytale.server.core.update.command;
 
 import com.hypixel.hytale.common.util.java.ManifestUtil;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.Constants;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.FlagArg;
@@ -34,7 +35,9 @@ public class UpdateSetupCommand extends CommandBase {
 
    @Override
    protected void executeSync(@Nonnull CommandContext context) {
-      if (!ManifestUtil.isJar()) {
+      if (Constants.BOOTSTRAP) {
+         UpdateDownloadCommand.runBootstrapInstall(context);
+      } else if (!ManifestUtil.isJar()) {
          context.sendMessage(MSG_NOT_JAR);
       } else {
          boolean force = this.forceFlag.get(context);

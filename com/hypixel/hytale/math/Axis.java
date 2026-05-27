@@ -1,24 +1,25 @@
 package com.hypixel.hytale.math;
 
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public enum Axis {
    X(new Vector3i(1, 0, 0)),
    Y(new Vector3i(0, 1, 0)),
    Z(new Vector3i(0, 0, 1));
 
-   private final Vector3i direction;
+   private final Vector3ic direction;
 
    private Axis(@Nonnull final Vector3i direction) {
       this.direction = direction;
    }
 
    @Nonnull
-   public Vector3i getDirection() {
-      return this.direction.clone();
+   public Vector3ic getDirection() {
+      return this.direction;
    }
 
    public void rotate(@Nonnull Vector3i vector, int angle) {
@@ -44,65 +45,65 @@ public enum Axis {
    public void rotate(@Nonnull Vector3i vector) {
       switch (this) {
          case X:
-            vector.assign(vector.getX(), -vector.getZ(), vector.getY());
+            vector.set(vector.x(), -vector.z(), vector.y());
             break;
          case Y:
-            vector.assign(vector.getZ(), vector.getY(), -vector.getX());
+            vector.set(vector.z(), vector.y(), -vector.x());
             break;
          case Z:
-            vector.assign(-vector.getY(), vector.getX(), vector.getZ());
+            vector.set(-vector.y(), vector.x(), vector.z());
       }
    }
 
    public void rotate(@Nonnull Vector3d vector) {
       switch (this) {
          case X:
-            vector.assign(vector.getX(), -vector.getZ(), vector.getY());
+            vector.set(vector.x(), -vector.z(), vector.y());
             break;
          case Y:
-            vector.assign(vector.getZ(), vector.getY(), -vector.getX());
+            vector.set(vector.z(), vector.y(), -vector.x());
             break;
          case Z:
-            vector.assign(-vector.getY(), vector.getX(), vector.getZ());
+            vector.set(-vector.y(), vector.x(), vector.z());
       }
    }
 
    public void flip(@Nonnull Vector3i vector) {
       switch (this) {
          case X:
-            vector.assign(-vector.getX(), vector.getY(), vector.getZ());
+            vector.set(-vector.x(), vector.y(), vector.z());
             break;
          case Y:
-            vector.assign(vector.getX(), -vector.getY(), vector.getZ());
+            vector.set(vector.x(), -vector.y(), vector.z());
             break;
          case Z:
-            vector.assign(vector.getX(), vector.getY(), -vector.getZ());
+            vector.set(vector.x(), vector.y(), -vector.z());
       }
    }
 
    public void flip(@Nonnull Vector3d vector) {
       switch (this) {
          case X:
-            vector.assign(-vector.getX(), vector.getY(), vector.getZ());
+            vector.set(-vector.x(), vector.y(), vector.z());
             break;
          case Y:
-            vector.assign(vector.getX(), -vector.getY(), vector.getZ());
+            vector.set(vector.x(), -vector.y(), vector.z());
             break;
          case Z:
-            vector.assign(vector.getX(), vector.getY(), -vector.getZ());
+            vector.set(vector.x(), vector.y(), -vector.z());
       }
    }
 
-   public void flipRotation(@Nonnull Vector3f rotation) {
+   public void flipRotation(@Nonnull Rotation3f rotation) {
       switch (this) {
          case X:
-            rotation.setYaw(-rotation.getYaw());
+            rotation.setYaw(-rotation.yaw());
             break;
          case Y:
-            rotation.setPitch(-rotation.getPitch());
+            rotation.setPitch(-rotation.pitch());
             break;
          case Z:
-            rotation.setYaw((float) Math.PI - rotation.getYaw());
+            rotation.setYaw((float) Math.PI - rotation.yaw());
       }
    }
 }

@@ -1,21 +1,24 @@
 package com.hypixel.hytale.server.core.modules.entity.player;
 
+import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Archetype;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Holder;
+import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.StoreSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.component.system.tick.RunWhenPausedSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
-import com.hypixel.hytale.server.core.entity.EntityUtils;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
@@ -24,13 +27,62 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PlayerSavingSystems {
    @Nonnull
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final float PLAYER_SAVE_INTERVAL_SECONDS = 10.0F;
+
+   @Nonnull
+   private static Holder<EntityStore> createShallowHolder(int index, @Nonnull ArchetypeChunk<EntityStore> archetypeChunk) {
+      Archetype<EntityStore> archetype = archetypeChunk.getArchetype();
+      Component[] components = new Component[archetype.length()];
+
+      for (int i = archetype.getMinIndex(); i < archetype.length(); i++) {
+         ComponentType componentType = archetype.get(i);
+         if (componentType != null) {
+            components[i] = archetypeChunk.getComponent(index, componentType);
+         }
+      }
+
+      return EntityStore.REGISTRY.newHolder(archetype, components);
+   }
+
+   public static class EntityRemovedSystem extends HolderSystem<EntityStore> {
+      @Nonnull
+      private final ComponentType<EntityStore, Player> playerComponentType;
+
+      public EntityRemovedSystem(@Nonnull ComponentType<EntityStore, Player> playerComponentType) {
+         this.playerComponentType = playerComponentType;
+      }
+
+      @Override
+      public void onEntityAdd(@Nonnull Holder<EntityStore> holder, @Nonnull AddReason reason, @Nonnull Store<EntityStore> store) {
+      }
+
+      @Override
+      public void onEntityRemoved(@Nonnull Holder<EntityStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<EntityStore> store) {
+         World world = store.getExternalData().getWorld();
+         if (world.getWorldConfig().isSavingPlayers()) {
+            Player playerComponent = holder.getComponent(this.playerComponentType);
+
+            assert playerComponent != null;
+
+            playerComponent.saveConfig(world, holder, true);
+         }
+      }
+
+      @Nonnull
+      @Override
+      public Query<EntityStore> getQuery() {
+         return this.playerComponentType;
+      }
+   }
 
    public static class SaveDataResource implements Resource<EntityStore> {
       private float delay = 10.0F;
@@ -79,7 +131,7 @@ public class PlayerSavingSystems {
       @Override
       public void tick(float dt, int systemIndex, @Nonnull Store<EntityStore> store) {
          World world = store.getExternalData().getWorld();
-         if (world.getWorldConfig().isSavingPlayers()) {
+         if (!world.isSavingLocked() && world.getWorldConfig().isSavingPlayers()) {
             PlayerSavingSystems.SaveDataResource data = store.getResource(this.dataResourceType);
             data.delay -= dt;
             if (data.delay <= 0.0F) {
@@ -111,9 +163,9 @@ public class PlayerSavingSystems {
 
          PlayerConfigData data = playerComponent.getPlayerConfigData();
          Vector3d position = transformComponent.getPosition();
-         Vector3f rotation = headRotationComponent.getRotation();
+         Rotation3f rotation = headRotationComponent.getRotation();
          Vector3d lastSavedPosition = data.lastSavedPosition;
-         Vector3f lastSavedRotation = data.lastSavedRotation;
+         Rotation3f lastSavedRotation = data.lastSavedRotation;
          InventoryComponent.Storage storage = archetypeChunk.getComponent(index, InventoryComponent.Storage.getComponentType());
          InventoryComponent.Armor armor = archetypeChunk.getComponent(index, InventoryComponent.Armor.getComponentType());
          InventoryComponent.Hotbar hotbar = archetypeChunk.getComponent(index, InventoryComponent.Hotbar.getComponentType());
@@ -128,9 +180,9 @@ public class PlayerSavingSystems {
          needsSaving |= tool != null && tool.consumeNeedsSaving();
          needsSaving |= backpack != null && backpack.consumeNeedsSaving();
          if (!lastSavedPosition.equals(position) || !lastSavedRotation.equals(rotation) || needsSaving) {
-            lastSavedPosition.assign(position);
-            lastSavedRotation.assign(rotation);
-            playerComponent.saveConfig(store.getExternalData().getWorld(), EntityUtils.toHolder(index, archetypeChunk));
+            lastSavedPosition.set(position);
+            lastSavedRotation.set(rotation);
+            playerComponent.saveConfig(store.getExternalData().getWorld(), PlayerSavingSystems.createShallowHolder(index, archetypeChunk), false);
          }
       }
    }
@@ -161,6 +213,7 @@ public class PlayerSavingSystems {
             PlayerSavingSystems.LOGGER.at(Level.INFO).log("Disconnecting Players...");
          }
 
+         ConcurrentLinkedDeque<CompletableFuture<Void>> futures = new ConcurrentLinkedDeque<>();
          store.forEachEntityParallel(this.query, (index, archetypeChunk, commandBuffer) -> {
             Player playerComponent = archetypeChunk.getComponent(index, this.playerComponentType);
 
@@ -172,11 +225,12 @@ public class PlayerSavingSystems {
 
             World world = commandBuffer.getExternalData().getWorld();
             if (world.getWorldConfig().isSavingPlayers()) {
-               playerComponent.saveConfig(world, EntityUtils.toHolder(index, archetypeChunk));
+               futures.add(playerComponent.saveConfig(world, PlayerSavingSystems.createShallowHolder(index, archetypeChunk), true));
             }
 
             playerRefComponent.getPacketHandler().disconnect(Message.translation("server.general.disconnect.stoppingWorld"));
          });
+         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
       }
    }
 }

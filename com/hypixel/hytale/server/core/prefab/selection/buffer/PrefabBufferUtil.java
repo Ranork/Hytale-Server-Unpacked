@@ -10,16 +10,17 @@ import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.PrefabBuffer;
 import com.hypixel.hytale.server.core.util.BsonUtil;
 import com.hypixel.hytale.server.core.util.io.FileUtil;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import java.io.BufferedOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.nio.channels.SeekableByteChannel;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.attribute.FileTime;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,6 +39,7 @@ public class PrefabBufferUtil {
    public static final Pattern FILE_SUFFIX_PATTERN = Pattern.compile("((!\\.prefab\\.json)\\.lpf|\\.prefab\\.json)$");
    public static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
    private static final Map<Path, WeakReference<PrefabBufferUtil.CachedEntry>> CACHE = new ConcurrentHashMap<>();
+   private static final Set<Path> SAVING_PREFABS = ConcurrentHashMap.newKeySet();
 
    @Nonnull
    public static IPrefabBuffer getCached(@Nonnull Path path) {
@@ -124,9 +126,13 @@ public class PrefabBufferUtil {
    @Nonnull
    public static CompletableFuture<Void> writeToFileAsync(@Nonnull PrefabBuffer prefab, @Nonnull Path path) {
       return CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> {
-         try (SeekableByteChannel channel = Files.newByteChannel(path, FileUtil.DEFAULT_WRITE_OPTIONS)) {
-            channel.write(BinaryPrefabBufferCodec.INSTANCE.serialize(prefab).nioBuffer());
+         Path tmp = path.resolveSibling(path.getFileName() + ".tmp");
+
+         try (DataOutputStream channel = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(tmp)))) {
+            BinaryPrefabBufferCodec.INSTANCE.serialize(prefab, channel);
          }
+
+         FileUtil.atomicMove(tmp, path);
       }));
    }
 
@@ -137,19 +143,8 @@ public class PrefabBufferUtil {
    @Nonnull
    public static CompletableFuture<PrefabBuffer> readFromFileAsync(@Nonnull Path path) {
       return CompletableFuture.supplyAsync(SneakyThrow.sneakySupplier(() -> {
-         PrefabBuffer var4;
-         try (SeekableByteChannel channel = Files.newByteChannel(path)) {
-            int size = (int)channel.size();
-            ByteBuf buf = Unpooled.buffer(size);
-            buf.writerIndex(size);
-            if (channel.read(buf.internalNioBuffer(0, size)) != size) {
-               throw new IOException("Didn't read full file!");
-            }
-
-            var4 = BinaryPrefabBufferCodec.INSTANCE.deserialize(path, buf);
-         }
-
-         return var4;
+         byte[] bytes = Files.readAllBytes(path);
+         return BinaryPrefabBufferCodec.INSTANCE.deserialize(ByteBuffer.wrap(bytes));
       }));
    }
 
@@ -168,7 +163,7 @@ public class PrefabBufferUtil {
 
       try {
          cachedAttr = Files.readAttributes(cachedLpfPath, BasicFileAttributes.class);
-      } catch (IOException var10) {
+      } catch (IOException var12) {
       }
 
       FileTime targetModifiedTime;
@@ -181,12 +176,12 @@ public class PrefabBufferUtil {
       if (cachedAttr != null && targetModifiedTime.compareTo(cachedAttr.lastModifiedTime()) <= 0) {
          try {
             return readFromFile(cachedLpfPath);
-         } catch (CompletionException var11) {
+         } catch (CompletionException var13) {
             if (!Options.getOptionSet().has(Options.VALIDATE_PREFABS)) {
-               if (var11.getCause() instanceof UpdateBinaryPrefabException) {
-                  LOGGER.at(Level.FINE).log("Ignoring LPF %s due to: %s", path, var11.getMessage());
+               if (var13.getCause() instanceof UpdateBinaryPrefabException) {
+                  LOGGER.at(Level.FINE).log("Ignoring LPF %s due to: %s", path, var13.getMessage());
                } else {
-                  ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(new SkipSentryException(var11))).log("Failed to load %s", cachedLpfPath);
+                  ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(new SkipSentryException(var13))).log("Failed to load %s", cachedLpfPath);
                }
             }
          }
@@ -194,7 +189,8 @@ public class PrefabBufferUtil {
 
       try {
          PrefabBuffer buffer = BsonPrefabBufferDeserializer.INSTANCE.deserialize(jsonPath, BsonUtil.readDocument(jsonPath, false).join());
-         if (!Options.getOptionSet().has(Options.DISABLE_CPB_BUILD)) {
+         Path fullPath = path.normalize();
+         if (!Options.getOptionSet().has(Options.DISABLE_CPB_BUILD) && SAVING_PREFABS.add(fullPath)) {
             try {
                Files.createDirectories(cachedLpfPath.getParent());
                writeToFileAsync(buffer, cachedLpfPath)
@@ -210,15 +206,20 @@ public class PrefabBufferUtil {
                            .log("Failed to save prefab cache %s", cachedLpfPath);
                         return null;
                      }
-                  );
-            } catch (IOException var8) {
-               LOGGER.at(Level.FINE).log("Cannot create cache directory for %s: %s", cachedLpfPath, var8.getMessage());
+                  )
+                  .whenComplete((unused, throwable) -> SAVING_PREFABS.remove(fullPath));
+            } catch (IOException var9) {
+               LOGGER.at(Level.FINE).log("Cannot create cache directory for %s: %s", cachedLpfPath, var9.getMessage());
+               SAVING_PREFABS.remove(fullPath);
+            } catch (Throwable var10) {
+               SAVING_PREFABS.remove(fullPath);
+               throw var10;
             }
          }
 
          return buffer;
-      } catch (Exception var9) {
-         throw new Error("Error while loading Prefab from " + jsonPath.toAbsolutePath(), var9);
+      } catch (Exception var11) {
+         throw new Error("Error while loading Prefab from " + jsonPath.toAbsolutePath(), var11);
       }
    }
 

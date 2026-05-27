@@ -5,8 +5,10 @@ import java.util.logging.LogManager;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class HytaleLogManager extends LogManager {
+   @Nullable
    public static HytaleLogManager instance;
 
    public HytaleLogManager() {

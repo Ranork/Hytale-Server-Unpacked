@@ -1,18 +1,18 @@
 package com.hypixel.hytale.server.core.event.events.ecs;
 
 import com.hypixel.hytale.component.system.CancellableEcsEvent;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PlaceBlockEvent extends CancellableEcsEvent {
    @Nullable
    private final ItemStack itemInHand;
    @Nonnull
-   private Vector3i targetBlock;
+   private final Vector3i targetBlock;
    @Nonnull
    private RotationTuple rotation;
 
@@ -34,7 +34,7 @@ public class PlaceBlockEvent extends CancellableEcsEvent {
 
    public void setTargetBlock(@Nonnull Vector3i targetBlock) {
       Objects.requireNonNull(targetBlock, "Block can't be null");
-      this.targetBlock = targetBlock;
+      this.targetBlock.set(targetBlock);
    }
 
    @Nonnull

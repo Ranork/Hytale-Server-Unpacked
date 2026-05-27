@@ -1,8 +1,9 @@
 package com.hypixel.hytale.server.core.io.stream;
 
+import com.hypixel.hytale.protocol.io.ChannelConnection;
+import com.hypixel.hytale.protocol.io.ConnectionHandler;
 import com.hypixel.hytale.protocol.packets.stream.StreamType;
 import com.hypixel.hytale.server.core.io.PacketHandler;
-import io.netty.channel.ChannelHandler;
 import io.netty.handler.codec.quic.QuicStreamPriority;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -10,6 +11,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class StreamManager {
+   public static final int MAX_AUXILIARY_STREAMS = 4;
    public static final QuicStreamPriority GAME_STREAM_PRIORITY = new QuicStreamPriority(0, false);
    public static final QuicStreamPriority DEFAULT_AUXILIARY_PRIORITY = new QuicStreamPriority(64, false);
    private static final StreamManager INSTANCE = new StreamManager();
@@ -44,9 +46,9 @@ public class StreamManager {
    }
 
    @Nullable
-   public ChannelHandler createHandler(@Nonnull StreamType type, @Nonnull PacketHandler packetHandler) {
+   public ConnectionHandler createHandler(@Nonnull StreamType type, @Nonnull PacketHandler packetHandler, @Nonnull ChannelConnection channel) {
       StreamManager.StreamRegistration registration = this.handlers.get(type);
-      return registration != null ? registration.factory().create(packetHandler) : null;
+      return registration != null ? registration.factory().create(packetHandler, channel) : null;
    }
 
    public void clearAll() {
@@ -62,7 +64,7 @@ public class StreamManager {
    @FunctionalInterface
    public interface StreamHandlerFactory {
       @Nonnull
-      ChannelHandler create(@Nonnull PacketHandler var1);
+      ConnectionHandler create(@Nonnull PacketHandler var1, @Nonnull ChannelConnection var2);
    }
 
    private record StreamRegistration(@Nonnull StreamManager.StreamHandlerFactory factory, @Nonnull QuicStreamPriority priority) {

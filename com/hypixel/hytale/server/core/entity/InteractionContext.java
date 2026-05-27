@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector4d;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ForkedChainId;
 import com.hypixel.hytale.protocol.GameMode;
@@ -13,7 +12,6 @@ import com.hypixel.hytale.protocol.InteractionSyncData;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.PrioritySlot;
 import com.hypixel.hytale.protocol.RootInteractionSettings;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
@@ -36,6 +34,8 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3f;
+import org.joml.Vector4d;
 
 public class InteractionContext {
    @Nonnull
@@ -56,8 +56,6 @@ public class InteractionContext {
    private final Ref<EntityStore> owningEntity;
    @Nullable
    private final Ref<EntityStore> runningForEntity;
-   @Nullable
-   private LivingEntity entity;
    @Nullable
    private InteractionChain chain;
    @Nullable
@@ -208,7 +206,7 @@ public class InteractionContext {
       return this.runningForEntity;
    }
 
-   @Nonnull
+   @Nullable
    public Ref<EntityStore> getOwningEntity() {
       return this.owningEntity;
    }
@@ -411,18 +409,17 @@ public class InteractionContext {
       return interactionIds;
    }
 
-   void initEntry(@Nonnull InteractionChain chain, InteractionEntry entry, @Nullable LivingEntity entity) {
+   void initEntry(@Nonnull InteractionChain chain, @Nonnull InteractionEntry entry, @Nullable Ref<EntityStore> ref) {
       CommandBuffer<EntityStore> commandBuffer = this.getCommandBuffer();
 
       assert commandBuffer != null;
 
       this.chain = chain;
       this.entry = entry;
-      this.entity = entity;
       this.labels = null;
       Player playerComponent = null;
-      if (entity != null) {
-         playerComponent = commandBuffer.getComponent(entity.getReference(), Player.getComponentType());
+      if (ref != null) {
+         playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
       }
 
       GameMode gameMode = playerComponent != null ? playerComponent.getGameMode() : GameMode.Adventure;
@@ -430,10 +427,9 @@ public class InteractionContext {
       chain.skipChainOnClick = chain.skipChainOnClick | (settings != null && settings.allowSkipChainOnClick);
    }
 
-   void deinitEntry(InteractionChain chain, InteractionEntry entry, LivingEntity entity) {
+   void deinitEntry(InteractionChain chain, InteractionEntry entry, Ref<EntityStore> ref) {
       this.chain = null;
       this.entry = null;
-      this.entity = null;
       this.labels = null;
    }
 
@@ -452,8 +448,6 @@ public class InteractionContext {
          + this.originalItemType
          + ", interactionVarsGetter="
          + this.interactionVarsGetter
-         + ", entity="
-         + this.entity
          + ", labels="
          + Arrays.toString((Object[])this.labels)
          + ", snapshotProvider="

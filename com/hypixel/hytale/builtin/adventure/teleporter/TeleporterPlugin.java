@@ -8,6 +8,10 @@ import com.hypixel.hytale.builtin.adventure.teleporter.system.ClearUsedTeleporte
 import com.hypixel.hytale.builtin.adventure.teleporter.system.CreateWarpWhenTeleporterPlacedSystem;
 import com.hypixel.hytale.builtin.adventure.teleporter.system.TurnOffTeleportersSystem;
 import com.hypixel.hytale.builtin.teleport.TeleportPlugin;
+import com.hypixel.hytale.builtin.teleport.Warp;
+import com.hypixel.hytale.builtin.teleport.commands.event.ModifyWarpEvent;
+import com.hypixel.hytale.builtin.teleport.commands.event.RemoveWarpEvent;
+import com.hypixel.hytale.builtin.teleport.commands.event.ReplaceWarpEvent;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.ComponentRegistryProxy;
@@ -18,6 +22,8 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.RefChangeSystem;
 import com.hypixel.hytale.component.system.RefSystem;
+import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
@@ -36,6 +42,7 @@ import javax.annotation.Nullable;
 
 public class TeleporterPlugin extends JavaPlugin {
    private static TeleporterPlugin instance;
+   private static final Message MESSAGE_TELEPORTER_PROTECTION_REASON = Message.translation("server.commands.teleporter.warp.protected");
    private ComponentType<ChunkStore, Teleporter> teleporterComponentType;
    private ComponentType<EntityStore, UsedTeleporter> usedTeleporterComponentType;
 
@@ -60,8 +67,8 @@ public class TeleporterPlugin extends JavaPlugin {
       ComponentType<EntityStore, TeleportRecord> teleportRecordComponentType = TeleportRecord.getComponentType();
       ComponentType<EntityStore, Teleport> teleportComponentType = Teleport.getComponentType();
       ComponentType<EntityStore, PendingTeleport> pendingTeleportComponentType = PendingTeleport.getComponentType();
-      chunkStoreRegistry.registerSystem(new TeleporterPlugin.TeleporterOwnedWarpRefChangeSystem(this.teleporterComponentType));
-      chunkStoreRegistry.registerSystem(new TeleporterPlugin.TeleporterOwnedWarpRefSystem(this.teleporterComponentType));
+      chunkStoreRegistry.registerSystem(new TeleporterPlugin.TeleporterOwnedWarpRefChangeSystem(this.teleporterComponentType, blockStateInfoComponentType));
+      chunkStoreRegistry.registerSystem(new TeleporterPlugin.TeleporterOwnedWarpRefSystem(this.teleporterComponentType, blockStateInfoComponentType));
       chunkStoreRegistry.registerSystem(new TurnOffTeleportersSystem());
       this.getChunkStoreRegistry()
          .registerSystem(
@@ -78,6 +85,8 @@ public class TeleporterPlugin extends JavaPlugin {
       this.getCodecRegistry(Interaction.CODEC).register("Teleporter", TeleporterInteraction.class, TeleporterInteraction.CODEC);
       this.getCodecRegistry(OpenCustomUIInteraction.PAGE_CODEC)
          .register("Teleporter", TeleporterSettingsPageSupplier.class, TeleporterSettingsPageSupplier.CODEC);
+      this.getEventRegistry().registerGlobal(RemoveWarpEvent.class, TeleporterPlugin::handleModifyWarpEvent);
+      this.getEventRegistry().registerGlobal(ReplaceWarpEvent.class, TeleporterPlugin::handleModifyWarpEvent);
    }
 
    public ComponentType<ChunkStore, Teleporter> getTeleporterComponentType() {
@@ -88,12 +97,25 @@ public class TeleporterPlugin extends JavaPlugin {
       return this.usedTeleporterComponentType;
    }
 
+   private static void handleModifyWarpEvent(ModifyWarpEvent event) {
+      Warp warp = event.getWarp();
+      if (warp.getCreator().equals("*Teleporter")) {
+         event.cancel(MESSAGE_TELEPORTER_PROTECTION_REASON.param("name", warp.getId()));
+      }
+   }
+
    private static class TeleporterOwnedWarpRefChangeSystem extends RefChangeSystem<ChunkStore, Teleporter> {
       @Nonnull
       private final ComponentType<ChunkStore, Teleporter> teleporterComponentType;
+      @Nonnull
+      private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateComponentType;
 
-      public TeleporterOwnedWarpRefChangeSystem(@Nonnull ComponentType<ChunkStore, Teleporter> teleporterComponentType) {
+      public TeleporterOwnedWarpRefChangeSystem(
+         @Nonnull ComponentType<ChunkStore, Teleporter> teleporterComponentType,
+         @Nonnull ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateComponentType
+      ) {
          this.teleporterComponentType = teleporterComponentType;
+         this.blockStateComponentType = blockStateComponentType;
       }
 
       @Nonnull
@@ -117,8 +139,11 @@ public class TeleporterPlugin extends JavaPlugin {
          if (oldComponent != null) {
             String ownedWarp = oldComponent.getOwnedWarp();
             if (ownedWarp != null && !ownedWarp.isEmpty() && !ownedWarp.equals(newComponent.getOwnedWarp())) {
-               TeleportPlugin.get().getWarps().remove(ownedWarp.toLowerCase());
-               TeleportPlugin.get().saveWarps();
+               BlockModule.BlockStateInfo blockstate = commandBuffer.getComponent(ref, this.blockStateComponentType);
+               if (blockstate != null && Teleporter.validateWarp(store, oldComponent, blockstate) == Teleporter.ValidationResult.VALID) {
+                  TeleportPlugin.get().removeWarp(ownedWarp);
+               }
+
                oldComponent.setOwnedWarp(null);
             }
          }
@@ -129,8 +154,11 @@ public class TeleporterPlugin extends JavaPlugin {
       ) {
          String ownedWarp = component.getOwnedWarp();
          if (ownedWarp != null && !ownedWarp.isEmpty()) {
-            TeleportPlugin.get().getWarps().remove(ownedWarp.toLowerCase());
-            TeleportPlugin.get().saveWarps();
+            BlockModule.BlockStateInfo blockstate = commandBuffer.getComponent(ref, this.blockStateComponentType);
+            if (blockstate != null && Teleporter.validateWarp(store, component, blockstate) == Teleporter.ValidationResult.VALID) {
+               TeleportPlugin.get().removeWarp(ownedWarp);
+            }
+
             component.setOwnedWarp(null);
          }
       }
@@ -145,15 +173,37 @@ public class TeleporterPlugin extends JavaPlugin {
    private static class TeleporterOwnedWarpRefSystem extends RefSystem<ChunkStore> {
       @Nonnull
       private final ComponentType<ChunkStore, Teleporter> teleporterComponentType;
+      @Nonnull
+      private final ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateComponentType;
+      @Nonnull
+      private final Query<ChunkStore> query;
 
-      public TeleporterOwnedWarpRefSystem(@Nonnull ComponentType<ChunkStore, Teleporter> teleporterComponentType) {
+      public TeleporterOwnedWarpRefSystem(
+         @Nonnull ComponentType<ChunkStore, Teleporter> teleporterComponentType,
+         @Nonnull ComponentType<ChunkStore, BlockModule.BlockStateInfo> blockStateComponentType
+      ) {
          this.teleporterComponentType = teleporterComponentType;
+         this.blockStateComponentType = blockStateComponentType;
+         this.query = Query.and(teleporterComponentType, blockStateComponentType);
       }
 
       @Override
       public void onEntityAdded(
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
+         if (reason == AddReason.LOAD) {
+            Teleporter teleporter = commandBuffer.getComponent(ref, this.teleporterComponentType);
+            if (teleporter != null && teleporter.getOwnedWarp() != null) {
+               BlockModule.BlockStateInfo blockstate = commandBuffer.getComponent(ref, this.blockStateComponentType);
+               if (blockstate != null) {
+                  if (Teleporter.validateWarp(store, teleporter, blockstate) != Teleporter.ValidationResult.VALID) {
+                     ((HytaleLogger.Api)TeleporterPlugin.get().getLogger().atInfo())
+                        .log("Owned warp '%s' is no longer valid for teleporter", teleporter.getOwnedWarp());
+                     teleporter.setOwnedWarp(null);
+                  }
+               }
+            }
+         }
       }
 
       @Override
@@ -161,16 +211,16 @@ public class TeleporterPlugin extends JavaPlugin {
          @Nonnull Ref<ChunkStore> ref, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
          if (reason == RemoveReason.REMOVE) {
-            Teleporter teleporterComponent = commandBuffer.getComponent(ref, this.teleporterComponentType);
-            if (teleporterComponent == null) {
-               return;
-            }
+            Teleporter teleporter = commandBuffer.getComponent(ref, this.teleporterComponentType);
+            if (teleporter != null && teleporter.getOwnedWarp() != null) {
+               BlockModule.BlockStateInfo blockstate = commandBuffer.getComponent(ref, this.blockStateComponentType);
+               if (blockstate != null) {
+                  if (Teleporter.validateWarp(store, teleporter, blockstate) == Teleporter.ValidationResult.VALID) {
+                     TeleportPlugin.get().removeWarp(teleporter.getOwnedWarp());
+                  }
 
-            String ownedWarp = teleporterComponent.getOwnedWarp();
-            if (ownedWarp != null && !ownedWarp.isEmpty()) {
-               TeleportPlugin.get().getWarps().remove(ownedWarp.toLowerCase());
-               TeleportPlugin.get().saveWarps();
-               teleporterComponent.setOwnedWarp(null);
+                  teleporter.setOwnedWarp(null);
+               }
             }
          }
       }
@@ -178,7 +228,7 @@ public class TeleporterPlugin extends JavaPlugin {
       @Nonnull
       @Override
       public Query<ChunkStore> getQuery() {
-         return this.teleporterComponentType;
+         return this.query;
       }
    }
 }

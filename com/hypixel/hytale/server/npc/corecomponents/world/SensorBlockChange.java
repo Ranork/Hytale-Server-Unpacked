@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.npc.corecomponents.world;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
@@ -12,6 +11,7 @@ import com.hypixel.hytale.server.npc.components.messaging.PlayerBlockEventSuppor
 import com.hypixel.hytale.server.npc.corecomponents.world.builders.BuilderSensorBlockChange;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class SensorBlockChange extends SensorEvent {
    public SensorBlockChange(@Nonnull BuilderSensorBlockChange builder, @Nonnull BuilderSupport support) {
@@ -31,10 +31,6 @@ public class SensorBlockChange extends SensorEvent {
          case NpcOnly:
             this.playerEventMessageSlot = -1;
             this.npcEventMessageSlot = support.getBlockEventSlot(type, blockSet, this.range, false);
-            break;
-         default:
-            this.playerEventMessageSlot = -1;
-            this.npcEventMessageSlot = -1;
       }
    }
 

@@ -6,6 +6,7 @@ import com.hypixel.hytale.builtin.instances.config.InstanceWorldConfig;
 import com.hypixel.hytale.builtin.portals.PortalsPlugin;
 import com.hypixel.hytale.builtin.portals.components.PortalDevice;
 import com.hypixel.hytale.builtin.portals.components.PortalDeviceConfig;
+import com.hypixel.hytale.builtin.portals.integrations.FragmentOriginGameplayConfig;
 import com.hypixel.hytale.builtin.portals.integrations.PortalGameplayConfig;
 import com.hypixel.hytale.builtin.portals.integrations.PortalRemovalCondition;
 import com.hypixel.hytale.builtin.portals.resources.PortalWorld;
@@ -19,7 +20,6 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.protocol.SoundCategory;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
@@ -37,9 +37,9 @@ import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -62,6 +62,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDeviceSummonPage.Data> {
    private final PortalDeviceConfig config;
@@ -80,11 +81,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    public void build(
       @Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store
    ) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-
-      assert playerComponent != null;
-
-      PortalDeviceSummonPage.State state = this.computeState(playerComponent, store);
+      PortalDeviceSummonPage.State state = this.computeState(ref, store);
       if (state != PortalDeviceSummonPage.Error.INVALID_BLOCK) {
          if (state instanceof PortalDeviceSummonPage.CanSpawnPortal canSpawn) {
             commandBuilder.append("Pages/PortalDeviceSummon.ui");
@@ -96,11 +93,11 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
             commandBuilder.set("#FlavorLabel.TextSpans", var23.getFlavorText());
             updateCustomPills(commandBuilder, portalType);
             String[] objectivesKeys = var23.getObjectivesKeys();
-            String[] var25 = var23.getWisdomKeys();
+            String[] var24 = var23.getWisdomKeys();
             commandBuilder.set("#Objectives.Visible", objectivesKeys.length > 0);
-            commandBuilder.set("#Tips.Visible", var25.length > 0);
+            commandBuilder.set("#Tips.Visible", var24.length > 0);
             updateBulletList(commandBuilder, "#ObjectivesList", objectivesKeys);
-            updateBulletList(commandBuilder, "#TipsList", var25);
+            updateBulletList(commandBuilder, "#TipsList", var24);
             PortalGameplayConfig gameplayConfig = portalType.getGameplayConfig().getPluginConfig().get(PortalGameplayConfig.class);
             long totalTimeLimit = TimeUnit.SECONDS.toMinutes(var22.getTimeLimitSeconds());
             if (portalType.isVoidInvasionEnabled()) {
@@ -129,21 +126,29 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                commandBuilder.set("#UsageErrorLabel.Text", Message.translation("server.customUI.portalDevice.nothingHeld"));
             } else if (state == PortalDeviceSummonPage.Error.PORTAL_INSIDE_PORTAL) {
                commandBuilder.set("#UsageErrorLabel.Text", Message.translation("server.customUI.portalDevice.portalInsidePortal"));
-            } else if (state == PortalDeviceSummonPage.Error.MAX_ACTIVE_PORTALS) {
-               commandBuilder.set("#UsageErrorLabel.Text", Message.translation("server.customUI.portalDevice.maxFragments").param("max", 4));
-            } else if (state instanceof PortalDeviceSummonPage.InstanceKeyNotFound(String wisdomKeys)) {
-               commandBuilder.set(
-                  "#UsageErrorLabel.Text", "The instance id '" + wisdomKeys + "' does not exist, this is a developer error with the portaltype."
-               );
-            } else if (state instanceof PortalDeviceSummonPage.PortalTypeNotFound(String var24)) {
-               commandBuilder.set("#UsageErrorLabel.Text", "The portaltype id '" + var24 + "' does not exist, this is a developer error with the portal key.");
-            } else if (state == PortalDeviceSummonPage.Error.BOTCHED_GAMEPLAY_CONFIG) {
-               commandBuilder.set(
-                  "#UsageErrorLabel.Text",
-                  "The gameplay config set on the PortalType set in the key does not have a Portal plugin configuration, this is a developer error."
-               );
             } else {
-               commandBuilder.set("#UsageErrorLabel.Text", Message.translation("server.customUI.portalDevice.unknownError").param("state", state.toString()));
+               if (state instanceof PortalDeviceSummonPage.MaxActivePortals(int var28)) {
+                  int totalTimeLimit = var28;
+                  if (true) {
+                     commandBuilder.set("#UsageErrorLabel.Text", Message.translation("server.customUI.portalDevice.maxFragments").param("max", totalTimeLimit));
+                     return;
+                  }
+               }
+
+               if (state instanceof PortalDeviceSummonPage.InstanceKeyNotFound(String var25)) {
+                  commandBuilder.set("#UsageErrorLabel.Text", "The instance id '" + var25 + "' does not exist, this is a developer error with the portaltype.");
+               } else if (state instanceof PortalDeviceSummonPage.PortalTypeNotFound(String var26)) {
+                  commandBuilder.set(
+                     "#UsageErrorLabel.Text", "The portaltype id '" + var26 + "' does not exist, this is a developer error with the portal key."
+                  );
+               } else if (state == PortalDeviceSummonPage.Error.BOTCHED_GAMEPLAY_CONFIG) {
+                  commandBuilder.set(
+                     "#UsageErrorLabel.Text",
+                     "The gameplay config set on the PortalType set in the key does not have a Portal plugin configuration, this is a developer error."
+                  );
+               } else {
+                  commandBuilder.set("#UsageErrorLabel.Text", Message.translation("server.customUI.portalDevice.unknownError").param("state", state.toString()));
+               }
             }
          }
       }
@@ -191,11 +196,8 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    }
 
    public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull PortalDeviceSummonPage.Data data) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-
-      assert playerComponent != null;
-
-      if (this.computeState(playerComponent, store) instanceof PortalDeviceSummonPage.CanSpawnPortal canSpawn) {
+      CombinedItemContainer combinedInventoryHotbarFirst = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
+      if (this.computeState(ref, store) instanceof PortalDeviceSummonPage.CanSpawnPortal canSpawn) {
          if ("SummonMouseEntered".equals(data.action)) {
             UICommandBuilder commandBuilder = new UICommandBuilder();
             commandBuilder.set("#Vignette.Visible", true);
@@ -205,6 +207,10 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
             commandBuilder.set("#Vignette.Visible", false);
             this.sendUpdate(commandBuilder, null, false);
          } else {
+            Player playerComponent = store.getComponent(ref, Player.getComponentType());
+
+            assert playerComponent != null;
+
             playerComponent.getPageManager().setPage(ref, store, Page.None);
             World originWorld = store.getExternalData().getWorld();
             int index = canSpawn.blockState().getIndex();
@@ -230,11 +236,15 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                      SoundUtil.playSoundEvent3d(spawningType.getInteractionSoundEventIndex(), SoundCategory.SFX, worldX, worldY, worldZ, store);
                   }
 
-                  ItemStack removedItem = decrementItemInHand(playerComponent.getInventory(), 1);
+                  ItemStack removedItem = decrementItemInHand(ref, store, 1);
                   Transform transform = new Transform(x + 0.5, y + 1.0, z + 0.5);
                   UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
 
                   assert uuidComponent != null;
+
+                  PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+
+                  assert playerRefComponent != null;
 
                   PortalType portalType = canSpawn.portalType;
                   UUID playerUUID = uuidComponent.getUuid();
@@ -282,11 +292,11 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                               .log("Error creating instance for Portal Device " + portalKey, t);
 
                            try {
-                              playerComponent.sendMessage(Message.translation("server.portals.device.internalErrorSpawning"));
-                              playerComponent.getInventory().getCombinedHotbarFirst().addItemStack(removedItem);
+                              playerRefComponent.sendMessage(Message.translation("server.portals.device.internalErrorSpawning"));
+                              combinedInventoryHotbarFirst.addItemStack(removedItem);
                               worldChunk.setBlock(x, y, z, BlockType.getAssetMap().getIndex(offType.getId()), offType, rotation, 0, 6);
-                           } catch (Throwable var11x) {
-                              ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var11x)).log("Error while resolving portal device error");
+                           } catch (Throwable var12x) {
+                              ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.SEVERE).withCause(var12x)).log("Error while resolving portal device error");
                            }
 
                            return null;
@@ -311,7 +321,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
          .thenCompose(
             spawnTransform -> {
                Vector3d spawnPoint = spawnTransform.getPosition();
-               Transform playerSpawnTransform = spawnTransform.clone();
+               Transform playerSpawnTransform = new Transform(spawnTransform);
                return world.getChunkAsync(ChunkUtil.indexChunkFromBlock((int)spawnPoint.x, (int)spawnPoint.z))
                   .thenAccept(
                      chunk -> {
@@ -394,13 +404,16 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
    }
 
    @Nonnull
-   private PortalDeviceSummonPage.State computeState(@Nonnull Player player, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   private PortalDeviceSummonPage.State computeState(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!this.blockRef.isValid()) {
          return PortalDeviceSummonPage.Error.INVALID_BLOCK;
       } else {
+         World originWorld = componentAccessor.getExternalData().getWorld();
+         FragmentOriginGameplayConfig originConfig = originWorld.getGameplayConfig().getPluginConfig().get(FragmentOriginGameplayConfig.class);
+         int maxFragments = originConfig == null ? 4 : originConfig.getMaxConcurrentFragments();
          int activeFragments = PortalsPlugin.getInstance().countActiveFragments();
-         if (activeFragments >= 4) {
-            return PortalDeviceSummonPage.Error.MAX_ACTIVE_PORTALS;
+         if (activeFragments >= maxFragments) {
+            return new PortalDeviceSummonPage.MaxActivePortals(maxFragments);
          } else {
             Store<ChunkStore> chunkStore = this.blockRef.getStore();
             BlockModule.BlockStateInfo blockStateInfo = chunkStore.getComponent(this.blockRef, BlockModule.BlockStateInfo.getComponentType());
@@ -420,8 +433,8 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                      } else if (this.offeredItemStack == null) {
                         return PortalDeviceSummonPage.Error.NOTHING_OFFERED;
                      } else {
-                        ItemStack inHand = player.getInventory().getItemInHand();
-                        if (!this.offeredItemStack.equals(inHand)) {
+                        ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+                        if (!this.offeredItemStack.equals(itemInHand)) {
                            return PortalDeviceSummonPage.Error.OFFERED_IS_NOT_HELD;
                         } else {
                            Item offeredItem = this.offeredItemStack.getItem();
@@ -446,13 +459,13 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
                                     } else {
                                        String gameplayConfigId = portalType.getGameplayConfigId();
                                        GameplayConfig gameplayConfig = GameplayConfig.getAssetMap().getAsset(gameplayConfigId);
-                                       PortalGameplayConfig portalGameplayConfig = gameplayConfig == null
+                                       PortalGameplayConfig destinationPortalConfig = gameplayConfig == null
                                           ? null
                                           : gameplayConfig.getPluginConfig().get(PortalGameplayConfig.class);
-                                       return (PortalDeviceSummonPage.State)(portalGameplayConfig == null
+                                       return (PortalDeviceSummonPage.State)(destinationPortalConfig == null
                                           ? PortalDeviceSummonPage.Error.BOTCHED_GAMEPLAY_CONFIG
                                           : new PortalDeviceSummonPage.CanSpawnPortal(
-                                             portalKey, portalType, worldChunk, blockStateInfo, portalDevice, portalGameplayConfig
+                                             portalKey, portalType, worldChunk, blockStateInfo, portalDevice, destinationPortalConfig
                                           ));
                                     }
                                  }
@@ -469,21 +482,26 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       }
    }
 
-   private static ItemStack decrementItemInHand(@Nonnull Inventory inventory, int amount) {
-      if (inventory.usingToolsItem()) {
+   private static ItemStack decrementItemInHand(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> accessor, int amount) {
+      InventoryComponent.Tool toolComponent = accessor.getComponent(ref, InventoryComponent.Tool.getComponentType());
+      if (toolComponent != null && toolComponent.isUsingToolsItem()) {
          return ItemStack.EMPTY;
       } else {
-         byte hotbarSlot = inventory.getActiveHotbarSlot();
-         if (hotbarSlot == -1) {
+         InventoryComponent.Hotbar hotbarComponent = accessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+         if (hotbarComponent == null) {
             return ItemStack.EMPTY;
          } else {
-            ItemContainer hotbar = inventory.getHotbar();
-            ItemStack inHand = hotbar.getItemStack(hotbarSlot);
-            if (inHand == null) {
+            byte hotbarSlot = hotbarComponent.getActiveSlot();
+            if (hotbarSlot == -1) {
                return ItemStack.EMPTY;
             } else {
-               hotbar.removeItemStackFromSlot(hotbarSlot, inHand, amount, false, true);
-               return inHand.withQuantity(amount);
+               ItemStack inHand = hotbarComponent.getInventory().getItemStack(hotbarSlot);
+               if (inHand == null) {
+                  return ItemStack.EMPTY;
+               } else {
+                  hotbarComponent.getInventory().removeItemStackFromSlot(hotbarSlot, inHand, amount, false, true);
+                  return inHand.withQuantity(amount);
+               }
             }
          }
       }
@@ -519,11 +537,13 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       INVALID_BLOCK,
       INVALID_DESTINATION,
       PORTAL_INSIDE_PORTAL,
-      BOTCHED_GAMEPLAY_CONFIG,
-      MAX_ACTIVE_PORTALS;
+      BOTCHED_GAMEPLAY_CONFIG;
    }
 
    private record InstanceKeyNotFound(String instanceId) implements PortalDeviceSummonPage.State {
+   }
+
+   private record MaxActivePortals(int maxConcurrentFragments) implements PortalDeviceSummonPage.State {
    }
 
    private record PortalTypeNotFound(String portalTypeId) implements PortalDeviceSummonPage.State {
@@ -533,6 +553,7 @@ public class PortalDeviceSummonPage extends InteractiveCustomUIPage<PortalDevice
       permits PortalDeviceSummonPage.CanSpawnPortal,
       PortalDeviceSummonPage.Error,
       PortalDeviceSummonPage.InstanceKeyNotFound,
-      PortalDeviceSummonPage.PortalTypeNotFound {
+      PortalDeviceSummonPage.PortalTypeNotFound,
+      PortalDeviceSummonPage.MaxActivePortals {
    }
 }

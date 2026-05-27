@@ -3,13 +3,13 @@ package com.hypixel.hytale.builtin.portals.utils.posqueries;
 import com.hypixel.hytale.builtin.portals.utils.posqueries.predicates.generic.FilterQuery;
 import com.hypixel.hytale.builtin.portals.utils.posqueries.predicates.generic.FlatMapQuery;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.universe.world.World;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public interface SpatialQuery {
    @Nonnull

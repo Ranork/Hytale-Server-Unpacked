@@ -6,7 +6,7 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.RotateObjectComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -47,7 +47,7 @@ public class RotateObjectSystem extends EntityTickingSystem<EntityStore> {
 
       assert transformComponent != null;
 
-      Vector3f rotation = transformComponent.getRotation();
+      Rotation3f rotation = transformComponent.getRotation();
       rotation.y = rotation.y + rotateObjectComponent.getRotationSpeed() * dt;
       if (rotation.y >= 360.0F) {
          rotation.y %= 360.0F;

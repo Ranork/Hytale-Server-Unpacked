@@ -9,7 +9,7 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Map;
@@ -52,23 +52,19 @@ public class LoadLoopFromToolArgOperation extends SequenceBrushOperation {
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       if (this.repetitionsRemaining == -1) {
-         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-
-         assert playerComponent != null;
-
-         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(playerComponent);
+         BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
          if (builderTool == null) {
             brushConfig.setErrorFlag("LoadLoop: No active builder tool");
             return;
          }
 
-         ItemStack itemStack = playerComponent.getInventory().getItemInHand();
-         if (itemStack == null) {
+         ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+         if (itemInHand == null) {
             brushConfig.setErrorFlag("LoadLoop: No item in hand");
             return;
          }
 
-         BuilderTool.ArgData argData = builderTool.getItemArgData(itemStack);
+         BuilderTool.ArgData argData = builderTool.getItemArgData(itemInHand);
          Map<String, Object> toolArgs = argData.tool();
          if (toolArgs == null || !toolArgs.containsKey(this.argNameArg)) {
             brushConfig.setErrorFlag("LoadLoop: Tool arg '" + this.argNameArg + "' not found");

@@ -26,6 +26,7 @@ public class CollisionConfig {
    public static final int MATERIAL_DAMAGE = 16;
    public static final int MATERIAL_SET_NONE = 0;
    public static final int MATERIAL_SET_ANY = 15;
+   public static final int MATERIAL_INVALID = -1;
    private static final int INVALID_CHUNK_SECTION_INDEX = Integer.MIN_VALUE;
    public int blockId;
    @Nullable
@@ -64,7 +65,10 @@ public class CollisionConfig {
    public boolean blockCanTriggerPartial;
    public boolean checkTriggerBlocks = true;
    public boolean checkDamageBlocks = true;
+   public boolean blockFilteredOut;
    public Predicate<CollisionConfig> canCollide;
+   @Nullable
+   public Predicate<CollisionConfig> extraBlockCollisionFilter;
    public boolean dumpInvalidBlocks;
    @Nullable
    public Object extraData1;
@@ -135,6 +139,7 @@ public class CollisionConfig {
       this.setCollisionByMaterial(4);
       this.setCollideWithDamageBlocks(true);
       this.setDefaultBlockCollisionPredicate();
+      this.extraBlockCollisionFilter = null;
    }
 
    public void setDefaultBlockCollisionPredicate() {
@@ -176,6 +181,7 @@ public class CollisionConfig {
       this.blockX = x;
       this.blockY = y;
       this.blockZ = z;
+      this.blockFilteredOut = false;
       int chunkX = ChunkUtil.chunkCoordinate(x);
       int chunkY = ChunkUtil.chunkCoordinate(y);
       int chunkZ = ChunkUtil.chunkCoordinate(z);
@@ -211,7 +217,7 @@ public class CollisionConfig {
             this.fluidId = Integer.MIN_VALUE;
             this.boundingBoxes = BlockBoundingBoxes.UNIT_BOX.get(Rotation.None, Rotation.None, Rotation.None);
             this.blockMaterialMask = 1;
-            this.blockCanCollide = (this.blockMaterialCollisionMask & this.blockMaterialMask) != 0;
+            this.blockCanCollide = (this.blockMaterialCollisionMask & this.blockMaterialMask) != 0 && this.passesExtraBlockCollisionFilter();
             this.blockId = 0;
             return this.blockCanCollide;
          } else {
@@ -259,14 +265,14 @@ public class CollisionConfig {
                   this.blockMaterial = BlockMaterial.Empty;
                   this.boundingBoxes = BlockBoundingBoxes.UNIT_BOX.get(Rotation.None, Rotation.None, Rotation.None);
                   this.blockMaterialMask |= 1;
-                  this.blockCanCollide = (this.blockMaterialMask & this.blockMaterialCollisionMask) != 0;
+                  this.blockCanCollide = (this.blockMaterialMask & this.blockMaterialCollisionMask) != 0 && this.passesExtraBlockCollisionFilter();
                   return this.blockCanCollide || this.blockCanTrigger;
                } else {
                   this.blockMaterial = this.blockType.getMaterial();
                   this.boundingBoxes = BlockBoundingBoxes.getAssetMap().getAsset(newBlockType.getHitboxTypeIndex()).get(this.rotation);
                   if (this.blockMaterial == BlockMaterial.Empty) {
                      this.blockMaterialMask = this.blockMaterialMask | (this.fluidId != 0 ? 2 : 1);
-                     this.blockCanCollide = (this.blockMaterialMask & this.blockMaterialCollisionMask) != 0;
+                     this.blockCanCollide = (this.blockMaterialMask & this.blockMaterialCollisionMask) != 0 && this.passesExtraBlockCollisionFilter();
                      return this.blockCanCollide || this.blockCanTrigger;
                   } else {
                      if (this.boundingBoxes == null) {
@@ -274,7 +280,7 @@ public class CollisionConfig {
                      }
 
                      this.blockMaterialMask = this.blockMaterialMask | (this.fluidId == 0 ? 4 : 14);
-                     this.blockCanCollide = this.canCollide.test(this);
+                     this.blockCanCollide = this.canCollide.test(this) && this.passesExtraBlockCollisionFilter();
                      return this.blockCanCollide || this.blockCanTrigger;
                   }
                }
@@ -293,6 +299,17 @@ public class CollisionConfig {
       }
    }
 
+   private boolean passesExtraBlockCollisionFilter() {
+      if (this.extraBlockCollisionFilter == null) {
+         return true;
+      } else if (this.extraBlockCollisionFilter.test(this)) {
+         return true;
+      } else {
+         this.blockFilteredOut = true;
+         return false;
+      }
+   }
+
    public void clear() {
       this.chunk = null;
       this.chunkSectionIndex = Integer.MIN_VALUE;
@@ -301,5 +318,7 @@ public class CollisionConfig {
       this.dumpInvalidBlocks = false;
       this.extraData1 = null;
       this.extraData2 = null;
+      this.extraBlockCollisionFilter = null;
+      this.blockFilteredOut = false;
    }
 }

@@ -34,6 +34,7 @@ public class WarpListCommand extends CommandBase {
    public WarpListCommand() {
       super("list", "server.commands.warp.list.desc");
       this.requirePermission(HytalePermissions.fromCommand("warp.list"));
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

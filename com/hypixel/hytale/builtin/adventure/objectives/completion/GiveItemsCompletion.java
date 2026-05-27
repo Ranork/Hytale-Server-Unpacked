@@ -60,10 +60,9 @@ public class GiveItemsCompletion extends ObjectiveCompletion {
                   for (ItemStack itemStack : itemStacks) {
                      objectiveHistoryData.addRewardForPlayerUUID(uuid, new ItemObjectiveRewardHistoryData(itemStack.getItemId(), itemStack.getQuantity()));
                      if (showItemNotification) {
-                        Message itemNameMessage = Message.translation(itemStack.getItem().getTranslationKey());
                         NotificationUtil.sendNotification(
                            playerRefComponent.getPacketHandler(),
-                           Message.translation("server.objectives.itemObjectiveCompletion").param("item", itemNameMessage),
+                           Message.translation("server.objectives.itemObjectiveCompletion").param("item", itemStack.getDisplayName()),
                            null,
                            itemStack.toPacket()
                         );

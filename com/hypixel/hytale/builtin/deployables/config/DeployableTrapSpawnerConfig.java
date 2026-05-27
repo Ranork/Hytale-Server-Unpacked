@@ -11,8 +11,7 @@ import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.time.TimeResource;
@@ -21,6 +20,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class DeployableTrapSpawnerConfig extends DeployableTrapConfig {
    @Nonnull
@@ -137,8 +137,8 @@ public class DeployableTrapSpawnerConfig extends DeployableTrapConfig {
                   Vector3d[] positionOffsets = spawner.getPositionOffsets();
 
                   for (Vector3d offset : positionOffsets) {
-                     Vector3f childPosition = Vector3d.add(parentPosition, offset).toVector3f();
-                     world.execute(() -> DeployablesUtils.spawnDeployable(commandBuffer, store, config, parentOwner, childPosition, new Vector3f(), "UP"));
+                     Vector3d childPosition = new Vector3d(parentPosition).add(offset);
+                     world.execute(() -> DeployablesUtils.spawnDeployable(commandBuffer, store, config, parentOwner, childPosition, new Rotation3f(), "UP"));
                   }
                }
             }

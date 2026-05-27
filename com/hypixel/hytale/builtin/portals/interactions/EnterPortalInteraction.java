@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -33,6 +32,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class EnterPortalInteraction extends SimpleBlockInteraction {
    @Nonnull
@@ -90,58 +90,57 @@ public class EnterPortalInteraction extends SimpleBlockInteraction {
                   RotationTuple rotation = chunk.getRotation(targetBlock.x, targetBlock.y, targetBlock.z);
                   double yaw = rotation.yaw().getRadians() + Math.PI;
                   Transform returnTransform = new Transform(targetBlock.x + 0.5, targetBlock.y + 0.5, targetBlock.z + 0.5, 0.0F, (float)yaw, 0.0F);
-                  World targetWorld = portalDevice.getDestinationWorld();
-                  if (targetWorld == null) {
-                     playerComponent.sendMessage(MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD);
+                  PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+                  if (playerRefComponent == null) {
                      context.getState().state = InteractionState.Failed;
                   } else {
-                     UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
-                     if (uuidComponent == null) {
+                     World targetWorld = portalDevice.getDestinationWorld();
+                     if (targetWorld == null) {
+                        playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD);
                         context.getState().state = InteractionState.Failed;
                      } else {
-                        UUID playerUuid = uuidComponent.getUuid();
-                        fetchTargetWorldState(targetWorld, playerUuid)
-                           .thenAcceptAsync(
-                              state -> {
-                                 if (!ref.isValid()) {
-                                    playerComponent.sendMessage(MESSAGE_PORTALS_DEVICE_REF_INVALID);
-                                    context.getState().state = InteractionState.Failed;
-                                 } else {
-                                    switch (state) {
-                                       case OKAY:
-                                          InstancesPlugin.teleportPlayerToInstance(ref, commandBuffer, targetWorld, returnTransform);
-                                          break;
-                                       case WORLD_DEAD:
-                                          playerComponent.sendMessage(MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD);
-                                          context.getState().state = InteractionState.Failed;
-                                          break;
-                                       case DIED_IN_WORLD:
-                                          PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
-                                          if (playerRefComponent == null) {
+                        UUIDComponent uuidComponent = commandBuffer.getComponent(ref, UUIDComponent.getComponentType());
+                        if (uuidComponent == null) {
+                           context.getState().state = InteractionState.Failed;
+                        } else {
+                           UUID playerUuid = uuidComponent.getUuid();
+                           fetchTargetWorldState(targetWorld, playerUuid)
+                              .thenAcceptAsync(
+                                 state -> {
+                                    if (!ref.isValid()) {
+                                       playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_REF_INVALID);
+                                       context.getState().state = InteractionState.Failed;
+                                    } else {
+                                       switch (state) {
+                                          case OKAY:
+                                             InstancesPlugin.teleportPlayerToInstance(ref, commandBuffer, targetWorld, returnTransform);
+                                             break;
+                                          case WORLD_DEAD:
+                                             playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_WORLD_IS_DEAD);
                                              context.getState().state = InteractionState.Failed;
-                                             return;
-                                          }
+                                             break;
+                                          case DIED_IN_WORLD:
+                                             Ref<ChunkStore> blockEntityRef = BlockModule.getBlockEntity(world, targetBlock.x, targetBlock.y, targetBlock.z);
+                                             if (blockEntityRef == null || !blockEntityRef.isValid()) {
+                                                playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_BLOCK_ENTITY_REF_INVALID);
+                                                context.getState().state = InteractionState.Failed;
+                                                return;
+                                             }
 
-                                          Ref<ChunkStore> blockEntityRef = BlockModule.getBlockEntity(world, targetBlock.x, targetBlock.y, targetBlock.z);
-                                          if (blockEntityRef == null || !blockEntityRef.isValid()) {
-                                             playerComponent.sendMessage(MESSAGE_PORTALS_DEVICE_BLOCK_ENTITY_REF_INVALID);
+                                             PortalDeviceActivePage activePage = new PortalDeviceActivePage(
+                                                playerRefComponent, portalDevice.getConfig(), blockEntityRef
+                                             );
+                                             playerComponent.getPageManager().openCustomPage(ref, world.getEntityStore().getStore(), activePage);
+                                             break;
+                                          case NO_SPAWN_AVAILABLE:
+                                             playerRefComponent.sendMessage(MESSAGE_PORTALS_DEVICE_NO_SPAWN);
                                              context.getState().state = InteractionState.Failed;
-                                             return;
-                                          }
-
-                                          PortalDeviceActivePage activePage = new PortalDeviceActivePage(
-                                             playerRefComponent, portalDevice.getConfig(), blockEntityRef
-                                          );
-                                          playerComponent.getPageManager().openCustomPage(ref, world.getEntityStore().getStore(), activePage);
-                                          break;
-                                       case NO_SPAWN_AVAILABLE:
-                                          playerComponent.sendMessage(MESSAGE_PORTALS_DEVICE_NO_SPAWN);
-                                          context.getState().state = InteractionState.Failed;
+                                       }
                                     }
-                                 }
-                              },
-                              world
-                           );
+                                 },
+                                 world
+                              );
+                        }
                      }
                   }
                }

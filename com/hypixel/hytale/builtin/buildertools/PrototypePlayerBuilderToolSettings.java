@@ -7,11 +7,11 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.block.BlockUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.packets.interface_.BlockChange;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import java.util.LinkedList;
@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.UUID;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PrototypePlayerBuilderToolSettings {
    @Nonnull
@@ -41,6 +42,8 @@ public class PrototypePlayerBuilderToolSettings {
    private PrototypePlayerBuilderToolSettings.FluidChange[] fluidChangesForPlaySelectionToolPasteMode = null;
    @Nullable
    private PrototypePlayerBuilderToolSettings.EntityChange[] entityChangesForPlaySelectionToolPasteMode = null;
+   @Nullable
+   private Holder<ChunkStore>[] blockHoldersForPasteMode = null;
    @Nullable
    private String prototypeItemId;
    @Nullable
@@ -79,6 +82,7 @@ public class PrototypePlayerBuilderToolSettings {
          this.blockChangesForPlaySelectionToolPasteMode = null;
          this.fluidChangesForPlaySelectionToolPasteMode = null;
          this.entityChangesForPlaySelectionToolPasteMode = null;
+         this.blockHoldersForPasteMode = null;
          this.blockChangeOffsetOrigin = null;
       }
    }
@@ -124,6 +128,15 @@ public class PrototypePlayerBuilderToolSettings {
    @Nullable
    public PrototypePlayerBuilderToolSettings.EntityChange[] getEntityChangesForPlaySelectionToolPasteMode() {
       return this.entityChangesForPlaySelectionToolPasteMode;
+   }
+
+   public void setBlockHoldersForPasteMode(@Nullable Holder<ChunkStore>[] holders) {
+      this.blockHoldersForPasteMode = holders;
+   }
+
+   @Nullable
+   public Holder<ChunkStore>[] getBlockHoldersForPasteMode() {
+      return this.blockHoldersForPasteMode;
    }
 
    public void setBlockChangeOffsetOrigin(@Nullable Vector3i blockChangeOffsetOrigin) {
@@ -208,10 +221,6 @@ public class PrototypePlayerBuilderToolSettings {
       this.brushConfig = brushConfig;
    }
 
-   public boolean isShouldShowEditorSettings() {
-      return this.shouldShowEditorSettings;
-   }
-
    public void setShouldShowEditorSettings(boolean shouldShowEditorSettings) {
       this.shouldShowEditorSettings = shouldShowEditorSettings;
    }
@@ -237,14 +246,14 @@ public class PrototypePlayerBuilderToolSettings {
       this.undoGroupSize = undoGroupSize > 0 ? undoGroupSize : 10;
    }
 
-   public static boolean isOkayToDoCommandsOnSelection(Ref<EntityStore> ref, @Nonnull Player player, ComponentAccessor<EntityStore> componentAccessor) {
+   public static boolean isOkayToDoCommandsOnSelection(Ref<EntityStore> ref, @Nonnull PlayerRef playerRef, ComponentAccessor<EntityStore> componentAccessor) {
       UUIDComponent uuidComponent = componentAccessor.getComponent(ref, UUIDComponent.getComponentType());
 
       assert uuidComponent != null;
 
       PrototypePlayerBuilderToolSettings prototypeSettings = ToolOperation.getOrCreatePrototypeSettings(uuidComponent.getUuid());
       if (prototypeSettings.isInSelectionTransformationMode()) {
-         player.sendMessage(MESSAGE_BUILDER_TOOLS_CANNOT_PERFORM_COMMAND_IN_TRANSFORMATION_MODE);
+         playerRef.sendMessage(MESSAGE_BUILDER_TOOLS_CANNOT_PERFORM_COMMAND_IN_TRANSFORMATION_MODE);
          return false;
       } else {
          return true;

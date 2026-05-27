@@ -35,4 +35,8 @@ public abstract class AbstractCommandCollection extends AbstractAsyncCommand {
    public Message getUsageString(@Nonnull CommandSender sender) {
       return this.getUsageShort(sender, false);
    }
+
+   public boolean isNoArgVariant() {
+      return false;
+   }
 }

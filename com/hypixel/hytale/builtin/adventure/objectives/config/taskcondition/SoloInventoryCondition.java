@@ -7,9 +7,9 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.Set;
 import java.util.UUID;
@@ -69,32 +69,24 @@ public class SoloInventoryCondition extends TaskConditionAsset {
 
    @Override
    public boolean isConditionFulfilled(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> ref, Set<UUID> objectivePlayers) {
-      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-      if (playerComponent == null) {
-         return false;
-      } else {
-         Inventory inventory = playerComponent.getInventory();
-         if (this.holdInHand) {
-            ItemStack itemInHand = inventory.getItemInHand();
-            if (itemInHand == null) {
-               return false;
-            } else {
-               return !this.blockTypeOrTagTask.isBlockTypeIncluded(itemInHand.getItemId()) ? false : inventory.getItemInHand().getQuantity() >= this.quantity;
-            }
+      if (this.holdInHand) {
+         ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+         if (itemInHand == null) {
+            return false;
          } else {
-            return inventory.getCombinedHotbarFirst().countItemStacks(itemStack -> this.blockTypeOrTagTask.isBlockTypeIncluded(itemStack.getItemId()))
-               >= this.quantity;
+            return !this.blockTypeOrTagTask.isBlockTypeIncluded(itemInHand.getItemId()) ? false : itemInHand.getQuantity() >= this.quantity;
          }
+      } else {
+         CombinedItemContainer combinedInventory = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
+         return combinedInventory.countItemStacks(itemStack -> this.blockTypeOrTagTask.isBlockTypeIncluded(itemStack.getItemId())) >= this.quantity;
       }
    }
 
    @Override
    public void consumeCondition(@Nonnull ComponentAccessor<EntityStore> componentAccessor, @Nonnull Ref<EntityStore> ref, Set<UUID> objectivePlayers) {
-      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         if (this.consumeOnCompletion) {
-            this.blockTypeOrTagTask.consumeItemStacks(playerComponent.getInventory().getCombinedHotbarFirst(), this.quantity);
-         }
+      if (this.consumeOnCompletion) {
+         CombinedItemContainer combinedInventory = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
+         this.blockTypeOrTagTask.consumeItemStacks(combinedInventory, this.quantity);
       }
    }
 

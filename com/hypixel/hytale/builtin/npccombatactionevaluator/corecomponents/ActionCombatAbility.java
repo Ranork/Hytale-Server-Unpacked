@@ -5,8 +5,7 @@ import com.hypixel.hytale.builtin.npccombatactionevaluator.evaluator.CombatActio
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
@@ -31,6 +30,7 @@ import com.hypixel.hytale.server.npc.util.AimingData;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ActionCombatAbility extends ActionBase {
    protected static final ComponentType<EntityStore, CombatActionEvaluator> COMPONENT_TYPE = CombatActionEvaluator.getComponentType();
@@ -117,8 +117,8 @@ public class ActionCombatAbility extends ActionBase {
 
       assert headRotationComponent != null;
 
-      Vector3f rotation = aimingData != null && aimingData.getChargeDistance() > 0.0 ? transformComponent.getRotation() : headRotationComponent.getRotation();
-      if (aimingData != null && !aimingData.isOnTarget(rotation.getYaw(), rotation.getPitch(), (float) (Math.PI / 12))) {
+      Rotation3f rotation = aimingData != null && aimingData.getChargeDistance() > 0.0 ? transformComponent.getRotation() : headRotationComponent.getRotation();
+      if (aimingData != null && !aimingData.isOnTarget(rotation.yaw(), rotation.pitch(), (float) (Math.PI / 12))) {
          aimingData.clearSolution();
          return false;
       } else {
@@ -140,8 +140,8 @@ public class ActionCombatAbility extends ActionBase {
                   assert targetTransformComponent != null;
 
                   Vector3d targetPosition = targetTransformComponent.getPosition();
-                  float selfYaw = NPCPhysicsMath.lookatHeading(transformComponent.getPosition(), targetPosition, transformComponent.getRotation().getYaw());
-                  float difference = PhysicsMath.normalizeTurnAngle(targetTransformComponent.getRotation().getYaw() - selfYaw - (float)positioningAngle);
+                  float selfYaw = NPCPhysicsMath.lookatHeading(transformComponent.getPosition(), targetPosition, transformComponent.getRotation().yaw());
+                  float difference = PhysicsMath.normalizeTurnAngle(targetTransformComponent.getRotation().yaw() - selfYaw - (float)positioningAngle);
                   if (Math.abs(difference) > 0.08726646F) {
                      return false;
                   }

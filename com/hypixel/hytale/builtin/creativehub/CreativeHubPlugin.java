@@ -16,6 +16,9 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.vector.Transform;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerConfigData;
+import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -37,12 +40,15 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 public class CreativeHubPlugin extends JavaPlugin {
+   @Nonnull
+   private static final String[] InstanceTemplatePathPrefixes = new String[]{"Defaults/", "Regions/", "Dungeons/", "Portals/", "Gyms/"};
    @Nonnull
    private static final Message MESSAGE_HUB_RETURN_HINT = Message.translation("server.creativehub.portal.returnHint");
    private static CreativeHubPlugin instance;
@@ -67,15 +73,43 @@ public class CreativeHubPlugin extends JavaPlugin {
             return (World)existingInstance;
          } else {
             try {
-               World hub = InstancesPlugin.get().spawnInstance(hubConfig.getStartupInstance(), parentWorld, returnPoint).join();
+               String startupInstance = resolveHubStartupInstance(hubConfig.getStartupInstance());
+               World hub = InstancesPlugin.get().spawnInstance(startupInstance, parentWorld, returnPoint).join();
                hub.getWorldConfig().setDeleteOnRemove(true);
                return hub;
-            } catch (Exception var7) {
-               ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var7)).log("Failed to spawn hub instance");
-               throw new RuntimeException("Failed to spawn hub instance", var7);
+            } catch (Exception var8) {
+               ((HytaleLogger.Api)this.getLogger().at(Level.SEVERE).withCause(var8)).log("Failed to spawn hub instance");
+               throw new RuntimeException("Failed to spawn hub instance", var8);
             }
          }
       });
+   }
+
+   @Nonnull
+   private static String resolveHubStartupInstance(@Nonnull String configured) {
+      if (InstancesPlugin.doesInstanceAssetExist(configured)) {
+         return configured;
+      } else {
+         return configured.indexOf(47) < 0 && InstancesPlugin.doesInstanceAssetExist("Defaults/" + configured) ? "Defaults/" + configured : configured;
+      }
+   }
+
+   @Nonnull
+   private static String resolveInstanceTemplateAssetName(@Nonnull String configured) {
+      if (InstancesPlugin.doesInstanceAssetExist(configured)) {
+         return configured;
+      } else if (configured.indexOf(47) >= 0) {
+         return configured;
+      } else {
+         for (String prefix : InstanceTemplatePathPrefixes) {
+            String candidate = prefix + configured;
+            if (InstancesPlugin.doesInstanceAssetExist(candidate)) {
+               return candidate;
+            }
+         }
+
+         return configured;
+      }
    }
 
    @Nullable
@@ -89,7 +123,9 @@ public class CreativeHubPlugin extends JavaPlugin {
    }
 
    @Nonnull
-   public CompletableFuture<World> spawnPermanentWorldFromTemplate(@Nonnull String instanceAssetName, @Nonnull String permanentWorldName) {
+   public CompletableFuture<World> spawnPermanentWorldFromTemplate(
+      @Nonnull String instanceAssetName, @Nonnull String permanentWorldName, @Nullable Consumer<WorldConfig> configCustomizer
+   ) {
       Universe universe = Universe.get();
       World existingWorld = universe.getWorld(permanentWorldName);
       if (existingWorld != null) {
@@ -97,7 +133,8 @@ public class CreativeHubPlugin extends JavaPlugin {
       } else if (universe.isWorldLoadable(permanentWorldName)) {
          return universe.loadWorld(permanentWorldName);
       } else {
-         Path assetPath = InstancesPlugin.getInstanceAssetPath(instanceAssetName);
+         String resolvedTemplate = resolveInstanceTemplateAssetName(instanceAssetName);
+         Path assetPath = InstancesPlugin.getInstanceAssetPath(resolvedTemplate);
          Path worldPath = universe.validateWorldPath(permanentWorldName);
          return WorldConfig.load(assetPath.resolve("instance.bson"))
             .thenApplyAsync(
@@ -110,9 +147,13 @@ public class CreativeHubPlugin extends JavaPlugin {
                      }
 
                      config.getPluginConfig().remove(InstanceWorldConfig.class);
+                     if (configCustomizer != null) {
+                        configCustomizer.accept(config);
+                     }
+
                      config.markChanged();
                      long start = System.nanoTime();
-                     this.getLogger().at(Level.INFO).log("Copying instance template %s to permanent world %s", instanceAssetName, permanentWorldName);
+                     this.getLogger().at(Level.INFO).log("Copying instance template %s to permanent world %s", resolvedTemplate, permanentWorldName);
 
                      try (Stream<Path> files = Files.walk(assetPath, FileUtil.DEFAULT_WALK_TREE_OPTIONS_ARRAY)) {
                         files.forEach(SneakyThrow.sneakyConsumer(filePath -> {
@@ -132,7 +173,7 @@ public class CreativeHubPlugin extends JavaPlugin {
                         .at(Level.INFO)
                         .log(
                            "Completed copying instance template %s to permanent world %s in %s",
-                           instanceAssetName,
+                           resolvedTemplate,
                            permanentWorldName,
                            FormatUtil.nanosToString(System.nanoTime() - start)
                         );
@@ -183,7 +224,7 @@ public class CreativeHubPlugin extends JavaPlugin {
             if (parentHubConfig != null && parentHubConfig.getStartupInstance() != null && targetWorld == null) {
                event.setWorld(parentWorld);
                targetWorld = parentWorld;
-               holder.removeComponent(TransformComponent.getComponentType());
+               holder.tryRemoveComponent(TransformComponent.getComponentType());
             }
          }
       }
@@ -192,6 +233,17 @@ public class CreativeHubPlugin extends JavaPlugin {
          WorldConfig worldConfig = targetWorld.getWorldConfig();
          CreativeHubWorldConfig hubConfig = CreativeHubWorldConfig.get(worldConfig);
          if (hubConfig != null && hubConfig.getStartupInstance() != null) {
+            Player playerComponent = holder.getComponent(Player.getComponentType());
+            if (playerComponent != null) {
+               PlayerConfigData playerConfig = playerComponent.getPlayerConfigData();
+               if (targetWorld.getName().equals(playerConfig.getWorld())) {
+                  PlayerWorldData worldData = playerConfig.getPerWorldData().get(targetWorld.getName());
+                  if (worldData != null && worldData.getLastPosition() != null) {
+                     return;
+                  }
+               }
+            }
+
             PlayerRef playerRef = event.getPlayerRef();
             ISpawnProvider spawnProvider = worldConfig.getSpawnProvider();
             Transform returnPoint = spawnProvider != null ? spawnProvider.getSpawnPoint(targetWorld, playerRef.getUuid()) : new Transform();
@@ -203,8 +255,9 @@ public class CreativeHubPlugin extends JavaPlugin {
                CreativeHubEntityConfig hubEntityConfig = CreativeHubEntityConfig.ensureAndGet(holder);
                hubEntityConfig.setParentHubWorldUuid(targetWorld.getWorldConfig().getUuid());
                event.setWorld(hubInstance);
-            } catch (Exception var12) {
-               ((HytaleLogger.Api)get().getLogger().at(Level.SEVERE).withCause(var12))
+               holder.tryRemoveComponent(TransformComponent.getComponentType());
+            } catch (Exception var13) {
+               ((HytaleLogger.Api)get().getLogger().at(Level.SEVERE).withCause(var13))
                   .log("Failed to get/spawn hub instance for player %s, falling back to default world", playerRef.getUuid());
             }
          }

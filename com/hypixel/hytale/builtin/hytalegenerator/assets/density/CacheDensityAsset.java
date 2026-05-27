@@ -2,6 +2,7 @@ package com.hypixel.hytale.builtin.hytalegenerator.assets.density;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.CacheDensity;
+import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.ConstantValueDensity;
 import com.hypixel.hytale.builtin.hytalegenerator.density.nodes.MultiCacheDensity;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -24,8 +25,10 @@ public class CacheDensityAsset extends DensityAsset {
    @Nonnull
    @Override
    public Density build(@Nonnull DensityAsset.Argument argument) {
-      if (this.capacity <= 0) {
-         return this.build(argument);
+      if (this.isSkipped() || this.inputs().length == 0) {
+         return new ConstantValueDensity(0.0);
+      } else if (this.capacity <= 0) {
+         return this.buildFirstInput(argument);
       } else {
          return (Density)(this.capacity == 1
             ? new CacheDensity(this.buildFirstInput(argument))

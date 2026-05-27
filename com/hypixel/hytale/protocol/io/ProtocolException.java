@@ -90,4 +90,9 @@ public class ProtocolException extends RuntimeException {
    public static ProtocolException valueAboveMaximum(@Nonnull String fieldName, @Nonnull Object value, double max) {
       return new ProtocolException(fieldName + ": value " + value + " exceeds maximum " + max);
    }
+
+   @Nonnull
+   public static ProtocolException invalidAsciiString(@Nonnull String fieldName) {
+      return new ProtocolException(fieldName + ": string contains non-ASCII bytes");
+   }
 }

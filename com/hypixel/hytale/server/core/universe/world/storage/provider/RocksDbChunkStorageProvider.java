@@ -8,23 +8,28 @@ import com.hypixel.hytale.server.core.universe.world.storage.BufferChunkSaver;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkLoader;
 import com.hypixel.hytale.server.core.universe.world.storage.IChunkSaver;
+import com.hypixel.hytale.server.core.universe.world.storage.component.ChunkSavingSystems;
+import com.hypixel.hytale.server.core.util.io.FileUtil;
 import com.hypixel.hytale.sneakythrow.SneakyThrow;
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.longs.LongSet;
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+import it.unimi.dsi.fastutil.longs.LongList;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.BloomFilter;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
 import org.rocksdb.ColumnFamilyOptions;
+import org.rocksdb.CompactRangeOptions;
 import org.rocksdb.CompactionPriority;
 import org.rocksdb.CompactionStyle;
 import org.rocksdb.CompressionType;
@@ -35,6 +40,7 @@ import org.rocksdb.Options;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.RocksIterator;
+import org.rocksdb.CompactRangeOptions.BottommostLevelCompaction;
 
 public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksDbChunkStorageProvider.RocksDbResource> {
    public static final String ID = "RocksDb";
@@ -143,6 +149,11 @@ public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksD
       }
    }
 
+   public void delete(@Nonnull RocksDbChunkStorageProvider.RocksDbResource resource, @Nonnull Store<ChunkStore> store) throws IOException {
+      this.close(resource, store);
+      FileUtil.deleteDirectory(store.getExternalData().getWorld().getSavePath().resolve("db"));
+   }
+
    public void close(@NonNullDecl RocksDbChunkStorageProvider.RocksDbResource resource, @NonNullDecl Store<ChunkStore> store) throws IOException {
       try {
          resource.db.syncWal();
@@ -196,8 +207,8 @@ public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksD
 
       @Nonnull
       @Override
-      public LongSet getIndexes() throws IOException {
-         LongOpenHashSet set = new LongOpenHashSet();
+      public LongList getIndexes() throws IOException {
+         LongArrayList result = new LongArrayList();
          RocksIterator iter = this.db.db.newIterator(this.db.chunkColumn);
 
          try {
@@ -205,7 +216,7 @@ public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksD
 
             while (iter.isValid()) {
                byte[] key = iter.key();
-               set.add(ChunkUtil.indexChunk(RocksDbChunkStorageProvider.keyToX(key), RocksDbChunkStorageProvider.keyToZ(key)));
+               result.add(ChunkUtil.indexChunk(RocksDbChunkStorageProvider.keyToX(key), RocksDbChunkStorageProvider.keyToZ(key)));
                iter.next();
             }
          } catch (Throwable var6) {
@@ -224,7 +235,7 @@ public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksD
             iter.close();
          }
 
-         return set;
+         return result;
       }
 
       @Override
@@ -267,8 +278,8 @@ public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksD
 
       @Nonnull
       @Override
-      public LongSet getIndexes() throws IOException {
-         LongOpenHashSet set = new LongOpenHashSet();
+      public LongList getIndexes() throws IOException {
+         LongArrayList result = new LongArrayList();
          RocksIterator iter = this.db.db.newIterator(this.db.chunkColumn);
 
          try {
@@ -276,7 +287,7 @@ public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksD
 
             while (iter.isValid()) {
                byte[] key = iter.key();
-               set.add(ChunkUtil.indexChunk(RocksDbChunkStorageProvider.keyToX(key), RocksDbChunkStorageProvider.keyToZ(key)));
+               result.add(ChunkUtil.indexChunk(RocksDbChunkStorageProvider.keyToX(key), RocksDbChunkStorageProvider.keyToZ(key)));
                iter.next();
             }
          } catch (Throwable var6) {
@@ -295,7 +306,7 @@ public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksD
             iter.close();
          }
 
-         return set;
+         return result;
       }
 
       @Override
@@ -326,7 +337,70 @@ public class RocksDbChunkStorageProvider implements IChunkStorageProvider<RocksD
       }
 
       @Override
+      public void compact(@Nullable long[] removedHint) throws IOException {
+         byte[] start = null;
+         byte[] endExclusive = null;
+         if (removedHint != null && removedHint.length > 0) {
+            byte[] min = null;
+            byte[] max = null;
+
+            for (long c : removedHint) {
+               byte[] k = RocksDbChunkStorageProvider.toKey(ChunkUtil.xOfChunkIndex(c), ChunkUtil.zOfChunkIndex(c));
+               if (min == null || Arrays.compareUnsigned(k, min) < 0) {
+                  min = k;
+               }
+
+               if (max == null || Arrays.compareUnsigned(k, max) > 0) {
+                  max = k;
+               }
+            }
+
+            start = min;
+            endExclusive = new byte[max.length + 1];
+            System.arraycopy(max, 0, endExclusive, 0, max.length);
+         }
+
+         try {
+            CompactRangeOptions opts = new CompactRangeOptions().setBottommostLevelCompaction(BottommostLevelCompaction.kForceOptimized);
+
+            try {
+               this.db.db.compactRange(this.db.chunkColumn, start, endExclusive, opts);
+            } catch (Throwable var13) {
+               if (opts != null) {
+                  try {
+                     opts.close();
+                  } catch (Throwable var12) {
+                     var13.addSuppressed(var12);
+                  }
+               }
+
+               throw var13;
+            }
+
+            if (opts != null) {
+               opts.close();
+            }
+         } catch (RocksDBException var14) {
+            throw SneakyThrow.sneakyThrow(var14);
+         }
+      }
+
+      @Override
       public void close() throws IOException {
+      }
+
+      @Override
+      public void pauseBackgroundSaving(ChunkSavingSystems.Data data) {
+         data.pushSavingFuture(CompletableFuture.runAsync(SneakyThrow.sneakyRunnable(() -> this.db.db.pauseBackgroundWork())));
+      }
+
+      @Override
+      public void resumeBackgroundSaving() {
+         try {
+            this.db.db.continueBackgroundWork();
+         } catch (RocksDBException var2) {
+            throw SneakyThrow.sneakyThrow(var2);
+         }
       }
    }
 }

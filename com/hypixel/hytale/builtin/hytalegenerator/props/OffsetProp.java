@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.props;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class OffsetProp extends Prop {
    @Nonnull
@@ -18,7 +18,7 @@ public class OffsetProp extends Prop {
    private final Prop.Context rChildContext;
 
    public OffsetProp(@Nonnull Vector3i offset, @Nonnull Prop childProp) {
-      this.offset = offset.clone();
+      this.offset = new Vector3i(offset);
       this.childProp = childProp;
       this.readBounds_voxelGrid = childProp.getReadBounds_voxelGrid().clone().offset(offset);
       this.writeBounds_voxelGrid = childProp.getWriteBounds_voxelGrid().clone().offset(offset);
@@ -28,7 +28,7 @@ public class OffsetProp extends Prop {
 
    @Override
    public boolean generate(@NonNullDecl Prop.Context context) {
-      this.rChildPosition.assign(context.position).add(this.offset);
+      this.rChildPosition.set(context.position).add(this.offset);
       this.rChildContext.assign(context);
       this.rChildContext.position = this.rChildPosition;
       return this.childProp.generate(this.rChildContext);

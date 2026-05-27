@@ -3,10 +3,11 @@ package com.hypixel.hytale.builtin.buildertools.snapshot;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 public class EntityAddSnapshot implements EntitySnapshot<EntityRemoveSnapshot> {
    private final Ref<EntityStore> entityRef;
@@ -19,12 +20,13 @@ public class EntityAddSnapshot implements EntitySnapshot<EntityRemoveSnapshot> {
       return this.entityRef;
    }
 
-   public EntityRemoveSnapshot restoreEntity(@Nonnull Player player, @Nonnull World world, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   @Nullable
+   public EntityRemoveSnapshot restoreEntity(@Nonnull PlayerRef playerRef, @Nonnull World world, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!this.entityRef.isValid()) {
          return null;
       } else {
          EntityRemoveSnapshot snapshot = new EntityRemoveSnapshot(this.entityRef);
-         world.getEntityStore().getStore().removeEntity(this.entityRef, RemoveReason.UNLOAD);
+         world.getEntityStore().getStore().removeEntity(this.entityRef, RemoveReason.BUILDER_TOOLS_UNDO);
          return snapshot;
       }
    }

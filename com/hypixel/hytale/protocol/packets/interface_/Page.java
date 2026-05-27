@@ -10,7 +10,8 @@ public enum Page {
    Map(4),
    MachinimaEditor(5),
    ContentCreation(6),
-   Custom(7);
+   Custom(7),
+   Serverside(8);
 
    public static final Page[] VALUES = values();
    private final int value;

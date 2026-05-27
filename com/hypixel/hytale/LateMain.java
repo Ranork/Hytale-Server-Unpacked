@@ -18,7 +18,10 @@ public class LateMain {
          if (!Options.parse(args)) {
             HytaleLogger.init();
             ConsoleModule.initializeTerminal();
-            HytaleFileHandler.INSTANCE.enable();
+            if (!Options.isBare()) {
+               HytaleFileHandler.INSTANCE.enable();
+            }
+
             HytaleLogger.replaceStd();
             HytaleLoggerBackend.LOG_LEVEL_LOADER = name -> {
                for (Entry<String, Level> e : Options.getOptionSet().valuesOf(Options.LOG_LEVELS)) {

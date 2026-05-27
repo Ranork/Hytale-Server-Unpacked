@@ -1,21 +1,21 @@
 package com.hypixel.hytale.builtin.hytalegenerator.props.deprecated;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PositionScanResult implements ScanResult {
    private Vector3i position;
 
    public PositionScanResult(@Nullable Vector3i position) {
       if (position != null) {
-         this.position = position.clone();
+         this.position = new Vector3i(position);
       }
    }
 
    @Nullable
    public Vector3i getPosition() {
-      return this.position == null ? null : this.position.clone();
+      return this.position == null ? null : new Vector3i(this.position);
    }
 
    @Nonnull

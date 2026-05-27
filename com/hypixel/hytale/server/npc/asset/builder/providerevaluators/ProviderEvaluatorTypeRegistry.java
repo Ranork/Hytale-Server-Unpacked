@@ -10,6 +10,7 @@ public class ProviderEvaluatorTypeRegistry {
       SubTypeTypeAdapterFactory factory = SubTypeTypeAdapterFactory.of(ProviderEvaluator.class, "Type");
       factory.registerSubType(UnconditionalFeatureProviderEvaluator.class, "ProvidesFeatureUnconditionally");
       factory.registerSubType(UnconditionalParameterProviderEvaluator.class, "ProvidesParameterUnconditionally");
+      factory.registerSubType(PrecedingProviderEvaluator.class, "PrecedingProviderEvaluator");
       gsonBuilder.registerTypeAdapterFactory(factory);
       return gsonBuilder;
    }

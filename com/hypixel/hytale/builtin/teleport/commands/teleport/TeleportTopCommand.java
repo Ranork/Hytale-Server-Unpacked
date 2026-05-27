@@ -5,8 +5,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -19,6 +18,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TeleportTopCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -41,7 +41,7 @@ public class TeleportTopCommand extends AbstractPlayerCommand {
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      WorldChunk worldChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(position.getX(), position.getZ()));
+      WorldChunk worldChunk = world.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(position.x(), position.z()));
       if (worldChunk == null) {
          context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TOP_CHUNK_NOT_LOADED_AT_POS);
       } else {
@@ -49,12 +49,11 @@ public class TeleportTopCommand extends AbstractPlayerCommand {
 
          assert headRotationComponent != null;
 
-         Vector3f headRotation = headRotationComponent.getRotation().clone();
-         int height = worldChunk.getHeight(MathUtil.floor(position.getX()), MathUtil.floor(position.getZ()));
-         store.ensureAndGetComponent(ref, TeleportHistory.getComponentType()).append(world, position.clone(), headRotation.clone(), "Underground");
-         store.addComponent(
-            ref, Teleport.getComponentType(), Teleport.createForPlayer(new Vector3d(position.getX(), height + 2, position.getZ()), Vector3f.NaN)
-         );
+         Rotation3f headRotation = new Rotation3f(headRotationComponent.getRotation());
+         int height = worldChunk.getHeight(MathUtil.floor(position.x()), MathUtil.floor(position.z()));
+         store.ensureAndGetComponent(ref, TeleportHistory.getComponentType())
+            .append(world, new Vector3d(position), new Rotation3f(headRotation), "Underground");
+         store.addComponent(ref, Teleport.getComponentType(), Teleport.createForPlayer(new Vector3d(position.x(), height + 2, position.z()), Rotation3f.NaN));
          context.sendMessage(MESSAGE_COMMANDS_TELEPORT_TELEPORTED_TO_TOP);
       }
    }

@@ -13,7 +13,6 @@ import com.hypixel.hytale.event.EventRegistry;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.util.FastRandom;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.MovementStates;
@@ -31,7 +30,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.event.events.player.AddPlayerToWorldEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -66,6 +65,7 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class PrefabEditSessionManager {
    @Nonnull
@@ -104,8 +104,8 @@ public class PrefabEditSessionManager {
    }
 
    private void onPlayerReady(@Nonnull PlayerReadyEvent event) {
-      Ref<EntityStore> ref = event.getPlayer().getReference();
-      if (ref != null && ref.isValid()) {
+      Ref<EntityStore> ref = event.getPlayerRef();
+      if (ref.isValid()) {
          Store<EntityStore> store = ref.getStore();
          World world = store.getExternalData().getWorld();
          world.execute(() -> {
@@ -125,7 +125,7 @@ public class PrefabEditSessionManager {
 
                assert playerComponent != null;
 
-               playerComponent.applyMovementStates(ref, new SavedMovementStates(true), movementStates, store);
+               Player.applyMovementStates(ref, new SavedMovementStates(true), movementStates, store);
                PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
                if (playerRefComponent != null) {
                   givePrefabSelectorTool(ref, playerComponent, playerRefComponent, store);
@@ -138,36 +138,38 @@ public class PrefabEditSessionManager {
    private static void givePrefabSelectorTool(
       @Nonnull Ref<EntityStore> ref, @Nonnull Player playerComponent, @Nonnull PlayerRef playerRef, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      Inventory inventory = playerComponent.getInventory();
-      ItemContainer hotbar = inventory.getHotbar();
-      int hotbarSize = hotbar.getCapacity();
+      InventoryComponent.Hotbar hotbarComponent = componentAccessor.getComponent(ref, InventoryComponent.Hotbar.getComponentType());
+      if (hotbarComponent != null) {
+         ItemContainer hotbarInventory = hotbarComponent.getInventory();
+         int hotbarSize = hotbarInventory.getCapacity();
 
-      for (short slot = 0; slot < hotbarSize; slot++) {
-         ItemStack itemStack = hotbar.getItemStack(slot);
-         if (itemStack != null && !itemStack.isEmpty() && "EditorTool_PrefabEditing_SelectPrefab".equals(itemStack.getItemId())) {
-            inventory.setActiveHotbarSlot(ref, (byte)slot, componentAccessor);
-            playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)slot));
-            return;
+         for (short slot = 0; slot < hotbarSize; slot++) {
+            ItemStack itemStack = hotbarInventory.getItemStack(slot);
+            if (itemStack != null && !itemStack.isEmpty() && "EditorTool_PrefabEditing_SelectPrefab".equals(itemStack.getItemId())) {
+               hotbarComponent.setActiveSlot((byte)slot, ref, componentAccessor);
+               playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)slot));
+               return;
+            }
          }
-      }
 
-      short emptySlot = -1;
+         short emptySlot = -1;
 
-      for (short slotx = 0; slotx < hotbarSize; slotx++) {
-         ItemStack itemStack = hotbar.getItemStack(slotx);
-         if (itemStack == null || itemStack.isEmpty()) {
-            emptySlot = slotx;
-            break;
+         for (short slotx = 0; slotx < hotbarSize; slotx++) {
+            ItemStack itemStack = hotbarInventory.getItemStack(slotx);
+            if (itemStack == null || itemStack.isEmpty()) {
+               emptySlot = slotx;
+               break;
+            }
          }
-      }
 
-      if (emptySlot == -1) {
-         emptySlot = 0;
-      }
+         if (emptySlot == -1) {
+            emptySlot = 0;
+         }
 
-      hotbar.setItemStackForSlot(emptySlot, new ItemStack("EditorTool_PrefabEditing_SelectPrefab"));
-      inventory.setActiveHotbarSlot(ref, (byte)emptySlot, componentAccessor);
-      playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
+         hotbarInventory.setItemStackForSlot(emptySlot, new ItemStack("EditorTool_PrefabEditing_SelectPrefab"));
+         hotbarComponent.setActiveSlot((byte)emptySlot, ref, componentAccessor);
+         playerRef.getPacketHandler().writeNoCache(new SetActiveSlot(-1, (byte)emptySlot));
+      }
    }
 
    public void onPlayerAddedToWorld(@Nonnull AddPlayerToWorldEvent event) {
@@ -416,7 +418,7 @@ public class PrefabEditSessionManager {
 
          assert transformComponent != null;
 
-         Transform transform = transformComponent.getTransform().clone();
+         Transform transform = new Transform(transformComponent.getTransform());
          PrefabEditSession prefabEditSession = new PrefabEditSession(worldName, playerUUID, sourceWorld.getWorldConfig().getUuid(), transform);
          CompletableFuture<World> future;
          if (createNewPrefab) {
@@ -585,7 +587,7 @@ public class PrefabEditSessionManager {
             world -> CompletableFuture.supplyAsync(
                () -> {
                   Vector3i pastePosition = new Vector3i(0, context.getPasteLevelGoal(), 0);
-                  Vector3i anchorPosition = pastePosition.clone();
+                  Vector3i anchorPosition = new Vector3i(pastePosition);
                   editSession.addPrefab(
                      context.getPrefabPaths().getFirst(),
                      new Vector3i(-1, context.getPasteLevelGoal() - 1, -1),
@@ -621,7 +623,7 @@ public class PrefabEditSessionManager {
 
       for (int i = 0; i < context.getPrefabPaths().size(); i++) {
          Path prefabPath = context.getPrefabPaths().get(i);
-         CompletableFuture<IPrefabBuffer> prefabLoadingFuture = this.getPrefabBuffer(context.getEditor(), prefabPath);
+         CompletableFuture<IPrefabBuffer> prefabLoadingFuture = this.getPrefabBuffer(context.getEditorRef(), prefabPath);
          if (prefabLoadingFuture == null) {
             if (loadingState != null) {
                loadingState.addError("server.commands.editprefab.error.prefabLoadFailed", prefabPath.toString());
@@ -753,9 +755,7 @@ public class PrefabEditSessionManager {
                               Vector3i pastePosition;
                               if (context.getAlignment().equals(PrefabAlignment.ZERO)) {
                                  pastePosition = new Vector3i(0, yLevelToPastePrefabsAt, 0);
-                                 pastePosition.subtract(
-                                    Math.min(prefabAccessorx.getMinX(), 0), prefabAccessorx.getMinY(), Math.min(prefabAccessorx.getMinZ(), 0)
-                                 );
+                                 pastePosition.sub(Math.min(prefabAccessorx.getMinX(), 0), prefabAccessorx.getMinY(), Math.min(prefabAccessorx.getMinZ(), 0));
                                  if (context.getStackingAxis().equals(PrefabStackingAxis.X)) {
                                     pastePosition.add(lineOffset, 0, rowOffset);
                                     lineOffset += prefabXSize + context.getBlocksBetweenEachPrefab() + 1;
@@ -808,7 +808,7 @@ public class PrefabEditSessionManager {
                                     context.shouldLoadEntities(),
                                     store
                                  );
-                                 editSession.addPrefab(prefabPathx, minPoint, maxPoint, anchorPosition, pastePosition.clone());
+                                 editSession.addPrefab(prefabPathx, minPoint, maxPoint, anchorPosition, new Vector3i(pastePosition));
                                  if (loadingState != null) {
                                     loadingState.onPrefabPasted(prefabPathx);
                                     this.notifyProgress(progressCallback, loadingState);

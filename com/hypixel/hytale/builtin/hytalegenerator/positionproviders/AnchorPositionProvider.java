@@ -3,9 +3,10 @@ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3d;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class AnchorPositionProvider extends PositionProvider {
    @Nonnull
@@ -23,11 +24,15 @@ public class AnchorPositionProvider extends PositionProvider {
    private PositionProvider.Context rContext;
    @Nonnull
    private final Pipe.One<Vector3d> rChildPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(AnchorPositionProvider.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
-         Vector3d newPoint = position.clone();
-         AnchorPositionProvider.this.rNewPosition.assign(position);
+         Vector3d newPoint = new Vector3d(position);
+         AnchorPositionProvider.this.rNewPosition.set(position);
          if (AnchorPositionProvider.this.isReversed) {
-            AnchorPositionProvider.this.rNewPosition.subtract(AnchorPositionProvider.this.rAnchor);
+            AnchorPositionProvider.this.rNewPosition.set(AnchorPositionProvider.this.rAnchor);
          } else {
             AnchorPositionProvider.this.rNewPosition.add(AnchorPositionProvider.this.rAnchor);
          }

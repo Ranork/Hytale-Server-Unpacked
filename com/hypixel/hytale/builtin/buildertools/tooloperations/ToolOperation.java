@@ -19,7 +19,6 @@ import com.hypixel.hytale.math.block.BlockInvertedDomeUtil;
 import com.hypixel.hytale.math.block.BlockPyramidUtil;
 import com.hypixel.hytale.math.block.BlockSphereUtil;
 import com.hypixel.hytale.math.block.BlockTorusUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.Rotation;
 import com.hypixel.hytale.protocol.packets.buildertools.BrushAxis;
@@ -29,6 +28,8 @@ import com.hypixel.hytale.protocol.packets.buildertools.BuilderToolOnUseInteract
 import com.hypixel.hytale.server.core.asset.type.buildertool.config.BuilderTool;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockFilter;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
@@ -38,15 +39,17 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.TargetUtil;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -82,7 +85,9 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    @Nonnull
    protected final Player player;
    @Nonnull
-   protected final Ref<EntityStore> playerRef;
+   protected final PlayerRef playerRef;
+   @Nonnull
+   protected final Ref<EntityStore> playerEntityRef;
    @Nonnull
    protected final BuilderToolsPlugin.BuilderState builderState;
    private Transform transform;
@@ -94,7 +99,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    private final BlockMask mask;
 
    public ToolOperation(@Nonnull Ref<EntityStore> ref, @Nonnull BuilderToolOnUseInteraction packet, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      this.playerRef = ref;
+      this.playerEntityRef = ref;
       World world = componentAccessor.getExternalData().getWorld();
       Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
 
@@ -105,6 +110,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       assert playerRefComponent != null;
 
       this.player = playerComponent;
+      this.playerRef = playerRefComponent;
       this.builderState = BuilderToolsPlugin.getState(playerComponent, playerRefComponent);
       UUIDComponent uuidComponent = componentAccessor.getComponent(ref, UUIDComponent.getComponentType());
 
@@ -117,14 +123,30 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          PROTOTYPE_TOOL_SETTINGS.put(uuid, playerBuilderToolSettings);
       }
 
-      playerBuilderToolSettings.setShouldShowEditorSettings(packet.isShowEditNotifications);
       playerBuilderToolSettings.setMaxLengthOfIgnoredPaintOperations(packet.maxLengthToolIgnoreHistory);
       if (!packet.isHoldDownInteraction && (this instanceof PaintOperation || this instanceof SculptOperation)) {
          playerBuilderToolSettings.getIgnoredPaintOperations().clear();
          playerBuilderToolSettings.clearLastBrushPosition();
       }
 
+      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
+      ItemStack itemInHand = InventoryComponent.getItemInHand(componentAccessor, ref);
+      BuilderTool.ArgData args = this.args = builderTool.getItemArgData(itemInHand);
+      Object width = args.tool().get("builtin_Width");
+      Object height = args.tool().get("builtin_Height");
+      Object thickness = args.tool().get("builtin_Thickness");
+      Object capped = args.tool().get("builtin_Capped");
+      Object shape = args.tool().get("builtin_Shape");
+      Object density = args.tool().get("builtin_Density");
+      Object spacing = args.tool().get("builtin_Spacing");
+      Object material = args.tool().get("builtin_Material");
+      int localShapeRange = width != null ? (Integer)width : 5;
+      int localShapeHeight = height != null ? (Integer)height : 5;
+      boolean evenW = localShapeRange % 2 == 0;
+      boolean evenH = localShapeHeight % 2 == 0;
+      int[] snapAxes = getRotatedEvenSnapAxes(args.tool().get("builtin_RotationFace") instanceof String s ? s : "Up", evenW, evenH);
       if (packet.isDoServerRaytraceForPosition && (this instanceof PaintOperation || this instanceof SculptOperation)) {
+         Vector3d hitPosition = new Vector3d();
          Vector3i targetBlockAvoidingPaint = this.getTargetBlockAvoidingPaint(
             ref,
             400.0,
@@ -134,12 +156,34 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
             packet.raycastOriginZ,
             packet.raycastDirectionX,
             packet.raycastDirectionY,
-            packet.raycastDirectionZ
+            packet.raycastDirectionZ,
+            hitPosition
          );
          if (targetBlockAvoidingPaint != null) {
-            this.x = targetBlockAvoidingPaint.x + packet.offsetForPaintModeX;
-            this.y = targetBlockAvoidingPaint.y + packet.offsetForPaintModeY;
-            this.z = targetBlockAvoidingPaint.z + packet.offsetForPaintModeZ;
+            int bufferX = targetBlockAvoidingPaint.x + packet.offsetForPaintModeX;
+            int bufferY = targetBlockAvoidingPaint.y + packet.offsetForPaintModeY;
+            int bufferZ = targetBlockAvoidingPaint.z + packet.offsetForPaintModeZ;
+            if (snapAxes[0] > 0 && hitPosition.x - targetBlockAvoidingPaint.x >= 0.5) {
+               bufferX++;
+            } else if (snapAxes[0] < 0 && hitPosition.x - targetBlockAvoidingPaint.x < 0.5) {
+               bufferX--;
+            }
+
+            if (snapAxes[1] > 0 && hitPosition.y - targetBlockAvoidingPaint.y >= 0.5) {
+               bufferY++;
+            } else if (snapAxes[1] < 0 && hitPosition.y - targetBlockAvoidingPaint.y < 0.5) {
+               bufferY--;
+            }
+
+            if (snapAxes[2] > 0 && hitPosition.z - targetBlockAvoidingPaint.z >= 0.5) {
+               bufferZ++;
+            } else if (snapAxes[2] < 0 && hitPosition.z - targetBlockAvoidingPaint.z < 0.5) {
+               bufferZ--;
+            }
+
+            this.x = bufferX;
+            this.y = bufferY;
+            this.z = bufferZ;
          } else {
             this.x = packet.x;
             this.y = packet.y;
@@ -152,34 +196,36 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       }
 
       this.interactionType = packet.type;
-      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(playerComponent);
-      BuilderTool.ArgData args = this.args = builderTool.getItemArgData(playerComponent.getInventory().getItemInHand());
-      Object width = args.tool().get("builtin_Width");
-      Object height = args.tool().get("builtin_Height");
-      Object thickness = args.tool().get("builtin_Thickness");
-      Object capped = args.tool().get("builtin_Capped");
-      Object shape = args.tool().get("builtin_Shape");
-      Object density = args.tool().get("builtin_Density");
-      Object spacing = args.tool().get("builtin_Spacing");
-      Object material = args.tool().get("builtin_Material");
       this.transform = getTransform(ref, args, this.vector, componentAccessor);
-      this.shapeRange = width != null ? (Integer)width : 5;
-      this.shapeHeight = height != null ? (Integer)height : 5;
+      this.shapeRange = localShapeRange;
+      this.shapeHeight = localShapeHeight;
       this.shapeThickness = thickness != null ? (Integer)thickness : 0;
       this.capped = capped != null ? (Boolean)capped : false;
       this.shape = shape != null ? BrushShape.valueOf((String)shape) : BrushShape.Sphere;
       this.density = density != null ? (Integer)density : 100;
       this.spacing = spacing != null ? (Integer)spacing : 0;
-      this.pattern = this.getPattern(packet, material != null ? (BlockPattern)material : BlockPattern.EMPTY);
+      this.pattern = material != null ? (BlockPattern)material : BlockPattern.EMPTY;
       this.mask = combineMasks(args, this.builderState.getGlobalMask());
       Object origin = args.tool().get("builtin_Origin");
       Object rotateOrigin = args.tool().get("builtin_OriginRotation");
       BrushOrigin shapeOrigin = origin != null ? BrushOrigin.valueOf((String)origin) : BrushOrigin.Center;
       boolean originRotation = rotateOrigin != null ? (Boolean)rotateOrigin : false;
-      Vector3i offsets = getOffsets(this.shapeRange, this.shapeHeight, originRotation, shapeOrigin, this.transform, this.vector, true);
-      this.originOffsetX = offsets.getX();
-      this.originOffsetY = offsets.getY();
-      this.originOffsetZ = offsets.getZ();
+      int effectiveWidth = this.shapeRange;
+      int effectiveHeight = this.shapeHeight;
+      if (this.shape == BrushShape.Torus) {
+         int outerRadius = this.shapeRange / 2;
+         int minorRadius = Math.max(1, this.shapeHeight / 4);
+         int majorRadius = Math.max(1, outerRadius - minorRadius);
+         int sizeXZ = majorRadius + minorRadius;
+         effectiveWidth = this.shapeRange % 2 == 0 ? sizeXZ * 2 : sizeXZ * 2 + 1;
+         effectiveHeight = this.shapeHeight % 2 == 0 ? minorRadius * 2 : minorRadius * 2 + 1;
+      }
+
+      Transform brushRot = this.getBrushRotation(componentAccessor);
+      Vector3i offsets = getOffsets(effectiveWidth, effectiveHeight, originRotation, shapeOrigin, this.transform, brushRot, this.vector);
+      this.originOffsetX = offsets.x();
+      this.originOffsetY = offsets.y();
+      this.originOffsetZ = offsets.z();
       this.random = this.builderState.getRandom();
       this.currentCenterX = this.x;
       this.currentCenterY = this.y;
@@ -209,9 +255,9 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          positions.add(currentPosition);
          return positions;
       } else {
-         double dx = currentPosition.getX() - lastPosition.getX();
-         double dy = currentPosition.getY() - lastPosition.getY();
-         double dz = currentPosition.getZ() - lastPosition.getZ();
+         double dx = currentPosition.x() - lastPosition.x();
+         double dy = currentPosition.y() - lastPosition.y();
+         double dz = currentPosition.z() - lastPosition.z();
          double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
          if (brushSpacing == 0) {
             float maxBrushDimension = Math.max(brushWidth, brushHeight);
@@ -225,9 +271,9 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
 
             for (int i = 1; i <= steps; i++) {
                float t = (float)i / steps;
-               int interpX = (int)Math.round(lastPosition.getX() + dx * t);
-               int interpY = (int)Math.round(lastPosition.getY() + dy * t);
-               int interpZ = (int)Math.round(lastPosition.getZ() + dz * t);
+               int interpX = (int)Math.round(lastPosition.x() + dx * t);
+               int interpY = (int)Math.round(lastPosition.y() + dy * t);
+               int interpZ = (int)Math.round(lastPosition.z() + dz * t);
                positions.add(new Vector3i(interpX, interpY, interpZ));
             }
          } else if (distance >= brushSpacing) {
@@ -271,7 +317,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          } else if (rotationSelection.equalsIgnoreCase("west")) {
             transform = Rotate.forAxisAndAngle(BrushAxis.Z, Rotation.Ninety);
          } else if (rotationSelection.equalsIgnoreCase("camera")) {
-            HeadRotation headRotationComponent = componentAccessor.getComponent(this.playerRef, HeadRotation.getComponentType());
+            HeadRotation headRotationComponent = componentAccessor.getComponent(this.playerEntityRef, HeadRotation.getComponentType());
 
             assert headRotationComponent != null;
 
@@ -290,7 +336,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       World world = componentAccessor.getExternalData().getWorld();
       prototypePlayerBuilderToolSettings.setUndoGroupSize(packet.undoGroupSize);
       prototypePlayerBuilderToolSettings.getBrushConfigCommandExecutor()
-         .execute(this.playerRef, world, new Vector3i(this.x, this.y, this.z), packet.isHoldDownInteraction, packet.type, bc -> {
+         .execute(this.playerEntityRef, world, new Vector3i(this.x, this.y, this.z), packet.isHoldDownInteraction, packet.type, bc -> {
             bc.setPattern(this.pattern);
             bc.setDensity(this.density);
             bc.setShapeHeight(this.shapeHeight);
@@ -305,16 +351,6 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          }, componentAccessor);
    }
 
-   private BlockPattern getPattern(@Nonnull BuilderToolOnUseInteraction packet, BlockPattern pattern) {
-      if (packet.type == InteractionType.Primary) {
-         return BlockPattern.EMPTY;
-      } else {
-         return (this instanceof PaintOperation || this instanceof PaintOperation) && pattern.equals(BlockPattern.EMPTY)
-            ? BlockPattern.parse("Rock_Stone")
-            : pattern;
-      }
-   }
-
    @Nullable
    public Vector3i getTargetBlockAvoidingPaint(
       @Nonnull Ref<EntityStore> ref,
@@ -327,26 +363,32 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       float raycastDirectionY,
       float raycastDirectionZ
    ) {
+      return this.getTargetBlockAvoidingPaint(
+         ref, maxDistance, componentAccessor, raycastOriginX, raycastOriginY, raycastOriginZ, raycastDirectionX, raycastDirectionY, raycastDirectionZ, null
+      );
+   }
+
+   @Nullable
+   public Vector3i getTargetBlockAvoidingPaint(
+      @Nonnull Ref<EntityStore> ref,
+      double maxDistance,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor,
+      float raycastOriginX,
+      float raycastOriginY,
+      float raycastOriginZ,
+      float raycastDirectionX,
+      float raycastDirectionY,
+      float raycastDirectionZ,
+      @Nullable Vector3d hitPositionOut
+   ) {
       World world = componentAccessor.getExternalData().getWorld();
       UUIDComponent uuidComponent = componentAccessor.getComponent(ref, UUIDComponent.getComponentType());
 
       assert uuidComponent != null;
 
       PrototypePlayerBuilderToolSettings prototypePlayerBuilderToolSettings = PROTOTYPE_TOOL_SETTINGS.get(uuidComponent.getUuid());
-      return prototypePlayerBuilderToolSettings != null && !prototypePlayerBuilderToolSettings.getIgnoredPaintOperations().isEmpty()
-         ? TargetUtil.getTargetBlockAvoidLocations(
-            world,
-            blockId -> blockId != 0,
-            raycastOriginX,
-            raycastOriginY,
-            raycastOriginZ,
-            raycastDirectionX,
-            raycastDirectionY,
-            raycastDirectionZ,
-            maxDistance,
-            prototypePlayerBuilderToolSettings.getIgnoredPaintOperations()
-         )
-         : TargetUtil.getTargetBlock(
+      if (prototypePlayerBuilderToolSettings == null || prototypePlayerBuilderToolSettings.getIgnoredPaintOperations().isEmpty()) {
+         Vector3i blockPos = TargetUtil.getTargetBlock(
             world,
             (blockId, _fluidId) -> blockId != 0,
             raycastOriginX,
@@ -357,6 +399,58 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
             raycastDirectionZ,
             maxDistance
          );
+         if (blockPos == null) {
+            return null;
+         } else {
+            if (hitPositionOut != null) {
+               Vector3d hitLocation = TargetUtil.getTargetLocation(
+                  world,
+                  blockId -> blockId != 0,
+                  raycastOriginX,
+                  raycastOriginY,
+                  raycastOriginZ,
+                  raycastDirectionX,
+                  raycastDirectionY,
+                  raycastDirectionZ,
+                  maxDistance
+               );
+               if (hitLocation != null) {
+                  hitPositionOut.x = hitLocation.x;
+                  hitPositionOut.y = hitLocation.y;
+                  hitPositionOut.z = hitLocation.z;
+               }
+            }
+
+            return blockPos;
+         }
+      } else {
+         return hitPositionOut != null
+            ? TargetUtil.getTargetBlockAvoidLocations(
+               world,
+               blockId -> blockId != 0,
+               raycastOriginX,
+               raycastOriginY,
+               raycastOriginZ,
+               raycastDirectionX,
+               raycastDirectionY,
+               raycastDirectionZ,
+               maxDistance,
+               prototypePlayerBuilderToolSettings.getIgnoredPaintOperations(),
+               hitPositionOut
+            )
+            : TargetUtil.getTargetBlockAvoidLocations(
+               world,
+               blockId -> blockId != 0,
+               raycastOriginX,
+               raycastOriginY,
+               raycastOriginZ,
+               raycastDirectionX,
+               raycastDirectionY,
+               raycastDirectionZ,
+               maxDistance,
+               prototypePlayerBuilderToolSettings.getIgnoredPaintOperations()
+            );
+      }
    }
 
    @Nonnull
@@ -366,14 +460,14 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
 
    public final boolean test(int x, int y, int z, Void aVoid) {
       if (this.transform == Transform.NONE) {
-         return this.execute0(x, y + this.originOffsetY, z);
+         return this.executeBlock(x + this.originOffsetX, y + this.originOffsetY, z + this.originOffsetZ);
       } else {
-         this.vector.assign(x - this.currentCenterX, y - this.currentCenterY, z - this.currentCenterZ);
+         this.vector.set(x - this.currentCenterX, y - this.currentCenterY, z - this.currentCenterZ);
          this.transform.apply(this.vector);
          x = this.currentCenterX + this.originOffsetX + this.vector.x;
          y = this.currentCenterY + this.originOffsetY + this.vector.y;
          z = this.currentCenterZ + this.originOffsetZ + this.vector.z;
-         return this.execute0(x, y, z);
+         return this.executeBlock(x, y, z);
       }
    }
 
@@ -381,7 +475,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       return true;
    }
 
-   abstract boolean execute0(int var1, int var2, int var3);
+   protected abstract boolean executeBlock(int var1, int var2, int var3);
 
    public void execute(ComponentAccessor<EntityStore> componentAccessor) {
       executeShapeOperation(this.x, this.y, this.z, this, this.shape, this.shapeRange, this.shapeHeight, this.shapeThickness, this.capped);
@@ -405,67 +499,193 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       int shapeThickness,
       boolean capped
    ) {
-      if (shapeRange <= 1 && shapeHeight <= 1) {
+      if (shapeRange <= 1 && shapeHeight <= 1 && shape != BrushShape.Torus) {
          operation.test(x, y, z, null);
       } else {
-         int radiusXZ = Math.max(shapeRange / 2, 1);
-         int halfHeight = Math.max(shapeHeight / 2, 1);
+         int radiusXZ = shapeRange / 2;
+         int halfHeight = shapeHeight / 2;
+         boolean evenXZ = shapeRange % 2 == 0;
+         boolean evenY = shapeHeight % 2 == 0;
+         if (radiusXZ < 1 && shape != BrushShape.Torus) {
+            BlockCubeUtil.forEachBlock(x, y, z, 0, shapeHeight, 0, false, evenY, null, operation);
+            return;
+         }
+
          switch (shape) {
             case Cube:
             default:
-               BlockCubeUtil.forEachBlock(x, y, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, null, operation);
+               BlockCubeUtil.forEachBlock(x, y, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, capped, false, evenXZ, evenY, null, operation);
                break;
             case Sphere:
-               BlockSphereUtil.forEachBlock(x, y, z, radiusXZ, halfHeight, radiusXZ, shapeThickness, null, operation);
+               if (halfHeight < 1) {
+                  BlockCylinderUtil.forEachBlock(x, y, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, evenXZ, false, null, operation);
+               } else {
+                  BlockSphereUtil.forEachBlock(x, y, z, radiusXZ, halfHeight, radiusXZ, shapeThickness, evenXZ, evenY, null, operation);
+               }
                break;
             case Cylinder:
-               BlockCylinderUtil.forEachBlock(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, null, operation);
+               BlockCylinderUtil.forEachBlock(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, evenXZ, evenY, null, operation);
                break;
             case Cone:
-               BlockConeUtil.forEachBlock(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, null, operation);
+               BlockConeUtil.forEachBlock(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, evenXZ, evenY, null, operation);
                break;
             case InvertedCone:
-               BlockConeUtil.forEachBlockInverted(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, null, operation);
+               BlockConeUtil.forEachBlockInverted(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, evenXZ, evenY, null, operation);
                break;
             case Pyramid:
-               BlockPyramidUtil.forEachBlock(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, null, operation);
+               BlockPyramidUtil.forEachBlock(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, evenXZ, evenY, null, operation);
                break;
             case InvertedPyramid:
-               BlockPyramidUtil.forEachBlockInverted(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, null, operation);
+               BlockPyramidUtil.forEachBlockInverted(
+                  x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, evenXZ, evenY, null, operation
+               );
                break;
             case Dome:
-               BlockDomeUtil.forEachBlock(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, null, operation);
+               BlockDomeUtil.forEachBlock(x, y - halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, evenXZ, evenY, null, operation);
                break;
             case InvertedDome:
-               BlockInvertedDomeUtil.forEachBlock(x, y + halfHeight, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, null, operation);
+               BlockInvertedDomeUtil.forEachBlock(
+                  x, y + (shapeHeight - 1) / 2, z, radiusXZ, shapeHeight, radiusXZ, shapeThickness, capped, evenXZ, evenY, null, operation
+               );
                break;
             case Diamond:
-               BlockDiamondUtil.forEachBlock(x, y, z, radiusXZ, shapeHeight / 2, radiusXZ, shapeThickness, capped, null, operation);
+               BlockDiamondUtil.forEachBlock(x, y, z, radiusXZ, shapeHeight / 2, radiusXZ, shapeThickness, capped, evenXZ, evenY, null, operation);
                break;
             case Torus:
                int minorRadius = Math.max(1, shapeHeight / 4);
-               BlockTorusUtil.forEachBlock(x, y, z, radiusXZ, minorRadius, shapeThickness, capped, null, operation);
+               int outerRadius = Math.max(1, radiusXZ);
+               BlockTorusUtil.forEachBlock(x, y, z, outerRadius, minorRadius, shapeThickness, capped, evenXZ, evenY, null, operation);
          }
       }
    }
 
    @Nonnull
    private static Vector3i getOffsets(
-      int width, int height, boolean originRotation, BrushOrigin origin, @Nonnull Transform transform, @Nonnull Vector3i vector, boolean applyBottomOriginFix
+      int width,
+      int height,
+      boolean originRotation,
+      BrushOrigin origin,
+      @Nonnull Transform transform,
+      @Nonnull Transform brushRotation,
+      @Nonnull Vector3i vector
    ) {
       int offsetY = height / 2;
       int offsetXZ = originRotation ? width / 2 : 0;
-      vector.assign(0, offsetY, 0);
-      transform.apply(vector);
-      int ox = vector.getX();
-      int oz = vector.getZ();
-      vector.assign(offsetXZ, offsetY, -offsetXZ);
-      transform.apply(vector);
-      int oy = vector.getY();
-      ox = origin == BrushOrigin.Center ? 0 : (origin == BrushOrigin.Bottom ? ox : -ox);
-      oy = origin == BrushOrigin.Center ? 0 : (origin == BrushOrigin.Bottom ? oy + (applyBottomOriginFix ? 1 : 0) : -oy);
-      oz = origin == BrushOrigin.Center ? 0 : (origin == BrushOrigin.Bottom ? oz : -oz);
-      return vector.assign(ox, oy, oz);
+      if (origin != BrushOrigin.Lowest && origin != BrushOrigin.Highest) {
+         vector.set(0, offsetY, 0);
+         transform.apply(vector);
+         int offsetXTransformed = vector.x();
+         int offsetZTransformed = vector.z();
+         vector.set(offsetXZ, offsetY, -offsetXZ);
+         transform.apply(vector);
+         int offsetYTransformed = vector.y();
+         offsetXTransformed = origin == BrushOrigin.Center ? 0 : (origin == BrushOrigin.Bottom ? offsetXTransformed : -offsetXTransformed);
+         offsetYTransformed = origin == BrushOrigin.Center ? 0 : (origin == BrushOrigin.Bottom ? offsetYTransformed : -offsetYTransformed);
+         offsetZTransformed = origin == BrushOrigin.Center ? 0 : (origin == BrushOrigin.Bottom ? offsetZTransformed : -offsetZTransformed);
+         return vector.set(offsetXTransformed, offsetYTransformed, offsetZTransformed);
+      } else {
+         int halfW = width / 2;
+         int posW = (width - 1) / 2;
+         int minY = Integer.MAX_VALUE;
+         int maxY = Integer.MIN_VALUE;
+
+         for (int sx = -1; sx <= 1; sx += 2) {
+            for (int sy = -1; sy <= 1; sy += 2) {
+               for (int sz = -1; sz <= 1; sz += 2) {
+                  vector.set(sx < 0 ? -halfW : posW, sy < 0 ? -offsetY : offsetY, sz < 0 ? -halfW : posW);
+                  brushRotation.apply(vector);
+                  minY = Math.min(minY, vector.y());
+                  maxY = Math.max(maxY, vector.y());
+               }
+            }
+         }
+
+         int worldOy = origin == BrushOrigin.Lowest ? -minY : -maxY;
+         vector.set(0, worldOy, 0);
+         if (brushRotation instanceof Rotate rotate) {
+            rotate.inverse().apply(vector);
+         }
+
+         return vector;
+      }
+   }
+
+   private static int[] getRotatedEvenSnapAxes(String rotationFace, boolean evenW, boolean evenH) {
+      int[] width = new int[]{1, 0, 0};
+      int[] height = new int[]{0, 1, 0};
+      int[] depth = new int[]{0, 0, 1};
+      String i = rotationFace.toLowerCase();
+      int count;
+      int axis;
+      switch (i) {
+         case "down":
+            axis = 0;
+            count = 2;
+            break;
+         case "north":
+            axis = 0;
+            count = 3;
+            break;
+         case "south":
+            axis = 0;
+            count = 1;
+            break;
+         case "east":
+            axis = 2;
+            count = 3;
+            break;
+         case "west":
+            axis = 2;
+            count = 1;
+            break;
+         default:
+            axis = 0;
+            count = 0;
+      }
+
+      for (int i = 0; i < count; i++) {
+         rotate90(width, axis);
+         rotate90(height, axis);
+         rotate90(depth, axis);
+      }
+
+      return new int[]{
+         evenSnapSign(evenW, width[0], depth[0], evenH, height[0]),
+         evenSnapSign(evenW, width[1], depth[1], evenH, height[1]),
+         evenSnapSign(evenW, width[2], depth[2], evenH, height[2])
+      };
+   }
+
+   private static void rotate90(int[] v, int axis) {
+      switch (axis) {
+         case 0: {
+            int tmp = v[1];
+            v[1] = -v[2];
+            v[2] = tmp;
+            break;
+         }
+         case 1: {
+            int tmp = v[0];
+            v[0] = v[2];
+            v[2] = -tmp;
+            break;
+         }
+         case 2: {
+            int tmp = v[0];
+            v[0] = -v[1];
+            v[1] = tmp;
+         }
+      }
+   }
+
+   private static int evenSnapSign(boolean evenW, int wComp, int dComp, boolean evenH, int hComp) {
+      if (evenW && wComp != 0) {
+         return wComp;
+      } else if (evenW && dComp != 0) {
+         return dComp;
+      } else {
+         return evenH && hComp != 0 ? hComp : 0;
+      }
    }
 
    private static Transform getTransform(
@@ -514,10 +734,11 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
    public static ToolOperation fromPacket(
       @Nonnull Ref<EntityStore> ref,
       @Nonnull Player player,
+      @Nonnull PlayerRef playerRef,
       @Nonnull BuilderToolOnUseInteraction packet,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) throws Exception {
-      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(player);
+      BuilderTool builderTool = BuilderTool.getActiveBuilderTool(ref, componentAccessor);
       if (builderTool == null) {
          throw new IllegalStateException("No builder tool active on player");
       } else {
@@ -526,7 +747,7 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
          if (factory == null) {
             throw new Exception("No tool found matching id " + toolType);
          } else {
-            return factory.create(ref, player, packet, componentAccessor);
+            return factory.create(ref, player, playerRef, packet, componentAccessor);
          }
       }
    }
@@ -536,20 +757,10 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       if (args == null) {
          return globalMask;
       } else {
-         Object useMaskCommands = args.tool().get("builtin_UseMaskCommands");
-         boolean useBrushMaskCommands = useMaskCommands != null ? (Boolean)useMaskCommands : false;
          Object invertMask = args.tool().get("builtin_InvertMask");
          boolean brushInvertMask = invertMask != null ? (Boolean)invertMask : false;
-         if (useBrushMaskCommands) {
-            String maskCommands = args.tool().get("builtin_MaskCommands") != null ? (String)args.tool().get("builtin_MaskCommands") : "";
-            String[] commands = NEWLINES_PATTERN.split(maskCommands);
-            BlockMask[] parsedMaskCommands = Arrays.stream(commands).map(m -> m.split(" ")).map(BlockMask::parse).toArray(BlockMask[]::new);
-            BlockMask mask = BlockMask.combine(parsedMaskCommands);
-            if (mask != null) {
-               mask.setInverted(brushInvertMask);
-            }
-
-            return mask;
+         if (args.tool().get("builtin_MaskEntries") instanceof String maskEntriesStr && !maskEntriesStr.isEmpty()) {
+            return parseMaskEntries(maskEntriesStr, globalMask);
          } else {
             Object mask = args.tool().get("builtin_Mask");
             Object maskAbove = args.tool().get("builtin_MaskAbove");
@@ -604,13 +815,29 @@ public abstract class ToolOperation implements TriIntObjPredicate<Void> {
       }
    }
 
+   @Nullable
+   private static BlockMask parseMaskEntries(@Nonnull String value, @Nullable BlockMask globalMask) {
+      try {
+         String cleaned = value.replace("{", "").replace("}", "");
+         BlockMask parsed = BlockMask.parse(cleaned);
+         if (parsed != null && parsed != BlockMask.EMPTY) {
+            return globalMask != null ? BlockMask.combine(parsed, globalMask) : parsed;
+         } else {
+            return globalMask;
+         }
+      } catch (Exception var4) {
+         LOGGER.at(Level.WARNING).log("Failed to parse mask entries: {}", value, var4);
+         return globalMask;
+      }
+   }
+
    static {
-      OPERATIONS.put("Flood", FloodOperation::new);
       OPERATIONS.put("Noise", NoiseOperation::new);
       OPERATIONS.put("Scatter", ScatterOperation::new);
-      OPERATIONS.put("Smooth", (ref, player1, packet, componentAccessor) -> new SmoothOperation(ref, packet, componentAccessor));
+      OPERATIONS.put("Smooth", (ref, player1, playerRef1, packet, componentAccessor) -> new SmoothOperation(ref, packet, componentAccessor));
       OPERATIONS.put("Tint", TintOperation::new);
       OPERATIONS.put("Paint", PaintOperation::new);
+      OPERATIONS.put("OldSculpt", OldSculptOperation::new);
       OPERATIONS.put("Sculpt", SculptOperation::new);
       OPERATIONS.put("Layers", LayersOperation::new);
       OPERATIONS.put("LaserPointer", LaserPointerOperation::new);

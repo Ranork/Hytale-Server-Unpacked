@@ -104,6 +104,11 @@ public class BuilderActionInventory extends BuilderActionBase {
          case SetOffHand:
          case EquipOffHand:
             result &= validationHelper.validateOffHandHasSlot(this.slot.get(context), "ActionInventory", errors);
+         case Add:
+         case Remove:
+         case Equip:
+         case ClearHeldItem:
+         case RemoveHeldItem:
       }
 
       return result;

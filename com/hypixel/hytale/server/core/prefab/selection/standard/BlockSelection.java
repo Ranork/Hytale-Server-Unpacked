@@ -15,12 +15,10 @@ import com.hypixel.hytale.component.SystemType;
 import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.block.BlockUtil;
-import com.hypixel.hytale.math.matrix.Matrix4d;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.metrics.MetricProvider;
 import com.hypixel.hytale.metrics.MetricResults;
 import com.hypixel.hytale.metrics.MetricsRegistry;
@@ -35,25 +33,28 @@ import com.hypixel.hytale.server.core.asset.type.blockhitbox.BlockBoundingBoxes;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.VariantRotation;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.asset.type.fluid.FluidTicker;
+import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.blocktype.component.BlockPhysics;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.BlockEntity;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
+import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.FromPrefab;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentModel;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.item.ItemComponent;
 import com.hypixel.hytale.server.core.prefab.event.PrefabPlaceEntityEvent;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockChunk;
+import com.hypixel.hytale.server.core.universe.world.chunk.BlockComponentChunk;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockRotationUtil;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -82,19 +83,22 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
-import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Quaterniond;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, MetricProvider {
    public static final Consumer<Ref<EntityStore>> DEFAULT_ENTITY_CONSUMER = ref -> {};
    public static final MetricsRegistry<BlockSelection> METRICS_REGISTRY = new MetricsRegistry<BlockSelection>()
       .register("BlocksLock", selection -> selection.blocksLock.toString(), Codec.STRING)
       .register("EntitiesLock", selection -> selection.entitiesLock.toString(), Codec.STRING)
-      .register("Position", selection -> new Vector3i(selection.x, selection.y, selection.z), Vector3i.CODEC)
-      .register("Anchor", selection -> new Vector3i(selection.anchorX, selection.anchorY, selection.anchorZ), Vector3i.CODEC)
-      .register("Min", BlockSelection::getSelectionMin, Vector3i.CODEC)
-      .register("Max", BlockSelection::getSelectionMax, Vector3i.CODEC)
+      .register("Position", selection -> new Vector3i(selection.x, selection.y, selection.z), Vector3iUtil.CODEC)
+      .register("Anchor", selection -> new Vector3i(selection.anchorX, selection.anchorY, selection.anchorZ), Vector3iUtil.CODEC)
+      .register("Min", BlockSelection::getSelectionMin, Vector3iUtil.CODEC)
+      .register("Max", BlockSelection::getSelectionMax, Vector3iUtil.CODEC)
       .register("BlockCount", BlockSelection::getBlockCount, Codec.INTEGER)
       .register("EntityCount", BlockSelection::getEntityCount, Codec.INTEGER);
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
@@ -106,9 +110,9 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
    private int anchorZ;
    private int prefabId = -1;
    @Nonnull
-   private Vector3i min = Vector3i.ZERO;
+   private Vector3i min = new Vector3i();
    @Nonnull
-   private Vector3i max = Vector3i.ZERO;
+   private Vector3i max = new Vector3i();
    @Nonnull
    private final Long2ObjectMap<BlockSelection.BlockHolder> blocks;
    @Nonnull
@@ -173,16 +177,16 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
    @Nonnull
    public Vector3i getSelectionMin() {
-      return this.min.clone();
+      return new Vector3i(this.min);
    }
 
    @Nonnull
    public Vector3i getSelectionMax() {
-      return this.max.clone();
+      return new Vector3i(this.max);
    }
 
    public boolean hasSelectionBounds() {
-      return !this.min.equals(Vector3i.ZERO) || !this.max.equals(Vector3i.ZERO);
+      return !this.min.equals(Vector3iUtil.ZERO) || !this.max.equals(Vector3iUtil.ZERO);
    }
 
    public int getBlockCount() {
@@ -228,7 +232,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       int xLength = this.max.x - this.min.x;
       int yLength = this.max.y - this.min.y;
       int zLength = this.max.z - this.min.z;
-      return xLength * yLength & zLength;
+      return xLength * yLength * zLength;
    }
 
    public int getEntityCount() {
@@ -260,9 +264,9 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       this.anchorZ = anchorZ;
    }
 
-   public void setSelectionArea(@Nonnull Vector3i min, @Nonnull Vector3i max) {
-      this.min = Vector3i.min(min, max);
-      this.max = Vector3i.max(min, max);
+   public void setSelectionArea(@Nonnull Vector3ic min, @Nonnull Vector3ic max) {
+      this.min = Vector3iUtil.min(min, max);
+      this.max = Vector3iUtil.max(min, max);
    }
 
    public void setPrefabId(int id) {
@@ -276,15 +280,15 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       this.anchorX = other.anchorX;
       this.anchorY = other.anchorY;
       this.anchorZ = other.anchorZ;
-      this.min = other.min.clone();
-      this.max = other.max.clone();
+      this.min = new Vector3i(other.min);
+      this.max = new Vector3i(other.max);
    }
 
    public boolean canPlace(@Nonnull World world, @Nonnull Vector3i position, @Nullable IntList mask) {
       return this.compare((x1, y1, z1, block) -> {
-         int blockX = x1 + position.getX() - this.anchorX;
-         int blockY = y1 + position.getY() - this.anchorY;
-         int blockZ = z1 + position.getZ() - this.anchorZ;
+         int blockX = x1 + position.x() - this.anchorX;
+         int blockY = y1 + position.y() - this.anchorY;
+         int blockZ = z1 + position.z() - this.anchorZ;
          int blockId = world.getBlock(blockX, blockY, blockZ);
          return blockId == 0 || mask == null || mask.contains(blockId);
       });
@@ -292,9 +296,9 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
    public boolean matches(@Nonnull World world, @Nonnull Vector3i position) {
       return this.compare((x1, y1, z1, block) -> {
-         int blockX = x1 + position.getX() - this.anchorX;
-         int blockY = y1 + position.getY() - this.anchorY;
-         int blockZ = z1 + position.getZ() - this.anchorZ;
+         int blockX = x1 + position.x() - this.anchorX;
+         int blockY = y1 + position.y() - this.anchorY;
+         int blockZ = z1 + position.z() - this.anchorZ;
          int blockId = world.getBlock(blockX, blockY, blockZ);
          return block.blockId == blockId;
       });
@@ -692,7 +696,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
       assert transformComponent != null;
 
-      transformComponent.getPosition().subtract(this.x, this.y, this.z);
+      transformComponent.getPosition().sub(this.x, this.y, this.z);
       this.addEntityHolderRaw(entityHolder);
    }
 
@@ -730,12 +734,12 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                } else if (pb == null) {
                   return -1;
                } else {
-                  int cmp = Double.compare(pa.getX(), pb.getX());
+                  int cmp = Double.compare(pa.x(), pb.x());
                   if (cmp != 0) {
                      return cmp;
                   } else {
-                     cmp = Double.compare(pa.getY(), pb.getY());
-                     return cmp != 0 ? cmp : Double.compare(pa.getZ(), pb.getZ());
+                     cmp = Double.compare(pa.y(), pb.y());
+                     return cmp != 0 ? cmp : Double.compare(pa.z(), pb.z());
                   }
                }
             }
@@ -750,7 +754,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
    }
 
    public void placeNoReturn(String feedbackKey, CommandSender feedback, @Nonnull World outerWorld, ComponentAccessor<EntityStore> componentAccessor) {
-      this.placeNoReturn(feedbackKey, feedback, FeedbackConsumer.DEFAULT, outerWorld, Vector3i.ZERO, null, componentAccessor);
+      this.placeNoReturn(feedbackKey, feedback, FeedbackConsumer.DEFAULT, outerWorld, Vector3iUtil.ZERO, null, componentAccessor);
    }
 
    public void placeNoReturn(
@@ -760,7 +764,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       @Nonnull World outerWorld,
       ComponentAccessor<EntityStore> componentAccessor
    ) {
-      this.placeNoReturn(feedbackKey, feedback, feedbackConsumer, outerWorld, Vector3i.ZERO, null, componentAccessor);
+      this.placeNoReturn(feedbackKey, feedback, feedbackConsumer, outerWorld, Vector3iUtil.ZERO, null, componentAccessor);
    }
 
    public void placeNoReturn(
@@ -768,27 +772,27 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       @Nullable CommandSender feedback,
       @Nonnull FeedbackConsumer feedbackConsumer,
       @Nonnull World outerWorld,
-      @Nullable Vector3i position,
+      @Nullable Vector3ic position,
       @Nullable BlockMask blockMask,
       ComponentAccessor<EntityStore> componentAccessor
    ) {
       IntUnaryOperator xConvert;
-      if (position != null && position.getX() != 0) {
-         xConvert = localX -> localX + this.x + position.getX() - this.anchorX;
+      if (position != null && position.x() != 0) {
+         xConvert = localX -> localX + this.x + position.x() - this.anchorX;
       } else {
          xConvert = localX -> localX + this.x - this.anchorX;
       }
 
       IntUnaryOperator yConvert;
-      if (position != null && position.getY() != 0) {
-         yConvert = localY -> localY + this.y + position.getY() - this.anchorY;
+      if (position != null && position.y() != 0) {
+         yConvert = localY -> localY + this.y + position.y() - this.anchorY;
       } else {
          yConvert = localY -> localY + this.y - this.anchorY;
       }
 
       IntUnaryOperator zConvert;
-      if (position != null && position.getZ() != 0) {
-         zConvert = localZ -> localZ + this.z + position.getZ() - this.anchorZ;
+      if (position != null && position.z() != 0) {
+         zConvert = localZ -> localZ + this.z + position.z() - this.anchorZ;
       } else {
          zConvert = localZ -> localZ + this.z - this.anchorZ;
       }
@@ -917,6 +921,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                }
             }
 
+            this.clearBlockItemContainer(outerWorld, chunk, blockX, blockY, blockZ);
             chunk.setState(blockX, blockY, blockZ, newBlockType, newRotation, holder);
             dirtyChunks.add(chunkIndex);
             feedbackConsumer.accept(feedbackKey, totalBlocks, counter, feedback, componentAccessor);
@@ -972,18 +977,44 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       }
    }
 
+   private void clearBlockItemContainer(@Nonnull World world, @Nonnull WorldChunk chunk, int blockX, int blockY, int blockZ) {
+      Ref<ChunkStore> ref = chunk.getReference();
+      if (ref != null && ref.isValid()) {
+         Store<ChunkStore> store = world.getChunkStore().getStore();
+         BlockComponentChunk blockComponentChunk = store.getComponent(ref, BlockComponentChunk.getComponentType());
+         if (blockComponentChunk != null) {
+            int index = ChunkUtil.indexBlockInColumn(blockX, blockY, blockZ);
+            Ref<ChunkStore> entityRef = blockComponentChunk.getEntityReference(index);
+            if (entityRef != null) {
+               ItemContainerBlock container = entityRef.getStore().getComponent(entityRef, ItemContainerBlock.getComponentType());
+               if (container != null) {
+                  container.getItemContainer().dropAllItemStacks();
+               }
+            } else {
+               Holder<ChunkStore> holder = blockComponentChunk.getEntityHolder(index);
+               if (holder != null) {
+                  ItemContainerBlock container = holder.getComponent(ItemContainerBlock.getComponentType());
+                  if (container != null) {
+                     container.getItemContainer().dropAllItemStacks();
+                  }
+               }
+            }
+         }
+      }
+   }
+
    @Nonnull
    public BlockSelection place(CommandSender feedback, @Nonnull World outerWorld) {
-      return this.place(feedback, outerWorld, Vector3i.ZERO, null);
+      return this.place(feedback, outerWorld, Vector3iUtil.ZERO, null);
    }
 
    @Nonnull
    public BlockSelection place(CommandSender feedback, @Nonnull World outerWorld, BlockMask blockMask) {
-      return this.place(feedback, outerWorld, Vector3i.ZERO, blockMask);
+      return this.place(feedback, outerWorld, Vector3iUtil.ZERO, blockMask);
    }
 
    @Nonnull
-   public BlockSelection place(CommandSender feedback, @Nonnull World outerWorld, Vector3i position, BlockMask blockMask) {
+   public BlockSelection place(CommandSender feedback, @Nonnull World outerWorld, Vector3ic position, BlockMask blockMask) {
       return this.place(feedback, outerWorld, position, blockMask, DEFAULT_ENTITY_CONSUMER);
    }
 
@@ -991,30 +1022,42 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
    public BlockSelection place(
       CommandSender feedback,
       @Nonnull World outerWorld,
-      @Nullable Vector3i position,
+      @Nullable Vector3ic position,
       @Nullable BlockMask blockMask,
       @Nonnull Consumer<Ref<EntityStore>> entityConsumer
+   ) {
+      return this.place(feedback, outerWorld, position, blockMask, entityConsumer, false);
+   }
+
+   @Nonnull
+   public BlockSelection place(
+      CommandSender feedback,
+      @Nonnull World outerWorld,
+      @Nullable Vector3ic position,
+      @Nullable BlockMask blockMask,
+      @Nonnull Consumer<Ref<EntityStore>> entityConsumer,
+      boolean skipEmptyBlocks
    ) {
       BlockSelection before = new BlockSelection(this.getBlockCount(), 0);
       before.setAnchor(this.anchorX, this.anchorY, this.anchorZ);
       before.setPosition(this.x, this.y, this.z);
       IntUnaryOperator xConvert;
-      if (position != null && position.getX() != 0) {
-         xConvert = localX -> localX + this.x + position.getX() - this.anchorX;
+      if (position != null && position.x() != 0) {
+         xConvert = localX -> localX + this.x + position.x() - this.anchorX;
       } else {
          xConvert = localX -> localX + this.x - this.anchorX;
       }
 
       IntUnaryOperator yConvert;
-      if (position != null && position.getY() != 0) {
-         yConvert = localY -> localY + this.y + position.getY() - this.anchorY;
+      if (position != null && position.y() != 0) {
+         yConvert = localY -> localY + this.y + position.y() - this.anchorY;
       } else {
          yConvert = localY -> localY + this.y - this.anchorY;
       }
 
       IntUnaryOperator zConvert;
-      if (position != null && position.getZ() != 0) {
-         zConvert = localZ -> localZ + this.z + position.getZ() - this.anchorZ;
+      if (position != null && position.z() != 0) {
+         zConvert = localZ -> localZ + this.z + position.z() - this.anchorZ;
       } else {
          zConvert = localZ -> localZ + this.z - this.anchorZ;
       }
@@ -1030,28 +1073,30 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             yConvert,
             zConvert,
             (world, blockHolder, chunkIndex, chunk, blockX, blockY, blockZ, localX, localY, localZ) -> {
-               Holder<ChunkStore> holder = blockHolder.holder();
-               this.placeBlock(
-                  feedback,
-                  outerWorld,
-                  blockMask,
-                  before,
-                  dirtyChunks,
-                  assetMap,
-                  chunkIndex,
-                  chunk,
-                  blockX,
-                  blockY,
-                  blockZ,
-                  localX,
-                  localY,
-                  localZ,
-                  blockHolder.blockId(),
-                  blockHolder.rotation(),
-                  blockHolder.filler(),
-                  holder != null ? holder.clone() : null,
-                  blockHolder.supportValue()
-               );
+               if (!skipEmptyBlocks || blockHolder.blockId() != 0 || blockHolder.filler() != 0) {
+                  Holder<ChunkStore> holder = blockHolder.holder();
+                  this.placeBlock(
+                     feedback,
+                     outerWorld,
+                     blockMask,
+                     before,
+                     dirtyChunks,
+                     assetMap,
+                     chunkIndex,
+                     chunk,
+                     blockX,
+                     blockY,
+                     blockZ,
+                     localX,
+                     localY,
+                     localZ,
+                     blockHolder.blockId(),
+                     blockHolder.rotation(),
+                     blockHolder.filler(),
+                     holder != null ? holder.clone() : null,
+                     blockHolder.supportValue()
+                  );
+               }
             }
          );
          IndexedLookupTableAssetMap<String, Fluid> fluidMap = Fluid.getAssetMap();
@@ -1163,6 +1208,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                }
             }
 
+            this.clearBlockItemContainer(outerWorld, chunk, blockX, blockY, blockZ);
             chunk.setState(blockX, blockY, blockZ, newBlockType, newRotation, holder);
             dirtyChunks.add(chunkIndex);
          }
@@ -1200,19 +1246,17 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       }
    }
 
-   private void placeEntities(@Nonnull World world, @Nonnull Vector3i pos) {
+   private void placeEntities(@Nonnull World world, @Nonnull Vector3ic pos) {
       this.placeEntities(world, pos, DEFAULT_ENTITY_CONSUMER);
    }
 
-   private void placeEntities(@Nonnull World world, @Nonnull Vector3i pos, @Nonnull Consumer<Ref<EntityStore>> entityConsumer) {
+   private void placeEntities(@Nonnull World world, @Nonnull Vector3ic pos, @Nonnull Consumer<Ref<EntityStore>> entityConsumer) {
       this.entitiesLock.readLock().lock();
 
       try {
          for (Holder<EntityStore> entityHolder : this.entities) {
             Ref<EntityStore> entity = this.placeEntity(world, entityHolder.clone(), pos, this.prefabId);
-            if (entity == null) {
-               LOGGER.at(Level.WARNING).log("Failed to spawn entity in world %s! Data: %s", world.getName(), entityHolder);
-            } else {
+            if (entity != null) {
                entityConsumer.accept(entity);
             }
          }
@@ -1221,42 +1265,68 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       }
    }
 
-   @Nonnull
-   private Ref<EntityStore> placeEntity(@Nonnull World world, @Nonnull Holder<EntityStore> entityHolder, @Nonnull Vector3i pos, int prefabId) {
+   @Nullable
+   private Ref<EntityStore> placeEntity(@Nonnull World world, @Nonnull Holder<EntityStore> entityHolder, @Nonnull Vector3ic pos, int prefabId) {
       TransformComponent transformComponent = entityHolder.getComponent(TransformComponent.getComponentType());
 
       assert transformComponent != null;
 
-      transformComponent.getPosition().add(this.x + pos.getX() - this.anchorX, this.y + pos.getY() - this.anchorY, this.z + pos.getZ() - this.anchorZ);
+      transformComponent.getPosition().add(this.x + pos.x() - this.anchorX, this.y + pos.y() - this.anchorY, this.z + pos.z() - this.anchorZ);
       Store<EntityStore> store = world.getEntityStore().getStore();
       PrefabPlaceEntityEvent prefabPlaceEntityEvent = new PrefabPlaceEntityEvent(prefabId, entityHolder);
       store.invoke(prefabPlaceEntityEvent);
-      entityHolder.addComponent(FromPrefab.getComponentType(), FromPrefab.INSTANCE);
-      Ref<EntityStore> entityRef = new Ref<>(store);
-      world.execute(() -> store.addEntity(entityHolder, entityRef, AddReason.LOAD));
-      return entityRef;
+      if (prefabPlaceEntityEvent.isCancelled()) {
+         return null;
+      } else {
+         entityHolder.addComponent(FromPrefab.getComponentType(), FromPrefab.INSTANCE);
+         Ref<EntityStore> entityRef = new Ref<>(store);
+         world.execute(() -> store.addEntity(entityHolder, entityRef, AddReason.LOAD));
+         return entityRef;
+      }
    }
 
    @Nonnull
    public BlockSelection rotate(@Nonnull Axis axis, int angle) {
-      BlockTypeAssetMap<String, BlockType> assetMap = BlockType.getAssetMap();
+      return this.rotate(axis, angle, RotateBlockMode.ALL);
+   }
+
+   @Nonnull
+   public BlockSelection rotate(@Nonnull Axis axis, int angle, @Nonnull RotateBlockMode rotateBlockMode) {
       BlockSelection selection = new BlockSelection(this.getBlockCount(), this.getEntityCount());
       selection.copyPropertiesFrom(this);
       Vector3i mutable = new Vector3i(0, 0, 0);
       Rotation rotation = Rotation.ofDegrees(angle);
+      BlockTypeAssetMap<String, BlockType> blockTypeAssetMap = rotateBlockMode != RotateBlockMode.NON_FULL_BLOCKS
+            && rotateBlockMode != RotateBlockMode.NON_UNIFORM
+         ? null
+         : BlockType.getAssetMap();
       this.forEachBlock(
          (x1, y1, z1, block) -> {
-            mutable.assign(x1 - this.anchorX, y1 - this.anchorY, z1 - this.anchorZ);
+            mutable.set(x1 - this.anchorX, y1 - this.anchorY, z1 - this.anchorZ);
             axis.rotate(mutable, angle);
             int blockId = block.blockId;
             Holder<ChunkStore> holder = block.holder;
             RotationTuple blockRotation = RotationTuple.get(block.rotation);
-            RotationTuple rotatedRotation = blockRotation.composeOnAxis(axis, rotation);
+
+            RotationTuple rotatedRotation = switch (rotateBlockMode) {
+               case ALL -> blockRotation.composeOnAxis(axis, rotation);
+               case NON_FULL_BLOCKS -> {
+                  BlockType blockType = blockTypeAssetMap.getAsset(blockId);
+                  boolean isFullBlock = blockType != null && "Full".equals(blockType.getHitboxType());
+                  yield isFullBlock ? blockRotation : blockRotation.composeOnAxis(axis, rotation);
+               }
+               case NON_UNIFORM -> {
+                  BlockType blockType = blockTypeAssetMap.getAsset(blockId);
+                  boolean isUniform = blockType != null && blockType.hasUniformTextures();
+                  yield isUniform ? blockRotation : blockRotation.composeOnAxis(axis, rotation);
+               }
+               case NOTHING -> blockRotation;
+            };
             int rotatedFiller = BlockRotationUtil.getRotatedFiller(block.filler, axis, rotation);
             selection.addBlock0(
-               mutable.getX() + this.anchorX,
-               mutable.getY() + this.anchorY,
-               mutable.getZ() + this.anchorZ,
+               mutable.x() + this.anchorX,
+               mutable.y() + this.anchorY,
+               mutable.z() + this.anchorZ,
                blockId,
                rotatedRotation.index(),
                rotatedFiller,
@@ -1265,8 +1335,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             );
          }
       );
-      Matrix4d axisRot = new Matrix4d()
-         .setRotateAxis(Math.toRadians(angle), axis.getDirection().getX(), axis.getDirection().getY(), axis.getDirection().getZ());
+      Quaterniond axisRot = new Quaterniond().rotateAxis(Math.toRadians(angle), axis.getDirection().x(), axis.getDirection().y(), axis.getDirection().z());
       this.forEachEntity(entityHolder -> {
          Holder<EntityStore> copy = entityHolder.clone();
          TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
@@ -1277,7 +1346,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          HeadRotation headRotationComponent = copy.getComponent(HeadRotation.getComponentType());
          boolean isBlockEntity = copy.getComponent(BlockEntity.getComponentType()) != null;
          Vector3d offset = isBlockEntity ? new Vector3d(0.5, 0.0, 0.5) : new Vector3d(0.5, 0.5, 0.5);
-         position.subtract(this.anchorX, this.anchorY, this.anchorZ).subtract(offset);
+         position.sub(this.anchorX, this.anchorY, this.anchorZ).sub(offset);
          axis.rotate(position, angle);
          position.add(this.anchorX, this.anchorY, this.anchorZ).add(offset);
          composeAxisRotation(axisRot, transformComponent.getRotation());
@@ -1289,23 +1358,23 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       });
       Vector3i fluidMutable = new Vector3i(0, 0, 0);
       this.forEachFluid((x1, y1, z1, fluidId, fluidLevel) -> {
-         fluidMutable.assign(x1 - this.anchorX, y1 - this.anchorY, z1 - this.anchorZ);
+         fluidMutable.set(x1 - this.anchorX, y1 - this.anchorY, z1 - this.anchorZ);
          axis.rotate(fluidMutable, angle);
-         selection.addFluid0(fluidMutable.getX() + this.anchorX, fluidMutable.getY() + this.anchorY, fluidMutable.getZ() + this.anchorZ, fluidId, fluidLevel);
+         selection.addFluid0(fluidMutable.x() + this.anchorX, fluidMutable.y() + this.anchorY, fluidMutable.z() + this.anchorZ, fluidId, fluidLevel);
       });
       return selection;
    }
 
    @Nonnull
-   public BlockSelection rotate(@Nonnull Axis axis, int angle, @Nonnull Vector3f originOfRotation) {
+   public BlockSelection rotate(@Nonnull Axis axis, int angle, @Nonnull Vector3d originOfRotation) {
       BlockSelection selection = new BlockSelection(this.getBlockCount(), this.getEntityCount());
       selection.copyPropertiesFrom(this);
       Vector3d mutable = new Vector3d(0.0, 0.0, 0.0);
       Rotation rotation = Rotation.ofDegrees(angle);
-      Vector3f finalOriginOfRotation = originOfRotation.clone().subtract(this.x, this.y, this.z);
+      Vector3d finalOriginOfRotation = new Vector3d(originOfRotation).sub(this.x, this.y, this.z);
       this.forEachBlock(
          (x1, y1, z1, block) -> {
-            mutable.assign(x1 - finalOriginOfRotation.x, y1 - finalOriginOfRotation.y, z1 - finalOriginOfRotation.z);
+            mutable.set(x1 - finalOriginOfRotation.x, y1 - finalOriginOfRotation.y, z1 - finalOriginOfRotation.z);
             axis.rotate(mutable, angle);
             int blockId = block.blockId;
             Holder<ChunkStore> holder = block.holder;
@@ -1314,9 +1383,9 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             RotationTuple rotatedRotation = blockRotation.composeOnAxis(axis, rotation);
             int rotatedFiller = BlockRotationUtil.getRotatedFiller(block.filler, axis, rotation);
             selection.addBlock0(
-               (int)(mutable.getX() + finalOriginOfRotation.x),
-               (int)(mutable.getY() + finalOriginOfRotation.y),
-               (int)(mutable.getZ() + finalOriginOfRotation.z),
+               (int)(mutable.x() + finalOriginOfRotation.x),
+               (int)(mutable.y() + finalOriginOfRotation.y),
+               (int)(mutable.z() + finalOriginOfRotation.z),
                blockId,
                rotatedRotation.index(),
                rotatedFiller,
@@ -1325,8 +1394,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             );
          }
       );
-      Matrix4d axisRot2 = new Matrix4d()
-         .setRotateAxis(Math.toRadians(angle), axis.getDirection().getX(), axis.getDirection().getY(), axis.getDirection().getZ());
+      Quaterniond axisRot2 = new Quaterniond().rotateAxis(Math.toRadians(angle), axis.getDirection().x(), axis.getDirection().y(), axis.getDirection().z());
       this.forEachEntity(entityHolder -> {
          Holder<EntityStore> copy = entityHolder.clone();
          TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
@@ -1337,7 +1405,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          HeadRotation headRotationComponent = copy.getComponent(HeadRotation.getComponentType());
          boolean isBlockEntity = entityHolder.getComponent(BlockEntity.getComponentType()) != null;
          Vector3d offset = isBlockEntity ? new Vector3d(0.5, 0.0, 0.5) : new Vector3d(0.5, 0.5, 0.5);
-         position.subtract(this.anchorX, this.anchorY, this.anchorZ).subtract(offset);
+         position.sub(this.anchorX, this.anchorY, this.anchorZ).sub(offset);
          axis.rotate(position, angle);
          position.add(this.anchorX, this.anchorY, this.anchorZ).add(offset);
          composeAxisRotation(axisRot2, transformComponent.getRotation());
@@ -1350,12 +1418,12 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       Vector3d fluidMutable2 = new Vector3d(0.0, 0.0, 0.0);
       this.forEachFluid(
          (x1, y1, z1, fluidId, fluidLevel) -> {
-            fluidMutable2.assign(x1 - finalOriginOfRotation.x, y1 - finalOriginOfRotation.y, z1 - finalOriginOfRotation.z);
+            fluidMutable2.set(x1 - finalOriginOfRotation.x, y1 - finalOriginOfRotation.y, z1 - finalOriginOfRotation.z);
             axis.rotate(fluidMutable2, angle);
             selection.addFluid0(
-               (int)(fluidMutable2.getX() + finalOriginOfRotation.x),
-               (int)(fluidMutable2.getY() + finalOriginOfRotation.y),
-               (int)(fluidMutable2.getZ() + finalOriginOfRotation.z),
+               (int)(fluidMutable2.x() + finalOriginOfRotation.x),
+               (int)(fluidMutable2.y() + finalOriginOfRotation.y),
+               (int)(fluidMutable2.z() + finalOriginOfRotation.z),
                fluidId,
                fluidLevel
             );
@@ -1364,74 +1432,31 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       return selection;
    }
 
-   private static void composeAxisRotation(@Nonnull Matrix4d axisRotation, @Nonnull Vector3f euler) {
-      double cy = Math.cos(euler.getYaw() * 0.5);
-      double sy = Math.sin(euler.getYaw() * 0.5);
-      double cp = Math.cos(euler.getPitch() * 0.5);
-      double sp = Math.sin(euler.getPitch() * 0.5);
-      double cr = Math.cos(euler.getRoll() * 0.5);
-      double sr = Math.sin(euler.getRoll() * 0.5);
-      double qw = cr * cp * cy + sr * sp * sy;
-      double qx = cr * sp * cy + sr * cp * sy;
-      double qy = cr * cp * sy - sr * sp * cy;
-      double qz = sr * cp * cy - cr * sp * sy;
-      double[] rotQuat = matrixToQuaternion(axisRotation);
-      double rqw = rotQuat[0] * qw - rotQuat[1] * qx - rotQuat[2] * qy - rotQuat[3] * qz;
-      double rqx = rotQuat[0] * qx + rotQuat[1] * qw + rotQuat[2] * qz - rotQuat[3] * qy;
-      double rqy = rotQuat[0] * qy - rotQuat[1] * qz + rotQuat[2] * qw + rotQuat[3] * qx;
-      double rqz = rotQuat[0] * qz + rotQuat[1] * qy - rotQuat[2] * qx + rotQuat[3] * qw;
-      double sinPitch = 2.0 * (rqw * rqx - rqy * rqz);
-      sinPitch = Math.max(-1.0, Math.min(1.0, sinPitch));
-      double newPitch = Math.asin(sinPitch);
-      double newYaw;
-      double newRoll;
-      if (Math.abs(sinPitch) < 0.9999) {
-         newYaw = Math.atan2(2.0 * (rqw * rqy + rqx * rqz), 1.0 - 2.0 * (rqx * rqx + rqy * rqy));
-         newRoll = Math.atan2(2.0 * (rqw * rqz + rqx * rqy), 1.0 - 2.0 * (rqx * rqx + rqz * rqz));
-      } else {
-         newYaw = Math.atan2(-2.0 * (rqx * rqz - rqw * rqy), 1.0 - 2.0 * (rqy * rqy + rqz * rqz));
-         newRoll = 0.0;
-      }
-
-      euler.setPitch((float)newPitch);
-      euler.setYaw((float)newYaw);
-      euler.setRoll((float)newRoll);
+   private static void composeAxisRotation(@Nonnull Quaterniond axisRotation, @Nonnull Rotation3f euler) {
+      euler.premul(axisRotation);
    }
 
-   private static double[] matrixToQuaternion(Matrix4d m) {
-      double[] d = m.getData();
-      double trace = d[0] + d[5] + d[10];
-      double qw;
-      double qx;
-      double qy;
-      double qz;
-      if (trace > 0.0) {
-         double s = 0.5 / Math.sqrt(trace + 1.0);
-         qw = 0.25 / s;
-         qx = (d[9] - d[6]) * s;
-         qy = (d[2] - d[8]) * s;
-         qz = (d[4] - d[1]) * s;
-      } else if (d[0] > d[5] && d[0] > d[10]) {
-         double s = 2.0 * Math.sqrt(1.0 + d[0] - d[5] - d[10]);
-         qw = (d[9] - d[6]) / s;
-         qx = 0.25 * s;
-         qy = (d[1] + d[4]) / s;
-         qz = (d[2] + d[8]) / s;
-      } else if (d[5] > d[10]) {
-         double s = 2.0 * Math.sqrt(1.0 + d[5] - d[0] - d[10]);
-         qw = (d[2] - d[8]) / s;
-         qx = (d[1] + d[4]) / s;
-         qy = 0.25 * s;
-         qz = (d[6] + d[9]) / s;
-      } else {
-         double s = 2.0 * Math.sqrt(1.0 + d[10] - d[0] - d[5]);
-         qw = (d[4] - d[1]) / s;
-         qx = (d[2] + d[8]) / s;
-         qy = (d[6] + d[9]) / s;
-         qz = 0.25 * s;
-      }
+   private void rotateEntities(@Nonnull BlockSelection dest, @Nonnull Quaterniond rotation) {
+      this.forEachEntity(entityHolder -> {
+         Holder<EntityStore> copy = entityHolder.clone();
+         TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
 
-      return new double[]{qw, qx, qy, qz};
+         assert transformComponent != null;
+
+         Vector3d position = transformComponent.getPosition();
+         HeadRotation headRotationComp = copy.getComponent(HeadRotation.getComponentType());
+         boolean isBlockEntity = entityHolder.getComponent(BlockEntity.getComponentType()) != null;
+         Vector3d offset = isBlockEntity ? new Vector3d(0.5, 0.0, 0.5) : new Vector3d(0.5, 0.5, 0.5);
+         position.sub(this.anchorX, this.anchorY, this.anchorZ).sub(offset);
+         rotation.transform(position);
+         position.add(this.anchorX, this.anchorY, this.anchorZ).add(offset);
+         composeAxisRotation(rotation, transformComponent.getRotation());
+         if (headRotationComp != null) {
+            composeAxisRotation(rotation, headRotationComp.getRotation());
+         }
+
+         dest.addEntity0(copy);
+      });
    }
 
    @Nonnull
@@ -1439,10 +1464,8 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       double pitchRad = Math.toRadians(pitchDegrees);
       double yawRad = Math.toRadians(yawDegrees);
       double rollRad = Math.toRadians(rollDegrees);
-      Matrix4d rotation = new Matrix4d();
-      rotation.setRotateEuler(pitchRad, yawRad, rollRad);
-      Matrix4d inverse = new Matrix4d(rotation);
-      inverse.invert();
+      Quaterniond rotation = new Quaterniond().rotateYXZ(yawRad, pitchRad, rollRad);
+      Quaterniond inverse = new Quaterniond(rotation).conjugate();
       Vector3d tempVec = new Vector3d();
       int destMinX = Integer.MAX_VALUE;
       int destMinY = Integer.MAX_VALUE;
@@ -1459,10 +1482,10 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       this.blocksLock.readLock().lock();
 
       try {
-         ObjectIterator corners = this.blocks.long2ObjectEntrySet().iterator();
+         ObjectIterator hasBlocks = this.blocks.long2ObjectEntrySet().iterator();
 
-         while (corners.hasNext()) {
-            Entry<BlockSelection.BlockHolder> entry = (Entry<BlockSelection.BlockHolder>)corners.next();
+         while (hasBlocks.hasNext()) {
+            Entry<BlockSelection.BlockHolder> entry = (Entry<BlockSelection.BlockHolder>)hasBlocks.next();
             long packed = entry.getLongKey();
             int bx = BlockUtil.unpackX(packed) - this.anchorX;
             int by = BlockUtil.unpackY(packed) - this.anchorY;
@@ -1478,11 +1501,10 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          this.blocksLock.readLock().unlock();
       }
 
-      if (srcMinX == Integer.MAX_VALUE) {
-         BlockSelection selection = new BlockSelection(0, this.getEntityCount());
-         selection.copyPropertiesFrom(this);
-         return selection;
-      } else {
+      boolean hasBlocks = srcMinX != Integer.MAX_VALUE;
+      BlockSelection selection = new BlockSelection(hasBlocks ? this.getBlockCount() : 0, this.getEntityCount());
+      selection.copyPropertiesFrom(this);
+      if (hasBlocks) {
          int[][] corners = new int[][]{
             {srcMinX, srcMinY, srcMinZ},
             {srcMaxX, srcMinY, srcMinZ},
@@ -1495,8 +1517,8 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          };
 
          for (int[] corner : corners) {
-            tempVec.assign(corner[0], corner[1], corner[2]);
-            rotation.multiplyDirection(tempVec);
+            tempVec.set(corner[0], corner[1], corner[2]);
+            rotation.transform(tempVec);
             int rx = MathUtil.floor(tempVec.x);
             int ry = MathUtil.floor(tempVec.y);
             int rz = MathUtil.floor(tempVec.z);
@@ -1508,19 +1530,18 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             destMaxZ = Math.max(destMaxZ, rz + 1);
          }
 
-         BlockSelection selection = new BlockSelection(this.getBlockCount(), this.getEntityCount());
-         selection.copyPropertiesFrom(this);
          Rotation snappedYaw = Rotation.ofDegrees(Math.round(yawDegrees / 90.0F) * 90);
          Rotation snappedPitch = Rotation.ofDegrees(Math.round(pitchDegrees / 90.0F) * 90);
          Rotation snappedRoll = Rotation.ofDegrees(Math.round(rollDegrees / 90.0F) * 90);
+         RotationTuple snappedRotation = RotationTuple.of(snappedYaw, snappedPitch, snappedRoll);
          this.blocksLock.readLock().lock();
 
          try {
             for (int dx = destMinX; dx <= destMaxX; dx++) {
                for (int dy = destMinY; dy <= destMaxY; dy++) {
                   for (int dz = destMinZ; dz <= destMaxZ; dz++) {
-                     tempVec.assign(dx, dy, dz);
-                     inverse.multiplyDirection(tempVec);
+                     tempVec.set(dx, dy, dz);
+                     inverse.transform(tempVec);
                      int sx = (int)Math.round(tempVec.x);
                      int sy = (int)Math.round(tempVec.y);
                      int sz = (int)Math.round(tempVec.z);
@@ -1528,9 +1549,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                      BlockSelection.BlockHolder block = (BlockSelection.BlockHolder)this.blocks.get(packedSource);
                      if (block != null) {
                         RotationTuple blockRotation = RotationTuple.get(block.rotation());
-                        RotationTuple rotatedRotation = RotationTuple.of(
-                           blockRotation.yaw().add(snappedYaw), blockRotation.pitch().add(snappedPitch), blockRotation.roll().add(snappedRoll)
-                        );
+                        RotationTuple rotatedRotation = RotationTuple.compose(snappedRotation, blockRotation);
                         if (rotatedRotation == null) {
                            rotatedRotation = blockRotation;
                         }
@@ -1540,8 +1559,8 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
                            int fillerX = FillerBlockUtil.unpackX(rotatedFiller);
                            int fillerY = FillerBlockUtil.unpackY(rotatedFiller);
                            int fillerZ = FillerBlockUtil.unpackZ(rotatedFiller);
-                           tempVec.assign(fillerX, fillerY, fillerZ);
-                           rotation.multiplyDirection(tempVec);
+                           tempVec.set(fillerX, fillerY, fillerZ);
+                           rotation.transform(tempVec);
                            rotatedFiller = FillerBlockUtil.pack((int)Math.round(tempVec.x), (int)Math.round(tempVec.y), (int)Math.round(tempVec.z));
                         }
 
@@ -1564,8 +1583,8 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             for (int dx = destMinX; dx <= destMaxX; dx++) {
                for (int dy = destMinY; dy <= destMaxY; dy++) {
                   for (int dzx = destMinZ; dzx <= destMaxZ; dzx++) {
-                     tempVec.assign(dx, dy, dzx);
-                     inverse.multiplyDirection(tempVec);
+                     tempVec.set(dx, dy, dzx);
+                     inverse.transform(tempVec);
                      int sx = (int)Math.round(tempVec.x);
                      int sy = (int)Math.round(tempVec.y);
                      int sz = (int)Math.round(tempVec.z);
@@ -1581,28 +1600,14 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             this.blocksLock.readLock().unlock();
          }
 
-         this.forEachEntity(entityHolder -> {
-            Holder<EntityStore> copy = entityHolder.clone();
-            TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
-
-            assert transformComponent != null;
-
-            Vector3d position = transformComponent.getPosition();
-            HeadRotation headRotationComp = copy.getComponent(HeadRotation.getComponentType());
-            boolean isBlockEntity = entityHolder.getComponent(BlockEntity.getComponentType()) != null;
-            Vector3d offset = isBlockEntity ? new Vector3d(0.5, 0.0, 0.5) : new Vector3d(0.5, 0.5, 0.5);
-            position.subtract(this.anchorX, this.anchorY, this.anchorZ).subtract(offset);
-            rotation.multiplyDirection(position);
-            position.add(this.anchorX, this.anchorY, this.anchorZ).add(offset);
-            composeAxisRotation(rotation, transformComponent.getRotation());
-            if (headRotationComp != null) {
-               composeAxisRotation(rotation, headRotationComp.getRotation());
-            }
-
-            selection.addEntity0(copy);
-         });
-         return selection;
+         selection.setSelectionArea(
+            new Vector3i(destMinX + this.anchorX + this.x, destMinY + this.anchorY + this.y, destMinZ + this.anchorZ + this.z),
+            new Vector3i(destMaxX + this.anchorX + this.x, destMaxY + this.anchorY + this.y, destMaxZ + this.anchorZ + this.z)
+         );
       }
+
+      this.rotateEntities(selection, rotation);
+      return selection;
    }
 
    @Nonnull
@@ -1613,16 +1618,24 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       Vector3i mutable = new Vector3i(0, 0, 0);
       this.forEachBlock(
          (x1, y1, z1, block) -> {
-            mutable.assign(x1 - this.anchorX, y1 - this.anchorY, z1 - this.anchorZ);
+            mutable.set(x1 - this.anchorX, y1 - this.anchorY, z1 - this.anchorZ);
             axis.flip(mutable);
             int blockId = block.blockId;
             Holder<ChunkStore> holder = block.holder;
             int supportValue = block.supportValue();
             int filler = block.filler;
             BlockType blockType = assetMap.getAsset(blockId);
-            VariantRotation variantRotation = blockType.getVariantRotation();
-            if (variantRotation == VariantRotation.None) {
-               selection.addBlock0(mutable.getX() + this.anchorX, mutable.getY() + this.anchorY, mutable.getZ() + this.anchorZ, block);
+            if (blockType == null) {
+               selection.addBlock0(
+                  mutable.x() + this.anchorX,
+                  mutable.y() + this.anchorY,
+                  mutable.z() + this.anchorZ,
+                  blockId,
+                  block.rotation,
+                  block.filler,
+                  block.supportValue(),
+                  block.holder != null ? block.holder.clone() : null
+               );
             } else {
                RotationTuple blockRotation = RotationTuple.get(block.rotation);
                RotationTuple rotatedRotation = BlockRotationUtil.getFlipped(blockRotation, blockType.getFlipType(), axis);
@@ -1632,9 +1645,9 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
                int rotatedFiller = BlockRotationUtil.getFlippedFiller(filler, axis);
                selection.addBlock0(
-                  mutable.getX() + this.anchorX,
-                  mutable.getY() + this.anchorY,
-                  mutable.getZ() + this.anchorZ,
+                  mutable.x() + this.anchorX,
+                  mutable.y() + this.anchorY,
+                  mutable.z() + this.anchorZ,
                   blockId,
                   rotatedRotation.index(),
                   rotatedFiller,
@@ -1647,23 +1660,22 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       this.forEachEntity(entityHolder -> {
          Holder<EntityStore> copy = entityHolder.clone();
          HeadRotation headRotationComponent = copy.getComponent(HeadRotation.getComponentType());
-
-         assert headRotationComponent != null;
-
-         Vector3f headRotation = headRotationComponent.getRotation();
          TransformComponent transformComponent = copy.getComponent(TransformComponent.getComponentType());
 
          assert transformComponent != null;
 
          Vector3d position = transformComponent.getPosition();
-         Vector3f bodyRotation = transformComponent.getRotation();
+         Rotation3f bodyRotation = transformComponent.getRotation();
          boolean isBlockEntity = entityHolder.getComponent(BlockEntity.getComponentType()) != null;
          Vector3d offset = isBlockEntity ? new Vector3d(0.5, 0.0, 0.5) : new Vector3d(0.5, 0.5, 0.5);
-         position.subtract(this.anchorX, this.anchorY, this.anchorZ).subtract(offset);
+         position.sub(this.anchorX, this.anchorY, this.anchorZ).sub(offset);
          axis.flip(position);
          position.add(this.anchorX, this.anchorY, this.anchorZ).add(offset);
          axis.flipRotation(bodyRotation);
-         axis.flipRotation(headRotation);
+         if (headRotationComponent != null) {
+            axis.flipRotation(headRotationComponent.getRotation());
+         }
+
          selection.addEntity0(copy);
       });
       return selection;
@@ -1682,7 +1694,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
          BlockSelection selection = new BlockSelection(this.getBlockCount(), this.getEntityCount());
          selection.setAnchor(this.anchorX - originX, this.anchorY - originY, this.anchorZ - originZ);
          selection.setPosition(this.x - originX, this.y - originY, this.z - originZ);
-         selection.setSelectionArea(this.min.clone().subtract(originX, originY, originZ), this.max.clone().subtract(originX, originY, originZ));
+         selection.setSelectionArea(new Vector3i(this.min).sub(originX, originY, originZ), new Vector3i(this.max).sub(originX, originY, originZ));
          this.forEachBlock((x, y, z, block) -> selection.addBlock0(x - originX, y - originY, z - originZ, block));
          this.forEachEntity(holder -> {
             Holder<EntityStore> copy = holder.clone();
@@ -1690,7 +1702,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
             assert transformComponent != null;
 
-            transformComponent.getPosition().subtract(originX, originY, originZ);
+            transformComponent.getPosition().sub(originX, originY, originZ);
             selection.addEntity0(copy);
          });
          return selection;
@@ -1734,7 +1746,7 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
 
             assert transformComponent != null;
 
-            transformComponent.getPosition().add(other.x, other.y, other.z).subtract(this.x, this.y, this.z);
+            transformComponent.getPosition().add(other.x, other.y, other.z).sub(this.x, this.y, this.z);
             this.addEntity0(copy);
          });
       } finally {
@@ -1814,9 +1826,9 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       if (transform != null && transform.getPosition() != null) {
          Vector3d pos = transform.getPosition();
          ClipboardEntityChange ec = new ClipboardEntityChange();
-         ec.x = (float)(pos.getX() - anchorX);
-         ec.y = (float)(pos.getY() - anchorY);
-         ec.z = (float)(pos.getZ() - anchorZ);
+         ec.x = (float)(pos.x() - anchorX);
+         ec.y = (float)(pos.y() - anchorY);
+         ec.z = (float)(pos.z() - anchorZ);
          BlockEntity blockEntityComp = holder.getComponent(BlockEntity.getComponentType());
          if (blockEntityComp != null) {
             String key = blockEntityComp.getBlockTypeKey();
@@ -1828,20 +1840,30 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
             ec.model = modelComp.getModel().toPacket();
          }
 
+         if (ec.model == null) {
+            PersistentModel persistentModel = holder.getComponent(PersistentModel.getComponentType());
+            if (persistentModel != null) {
+               Model model = persistentModel.getModelReference().toModel();
+               if (model != null) {
+                  ec.model = model.toPacket();
+               }
+            }
+         }
+
          ItemComponent itemComp = holder.getComponent(ItemComponent.getComponentType());
          if (itemComp != null && itemComp.getItemStack() != null) {
             ec.itemId = itemComp.getItemStack().getItemId();
          }
 
-         Vector3f rot = transform.getRotation();
+         Rotation3f rot = transform.getRotation();
          if (rot != null) {
-            ec.bodyOrientation = new Direction(rot.getY(), rot.getX(), rot.getZ());
+            ec.bodyOrientation = new Direction(rot.y(), rot.x(), rot.z());
          }
 
          HeadRotation headRot = holder.getComponent(HeadRotation.getComponentType());
          if (headRot != null && headRot.getRotation() != null) {
-            Vector3f hr = headRot.getRotation();
-            ec.lookOrientation = new Direction(hr.getY(), hr.getX(), hr.getZ());
+            Rotation3f hr = headRot.getRotation();
+            ec.lookOrientation = new Direction(hr.y(), hr.x(), hr.z());
          }
 
          EntityScaleComponent scaleComp = holder.getComponent(EntityScaleComponent.getComponentType());
@@ -1857,15 +1879,15 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       EditorBlocksChange packet = new EditorBlocksChange();
       EditorSelection selection = new EditorSelection();
       if (this.min != null) {
-         selection.minX = this.min.getX();
-         selection.minY = this.min.getY();
-         selection.minZ = this.min.getZ();
+         selection.minX = this.min.x();
+         selection.minY = this.min.y();
+         selection.minZ = this.min.z();
       }
 
       if (this.max != null) {
-         selection.maxX = this.max.getX();
-         selection.maxY = this.max.getY();
-         selection.maxZ = this.max.getZ();
+         selection.maxX = this.max.x();
+         selection.maxY = this.max.y();
+         selection.maxZ = this.max.z();
       }
 
       packet.selection = selection;
@@ -1877,12 +1899,12 @@ public class BlockSelection implements NetworkSerializable<EditorBlocksChange>, 
       EditorBlocksChange packet = this.toPacket();
       if (this.min != null && this.max != null) {
          EditorSelection selection = new EditorSelection();
-         selection.minX = this.min.getX();
-         selection.minY = this.min.getY();
-         selection.minZ = this.min.getZ();
-         selection.maxX = this.max.getX();
-         selection.maxY = this.max.getY();
-         selection.maxZ = this.max.getZ();
+         selection.minX = this.min.x();
+         selection.minY = this.min.y();
+         selection.minZ = this.min.z();
+         selection.maxX = this.max.x();
+         selection.maxY = this.max.y();
+         selection.maxZ = this.max.z();
          packet.selection = selection;
       }
 

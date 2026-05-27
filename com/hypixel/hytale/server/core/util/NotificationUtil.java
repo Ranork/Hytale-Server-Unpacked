@@ -130,7 +130,7 @@ public class NotificationUtil {
       sendNotification(handler, message, null, null, null, NotificationStyle.Default);
    }
 
-   public static void sendNotification(@Nonnull PacketHandler handler, Message message, NotificationStyle style) {
+   public static void sendNotification(@Nonnull PacketHandler handler, @Nonnull Message message, @Nonnull NotificationStyle style) {
       sendNotification(handler, message, null, null, null, style);
    }
 
@@ -142,24 +142,34 @@ public class NotificationUtil {
       sendNotification(handler, message, secondaryMessage, icon, null, NotificationStyle.Default);
    }
 
-   public static void sendNotification(@Nonnull PacketHandler handler, Message message, Message secondaryMessage) {
+   public static void sendNotification(@Nonnull PacketHandler handler, @Nonnull Message message, @Nonnull Message secondaryMessage) {
       sendNotification(handler, message, secondaryMessage, null, null, NotificationStyle.Default);
    }
 
-   public static void sendNotification(@Nonnull PacketHandler handler, Message message, Message secondaryMessage, ItemWithAllMetadata item) {
+   public static void sendNotification(
+      @Nonnull PacketHandler handler, @Nonnull Message message, @Nullable Message secondaryMessage, @Nullable ItemWithAllMetadata item
+   ) {
       sendNotification(handler, message, secondaryMessage, null, item, NotificationStyle.Default);
    }
 
-   public static void sendNotification(@Nonnull PacketHandler handler, Message message, Message secondaryMessage, @Nonnull NotificationStyle style) {
+   public static void sendNotification(
+      @Nonnull PacketHandler handler, @Nonnull Message message, @Nullable Message secondaryMessage, @Nonnull NotificationStyle style
+   ) {
       sendNotification(handler, message, secondaryMessage, null, null, style);
    }
 
-   public static void sendNotification(@Nonnull PacketHandler handler, Message message, Message secondaryMessage, String icon, @Nonnull NotificationStyle style) {
+   public static void sendNotification(
+      @Nonnull PacketHandler handler, @Nonnull Message message, @Nonnull Message secondaryMessage, @Nullable String icon, @Nonnull NotificationStyle style
+   ) {
       sendNotification(handler, message, secondaryMessage, icon, null, style);
    }
 
    public static void sendNotification(
-      @Nonnull PacketHandler handler, Message message, Message secondaryMessage, ItemWithAllMetadata item, @Nonnull NotificationStyle style
+      @Nonnull PacketHandler handler,
+      @Nonnull Message message,
+      @Nullable Message secondaryMessage,
+      @Nullable ItemWithAllMetadata item,
+      @Nonnull NotificationStyle style
    ) {
       sendNotification(handler, message, secondaryMessage, null, item, style);
    }

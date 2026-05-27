@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.iterator.SpiralIterator;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -26,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class BlockBulkFindHereCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -55,8 +55,8 @@ public class BlockBulkFindHereCommand extends AbstractPlayerCommand {
       assert transformComponent != null;
 
       Vector3d playerPos = transformComponent.getPosition();
-      int originChunkX = MathUtil.floor(playerPos.getX()) >> 5;
-      int originChunkZ = MathUtil.floor(playerPos.getZ()) >> 5;
+      int originChunkX = MathUtil.floor(playerPos.x()) >> 5;
+      int originChunkZ = MathUtil.floor(playerPos.z()) >> 5;
       CompletableFuture.runAsync(
          () -> {
             long start = System.nanoTime();

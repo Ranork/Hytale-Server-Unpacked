@@ -1,13 +1,13 @@
 package com.hypixel.hytale.server.core.prefab;
 
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.math.vector.Vector3l;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.universe.world.chunk.BlockRotationUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3L;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public enum PrefabRotation {
    ROTATION_0(Rotation.None, new PrefabRotation.RotationExecutor_0()),
@@ -40,6 +40,11 @@ public enum PrefabRotation {
       this.executor = executor;
    }
 
+   @Nonnull
+   public Rotation getRotation() {
+      return this.rotation;
+   }
+
    public PrefabRotation add(@Nonnull PrefabRotation other) {
       int val = this.rotation.getDegrees() + other.rotation.getDegrees();
       return VALUES[val % 360 / 90];
@@ -59,7 +64,7 @@ public enum PrefabRotation {
       v.z = this.executor.rotateIntZ(x, z);
    }
 
-   public void rotate(@Nonnull Vector3l v) {
+   public void rotate(@Nonnull Vector3L v) {
       long x = v.x;
       long z = v.z;
       v.x = this.executor.rotateLongX(x, z);

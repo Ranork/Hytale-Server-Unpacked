@@ -1,13 +1,13 @@
 package com.hypixel.hytale.procedurallib.logic.cell.evaluator;
 
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector2i;
 import com.hypixel.hytale.procedurallib.logic.DoubleArray;
 import com.hypixel.hytale.procedurallib.logic.ResultBuffer;
 import com.hypixel.hytale.procedurallib.logic.cell.CellDistanceFunction;
 import com.hypixel.hytale.procedurallib.logic.cell.CellPointFunction;
 import com.hypixel.hytale.procedurallib.logic.cell.jitter.CellJitter;
 import javax.annotation.Nonnull;
+import org.joml.Vector2i;
 
 public class BranchEvaluator implements PointEvaluator {
    protected static final int CARDINAL_MASK = 1;

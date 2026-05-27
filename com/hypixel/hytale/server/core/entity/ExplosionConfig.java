@@ -1,9 +1,13 @@
 package com.hypixel.hytale.server.core.entity;
 
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemTool;
+import com.hypixel.hytale.server.core.asset.type.model.config.ModelParticle;
+import com.hypixel.hytale.server.core.asset.type.soundevent.config.SoundEvent;
+import com.hypixel.hytale.server.core.asset.type.soundevent.validator.SoundEventValidators;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.Knockback;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -85,12 +89,31 @@ public class ExplosionConfig {
       .add()
       .<ItemTool>appendInherited(
          new KeyedCodec<>("ItemTool", ItemTool.CODEC),
-         (damageEffects, s) -> damageEffects.itemTool = s,
-         damageEffects -> damageEffects.itemTool,
-         (damageEffects, parent) -> damageEffects.itemTool = parent.itemTool
+         (explosionConfig, s) -> explosionConfig.itemTool = s,
+         explosionConfig -> explosionConfig.itemTool,
+         (explosionConfig, parent) -> explosionConfig.itemTool = parent.itemTool
       )
       .documentation("The item tool to reference when applying damage to blocks.")
       .add()
+      .<ModelParticle[]>appendInherited(
+         new KeyedCodec<>("Particles", ModelParticle.ARRAY_CODEC),
+         (explosionConfig, s) -> explosionConfig.particles = s,
+         explosionConfig -> explosionConfig.particles,
+         (explosionConfig, parent) -> explosionConfig.particles = parent.particles
+      )
+      .documentation("The particles to spawn when the explosion is triggered.")
+      .add()
+      .<String>appendInherited(
+         new KeyedCodec<>("SoundEventId", Codec.STRING),
+         (entityEffect, s) -> entityEffect.soundEventId = s,
+         entityEffect -> entityEffect.soundEventId,
+         (entityEffect, parent) -> entityEffect.soundEventId = parent.soundEventId
+      )
+      .documentation("The sound event played to surrounding players when the explosion is triggered.")
+      .addValidator(SoundEvent.VALIDATOR_CACHE.getValidator())
+      .addValidator(SoundEventValidators.MONO)
+      .add()
+      .afterDecode(ExplosionConfig::processConfig)
       .build();
    protected boolean damageEntities = true;
    protected boolean damageBlocks = true;
@@ -104,4 +127,16 @@ public class ExplosionConfig {
    protected Knockback knockback;
    @Nullable
    protected ItemTool itemTool;
+   @Nullable
+   protected ModelParticle[] particles;
+   @Nullable
+   protected String soundEventId;
+   protected transient int soundEventIndex = 0;
+
+   protected void processConfig() {
+      IndexedLookupTableAssetMap<String, SoundEvent> soundEventAssetMap = SoundEvent.getAssetMap();
+      if (this.soundEventId != null) {
+         this.soundEventIndex = soundEventAssetMap.getIndex(this.soundEventId);
+      }
+   }
 }

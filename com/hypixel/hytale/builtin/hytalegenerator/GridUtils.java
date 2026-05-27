@@ -3,9 +3,11 @@ package com.hypixel.hytale.builtin.hytalegenerator;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.builtin.hytalegenerator.engine.bufferbundle.buffers.VoxelBuffer;
 import com.hypixel.hytale.builtin.hytalegenerator.math.Calculator;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public class GridUtils {
    public static final int BUFFER_COUNT_IN_CHUNK_Y = 320 / VoxelBuffer.SIZE.y;
@@ -35,9 +37,9 @@ public class GridUtils {
    public static Bounds3i createColumnBounds_voxelGrid(@Nonnull Vector3i position_bufferGrid, int minY_voxelSpace, int maxY_voxelSpace) {
       assert minY_voxelSpace <= maxY_voxelSpace;
 
-      Vector3i min = position_bufferGrid.clone();
+      Vector3i min = new Vector3i(position_bufferGrid);
       VectorUtil.bitShiftLeft(3, min);
-      Vector3i max = min.clone().add(VoxelBuffer.SIZE);
+      Vector3i max = new Vector3i(min).add(VoxelBuffer.SIZE);
       min.y = minY_voxelSpace;
       max.y = maxY_voxelSpace;
       return new Bounds3i(min, max);
@@ -50,8 +52,8 @@ public class GridUtils {
       if (bounds_voxelGrid.isZeroVolume()) {
          return new Bounds3i();
       } else {
-         Vector3i min = bounds_voxelGrid.min.clone();
-         Vector3i max = bounds_voxelGrid.max.clone();
+         Vector3i min = new Vector3i(bounds_voxelGrid.min);
+         Vector3i max = new Vector3i(bounds_voxelGrid.max);
          min.x = Calculator.floor(min.x, VoxelBuffer.SIZE.x);
          min.x >>= 3;
          min.y = Calculator.floor(min.y, VoxelBuffer.SIZE.y);
@@ -70,8 +72,6 @@ public class GridUtils {
          max.z = Calculator.ceil(max.z, VoxelBuffer.SIZE.z);
          max.z >>= 3;
          max.z++;
-         min.dropHash();
-         max.dropHash();
          return new Bounds3i(min, max);
       }
    }
@@ -80,8 +80,8 @@ public class GridUtils {
    public static Bounds3i createColumnBounds_bufferGrid(@Nonnull Vector3i position_bufferGrid, int minY_bufferGrid, int maxY_bufferGrid) {
       assert minY_bufferGrid <= maxY_bufferGrid;
 
-      Vector3i min = position_bufferGrid.clone();
-      Vector3i max = min.clone().add(Vector3i.ALL_ONES);
+      Vector3i min = new Vector3i(position_bufferGrid);
+      Vector3i max = new Vector3i(min).add(Vector3iUtil.ALL_ONES);
       min.y = minY_bufferGrid;
       max.y = maxY_bufferGrid;
       return new Bounds3i(min, max);
@@ -90,13 +90,13 @@ public class GridUtils {
    @Nonnull
    public static Bounds3i createChunkBounds_voxelGrid(int x_chunkGrid, int z_chunkGrid) {
       Vector3i min = new Vector3i(x_chunkGrid << 5, 0, z_chunkGrid << 5);
-      Vector3i max = min.clone().add(32, 320, 32);
+      Vector3i max = new Vector3i(min).add(32, 320, 32);
       return new Bounds3i(min, max);
    }
 
    @Nonnull
-   public static Bounds3i createUnitBounds3i(@Nonnull Vector3i position) {
-      return new Bounds3i(position, position.clone().add(Vector3i.ALL_ONES));
+   public static Bounds3i createUnitBounds3i(@Nonnull Vector3ic position) {
+      return new Bounds3i(position, new Vector3i(position).add(Vector3iUtil.ALL_ONES));
    }
 
    @Nonnull
@@ -108,8 +108,8 @@ public class GridUtils {
 
    @Nonnull
    public static Bounds3i createBounds_fromVector_originVoxelInclusive(@Nonnull Vector3i range) {
-      Vector3i min = new Vector3i(range).scale(-1);
-      Vector3i max = new Vector3i(range).add(Vector3i.ALL_ONES);
+      Vector3i min = new Vector3i(range).negate();
+      Vector3i max = new Vector3i(range).add(Vector3iUtil.ALL_ONES);
       return new Bounds3i(min, max);
    }
 
@@ -197,15 +197,15 @@ public class GridUtils {
    public static void setBoundsYToWorldHeight_bufferGrid(@Nonnull Bounds3i bounds_bufferGrid) {
       assert bounds_bufferGrid.isCorrect();
 
-      bounds_bufferGrid.min.setY(0);
-      bounds_bufferGrid.max.setY(40);
+      bounds_bufferGrid.min.y = 0;
+      bounds_bufferGrid.max.y = 40;
    }
 
    public static void setBoundsYToWorldHeight_voxelGrid(@Nonnull Bounds3i bounds_voxelGrid) {
       assert bounds_voxelGrid.isCorrect();
 
-      bounds_voxelGrid.min.setY(0);
-      bounds_voxelGrid.max.setY(320);
+      bounds_voxelGrid.min.y = 0;
+      bounds_voxelGrid.max.y = 320;
    }
 
    public static void toVoxelPosition_fromChunkPosition(@Nonnull Vector3i chunkPosition_voxelGrid) {

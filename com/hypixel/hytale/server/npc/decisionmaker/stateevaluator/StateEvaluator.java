@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.npc.decisionmaker.core.EvaluationContext;
 import com.hypixel.hytale.server.npc.decisionmaker.core.Evaluator;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Arrays;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 
 public class StateEvaluator extends Evaluator<StateOption> implements Component<EntityStore> {
@@ -136,6 +137,7 @@ public class StateEvaluator extends Evaluator<StateOption> implements Component<
 
    public class SelfOptionHolder extends Evaluator<StateOption>.OptionHolder {
       public SelfOptionHolder(StateOption option) {
+         Objects.requireNonNull(StateEvaluator.this);
          super(option);
       }
 

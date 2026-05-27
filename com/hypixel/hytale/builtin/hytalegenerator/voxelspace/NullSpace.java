@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.voxelspace;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class NullSpace<V> implements VoxelSpace<V> {
    @Nonnull

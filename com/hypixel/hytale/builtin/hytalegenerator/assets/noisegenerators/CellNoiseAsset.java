@@ -6,7 +6,10 @@ import com.hypixel.hytale.builtin.hytalegenerator.rng.SeedBox;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.codec.validation.LegacyValidator;
+import com.hypixel.hytale.codec.schema.SchemaContext;
+import com.hypixel.hytale.codec.schema.config.Schema;
+import com.hypixel.hytale.codec.validation.ValidationResults;
+import com.hypixel.hytale.codec.validation.Validator;
 import com.hypixel.hytale.codec.validation.Validators;
 import java.util.HashSet;
 import java.util.Set;
@@ -68,20 +71,26 @@ public class CellNoiseAsset extends NoiseAsset {
             (asset, cellType) -> asset.cellType = FastNoiseLite.CellularReturnType.valueOf(cellType),
             asset -> asset.cellType.name()
          )
-         .addValidator((LegacyValidator<? super String>)((v, r) -> {
-            try {
-               FastNoiseLite.CellularReturnType.valueOf(v);
-            } catch (IllegalArgumentException var6) {
-               String msg = "Invalid CellType: " + v + ". Valid choices: ";
+         .addValidator(new Validator<String>() {
+            public void accept(String v, ValidationResults r) {
+               try {
+                  FastNoiseLite.CellularReturnType.valueOf(v);
+               } catch (IllegalArgumentException var7) {
+                  String msg = "Invalid CellType: " + v + ". Valid choices: ";
 
-               for (String t : validCellTypes) {
-                  msg = msg + " ";
-                  msg = msg + t;
+                  for (String t : CellNoiseAsset.validCellTypes) {
+                     msg = msg + " ";
+                     msg = msg + t;
+                  }
+
+                  r.fail(msg);
                }
-
-               r.fail(msg);
             }
-         }))
+
+            @Override
+            public void updateSchema(SchemaContext context, Schema target) {
+            }
+         })
          .add()
          .build();
    }

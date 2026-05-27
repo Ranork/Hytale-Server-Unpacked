@@ -1,11 +1,12 @@
 package com.hypixel.hytale.server.core.asset.type.blocktype.config;
 
 import com.hypixel.hytale.math.Axis;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
+import org.joml.Vector3i;
 
 public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation roll) {
    public static final RotationTuple[] EMPTY_ARRAY = new RotationTuple[0];
@@ -42,6 +43,18 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
       }
 
       return rotations[(index + rotation.ordinal()) % Rotation.VALUES.length];
+   }
+
+   public static RotationTuple compose(RotationTuple a, RotationTuple b) {
+      if (b == NONE) {
+         return a;
+      } else if (a == NONE) {
+         return b;
+      } else {
+         int[][] matrixA = eulerToMatrix(a.yaw, a.pitch, a.roll);
+         int[][] matrixB = eulerToMatrix(b.yaw, b.pitch, b.roll);
+         return matrixToRotationTuple(multiply3x3(matrixA, matrixB));
+      }
    }
 
    public static RotationTuple flip(@Nonnull RotationTuple blockRotation, @Nullable BlockFlipType flipType, @Nonnull Axis axis, int[][][] flipCorrections) {
@@ -163,11 +176,6 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
    }
 
    @Nonnull
-   public RotationTuple add(@Nonnull RotationTuple rotation) {
-      return of(rotation.yaw.add(this.yaw), rotation.pitch.add(this.pitch), rotation.roll.add(this.roll));
-   }
-
-   @Nonnull
    public Vector3d rotatedVector(@Nonnull Vector3d vector) {
       return Rotation.rotate(vector, this.yaw, this.pitch, this.roll);
    }
@@ -178,6 +186,10 @@ public record RotationTuple(int index, Rotation yaw, Rotation pitch, Rotation ro
 
    public void applyRotationTo(@Nonnull Vector3f vector) {
       Rotation.applyRotationTo(vector, this.yaw, this.pitch, this.roll);
+   }
+
+   public void applyRotationTo(@Nonnull Rotation3f rotation) {
+      Rotation.applyRotationTo(rotation, this.yaw, this.pitch, this.roll);
    }
 
    public void applyRotationTo(@Nonnull Vector3d vector) {

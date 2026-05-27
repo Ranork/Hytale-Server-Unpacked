@@ -7,7 +7,6 @@ import com.hypixel.hytale.builtin.instances.InstancesPlugin;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -28,7 +27,7 @@ public class HubCommand extends AbstractPlayerCommand {
    public HubCommand() {
       super("hub", "server.commands.hub.desc");
       this.addAliases("cosmos", "crossroads");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:Builder");
    }
 
    @Override

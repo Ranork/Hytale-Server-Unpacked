@@ -75,9 +75,10 @@ public class TintContainerJsonLoader extends JsonLoader<SeedStringResource, Tint
          ModifyEvent.dispatch(
             ModifyEvents.BiomeTints.class,
             new ModifyEvents.BiomeTints(
+               this.seed,
                this.biomeContext,
                entries,
-               content -> new TintContainerJsonLoader.TintContainerEntryJsonLoader(seed.next(), this.dataFolder, this.getOrLoad(content)).load()
+               path -> new TintContainerJsonLoader.TintContainerEntryJsonLoader(seed.next(), this.dataFolder, this.loadFile(path)).load()
             )
          );
          e = new ObjectArrayList(entries);

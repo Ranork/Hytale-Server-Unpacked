@@ -2,12 +2,14 @@ package com.hypixel.hytale.builtin.hytalegenerator.noise.pointprovider;
 
 import com.hypixel.hytale.builtin.hytalegenerator.VectorUtil;
 import com.hypixel.hytale.builtin.hytalegenerator.noise.FastNoiseLite;
-import com.hypixel.hytale.math.vector.Vector2d;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
+import org.joml.Vector2i;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class JitterPointField extends PointField {
    @Nonnull
@@ -50,7 +52,7 @@ public class JitterPointField extends PointField {
 
    @Override
    public void points3i(@Nonnull Vector3i min, @Nonnull Vector3i max, @Nonnull Consumer<Vector3i> pointsOut) {
-      this.points3d(min.toVector3d(), max.toVector3d(), p -> pointsOut.accept(p.toVector3i()));
+      this.points3d(Vector3iUtil.toVector3d(min), Vector3iUtil.toVector3d(max), p -> pointsOut.accept(Vector3dUtil.toVector3i(p)));
    }
 
    @Override
@@ -65,8 +67,8 @@ public class JitterPointField extends PointField {
 
    @Override
    public void points3d(@Nonnull Vector3d min, @Nonnull Vector3d max, @Nonnull Consumer<Vector3d> pointsOut) {
-      Vector3d cellMin = min.clone().scale(this.scaleDown3d);
-      Vector3d cellMax = max.clone().scale(this.scaleDown3d);
+      Vector3d cellMin = new Vector3d(min).mul(this.scaleDown3d);
+      Vector3d cellMax = new Vector3d(max).mul(this.scaleDown3d);
       cellMin.x = FastNoiseLite.fastRound(cellMin.x);
       cellMin.y = FastNoiseLite.fastRound(cellMin.y);
       cellMin.z = FastNoiseLite.fastRound(cellMin.z);
@@ -78,7 +80,7 @@ public class JitterPointField extends PointField {
          for (double y = cellMin.y; y <= cellMax.y + 0.25; y++) {
             for (double z = cellMin.z; z <= cellMax.z + 0.25; z++) {
                Vector3d point = this.noise.pointFor(this.seed, this.jitter, x, y, z);
-               point.scale(this.scaleUp3d);
+               point.mul(this.scaleUp3d);
                if (VectorUtil.isInside(point, min, max)) {
                   pointsOut.accept(point);
                }
@@ -89,8 +91,8 @@ public class JitterPointField extends PointField {
 
    @Override
    public void points2d(@Nonnull Vector2d min, @Nonnull Vector2d max, @Nonnull Consumer<Vector2d> pointsOut) {
-      Vector2d cellMin = min.clone().scale(this.scaleDown2d);
-      Vector2d cellMax = max.clone().scale(this.scaleDown2d);
+      Vector2d cellMin = new Vector2d(min).mul(this.scaleDown2d);
+      Vector2d cellMax = new Vector2d(max).mul(this.scaleDown2d);
       cellMin.x = FastNoiseLite.fastRound(cellMin.x);
       cellMin.y = FastNoiseLite.fastRound(cellMin.y);
       cellMax.x = FastNoiseLite.fastRound(cellMax.x);
@@ -99,7 +101,7 @@ public class JitterPointField extends PointField {
       for (double x = cellMin.x; x <= cellMax.x + 0.25; x++) {
          for (double z = cellMin.y; z <= cellMax.y + 0.25; z++) {
             Vector2d point = this.noise.pointFor(this.seed, this.jitter, x, z);
-            point.scale(this.scaleUp2d);
+            point.mul(this.scaleUp2d);
             if (VectorUtil.isInside(point, min, max)) {
                pointsOut.accept(point);
             }

@@ -8,6 +8,10 @@ public class Ref<ECS_TYPE> {
    @Nonnull
    private final Store<ECS_TYPE> store;
    private volatile int index;
+   @Nullable
+   private ArchetypeChunk<ECS_TYPE> archetypeChunk;
+   private int chunkEntityIndex;
+   private volatile int seq = 0;
    private volatile Throwable invalidatedBy;
 
    public Ref(@Nonnull Store<ECS_TYPE> store) {
@@ -28,17 +32,57 @@ public class Ref<ECS_TYPE> {
       return this.index;
    }
 
+   @Nullable
+   ArchetypeChunk<ECS_TYPE> getArchetypeChunk() {
+      return this.archetypeChunk;
+   }
+
+   int getChunkEntityIndex() {
+      return this.chunkEntityIndex;
+   }
+
    void setIndex(int index) {
       this.index = index;
    }
 
+   void beginMutation() {
+      this.seq++;
+   }
+
+   void setPosition(@Nonnull ArchetypeChunk<ECS_TYPE> archetypeChunk, int index) {
+      this.archetypeChunk = archetypeChunk;
+      this.chunkEntityIndex = index;
+   }
+
+   void endMutation() {
+      this.seq++;
+   }
+
+   int getSeq() {
+      return this.seq;
+   }
+
    void invalidate() {
+      if ((this.seq & 1) == 0) {
+         this.seq++;
+      }
+
       this.index = Integer.MIN_VALUE;
+      this.archetypeChunk = null;
+      this.chunkEntityIndex = Integer.MIN_VALUE;
+      this.seq++;
       this.invalidatedBy = new Throwable();
    }
 
    void invalidate(@Nullable Throwable invalidatedBy) {
+      if ((this.seq & 1) == 0) {
+         this.seq++;
+      }
+
       this.index = Integer.MIN_VALUE;
+      this.archetypeChunk = null;
+      this.chunkEntityIndex = Integer.MIN_VALUE;
+      this.seq++;
       this.invalidatedBy = invalidatedBy != null ? invalidatedBy : new Throwable();
    }
 
@@ -61,6 +105,10 @@ public class Ref<ECS_TYPE> {
 
    public boolean isValid() {
       return this.index != Integer.MIN_VALUE;
+   }
+
+   boolean isValid(@Nonnull Store<ECS_TYPE> store) {
+      return this.index != Integer.MIN_VALUE && this.store == store;
    }
 
    @Nonnull

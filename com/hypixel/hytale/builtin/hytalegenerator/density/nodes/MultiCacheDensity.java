@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class MultiCacheDensity extends Density {
    @Nonnull
@@ -27,7 +27,7 @@ public class MultiCacheDensity extends Density {
             matchingEntry.position = new Vector3d();
          }
 
-         matchingEntry.position.assign(context.position);
+         matchingEntry.position.set(context.position);
          matchingEntry.value = this.input.process(context);
       }
 

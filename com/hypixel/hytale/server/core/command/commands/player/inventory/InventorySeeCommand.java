@@ -28,6 +28,7 @@ public class InventorySeeCommand extends AbstractPlayerCommand {
 
    public InventorySeeCommand() {
       super("see", "server.commands.inventorysee.desc");
+      this.setPermissionGroups("hytale:ServerEditor");
    }
 
    @Override

@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.prefab.PrefabRotation;
 import com.hypixel.hytale.server.worldgen.SeedStringResource;
 import com.hypixel.hytale.server.worldgen.loader.context.FileLoadingContext;
 import com.hypixel.hytale.server.worldgen.loader.util.ResolvedBlockArrayJsonLoader;
+import com.hypixel.hytale.server.worldgen.prefab.PrefabBaseCheck;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabCategory;
 import com.hypixel.hytale.server.worldgen.prefab.PrefabPatternGenerator;
 import com.hypixel.hytale.server.worldgen.util.LogUtil;
@@ -63,7 +64,8 @@ public class PrefabPatternGeneratorJsonLoader extends JsonLoader<SeedStringResou
          this.loadDeepSearch(heightThresholds),
          this.loadSubmerge(),
          this.loadMaxSize(),
-         this.loadExclusionRadius()
+         this.loadExclusionRadius(),
+         this.loadBaseChecks()
       );
    }
 
@@ -184,6 +186,11 @@ public class PrefabPatternGeneratorJsonLoader extends JsonLoader<SeedStringResou
       return this.mustGetNumber("ExclusionRadius", PrefabPatternGeneratorJsonLoader.Constants.DEFAULT_EXCLUSION_RADIUS).intValue();
    }
 
+   @Nonnull
+   protected PrefabBaseCheck[] loadBaseChecks() {
+      return PrefabBaseCheck.Loader.loadAll(this, this.get("BaseChecks"));
+   }
+
    @Nullable
    public static PrefabRotation[] loadRotations(@Nullable JsonElement element) {
       if (element == null) {
@@ -240,6 +247,7 @@ public class PrefabPatternGeneratorJsonLoader extends JsonLoader<SeedStringResou
       String KEY_SUBMERGE = "Submerge";
       String KEY_MAX_SIZE = "MaxSize";
       String KEY_EXCLUSION_RADIUS = "ExclusionRadius";
+      String KEY_BASE_CHECKS = "BaseChecks";
       String KEY_CATEGORY = "Category";
       String ERROR_NO_GRID_GENERATOR = "Could not find point generator to place prefabs at! Keyword: GridGenerator";
       String ERROR_DEEP_SEARCH = "DeepSearch is enabled but HeightThreshold is not set!";

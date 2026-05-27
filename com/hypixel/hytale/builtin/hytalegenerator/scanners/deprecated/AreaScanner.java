@@ -7,12 +7,12 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.scanners.Scanner;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
-import com.hypixel.hytale.math.vector.Vector2i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector2i;
+import org.joml.Vector3i;
 
 public class AreaScanner extends Scanner {
    private final int resultCap;
@@ -38,8 +38,8 @@ public class AreaScanner extends Scanner {
                   scanOrder.add(new Vector2i(position.x, position.z));
                   stampBounds_voxelGrid.offset(position);
                   this.bounds_voxelGrid.encompass(stampBounds_voxelGrid);
-                  stampBounds_voxelGrid.offset(position.scale(-1));
-                  position.scale(-1);
+                  stampBounds_voxelGrid.offset(position.negate());
+                  position.negate();
                }
             }
          }

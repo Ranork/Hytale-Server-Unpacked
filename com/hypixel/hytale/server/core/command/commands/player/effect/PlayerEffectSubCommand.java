@@ -5,6 +5,7 @@ import com.hypixel.hytale.server.core.command.system.basecommands.AbstractComman
 public class PlayerEffectSubCommand extends AbstractCommandCollection {
    public PlayerEffectSubCommand() {
       super("effect", "server.commands.player.effect.desc");
+      this.setPermissionGroups("hytale:Builder");
       this.addSubCommand(new PlayerEffectApplyCommand());
       this.addSubCommand(new PlayerEffectClearCommand());
    }

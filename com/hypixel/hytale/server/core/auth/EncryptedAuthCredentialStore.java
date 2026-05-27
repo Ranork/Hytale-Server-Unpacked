@@ -11,8 +11,12 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
@@ -27,12 +31,15 @@ import org.bson.BsonDocument;
 
 public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
+   private static final String ENV_AUTH_KEY = "HYTALE_AUTH_KEY";
+   private static final String ENV_AUTH_KEY_FILE = "HYTALE_AUTH_KEY_FILE";
    private static final String ALGORITHM = "AES/GCM/NoPadding";
    private static final int GCM_IV_LENGTH = 12;
    private static final int GCM_TAG_LENGTH = 128;
    private static final int KEY_LENGTH = 256;
    private static final int PBKDF2_ITERATIONS = 100000;
    private static final byte[] SALT = "HytaleAuthCredentialStore".getBytes(StandardCharsets.UTF_8);
+   private static final Set<PosixFilePermission> OWNER_ONLY_PERMISSIONS = Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
    private static final BuilderCodec<EncryptedAuthCredentialStore.StoredCredentials> CREDENTIALS_CODEC = BuilderCodec.builder(
          EncryptedAuthCredentialStore.StoredCredentials.class, EncryptedAuthCredentialStore.StoredCredentials::new
       )
@@ -48,13 +55,16 @@ public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
    private final Path path;
    @Nullable
    private final SecretKey encryptionKey;
+   private final List<SecretKey> decryptionKeys;
    private IAuthCredentialStore.OAuthTokens tokens = new IAuthCredentialStore.OAuthTokens(null, null, null);
    @Nullable
    private UUID profile;
 
    public EncryptedAuthCredentialStore(@Nonnull Path path) {
       this.path = path;
-      this.encryptionKey = deriveKey();
+      EncryptedAuthCredentialStore.ResolvedPassphrases resolved = resolvePassphrases(path);
+      this.encryptionKey = resolved.writePassphrase != null ? deriveKey(resolved.writePassphrase) : null;
+      this.decryptionKeys = deriveKeys(resolved.readPassphrases);
       if (this.encryptionKey == null) {
          LOGGER.at(Level.WARNING).log("Cannot derive encryption key - encrypted storage will not persist credentials");
       } else {
@@ -63,20 +73,155 @@ public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
    }
 
    @Nullable
-   private static SecretKey deriveKey() {
+   private static SecretKey deriveKey(@Nonnull String passphrase) {
+      PBEKeySpec spec = new PBEKeySpec(passphrase.toCharArray(), SALT, 100000, 256);
+
+      SecretKey tmp;
+      try {
+         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+         tmp = factory.generateSecret(spec);
+         return new SecretKeySpec(tmp.getEncoded(), "AES");
+      } catch (Exception var8) {
+         ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var8)).log("Failed to derive encryption key");
+         tmp = null;
+      } finally {
+         spec.clearPassword();
+      }
+
+      return tmp;
+   }
+
+   @Nonnull
+   private static List<SecretKey> deriveKeys(@Nonnull List<String> passphrases) {
+      ArrayList<SecretKey> keys = new ArrayList<>();
+
+      for (String passphrase : passphrases) {
+         SecretKey key = deriveKey(passphrase);
+         if (key != null) {
+            keys.add(key);
+         }
+      }
+
+      return keys;
+   }
+
+   @Nonnull
+   private static EncryptedAuthCredentialStore.ResolvedPassphrases resolvePassphrases(@Nonnull Path credentialPath) {
+      String envFilePassphrase = null;
+      String envDirectPassphrase = null;
+      String hardwarePassphrase = null;
+      String generatedPassphrase = null;
+      String keyFilePath = System.getenv("HYTALE_AUTH_KEY_FILE");
+      if (keyFilePath != null && !keyFilePath.isBlank()) {
+         String content;
+         try {
+            content = Files.readString(Path.of(keyFilePath), StandardCharsets.UTF_8).trim();
+         } catch (IOException var10) {
+            throw new IllegalStateException("Failed to read encryption key file specified by HYTALE_AUTH_KEY_FILE: " + keyFilePath, var10);
+         }
+
+         if (content.isEmpty()) {
+            throw new IllegalStateException("Encryption key file specified by HYTALE_AUTH_KEY_FILE is empty: " + keyFilePath);
+         }
+
+         LOGGER.at(Level.INFO).log("Using encryption passphrase from %s", "HYTALE_AUTH_KEY_FILE");
+         envFilePassphrase = content;
+      }
+
+      String directKey = System.getenv("HYTALE_AUTH_KEY");
+      if (directKey != null && !directKey.isBlank()) {
+         LOGGER.at(Level.INFO).log("Using encryption passphrase from %s", "HYTALE_AUTH_KEY");
+         envDirectPassphrase = directKey;
+      }
+
       UUID hardwareId = HardwareUtil.getUUID();
-      if (hardwareId == null) {
+      if (hardwareId != null) {
+         hardwarePassphrase = hardwareId.toString();
+      }
+
+      generatedPassphrase = loadGeneratedKeyFile(credentialPath);
+      String writePassphrase;
+      if (envFilePassphrase != null) {
+         writePassphrase = envFilePassphrase;
+      } else if (envDirectPassphrase != null) {
+         writePassphrase = envDirectPassphrase;
+      } else if (hardwarePassphrase != null) {
+         writePassphrase = hardwarePassphrase;
+      } else if (generatedPassphrase != null) {
+         writePassphrase = generatedPassphrase;
+      } else {
+         writePassphrase = generateKeyFile(credentialPath);
+      }
+
+      ArrayList<String> readPassphrases = new ArrayList<>(4);
+      if (envFilePassphrase != null) {
+         readPassphrases.add(envFilePassphrase);
+      }
+
+      if (envDirectPassphrase != null) {
+         readPassphrases.add(envDirectPassphrase);
+      }
+
+      if (generatedPassphrase != null) {
+         readPassphrases.add(generatedPassphrase);
+      }
+
+      if (hardwarePassphrase != null) {
+         readPassphrases.add(hardwarePassphrase);
+      }
+
+      return new EncryptedAuthCredentialStore.ResolvedPassphrases(writePassphrase, readPassphrases);
+   }
+
+   @Nonnull
+   public static Path keyFilePath(@Nonnull Path credentialPath) {
+      String fileName = credentialPath.getFileName().toString();
+      String keyFileName = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf(46)) + ".key" : fileName + ".key";
+      return credentialPath.resolveSibling(keyFileName);
+   }
+
+   @Nullable
+   private static String loadGeneratedKeyFile(@Nonnull Path credentialPath) {
+      Path keyPath = keyFilePath(credentialPath);
+      if (!Files.exists(keyPath)) {
          return null;
       } else {
          try {
-            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            PBEKeySpec spec = new PBEKeySpec(hardwareId.toString().toCharArray(), SALT, 100000, 256);
-            SecretKey tmp = factory.generateSecret(spec);
-            return new SecretKeySpec(tmp.getEncoded(), "AES");
-         } catch (Exception var4) {
-            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var4)).log("Failed to derive encryption key");
-            return null;
+            String content = Files.readString(keyPath, StandardCharsets.UTF_8).trim();
+            if (!content.isEmpty()) {
+               LOGGER.at(Level.INFO).log("Using auto-generated encryption key from %s", keyPath);
+               return content;
+            }
+         } catch (IOException var3) {
+            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var3)).log("Failed to read generated key file %s", keyPath);
          }
+
+         return null;
+      }
+   }
+
+   @Nullable
+   private static String generateKeyFile(@Nonnull Path credentialPath) {
+      Path keyPath = keyFilePath(credentialPath);
+
+      try {
+         String passphrase = UUID.randomUUID().toString();
+         Files.writeString(keyPath, passphrase, StandardCharsets.UTF_8);
+         restrictFilePermissions(keyPath);
+         LOGGER.at(Level.INFO).log("Generated new encryption key file at %s", keyPath);
+         return passphrase;
+      } catch (IOException var3) {
+         ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var3)).log("Failed to generate key file at %s", keyPath);
+         return null;
+      }
+   }
+
+   private static void restrictFilePermissions(@Nonnull Path file) {
+      try {
+         Files.setPosixFilePermissions(file, OWNER_ONLY_PERMISSIONS);
+      } catch (UnsupportedOperationException var2) {
+      } catch (IOException var3) {
+         ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var3)).log("Failed to set file permissions on %s", file);
       }
    }
 
@@ -84,9 +229,22 @@ public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
       if (this.encryptionKey != null && Files.exists(this.path)) {
          try {
             byte[] encrypted = Files.readAllBytes(this.path);
-            byte[] decrypted = this.decrypt(encrypted);
+            byte[] decrypted = null;
+            boolean migrated = false;
+
+            for (SecretKey key : this.decryptionKeys) {
+               decrypted = decrypt(encrypted, key);
+               if (decrypted != null) {
+                  if (!key.equals(this.encryptionKey)) {
+                     LOGGER.at(Level.INFO).log("Decrypted credentials using fallback key - will re-encrypt with current key");
+                     migrated = true;
+                  }
+                  break;
+               }
+            }
+
             if (decrypted == null) {
-               LOGGER.at(Level.WARNING).log("Failed to decrypt credentials from %s - file may be corrupted or from different hardware", this.path);
+               LOGGER.at(Level.WARNING).log("Failed to decrypt credentials from %s - file may be corrupted or from different key source", this.path);
                return;
             }
 
@@ -103,8 +261,12 @@ public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
             }
 
             LOGGER.at(Level.INFO).log("Loaded encrypted credentials from %s", this.path);
-         } catch (Exception var5) {
-            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var5)).log("Failed to load encrypted credentials from %s", this.path);
+            if (migrated) {
+               this.save();
+               LOGGER.at(Level.INFO).log("Migrated credentials to current encryption key");
+            }
+         } catch (Exception var6) {
+            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var6)).log("Failed to load encrypted credentials from %s", this.path);
          }
       }
    }
@@ -128,6 +290,7 @@ public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
             }
 
             Files.write(this.path, encrypted);
+            restrictFilePermissions(this.path);
          } catch (IOException var5) {
             ((HytaleLogger.Api)LOGGER.at(Level.SEVERE).withCause(var5)).log("Failed to save encrypted credentials to %s", this.path);
          }
@@ -157,8 +320,10 @@ public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
    }
 
    @Nullable
-   private byte[] decrypt(@Nonnull byte[] encrypted) {
-      if (this.encryptionKey != null && encrypted.length >= 12) {
+   private static byte[] decrypt(@Nonnull byte[] encrypted, @Nonnull SecretKey key) {
+      if (encrypted.length < 12) {
+         return null;
+      } else {
          try {
             ByteBuffer buffer = ByteBuffer.wrap(encrypted);
             byte[] iv = new byte[12];
@@ -166,14 +331,11 @@ public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
             byte[] ciphertext = new byte[buffer.remaining()];
             buffer.get(ciphertext);
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(2, this.encryptionKey, new GCMParameterSpec(128, iv));
+            cipher.init(2, key, new GCMParameterSpec(128, iv));
             return cipher.doFinal(ciphertext);
          } catch (Exception var6) {
-            ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var6)).log("Decryption failed");
             return null;
          }
-      } else {
-         return null;
       }
    }
 
@@ -211,6 +373,9 @@ public class EncryptedAuthCredentialStore implements IAuthCredentialStore {
       } catch (IOException var2) {
          ((HytaleLogger.Api)LOGGER.at(Level.WARNING).withCause(var2)).log("Failed to delete encrypted credentials file %s", this.path);
       }
+   }
+
+   private record ResolvedPassphrases(@Nullable String writePassphrase, @Nonnull List<String> readPassphrases) {
    }
 
    private static class StoredCredentials {

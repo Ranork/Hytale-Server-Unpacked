@@ -1,8 +1,8 @@
 package com.hypixel.hytale.server.core.modules.collision;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BlockTracker implements IBlockTracker {
    public static final int NOT_FOUND = -1;

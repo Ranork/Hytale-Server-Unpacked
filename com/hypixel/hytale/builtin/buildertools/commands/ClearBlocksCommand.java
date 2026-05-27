@@ -4,9 +4,7 @@ import com.hypixel.hytale.builtin.buildertools.BuilderToolsPlugin;
 import com.hypixel.hytale.builtin.buildertools.PrototypePlayerBuilderToolSettings;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
-import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.RequiredArg;
@@ -20,7 +18,10 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import java.util.Objects;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class ClearBlocksCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -30,18 +31,20 @@ public class ClearBlocksCommand extends AbstractPlayerCommand {
 
    public ClearBlocksCommand() {
       super("clearBlocks", "server.commands.clear.desc");
-      this.setPermissionGroup(GameMode.Creative);
+      this.setPermissionGroups("hytale:WorldEditor");
       this.addAliases("clear");
       this.addUsageVariant(
          new AbstractPlayerCommand("server.commands.clear.desc") {
             @Nonnull
-            private final RequiredArg<RelativeIntPosition> positionOneArg = this.withRequiredArg(
-               "positionOne", "server.commands.clear.positionOne.desc", ArgTypes.RELATIVE_BLOCK_POSITION
-            );
+            private final RequiredArg<RelativeIntPosition> positionOneArg;
             @Nonnull
-            private final RequiredArg<RelativeIntPosition> positionTwoArg = this.withRequiredArg(
-               "positionTwo", "server.commands.clear.positionTwo.desc", ArgTypes.RELATIVE_BLOCK_POSITION
-            );
+            private final RequiredArg<RelativeIntPosition> positionTwoArg;
+
+            {
+               Objects.requireNonNull(ClearBlocksCommand.this);
+               this.positionOneArg = this.withRequiredArg("positionOne", "server.commands.clear.positionOne.desc", ArgTypes.RELATIVE_BLOCK_POSITION);
+               this.positionTwoArg = this.withRequiredArg("positionTwo", "server.commands.clear.positionTwo.desc", ArgTypes.RELATIVE_BLOCK_POSITION);
+            }
 
             @Override
             protected void execute(
@@ -60,14 +63,14 @@ public class ClearBlocksCommand extends AbstractPlayerCommand {
 
                assert transformComponent != null;
 
-               if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+               if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
                   Vector3d position = transformComponent.getPosition();
                   RelativeIntPosition relativeIntPositionOne = this.positionOneArg.get(context);
                   RelativeIntPosition relativeIntPositionTwo = this.positionTwoArg.get(context);
                   Vector3i posOne = relativeIntPositionOne.getBlockPosition(position, chunkStore);
                   Vector3i posTwo = relativeIntPositionTwo.getBlockPosition(position, chunkStore);
-                  Vector3i min = Vector3i.min(posOne, posTwo);
-                  Vector3i max = Vector3i.max(posOne, posTwo);
+                  Vector3i min = Vector3iUtil.min(posOne, posTwo);
+                  Vector3i max = Vector3iUtil.max(posOne, posTwo);
                   BuilderToolsPlugin.addToQueue(
                      playerComponent, playerRef, (r, s, componentAccessor) -> s.clear(min.x, min.y, min.z, max.x, max.y, max.z, componentAccessor)
                   );
@@ -86,7 +89,7 @@ public class ClearBlocksCommand extends AbstractPlayerCommand {
 
       assert playerComponent != null;
 
-      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerComponent, store)) {
+      if (PrototypePlayerBuilderToolSettings.isOkayToDoCommandsOnSelection(ref, playerRef, store)) {
          BuilderToolsPlugin.BuilderState builderState = BuilderToolsPlugin.getState(playerComponent, playerRef);
          if (builderState.getSelection() == null) {
             playerRef.sendMessage(MESSAGE_COMMANDS_CLEAR_NO_SELECTION);

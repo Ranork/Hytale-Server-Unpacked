@@ -4,8 +4,20 @@ import com.github.luben.zstd.Zstd;
 import com.hypixel.hytale.protocol.Packet;
 import com.hypixel.hytale.protocol.PacketRegistry;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.lang.foreign.ValueLayout.OfBoolean;
+import java.lang.foreign.ValueLayout.OfByte;
+import java.lang.foreign.ValueLayout.OfDouble;
+import java.lang.foreign.ValueLayout.OfFloat;
+import java.lang.foreign.ValueLayout.OfInt;
+import java.lang.foreign.ValueLayout.OfLong;
+import java.lang.foreign.ValueLayout.OfShort;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -24,8 +36,17 @@ import org.joml.Vector4fc;
 
 public final class PacketIO {
    public static final int FRAME_HEADER_SIZE = 4;
+   public static final int PACKET_HEADER_SIZE = 8;
    public static final Charset UTF8 = StandardCharsets.UTF_8;
    public static final Charset ASCII = StandardCharsets.US_ASCII;
+   public static final OfBoolean PROTO_BOOL = ValueLayout.JAVA_BOOLEAN.withOrder(ByteOrder.LITTLE_ENDIAN);
+   public static final OfByte PROTO_BYTE = ValueLayout.JAVA_BYTE.withOrder(ByteOrder.LITTLE_ENDIAN);
+   public static final OfShort PROTO_SHORT = ValueLayout.JAVA_SHORT_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
+   public static final OfInt PROTO_INT = ValueLayout.JAVA_INT_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
+   public static final OfLong PROTO_LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
+   public static final OfFloat PROTO_FLOAT = ValueLayout.JAVA_FLOAT_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
+   public static final OfDouble PROTO_DOUBLE = ValueLayout.JAVA_DOUBLE_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
+   public static final OfLong UUID_LONG = ValueLayout.JAVA_LONG_UNALIGNED.withOrder(ByteOrder.BIG_ENDIAN);
    public static final Vector2fc ZERO_VECTOR2 = new Vector2f();
    public static final Vector3fc ZERO_VECTOR3 = new Vector3f();
    public static final Vector4fc ZERO_VECTOR4 = new Vector4f();
@@ -108,13 +129,34 @@ public final class PacketIO {
    }
 
    @Nonnull
-   public static String readVarString(@Nonnull ByteBuf buf, int offset) {
-      return readVarString(buf, offset, StandardCharsets.UTF_8);
+   public static String readFixedAsciiString(@Nonnull MemorySegment mem, int offset, int length) {
+      byte[] bytes = new byte[length];
+      MemorySegment.copy(mem, PROTO_BYTE, offset, bytes, 0, length);
+      int end = 0;
+
+      while (end < length && bytes[end] != 0) {
+         end++;
+      }
+
+      return new String(bytes, 0, end, StandardCharsets.US_ASCII);
    }
 
    @Nonnull
-   public static String readVarAsciiString(@Nonnull ByteBuf buf, int offset) {
-      return readVarString(buf, offset, StandardCharsets.US_ASCII);
+   public static String readFixedString(@Nonnull MemorySegment mem, int offset, int length) {
+      byte[] bytes = new byte[length];
+      MemorySegment.copy(mem, PROTO_BYTE, offset, bytes, 0, length);
+      int end = 0;
+
+      while (end < length && bytes[end] != 0) {
+         end++;
+      }
+
+      return new String(bytes, 0, end, StandardCharsets.UTF_8);
+   }
+
+   @Nonnull
+   public static String readVarString(@Nonnull ByteBuf buf, int offset) {
+      return readVarString(buf, offset, StandardCharsets.UTF_8);
    }
 
    @Nonnull
@@ -124,6 +166,95 @@ public final class PacketIO {
       byte[] bytes = new byte[len];
       buf.getBytes(offset + varIntLen, bytes);
       return new String(bytes, charset);
+   }
+
+   @Nonnull
+   public static String readValidatedAsciiString(@Nonnull ByteBuf buf, int offset, int length, @Nonnull String fieldName) {
+      byte[] bytes = new byte[length];
+      buf.getBytes(offset, bytes);
+
+      for (int i = 0; i < length; i++) {
+         if ((bytes[i] & 255) > 127) {
+            throw ProtocolException.invalidAsciiString(fieldName);
+         }
+      }
+
+      return new String(bytes, StandardCharsets.US_ASCII);
+   }
+
+   public static boolean isValidAscii(@Nonnull ByteBuf buf, int offset, int length) {
+      for (int i = 0; i < length; i++) {
+         if ((buf.getByte(offset + i) & 255) > 127) {
+            return false;
+         }
+      }
+
+      return true;
+   }
+
+   @Nonnull
+   public static String readVarString(String fieldName, @Nonnull MemorySegment mem, int offset, int minLength, int maxLength, Charset charset) {
+      long packed = VarInt.getWithLength(mem, offset);
+      int len = (int)packed;
+      if (len == -1) {
+         throw ProtocolException.invalidVarInt(fieldName);
+      } else if (len < 0) {
+         throw ProtocolException.negativeLength(fieldName, len);
+      } else if (len > maxLength) {
+         throw ProtocolException.stringTooLong(fieldName, len, maxLength);
+      } else if (len < minLength) {
+         throw ProtocolException.stringTooShort(fieldName, len, minLength);
+      } else {
+         int varIntLen = (int)(packed >>> 32);
+         if (offset + len + varIntLen > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall(fieldName, len + varIntLen, (int)(mem.byteSize() - offset));
+         } else {
+            byte[] bytes = new byte[len];
+            MemorySegment.copy(mem, PROTO_BYTE, offset + varIntLen, bytes, 0, len);
+            return new String(bytes, charset);
+         }
+      }
+   }
+
+   @Nonnull
+   public static String readVarString(String fieldName, @Nonnull MemorySegment mem, int offset, int maxLength, Charset charset) {
+      return readVarString(fieldName, mem, offset, 0, maxLength, charset);
+   }
+
+   @Nonnull
+   public static String readValidatedAsciiString(String fieldName, @Nonnull MemorySegment mem, int offset, int minLength, int maxLength) {
+      long packed = VarInt.getWithLength(mem, offset);
+      int len = (int)packed;
+      if (len == -1) {
+         throw ProtocolException.invalidVarInt(fieldName);
+      } else if (len < 0) {
+         throw ProtocolException.negativeLength(fieldName, len);
+      } else if (len > maxLength) {
+         throw ProtocolException.stringTooLong(fieldName, len, maxLength);
+      } else if (len < minLength) {
+         throw ProtocolException.stringTooShort(fieldName, len, minLength);
+      } else {
+         int varIntLen = (int)(packed >>> 32);
+         if (offset + len + varIntLen > mem.byteSize()) {
+            throw ProtocolException.bufferTooSmall(fieldName, len + varIntLen, (int)(mem.byteSize() - offset));
+         } else {
+            byte[] bytes = new byte[len];
+            MemorySegment.copy(mem, PROTO_BYTE, offset + varIntLen, bytes, 0, len);
+
+            for (int i = 0; i < len; i++) {
+               if ((bytes[i] & 255) > 127) {
+                  throw ProtocolException.invalidAsciiString(fieldName);
+               }
+            }
+
+            return new String(bytes, StandardCharsets.US_ASCII);
+         }
+      }
+   }
+
+   @Nonnull
+   public static String readValidatedAsciiString(String fieldName, @Nonnull MemorySegment mem, int offset, int maxLength) {
+      return readValidatedAsciiString(fieldName, mem, offset, 0, maxLength);
    }
 
    public static int utf8ByteLength(@Nonnull String s) {
@@ -207,6 +338,28 @@ public final class PacketIO {
       }
    }
 
+   public static int writeVarString(@Nonnull MemorySegment mem, int offset, @Nonnull String value, int maxLength) {
+      byte[] bytes = value.getBytes(UTF8);
+      if (bytes.length > maxLength) {
+         throw new ProtocolException("String exceeds max bytes: " + bytes.length + " > " + maxLength);
+      } else {
+         int len = VarInt.set(mem, offset, bytes.length);
+         MemorySegment.copy(bytes, 0, mem, ValueLayout.JAVA_BYTE, offset + len, bytes.length);
+         return len + bytes.length;
+      }
+   }
+
+   public static int writeVarAsciiString(@Nonnull MemorySegment mem, int offset, @Nonnull String value, int maxLength) {
+      byte[] bytes = value.getBytes(ASCII);
+      if (bytes.length > maxLength) {
+         throw new ProtocolException("String exceeds max bytes: " + bytes.length + " > " + maxLength);
+      } else {
+         int len = VarInt.set(mem, offset, bytes.length);
+         MemorySegment.copy(bytes, 0, mem, ValueLayout.JAVA_BYTE, offset + len, bytes.length);
+         return len + bytes.length;
+      }
+   }
+
    @Nonnull
    public static Vector2f readVector2f(@Nonnull ByteBuf buf, int offset) {
       return new Vector2f(buf.getFloatLE(offset), buf.getFloatLE(offset + 4));
@@ -225,6 +378,36 @@ public final class PacketIO {
    @Nonnull
    public static Quaternionf readQuaternionf(@Nonnull ByteBuf buf, int offset) {
       return new Quaternionf(buf.getFloatLE(offset), buf.getFloatLE(offset + 4), buf.getFloatLE(offset + 8), buf.getFloatLE(offset + 12));
+   }
+
+   @Nonnull
+   public static Vector2f readVector2f(@Nonnull MemorySegment mem, int offset) {
+      return new Vector2f(mem.get(PROTO_FLOAT, (long)offset), mem.get(PROTO_FLOAT, (long)(offset + 4)));
+   }
+
+   @Nonnull
+   public static Vector3f readVector3f(@Nonnull MemorySegment mem, int offset) {
+      return new Vector3f(mem.get(PROTO_FLOAT, (long)offset), mem.get(PROTO_FLOAT, (long)(offset + 4)), mem.get(PROTO_FLOAT, (long)(offset + 8)));
+   }
+
+   @Nonnull
+   public static Vector4f readVector4f(@Nonnull MemorySegment mem, int offset) {
+      return new Vector4f(
+         mem.get(PROTO_FLOAT, (long)offset),
+         mem.get(PROTO_FLOAT, (long)(offset + 4)),
+         mem.get(PROTO_FLOAT, (long)(offset + 8)),
+         mem.get(PROTO_FLOAT, (long)(offset + 12))
+      );
+   }
+
+   @Nonnull
+   public static Quaternionf readQuaternionf(@Nonnull MemorySegment mem, int offset) {
+      return new Quaternionf(
+         mem.get(PROTO_FLOAT, (long)offset),
+         mem.get(PROTO_FLOAT, (long)(offset + 4)),
+         mem.get(PROTO_FLOAT, (long)(offset + 8)),
+         mem.get(PROTO_FLOAT, (long)(offset + 12))
+      );
    }
 
    @Nonnull
@@ -274,6 +457,59 @@ public final class PacketIO {
       buf.writeFloatLE(q.w());
    }
 
+   public static void writeVector2f(@Nonnull MemorySegment mem, int offset, @Nonnull Vector2fc v) {
+      mem.set(PROTO_FLOAT, (long)offset, v.x());
+      mem.set(PROTO_FLOAT, (long)(offset + 4), v.y());
+   }
+
+   public static void writeVector3f(@Nonnull MemorySegment mem, int offset, @Nonnull Vector3fc v) {
+      mem.set(PROTO_FLOAT, (long)offset, v.x());
+      mem.set(PROTO_FLOAT, (long)(offset + 4), v.y());
+      mem.set(PROTO_FLOAT, (long)(offset + 8), v.z());
+   }
+
+   public static void writeVector4f(@Nonnull MemorySegment mem, int offset, @Nonnull Vector4fc v) {
+      mem.set(PROTO_FLOAT, (long)offset, v.x());
+      mem.set(PROTO_FLOAT, (long)(offset + 4), v.y());
+      mem.set(PROTO_FLOAT, (long)(offset + 8), v.z());
+      mem.set(PROTO_FLOAT, (long)(offset + 12), v.w());
+   }
+
+   public static void writeQuaternionf(@Nonnull MemorySegment mem, int offset, @Nonnull Quaternionfc q) {
+      mem.set(PROTO_FLOAT, (long)offset, q.x());
+      mem.set(PROTO_FLOAT, (long)(offset + 4), q.y());
+      mem.set(PROTO_FLOAT, (long)(offset + 8), q.z());
+      mem.set(PROTO_FLOAT, (long)(offset + 12), q.w());
+   }
+
+   public static void writeFixedAsciiString(@Nonnull MemorySegment mem, int offset, @Nullable String value, int length) {
+      if (value != null) {
+         byte[] bytes = value.getBytes(StandardCharsets.US_ASCII);
+         if (bytes.length > length) {
+            throw new ProtocolException("Fixed ASCII string exceeds length: " + bytes.length + " > " + length);
+         }
+
+         MemorySegment.copy(bytes, 0, mem, PROTO_BYTE, offset, bytes.length);
+         mem.asSlice(offset + bytes.length, length - bytes.length).fill((byte)0);
+      } else {
+         mem.asSlice(offset, length).fill((byte)0);
+      }
+   }
+
+   public static void writeFixedString(@Nonnull MemorySegment mem, int offset, @Nullable String value, int length) {
+      if (value != null) {
+         byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
+         if (bytes.length > length) {
+            throw new ProtocolException("Fixed UTF-8 string exceeds length: " + bytes.length + " > " + length);
+         }
+
+         MemorySegment.copy(bytes, 0, mem, PROTO_BYTE, offset, bytes.length);
+         mem.asSlice(offset + bytes.length, length - bytes.length).fill((byte)0);
+      } else {
+         mem.asSlice(offset, length).fill((byte)0);
+      }
+   }
+
    public static void writeMatrix4f(@Nonnull ByteBuf buf, @Nonnull Matrix4fc m) {
       buf.writeFloatLE(m.m00());
       buf.writeFloatLE(m.m10());
@@ -305,7 +541,19 @@ public final class PacketIO {
       buf.writeLong(value.getLeastSignificantBits());
    }
 
-   private static float halfToFloat(short half) {
+   @Nonnull
+   public static UUID readUUID(@Nonnull MemorySegment mem, int offset) {
+      long mostSig = mem.get(UUID_LONG, (long)offset);
+      long leastSig = mem.get(UUID_LONG, (long)(offset + 8));
+      return new UUID(mostSig, leastSig);
+   }
+
+   public static void writeUUID(@Nonnull MemorySegment mem, int offset, @Nonnull UUID value) {
+      mem.set(UUID_LONG, (long)offset, value.getMostSignificantBits());
+      mem.set(UUID_LONG, (long)(offset + 8), value.getLeastSignificantBits());
+   }
+
+   public static float halfToFloat(short half) {
       int h = half & '\uffff';
       int sign = h >>> 15 & 1;
       int exp = h >>> 10 & 31;
@@ -328,7 +576,7 @@ public final class PacketIO {
       return Float.intBitsToFloat(floatBits);
    }
 
-   private static short floatToHalf(float f) {
+   public static short floatToHalf(float f) {
       int bits = Float.floatToRawIntBits(f);
       int sign = bits >>> 16 & 32768;
       int val = (bits & 2147483647) + 4096;
@@ -362,7 +610,7 @@ public final class PacketIO {
    }
 
    @Nonnull
-   private static ByteBuf decompressFromBuffer(@Nonnull ByteBuf src, int srcOffset, int srcLength, int maxDecompressedSize) {
+   private static ByteBuf decompressFromBuffer(@Nonnull ByteBufAllocator allocator, @Nonnull ByteBuf src, int srcOffset, int srcLength, int maxDecompressedSize) {
       if (srcLength > maxDecompressedSize) {
          throw new ProtocolException("Compressed size " + srcLength + " exceeds max decompressed size " + maxDecompressedSize);
       } else if (src.isDirect()) {
@@ -373,15 +621,20 @@ public final class PacketIO {
          } else if (decompressedSize > maxDecompressedSize) {
             throw new ProtocolException("Decompressed size " + decompressedSize + " exceeds maximum " + maxDecompressedSize);
          } else {
-            ByteBuf dst = Unpooled.directBuffer((int)decompressedSize);
-            ByteBuffer dstNio = dst.nioBuffer(0, (int)decompressedSize);
-            int result = Zstd.decompress(dstNio, srcNio);
-            if (Zstd.isError(result)) {
+            ByteBuf dst = allocator.directBuffer((int)decompressedSize);
+
+            try {
+               ByteBuffer dstNio = dst.nioBuffer(0, (int)decompressedSize);
+               int result = Zstd.decompress(dstNio, srcNio);
+               if (Zstd.isError(result)) {
+                  throw new ProtocolException("Zstd decompression failed: " + Zstd.getErrorName(result));
+               } else {
+                  dst.writerIndex(result);
+                  return dst;
+               }
+            } catch (Exception var11) {
                dst.release();
-               throw new ProtocolException("Zstd decompression failed: " + Zstd.getErrorName(result));
-            } else {
-               dst.writerIndex(result);
-               return dst;
+               throw var11;
             }
          }
       } else {
@@ -399,81 +652,160 @@ public final class PacketIO {
       }
    }
 
+   private static MemorySegment decompressFromBuffer(
+      @Nonnull MemorySegment decompressionContext, @Nonnull Arena arena, @Nonnull MemorySegment src, int srcOffset, int srcLength, int maxDecompressedSize
+   ) {
+      if (srcLength > maxDecompressedSize) {
+         throw new ProtocolException("Compressed size " + srcLength + " exceeds max decompressed size " + maxDecompressedSize);
+      } else {
+         MemorySegment srcBuf = src.asSlice(srcOffset, srcLength);
+         long decompressedSize = ZstdNative.getFrameContentSize(srcBuf, srcLength);
+         if (decompressedSize < 0L) {
+            throw new ProtocolException("Invalid Zstd frame or unknown content size");
+         } else if (decompressedSize > maxDecompressedSize) {
+            throw new ProtocolException("Decompressed size " + decompressedSize + " exceeds maximum " + maxDecompressedSize);
+         } else {
+            MemorySegment dst = arena.allocate((int)decompressedSize);
+            long result = ZstdNative.decompressDCtx(decompressionContext, dst, dst.byteSize(), srcBuf, srcLength);
+            if (ZstdNative.isError(result)) {
+               throw new ProtocolException("Decompression failed with error code: " + ZstdNative.getErrorName(result));
+            } else {
+               return dst;
+            }
+         }
+      }
+   }
+
    public static void writeFramedPacket(
-      @Nonnull Packet packet, @Nonnull Class<? extends Packet> packetClass, @Nonnull ByteBuf out, @Nonnull PacketStatsRecorder statsRecorder
+      @Nonnull Packet packet,
+      @Nonnull Class<? extends Packet> packetClass,
+      @Nonnull ByteBuf out,
+      @Nonnull ByteBufAllocator allocator,
+      @Nonnull PacketStatsRecorder statsRecorder
    ) {
       Integer id = PacketRegistry.getId(packetClass);
       if (id == null) {
          throw new ProtocolException("Unknown packet type: " + packetClass.getName());
       } else {
          PacketRegistry.PacketInfo info = PacketRegistry.getToClientPacketById(id);
-         int lengthIndex = out.writerIndex();
-         out.writeIntLE(0);
-         out.writeIntLE(id);
-         ByteBuf payloadBuf = Unpooled.buffer(Math.min(info.maxSize(), 65536));
+         writeFramedPacketWithInfo(packet, info, out, allocator, statsRecorder);
+      }
+   }
 
-         try {
-            packet.serialize(payloadBuf);
-            int serializedSize = payloadBuf.readableBytes();
-            if (serializedSize > info.maxSize()) {
-               throw new ProtocolException("Packet " + info.name() + " serialized to " + serializedSize + " bytes, exceeds max size " + info.maxSize());
-            }
+   public static void writeFramedPacketWithInfo(
+      @Nonnull Packet packet,
+      @Nonnull PacketRegistry.PacketInfo info,
+      @Nonnull ByteBuf out,
+      @Nonnull ByteBufAllocator allocator,
+      @Nonnull PacketStatsRecorder statsRecorder
+   ) {
+      int lengthIndex = out.writerIndex();
+      out.writeIntLE(0);
+      out.writeIntLE(info.id());
+      if (info.compressed()) {
+         writeCompressed(packet, info, info.id(), out, allocator, statsRecorder, lengthIndex);
+      } else {
+         writeUncompressed(packet, info, info.id(), out, statsRecorder, lengthIndex);
+      }
+   }
 
-            if (info.compressed() && serializedSize > 0) {
-               int compressBound = (int)Zstd.compressBound(serializedSize);
-               out.ensureWritable(compressBound);
-               int compressedSize = compressToBuffer(payloadBuf, out, out.writerIndex(), compressBound);
-               if (Zstd.isError(compressedSize)) {
-                  throw new ProtocolException("Zstd compression failed: " + Zstd.getErrorName(compressedSize));
-               }
+   private static void writeCompressed(
+      @Nonnull Packet packet,
+      @Nonnull PacketRegistry.PacketInfo info,
+      int id,
+      @Nonnull ByteBuf out,
+      @Nonnull ByteBufAllocator allocator,
+      @Nonnull PacketStatsRecorder statsRecorder,
+      int lengthIndex
+   ) {
+      ByteBuf payloadBuf = allocator.buffer(Math.min(info.maxSize(), 65536));
 
-               if (compressedSize > 1677721600) {
-                  throw new ProtocolException("Packet " + info.name() + " compressed payload size " + compressedSize + " exceeds protocol maximum");
-               }
-
-               out.writerIndex(out.writerIndex() + compressedSize);
-               out.setIntLE(lengthIndex, compressedSize);
-               statsRecorder.recordSend(id, serializedSize, compressedSize);
-            } else {
-               if (serializedSize > 1677721600) {
-                  throw new ProtocolException("Packet " + info.name() + " payload size " + serializedSize + " exceeds protocol maximum");
-               }
-
-               out.writeBytes(payloadBuf);
-               out.setIntLE(lengthIndex, serializedSize);
-               statsRecorder.recordSend(id, serializedSize, 0);
-            }
-         } finally {
-            payloadBuf.release();
+      try {
+         packet.serialize(payloadBuf);
+         int serializedSize = payloadBuf.readableBytes();
+         if (serializedSize > info.maxSize()) {
+            throw new ProtocolException("Packet " + info.name() + " serialized to " + serializedSize + " bytes, exceeds max size " + info.maxSize());
          }
+
+         if (serializedSize != 0) {
+            int compressBound = (int)Zstd.compressBound(serializedSize);
+            out.ensureWritable(compressBound);
+            int compressedSize = compressToBuffer(payloadBuf, out, out.writerIndex(), compressBound);
+            if (Zstd.isError(compressedSize)) {
+               throw new ProtocolException("Zstd compression failed: " + Zstd.getErrorName(compressedSize));
+            }
+
+            if (compressedSize > 1677721600) {
+               throw new ProtocolException("Packet " + info.name() + " compressed payload size " + compressedSize + " exceeds protocol maximum");
+            }
+
+            out.writerIndex(out.writerIndex() + compressedSize);
+            out.setIntLE(lengthIndex, compressedSize);
+            statsRecorder.recordSend(id, serializedSize, compressedSize);
+            return;
+         }
+
+         out.setIntLE(lengthIndex, 0);
+         statsRecorder.recordSend(id, 0, 0);
+      } finally {
+         payloadBuf.release();
+      }
+   }
+
+   private static void writeUncompressed(
+      @Nonnull Packet packet,
+      @Nonnull PacketRegistry.PacketInfo info,
+      int id,
+      @Nonnull ByteBuf out,
+      @Nonnull PacketStatsRecorder statsRecorder,
+      int lengthIndex
+   ) {
+      int payloadStart = out.writerIndex();
+      packet.serialize(out);
+      int serializedSize = out.writerIndex() - payloadStart;
+      if (serializedSize > info.maxSize()) {
+         out.writerIndex(lengthIndex);
+         throw new ProtocolException("Packet " + info.name() + " serialized to " + serializedSize + " bytes, exceeds max size " + info.maxSize());
+      } else if (serializedSize > 1677721600) {
+         out.writerIndex(lengthIndex);
+         throw new ProtocolException("Packet " + info.name() + " payload size " + serializedSize + " exceeds protocol maximum");
+      } else {
+         out.setIntLE(lengthIndex, serializedSize);
+         statsRecorder.recordSend(id, serializedSize, 0);
       }
    }
 
    @Nonnull
-   public static Packet readFramedPacket(@Nonnull ByteBuf in, int payloadLength, @Nonnull PacketStatsRecorder statsRecorder) {
+   public static Packet readFramedPacket(
+      @Nonnull ByteBuf in, int payloadLength, @Nonnull ByteBufAllocator allocator, @Nonnull PacketStatsRecorder statsRecorder
+   ) {
       int packetId = in.readIntLE();
       PacketRegistry.PacketInfo info = PacketRegistry.getToServerPacketById(packetId);
       if (info == null) {
          in.skipBytes(payloadLength);
          throw new ProtocolException("Unknown packet ID: " + packetId);
       } else {
-         return readFramedPacketWithInfo(in, payloadLength, info, statsRecorder);
+         return readFramedPacketWithInfo(in, payloadLength, allocator, info, statsRecorder);
       }
    }
 
    @Nonnull
    public static Packet readFramedPacketWithInfo(
-      @Nonnull ByteBuf in, int payloadLength, @Nonnull PacketRegistry.PacketInfo info, @Nonnull PacketStatsRecorder statsRecorder
+      @Nonnull ByteBuf in,
+      int payloadLength,
+      @Nonnull ByteBufAllocator allocator,
+      @Nonnull PacketRegistry.PacketInfo info,
+      @Nonnull PacketStatsRecorder statsRecorder
    ) {
       int compressedSize = 0;
       ByteBuf payload;
       int uncompressedSize;
       if (info.compressed() && payloadLength > 0) {
          try {
-            payload = decompressFromBuffer(in, in.readerIndex(), payloadLength, info.maxSize());
-         } catch (ProtocolException var12) {
+            payload = decompressFromBuffer(allocator, in, in.readerIndex(), payloadLength, info.maxSize());
+         } catch (ProtocolException var13) {
             in.skipBytes(payloadLength);
-            throw var12;
+            throw var13;
          }
 
          in.skipBytes(payloadLength);
@@ -487,17 +819,129 @@ public final class PacketIO {
          uncompressedSize = 0;
       }
 
-      Packet var8;
+      Packet var9;
       try {
-         Packet packet = info.deserialize().apply(payload, 0);
+         Packet packet = info.deserialize().deserialize(payload, 0);
          statsRecorder.recordReceive(info.id(), uncompressedSize, compressedSize);
-         var8 = packet;
+         var9 = packet;
       } finally {
          if (payloadLength > 0) {
             payload.release();
          }
       }
 
-      return var8;
+      return var9;
+   }
+
+   public static int writeFramedPacket(
+      @Nonnull MemorySegment compressionContext,
+      @Nonnull Packet packet,
+      @Nonnull PacketRegistry.PacketInfo packetInfo,
+      @Nonnull MemorySegment out,
+      int offset,
+      int packetSize,
+      @Nonnull PacketStatsRecorder statsRecorder
+   ) {
+      out.set(PROTO_INT, (long)(offset + 4), packetInfo.id());
+      int dataStart = offset + 8;
+      if (packetInfo.compressed()) {
+         int var13;
+         try (Arena arena = Arena.ofConfined()) {
+            MemorySegment compressionTarget = out.asSlice(dataStart);
+            MemorySegment src = arena.allocate(packetSize);
+            packet.serialize(src, 0);
+            if (packetSize > packetInfo.maxSize()) {
+               throw new ProtocolException("Packet " + packetInfo.name() + " serialized to " + packetSize + " bytes, exceeds max size " + packetInfo.maxSize());
+            }
+
+            long result = ZstdNative.compressCCtx(compressionContext, compressionTarget, compressionTarget.byteSize(), src, src.byteSize(), COMPRESSION_LEVEL);
+            if (ZstdNative.isError(result)) {
+               throw new ProtocolException("Zstd compression failed: " + ZstdNative.getErrorName(result));
+            }
+
+            if (result > 1677721600L) {
+               throw new ProtocolException("Packet " + packetInfo.name() + " compressed payload size " + result + " exceeds protocol maximum");
+            }
+
+            out.set(PROTO_INT, (long)offset, (int)result);
+            statsRecorder.recordSend(packetInfo.id(), packetSize, (int)result);
+            var13 = (int)(result + 8L);
+         }
+
+         return var13;
+      } else {
+         int size = packet.serialize(out, dataStart);
+         if (size > packetInfo.maxSize()) {
+            throw new ProtocolException("Packet " + packetInfo.name() + " serialized to " + size + " bytes, exceeds max size " + packetInfo.maxSize());
+         } else if (size > 1677721600) {
+            throw new ProtocolException("Packet " + packetInfo.name() + " payload size " + size + " exceeds protocol maximum");
+         } else {
+            out.set(PROTO_INT, (long)offset, size);
+            statsRecorder.recordSend(packetInfo.id(), size, 0);
+            return size + 8;
+         }
+      }
+   }
+
+   @Nonnull
+   public static Packet readFramedPacket(
+      @Nonnull MemorySegment decompressionContext, @Nonnull MemorySegment in, int payloadLength, @Nonnull PacketStatsRecorder statsRecorder
+   ) {
+      int packetId = in.get(PROTO_INT, 0L);
+      PacketRegistry.PacketInfo info = PacketRegistry.getToServerPacketById(packetId);
+      if (info == null) {
+         throw new ProtocolException("Unknown packet ID: " + packetId);
+      } else if (payloadLength > info.maxSize()) {
+         throw new ProtocolException("Packet " + info.name() + " payload size " + payloadLength + " exceeds max size " + info.maxSize());
+      } else {
+         return readFramedPacketWithInfo(decompressionContext, in, (int)PROTO_INT.byteSize(), payloadLength, info, statsRecorder);
+      }
+   }
+
+   @Nonnull
+   public static Packet readFramedPacketWithInfo(
+      @Nonnull MemorySegment decompressionContext,
+      @Nonnull MemorySegment in,
+      int offset,
+      int payloadLength,
+      @Nonnull PacketRegistry.PacketInfo info,
+      @Nonnull PacketStatsRecorder statsRecorder
+   ) {
+      int compressedSize = 0;
+      Arena arena = null;
+      int uncompressedSize;
+      MemorySegment payload;
+      byte var17;
+      if (info.compressed() && payloadLength > 0) {
+         arena = Arena.ofConfined();
+
+         try {
+            payload = decompressFromBuffer(decompressionContext, arena, in, offset, payloadLength, info.maxSize());
+         } catch (Throwable var15) {
+            arena.close();
+            throw var15;
+         }
+
+         uncompressedSize = (int)payload.byteSize();
+         compressedSize = payloadLength;
+         var17 = 0;
+      } else {
+         payload = in.asSlice(offset, payloadLength);
+         var17 = 0;
+         uncompressedSize = payloadLength;
+      }
+
+      Packet var11;
+      try {
+         Packet packet = info.toObject().deserialize(payload, var17);
+         statsRecorder.recordReceive(info.id(), uncompressedSize, compressedSize);
+         var11 = packet;
+      } finally {
+         if (arena != null) {
+            arena.close();
+         }
+      }
+
+      return var11;
    }
 }

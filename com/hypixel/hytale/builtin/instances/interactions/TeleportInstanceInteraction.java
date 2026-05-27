@@ -7,7 +7,6 @@ import com.hypixel.hytale.builtin.instances.blocks.InstanceBlock;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.AddReason;
 import com.hypixel.hytale.component.Archetype;
@@ -18,9 +17,10 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Rotation3fc;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
@@ -34,6 +34,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.TransformComponen
 import com.hypixel.hytale.server.core.modules.entity.teleport.PendingTeleport;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.OriginSource;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -46,6 +47,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class TeleportInstanceInteraction extends SimpleInstantInteraction {
    @Nonnull
@@ -66,21 +68,18 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
       .documentation("The key to name the world. Random if not provided")
       .add()
       .<Vector3d>appendInherited(
-         new KeyedCodec<>("PositionOffset", Vector3d.CODEC),
+         new KeyedCodec<>("PositionOffset", Vector3dUtil.CODEC),
          (o, i) -> o.positionOffset = i,
          o -> o.positionOffset,
          (o, p) -> o.positionOffset = p.positionOffset
       )
       .documentation("The offset to apply to the return point.\n\nUsed to prevent repeated interactions when returning from the instance.")
       .add()
-      .<Vector3f>appendInherited(new KeyedCodec<>("Rotation", Vector3f.ROTATION), (o, i) -> o.rotation = i, o -> o.rotation, (o, p) -> o.rotation = p.rotation)
+      .<Rotation3f>appendInherited(new KeyedCodec<>("Rotation", Rotation3f.CODEC), (o, i) -> o.rotation = i, o -> o.rotation, (o, p) -> o.rotation = p.rotation)
       .documentation("The rotation to set the player to when returning from an instance.")
       .add()
-      .<TeleportInstanceInteraction.OriginSource>appendInherited(
-         new KeyedCodec<>("OriginSource", TeleportInstanceInteraction.OriginSource.CODEC),
-         (o, i) -> o.originSource = i,
-         o -> o.originSource,
-         (o, p) -> o.originSource = p.originSource
+      .<OriginSource>appendInherited(
+         new KeyedCodec<>("OriginSource", OriginSource.CODEC), (o, i) -> o.originSource = i, o -> o.originSource, (o, p) -> o.originSource = p.originSource
       )
       .documentation("The source to use for the return position.\n\nDefaults to the player's position.")
       .addValidator(Validators.nonNull())
@@ -115,7 +114,7 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
       .add()
       .afterDecode(i -> {
          if (i.rotation != null) {
-            i.rotation.scale((float) (Math.PI / 180.0));
+            i.rotation.mul((float) (Math.PI / 180.0));
          }
       })
       .build();
@@ -123,9 +122,9 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
    private String instanceName;
    private String instanceKey;
    private Vector3d positionOffset;
-   private Vector3f rotation;
+   private Rotation3f rotation;
    @Nonnull
-   private TeleportInstanceInteraction.OriginSource originSource = TeleportInstanceInteraction.OriginSource.PLAYER;
+   private OriginSource originSource = OriginSource.ENTITY;
    private boolean personalReturnPoint = false;
    private boolean closeOnBlockRemove = true;
    private double removeBlockAfter = -1.0;
@@ -267,14 +266,14 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
    ) {
       Transform transform = null;
       switch (this.originSource) {
-         case PLAYER:
+         case ENTITY:
             TransformComponent transformComponent = componentAccessor.getComponent(playerRef, TransformComponent.getComponentType());
 
             assert transformComponent != null;
 
-            transform = transformComponent.getTransform().clone();
+            transform = new Transform(transformComponent.getTransform());
             transform.getPosition().add(this.positionOffset);
-            transform.setRotation(this.rotation != null ? this.rotation : Vector3f.NaN);
+            transform.setRotation((Rotation3fc)(this.rotation != null ? this.rotation : Rotation3f.NaN));
             break;
          case BLOCK:
             BlockPosition targetBlock = context.getTargetBlock();
@@ -297,26 +296,18 @@ public class TeleportInstanceInteraction extends SimpleInstantInteraction {
             position.x = position.x + (hitbox.middleX() + targetBlock.x);
             position.y = position.y + (hitbox.middleY() + targetBlock.y);
             position.z = position.z + (hitbox.middleZ() + targetBlock.z);
-            Vector3f rotation = Vector3f.NaN;
+            Rotation3f rotation;
             if (this.rotation != null) {
-               rotation = this.rotation.clone();
+               rotation = new Rotation3f(this.rotation);
                rotation.addRotationOnAxis(Axis.Y, rotationTuple.yaw().getDegrees());
                rotation.addRotationOnAxis(Axis.X, rotationTuple.pitch().getDegrees());
+            } else {
+               rotation = new Rotation3f(Rotation3f.NaN);
             }
 
             transform = new Transform(position, rotation);
       }
 
       return transform;
-   }
-
-   private static enum OriginSource {
-      PLAYER,
-      BLOCK;
-
-      @Nonnull
-      public static EnumCodec<TeleportInstanceInteraction.OriginSource> CODEC = new EnumCodec<>(TeleportInstanceInteraction.OriginSource.class)
-         .documentKey(PLAYER, "The origin of operations will be based on the player's current position.")
-         .documentKey(BLOCK, "The origin of operations will be based on the middle of the block's hitbox.");
    }
 }

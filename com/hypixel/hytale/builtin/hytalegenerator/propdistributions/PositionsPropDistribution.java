@@ -5,10 +5,11 @@ import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
 import com.hypixel.hytale.builtin.hytalegenerator.positionproviders.PositionProvider;
 import com.hypixel.hytale.builtin.hytalegenerator.props.EmptyProp;
 import com.hypixel.hytale.builtin.hytalegenerator.props.Prop;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class PositionsPropDistribution extends PropDistribution {
    @Nonnull
@@ -19,6 +20,10 @@ public class PositionsPropDistribution extends PropDistribution {
    private PropDistribution.Context rContext;
    @Nonnull
    private final Pipe.One<Vector3d> rPositionsPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(PositionsPropDistribution.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
          assert PositionsPropDistribution.this.rContext.bounds.contains(position);
 

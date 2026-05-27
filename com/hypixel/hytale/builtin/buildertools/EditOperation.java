@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.prefab.selection.mask.BlockMask;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -22,6 +21,7 @@ import it.unimi.dsi.fastutil.objects.ReferenceArrayList;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class EditOperation {
    private final BlockMask blockMask;
@@ -102,6 +102,9 @@ public class EditOperation {
                      blocks.getSupportValue(x, y, z),
                      blocks.getBlockComponentHolder(x, y, z)
                   );
+               if (this.before.getFluidAtWorldPos(x, y, z) < 0 && currentFluid != 0) {
+                  this.before.addFluidAtWorldPos(x, y, z, currentFluid, blocks.getFluidLevel(x, y, z));
+               }
             }
 
             this.after.addBlockAtWorldPos(x, y, z, blockId, rotation, 0, 0);
@@ -137,6 +140,10 @@ public class EditOperation {
       }
    }
 
+   public boolean clearFluid(int x, int y, int z) {
+      return this.getFluid(x, y, z) == 0 ? false : this.setFluid(x, y, z, 0, (byte)0);
+   }
+
    public int getFluid(int x, int y, int z) {
       BlockAccessor chunk = this.accessor.getChunkIfInMemory(ChunkUtil.indexChunkFromBlock(x, z));
       return chunk != null ? chunk.getFluidId(x, y, z) : 0;
@@ -153,9 +160,9 @@ public class EditOperation {
          long chunkIdx = ChunkUtil.indexChunkFromBlock(x, z);
          WorldChunk chunk = this.world.getNonTickingChunk(chunkIdx);
          int beforeColor = chunk.getBlockChunk().getTint(x, z);
-         int r = (int)MathUtil.lerp((double)(beforeColor >> 16 & 0xFF), (double)(color >> 16 & 0xFF), 1.0 - opacity);
-         int g = (int)MathUtil.lerp((double)(beforeColor >> 8 & 0xFF), (double)(color >> 8 & 0xFF), 1.0 - opacity);
-         int b = (int)MathUtil.lerp((double)(beforeColor & 0xFF), (double)(color & 0xFF), 1.0 - opacity);
+         int r = (int)MathUtil.lerp((double)(beforeColor >> 16 & 0xFF), (double)(color >> 16 & 0xFF), opacity);
+         int g = (int)MathUtil.lerp((double)(beforeColor >> 8 & 0xFF), (double)(color >> 8 & 0xFF), opacity);
+         int b = (int)MathUtil.lerp((double)(beforeColor & 0xFF), (double)(color & 0xFF), opacity);
          int merged = r << 16 | g << 8 | b;
          this.before.addTintAtWorldPos(x, z, beforeColor);
          this.after.addTintAtWorldPos(x, z, merged);

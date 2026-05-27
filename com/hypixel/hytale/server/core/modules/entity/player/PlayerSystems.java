@@ -22,9 +22,8 @@ import com.hypixel.hytale.component.system.RefSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.component.system.tick.RunWhenPausedSystem;
 import com.hypixel.hytale.logger.HytaleLogger;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.protocol.ComponentUpdate;
 import com.hypixel.hytale.protocol.EntityEffectsUpdate;
 import com.hypixel.hytale.protocol.EntityStatsUpdate;
@@ -33,7 +32,6 @@ import com.hypixel.hytale.protocol.EquipmentUpdate;
 import com.hypixel.hytale.protocol.IntangibleUpdate;
 import com.hypixel.hytale.protocol.InteractableUpdate;
 import com.hypixel.hytale.protocol.InvulnerableUpdate;
-import com.hypixel.hytale.protocol.ItemArmorSlot;
 import com.hypixel.hytale.protocol.ModelTransform;
 import com.hypixel.hytale.protocol.ModelUpdate;
 import com.hypixel.hytale.protocol.NameplateUpdate;
@@ -49,7 +47,6 @@ import com.hypixel.hytale.protocol.packets.player.SetBlockPlacementOverride;
 import com.hypixel.hytale.server.core.HytaleServer;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.gameplay.GameplayConfig;
-import com.hypixel.hytale.server.core.asset.type.gameplay.PlayerConfig;
 import com.hypixel.hytale.server.core.asset.type.gameplay.SpawnConfig;
 import com.hypixel.hytale.server.core.asset.type.particle.config.WorldParticle;
 import com.hypixel.hytale.server.core.entity.Entity;
@@ -61,12 +58,12 @@ import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementMa
 import com.hypixel.hytale.server.core.entity.entities.player.pages.RespawnPage;
 import com.hypixel.hytale.server.core.entity.nameplate.Nameplate;
 import com.hypixel.hytale.server.core.event.events.player.RemovedPlayerFromWorldEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryUtils;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
-import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.modules.entity.EntityModule;
+import com.hypixel.hytale.server.core.modules.entity.component.BreathingComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.EntityScaleComponent;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
@@ -74,6 +71,7 @@ import com.hypixel.hytale.server.core.modules.entity.component.Intangible;
 import com.hypixel.hytale.server.core.modules.entity.component.Interactable;
 import com.hypixel.hytale.server.core.modules.entity.component.Invulnerable;
 import com.hypixel.hytale.server.core.modules.entity.component.ModelComponent;
+import com.hypixel.hytale.server.core.modules.entity.component.PersistentDisplayName;
 import com.hypixel.hytale.server.core.modules.entity.component.RespondToHit;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
@@ -91,12 +89,12 @@ import com.hypixel.hytale.server.core.universe.world.WorldConfig;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class PlayerSystems {
    @Nonnull
@@ -133,12 +131,12 @@ public class PlayerSystems {
             for (PlayerInput.InputUpdate entry : movementUpdateQueue) {
                switch (entry) {
                   case PlayerInput.AbsoluteMovement abs:
-                     shouldTeleport = transformComponent.getPosition().distanceSquaredTo(abs.getX(), abs.getY(), abs.getZ()) > 0.01F;
+                     shouldTeleport = transformComponent.getPosition().distanceSquared(abs.getX(), abs.getY(), abs.getZ()) > 0.01F;
                      break;
                   case PlayerInput.RelativeMovement rel:
                      Vector3d position = transformComponent.getPosition();
                      shouldTeleport = transformComponent.getPosition()
-                           .distanceSquaredTo(position.x + rel.getX(), position.y + rel.getY(), position.z + rel.getZ())
+                           .distanceSquared(position.x + rel.getX(), position.y + rel.getY(), position.z + rel.getZ())
                         > 0.01F;
                      break;
                   case PlayerInput.SetHead head:
@@ -356,7 +354,7 @@ public class PlayerSystems {
 
          assert movementManagerComponent != null;
 
-         if (commandBuffer.getComponent(ref, DisplayNameComponent.getComponentType()) == null) {
+         if (commandBuffer.getComponent(ref, PersistentDisplayName.getComponentType()) == null) {
             Message displayName = Message.raw(playerRefComponent.getUsername());
             commandBuffer.putComponent(ref, DisplayNameComponent.getComponentType(), new DisplayNameComponent(displayName));
          }
@@ -405,12 +403,11 @@ public class PlayerSystems {
                backpack != null ? backpack.getInventory().toPacket() : null
             )
          );
-         Inventory playerInventory = playerComponent.getInventory();
-         playerConnection.writeNoCache(new SetActiveSlot(-1, playerInventory.getActiveHotbarSlot()));
-         playerConnection.writeNoCache(new SetActiveSlot(-5, playerInventory.getActiveUtilitySlot()));
-         playerConnection.writeNoCache(new SetActiveSlot(-8, playerInventory.getActiveToolsSlot()));
-         if (Inventory.containsBrokenItem(ref, commandBuffer)) {
-            playerComponent.sendMessage(Message.translation("server.general.repair.itemBrokenOnRespawn").color("#ff5555"));
+         playerConnection.writeNoCache(new SetActiveSlot(-1, hotbar != null ? hotbar.getActiveSlot() : -1));
+         playerConnection.writeNoCache(new SetActiveSlot(-5, utility != null ? utility.getActiveSlot() : -1));
+         playerConnection.writeNoCache(new SetActiveSlot(-8, tool != null ? tool.getActiveSlot() : -1));
+         if (InventoryUtils.containsBrokenItem(ref, commandBuffer)) {
+            playerRefComponent.sendMessage(Message.translation("server.general.repair.itemBrokenOnRespawn").color("#ff5555"));
          }
 
          playerConnection.writeNoCache(new SetBlockPlacementOverride(playerComponent.isOverrideBlockPlacementRestrictions()));
@@ -482,6 +479,7 @@ public class PlayerSystems {
          holder.ensureComponent(PlayerInput.getComponentType());
          holder.ensureComponent(EffectControllerComponent.getComponentType());
          holder.ensureComponent(UniqueItemUsagesComponent.getComponentType());
+         holder.ensureComponent(BreathingComponent.getComponentType());
          Player player = holder.getComponent(Player.getComponentType());
 
          assert player != null;
@@ -553,7 +551,7 @@ public class PlayerSystems {
             );
          playerComponent.getPlayerConfigData()
             .getPerWorldData(world.getName())
-            .setLastPosition(new Transform(transformComponent.getPosition().clone(), headRotationComponent.getRotation().clone()));
+            .setLastPosition(new Transform(new Vector3d(transformComponent.getPosition()), new Rotation3f(headRotationComponent.getRotation())));
          playerRefComponent.getPacketHandler().setQueuePackets(false);
          playerRefComponent.getPacketHandler().tryFlush();
          WorldConfig worldConfig = world.getWorldConfig();
@@ -600,110 +598,75 @@ public class PlayerSystems {
             if (networkIdComponent == null) {
                throw new IllegalArgumentException("Viewer is missing NetworkId component");
             } else {
-               Player playerComponent = store.getComponent(viewerRef, Player.getComponentType());
-               if (playerComponent == null) {
-                  throw new IllegalArgumentException("Viewer is missing Player component");
-               } else {
-                  EntityUpdate entityUpdate = new EntityUpdate();
-                  entityUpdate.networkId = networkIdComponent.getId();
-                  ObjectArrayList<ComponentUpdate> list = new ObjectArrayList();
-                  Archetype<EntityStore> viewerArchetype = store.getArchetype(viewerRef);
-                  if (viewerArchetype.contains(Interactable.getComponentType())) {
-                     list.add(new InteractableUpdate());
-                  }
-
-                  if (viewerArchetype.contains(Intangible.getComponentType())) {
-                     list.add(new IntangibleUpdate());
-                  }
-
-                  if (viewerArchetype.contains(Invulnerable.getComponentType())) {
-                     list.add(new InvulnerableUpdate());
-                  }
-
-                  if (viewerArchetype.contains(RespondToHit.getComponentType())) {
-                     list.add(new RespondToHitUpdate());
-                  }
-
-                  Nameplate nameplateComponent = store.getComponent(viewerRef, Nameplate.getComponentType());
-                  if (nameplateComponent != null) {
-                     list.add(new NameplateUpdate(nameplateComponent.getText()));
-                  }
-
-                  PredictedProjectile predictionComponent = store.getComponent(viewerRef, PredictedProjectile.getComponentType());
-                  if (predictionComponent != null) {
-                     list.add(new PredictionUpdate(predictionComponent.getUuid()));
-                  }
-
-                  ModelComponent modelComponent = store.getComponent(viewerRef, ModelComponent.getComponentType());
-                  ModelUpdate update = new ModelUpdate();
-                  update.model = modelComponent != null ? modelComponent.getModel().toPacket() : null;
-                  EntityScaleComponent entityScaleComponent = store.getComponent(viewerRef, EntityScaleComponent.getComponentType());
-                  if (entityScaleComponent != null) {
-                     update.entityScale = entityScaleComponent.getScale();
-                  }
-
-                  list.add(update);
-                  PlayerSkinComponent playerSkinComponent = store.getComponent(viewerRef, PlayerSkinComponent.getComponentType());
-                  list.add(new PlayerSkinUpdate(playerSkinComponent != null ? playerSkinComponent.getPlayerSkin() : null));
-                  Inventory inventory = playerComponent.getInventory();
-                  EquipmentUpdate updatex = new EquipmentUpdate();
-                  ItemContainer armor = inventory.getArmor();
-                  updatex.armorIds = new String[armor.getCapacity()];
-                  Arrays.fill(updatex.armorIds, "");
-                  armor.forEachWithMeta((slot, itemStack, armorIds) -> armorIds[slot] = itemStack.getItemId(), updatex.armorIds);
-                  PlayerSettings playerSettingsComponent = store.getComponent(viewerRef, PlayerSettings.getComponentType());
-                  if (playerSettingsComponent != null) {
-                     PlayerConfig.ArmorVisibilityOption armorVisibilityOption = store.getExternalData()
-                        .getWorld()
-                        .getGameplayConfig()
-                        .getPlayerConfig()
-                        .getArmorVisibilityOption();
-                     if (armorVisibilityOption.canHideHelmet() && playerSettingsComponent.hideHelmet()) {
-                        updatex.armorIds[ItemArmorSlot.Head.ordinal()] = "";
-                     }
-
-                     if (armorVisibilityOption.canHideCuirass() && playerSettingsComponent.hideCuirass()) {
-                        updatex.armorIds[ItemArmorSlot.Chest.ordinal()] = "";
-                     }
-
-                     if (armorVisibilityOption.canHideGauntlets() && playerSettingsComponent.hideGauntlets()) {
-                        updatex.armorIds[ItemArmorSlot.Hands.ordinal()] = "";
-                     }
-
-                     if (armorVisibilityOption.canHidePants() && playerSettingsComponent.hidePants()) {
-                        updatex.armorIds[ItemArmorSlot.Legs.ordinal()] = "";
-                     }
-                  }
-
-                  ItemStack itemInHand = inventory.getItemInHand();
-                  updatex.rightHandItemId = itemInHand != null ? itemInHand.getItemId() : "Empty";
-                  ItemStack utilityItem = inventory.getUtilityItem();
-                  updatex.leftHandItemId = utilityItem != null ? utilityItem.getItemId() : "Empty";
-                  list.add(updatex);
-                  TransformComponent transformComponent = store.getComponent(viewerRef, TransformComponent.getComponentType());
-                  HeadRotation headRotationComponent = store.getComponent(viewerRef, HeadRotation.getComponentType());
-                  if (transformComponent != null && headRotationComponent != null) {
-                     TransformUpdate updatexx = new TransformUpdate();
-                     updatexx.transform = new ModelTransform();
-                     updatexx.transform.position = PositionUtil.toPositionPacket(transformComponent.getPosition());
-                     updatexx.transform.bodyOrientation = PositionUtil.toDirectionPacket(transformComponent.getRotation());
-                     updatexx.transform.lookOrientation = PositionUtil.toDirectionPacket(headRotationComponent.getRotation());
-                     list.add(updatexx);
-                  }
-
-                  EffectControllerComponent effectControllerComponent = store.getComponent(viewerRef, EffectControllerComponent.getComponentType());
-                  if (effectControllerComponent != null) {
-                     list.add(new EntityEffectsUpdate(effectControllerComponent.createInitUpdates()));
-                  }
-
-                  EntityStatMap statMapComponent = store.getComponent(viewerRef, EntityStatMap.getComponentType());
-                  if (statMapComponent != null) {
-                     list.add(new EntityStatsUpdate(statMapComponent.createInitUpdate(true)));
-                  }
-
-                  entityUpdate.updates = (ComponentUpdate[])list.toArray(ComponentUpdate[]::new);
-                  entityViewerComponent.packetReceiver.writeNoCache(new EntityUpdates(null, new EntityUpdate[]{entityUpdate}));
+               EntityUpdate entityUpdate = new EntityUpdate();
+               entityUpdate.networkId = networkIdComponent.getId();
+               ObjectArrayList<ComponentUpdate> list = new ObjectArrayList();
+               Archetype<EntityStore> viewerArchetype = store.getArchetype(viewerRef);
+               if (viewerArchetype.contains(Interactable.getComponentType())) {
+                  list.add(new InteractableUpdate());
                }
+
+               if (viewerArchetype.contains(Intangible.getComponentType())) {
+                  list.add(new IntangibleUpdate());
+               }
+
+               if (viewerArchetype.contains(Invulnerable.getComponentType())) {
+                  list.add(new InvulnerableUpdate());
+               }
+
+               if (viewerArchetype.contains(RespondToHit.getComponentType())) {
+                  list.add(new RespondToHitUpdate());
+               }
+
+               Nameplate nameplateComponent = store.getComponent(viewerRef, Nameplate.getComponentType());
+               if (nameplateComponent != null) {
+                  list.add(new NameplateUpdate(nameplateComponent.getText()));
+               }
+
+               PredictedProjectile predictionComponent = store.getComponent(viewerRef, PredictedProjectile.getComponentType());
+               if (predictionComponent != null) {
+                  list.add(new PredictionUpdate(predictionComponent.getUuid()));
+               }
+
+               ModelComponent modelComponent = store.getComponent(viewerRef, ModelComponent.getComponentType());
+               ModelUpdate update = new ModelUpdate();
+               update.model = modelComponent != null ? modelComponent.getModel().toPacket() : null;
+               EntityScaleComponent entityScaleComponent = store.getComponent(viewerRef, EntityScaleComponent.getComponentType());
+               if (entityScaleComponent != null) {
+                  update.entityScale = entityScaleComponent.getScale();
+               }
+
+               list.add(update);
+               PlayerSkinComponent playerSkinComponent = store.getComponent(viewerRef, PlayerSkinComponent.getComponentType());
+               list.add(new PlayerSkinUpdate(playerSkinComponent != null ? playerSkinComponent.getPlayerSkin() : null));
+               PlayerSettings playerSettingsComponent = store.getComponent(viewerRef, PlayerSettings.getComponentType());
+               InventoryComponent.Armor armorComponent = store.getComponent(viewerRef, InventoryComponent.Armor.getComponentType());
+               InventoryComponent.Utility utilityComponent = store.getComponent(viewerRef, InventoryComponent.Utility.getComponentType());
+               EquipmentUpdate updatex = InventoryUtils.createEquipmentUpdate(viewerRef, store, playerSettingsComponent, armorComponent, utilityComponent);
+               list.add(updatex);
+               TransformComponent transformComponent = store.getComponent(viewerRef, TransformComponent.getComponentType());
+               HeadRotation headRotationComponent = store.getComponent(viewerRef, HeadRotation.getComponentType());
+               if (transformComponent != null && headRotationComponent != null) {
+                  TransformUpdate updatexx = new TransformUpdate();
+                  updatexx.transform = new ModelTransform();
+                  updatexx.transform.position = PositionUtil.toPositionPacket(transformComponent.getPosition());
+                  updatexx.transform.bodyOrientation = PositionUtil.toDirectionPacket(transformComponent.getRotation());
+                  updatexx.transform.lookOrientation = PositionUtil.toDirectionPacket(headRotationComponent.getRotation());
+                  list.add(updatexx);
+               }
+
+               EffectControllerComponent effectControllerComponent = store.getComponent(viewerRef, EffectControllerComponent.getComponentType());
+               if (effectControllerComponent != null) {
+                  list.add(new EntityEffectsUpdate(effectControllerComponent.createInitUpdates()));
+               }
+
+               EntityStatMap statMapComponent = store.getComponent(viewerRef, EntityStatMap.getComponentType());
+               if (statMapComponent != null) {
+                  list.add(new EntityStatsUpdate(statMapComponent.createInitUpdate(true)));
+               }
+
+               entityUpdate.updates = (ComponentUpdate[])list.toArray(ComponentUpdate[]::new);
+               entityViewerComponent.packetReceiver.writeNoCache(new EntityUpdates(null, new EntityUpdate[]{entityUpdate}));
             }
          }
       }
@@ -769,7 +732,7 @@ public class PlayerSystems {
 
          assert headRotationComponent != null;
 
-         Vector3f headRotation = headRotationComponent.getRotation();
+         Rotation3f headRotation = headRotationComponent.getRotation();
          PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
 
          assert playerRefComponent != null;

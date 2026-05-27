@@ -5,8 +5,9 @@ import com.hypixel.hytale.builtin.hytalegenerator.patterns.OffsetPattern;
 import com.hypixel.hytale.builtin.hytalegenerator.patterns.Pattern;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class OffsetPatternAsset extends PatternAsset {
    @Nonnull
@@ -15,7 +16,7 @@ public class OffsetPatternAsset extends PatternAsset {
       )
       .append(new KeyedCodec<>("Pattern", PatternAsset.CODEC, true), (t, k) -> t.patternAsset = k, k -> k.patternAsset)
       .add()
-      .append(new KeyedCodec<>("Offset", Vector3i.CODEC, true), (t, k) -> t.offset = k, k -> k.offset)
+      .append(new KeyedCodec<>("Offset", Vector3iUtil.CODEC, true), (t, k) -> t.offset = k, k -> k.offset)
       .add()
       .build();
    private PatternAsset patternAsset = new ConstantPatternAsset();
@@ -28,7 +29,7 @@ public class OffsetPatternAsset extends PatternAsset {
          return ConstantPattern.INSTANCE_FALSE;
       } else {
          Pattern pattern = this.patternAsset.build(argument);
-         return new OffsetPattern(pattern, this.offset.clone());
+         return new OffsetPattern(pattern, new Vector3i(this.offset));
       }
    }
 

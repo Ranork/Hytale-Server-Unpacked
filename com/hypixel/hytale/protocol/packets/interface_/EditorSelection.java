@@ -1,7 +1,10 @@
 package com.hypixel.hytale.protocol.packets.interface_;
 
+import com.hypixel.hytale.protocol.io.PacketIO;
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Objects;
 import javax.annotation.Nonnull;
 
@@ -41,18 +44,93 @@ public class EditorSelection {
 
    @Nonnull
    public static EditorSelection deserialize(@Nonnull ByteBuf buf, int offset) {
-      EditorSelection obj = new EditorSelection();
-      obj.minX = buf.getIntLE(offset + 0);
-      obj.minY = buf.getIntLE(offset + 4);
-      obj.minZ = buf.getIntLE(offset + 8);
-      obj.maxX = buf.getIntLE(offset + 12);
-      obj.maxY = buf.getIntLE(offset + 16);
-      obj.maxZ = buf.getIntLE(offset + 20);
-      return obj;
+      if (buf.readableBytes() - offset < 24) {
+         throw ProtocolException.bufferTooSmall("EditorSelection", 24, buf.readableBytes() - offset);
+      } else {
+         EditorSelection obj = new EditorSelection();
+         obj.minX = buf.getIntLE(offset + 0);
+         obj.minY = buf.getIntLE(offset + 4);
+         obj.minZ = buf.getIntLE(offset + 8);
+         obj.maxX = buf.getIntLE(offset + 12);
+         obj.maxY = buf.getIntLE(offset + 16);
+         obj.maxZ = buf.getIntLE(offset + 20);
+         return obj;
+      }
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       return 24;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 24L;
+   }
+
+   public static int getMinX(MemorySegment mem) {
+      return getMinX(mem, 0);
+   }
+
+   public static int getMinX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 0));
+   }
+
+   public static int getMinY(MemorySegment mem) {
+      return getMinY(mem, 0);
+   }
+
+   public static int getMinY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 4));
+   }
+
+   public static int getMinZ(MemorySegment mem) {
+      return getMinZ(mem, 0);
+   }
+
+   public static int getMinZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 8));
+   }
+
+   public static int getMaxX(MemorySegment mem) {
+      return getMaxX(mem, 0);
+   }
+
+   public static int getMaxX(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 12));
+   }
+
+   public static int getMaxY(MemorySegment mem) {
+      return getMaxY(mem, 0);
+   }
+
+   public static int getMaxY(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 16));
+   }
+
+   public static int getMaxZ(MemorySegment mem) {
+      return getMaxZ(mem, 0);
+   }
+
+   public static int getMaxZ(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_INT, (long)(offset + 20));
+   }
+
+   public static EditorSelection toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static EditorSelection toObject(MemorySegment mem, int offset) {
+      if (offset + 24 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("EditorSelection", offset + 24, (int)mem.byteSize());
+      } else {
+         return new EditorSelection(
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 0)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 4)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 8)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 12)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 16)),
+            mem.get(PacketIO.PROTO_INT, (long)(offset + 20))
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -62,6 +140,16 @@ public class EditorSelection {
       buf.writeIntLE(this.maxX);
       buf.writeIntLE(this.maxY);
       buf.writeIntLE(this.maxZ);
+   }
+
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 0), this.minX);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 4), this.minY);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 8), this.minZ);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 12), this.maxX);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 16), this.maxY);
+      mem.set(PacketIO.PROTO_INT, (long)(offset + 20), this.maxZ);
+      return 24;
    }
 
    public int computeSize() {

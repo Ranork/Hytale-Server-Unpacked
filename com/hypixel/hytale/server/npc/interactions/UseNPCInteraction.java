@@ -8,10 +8,10 @@ import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.RootInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.blackboard.Blackboard;
 import com.hypixel.hytale.server.npc.blackboard.view.interaction.InteractionView;
@@ -40,8 +40,8 @@ public class UseNPCInteraction extends SimpleInstantInteraction {
    protected final void firstRun(@Nonnull InteractionType type, @Nonnull InteractionContext context, @Nonnull CooldownHandler cooldownHandler) {
       Ref<EntityStore> ref = context.getEntity();
       CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
-      Player playerComponent = commandBuffer.getComponent(ref, Player.getComponentType());
-      if (playerComponent == null) {
+      PlayerRef playerRefComponent = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
+      if (playerRefComponent == null) {
          HytaleLogger.getLogger().at(Level.INFO).log("UseNPCInteraction requires a Player but was used for: %s", ref);
          context.getState().state = InteractionState.Failed;
       } else {
@@ -58,10 +58,10 @@ public class UseNPCInteraction extends SimpleInstantInteraction {
             } else {
                InteractionView interactionView = commandBuffer.getResource(Blackboard.getResourceType()).getView(InteractionView.class, 0L);
                if (interactionView.getReservationStatus(targetRef, ref, commandBuffer) == ReservationStatus.RESERVED_OTHER) {
-                  playerComponent.sendMessage(Message.translation("server.npc.npc.isBusy").param("roleName", npcComponent.getRoleName()));
+                  playerRefComponent.sendMessage(Message.translation("server.npc.npc.isBusy").param("roleName", npcComponent.getRoleName()));
                   context.getState().state = InteractionState.Failed;
                } else {
-                  npcComponent.getRole().getStateSupport().addInteraction(playerComponent);
+                  npcComponent.getRole().getStateSupport().addInteraction(playerRefComponent.getReference());
                }
             }
          }

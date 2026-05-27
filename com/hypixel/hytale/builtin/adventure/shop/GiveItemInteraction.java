@@ -7,9 +7,10 @@ import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.choices.ChoiceInteraction;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
@@ -56,10 +57,8 @@ public class GiveItemInteraction extends ChoiceInteraction {
 
    @Override
    public void run(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref, @Nonnull PlayerRef playerRef) {
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-      if (playerComponent != null) {
-         playerComponent.getInventory().getCombinedHotbarFirst().addItemStack(new ItemStack(this.itemId, this.quantity));
-      }
+      CombinedItemContainer combinedInventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
+      combinedInventory.addItemStack(new ItemStack(this.itemId, this.quantity));
    }
 
    @Nonnull

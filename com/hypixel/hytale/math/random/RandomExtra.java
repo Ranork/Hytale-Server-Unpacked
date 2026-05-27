@@ -1,7 +1,6 @@
 package com.hypixel.hytale.math.random;
 
 import com.hypixel.hytale.function.function.TriFunction;
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
@@ -14,6 +13,7 @@ import java.util.function.ToDoubleFunction;
 import java.util.function.ToIntFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public final class RandomExtra {
    private RandomExtra() {

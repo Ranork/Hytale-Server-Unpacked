@@ -1,8 +1,8 @@
 package com.hypixel.hytale.server.npc.movement.steeringforces;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.npc.movement.Steering;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SteeringForcePursue extends SteeringForceWithTarget {
    private double stopDistance;
@@ -34,20 +34,20 @@ public class SteeringForcePursue extends SteeringForceWithTarget {
       if (super.compute(output)) {
          output.setTranslation(this.targetPosition);
          Vector3d translation = output.getTranslation();
-         translation.subtract(this.selfPosition);
-         double distanceSquared = translation.squaredLength();
+         translation.sub(this.selfPosition);
+         double distanceSquared = translation.lengthSquared();
          if (distanceSquared <= this.squaredStopDistance) {
             output.clear();
             return false;
          } else {
             double distance = Math.sqrt(distanceSquared);
             if (distanceSquared >= this.squaredSlowdownDistance) {
-               translation.scale(1.0 / distance);
+               translation.mul(1.0 / distance);
                output.clearRotation();
                return true;
             } else {
                double scale = Math.pow((distance - this.stopDistance) / this.distanceDelta, this.invFalloff);
-               translation.setLength(scale);
+               translation.normalize(scale);
                output.clearRotation();
                return true;
             }

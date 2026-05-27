@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.SpawnableWithModelBuilder;
 import com.hypixel.hytale.server.npc.asset.builder.StateMappingHelper;
 import com.hypixel.hytale.server.npc.asset.builder.holder.StringHolder;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import com.hypixel.hytale.server.npc.util.expression.Scope;
@@ -26,6 +27,7 @@ import com.hypixel.hytale.server.spawning.SpawningContext;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -132,6 +134,33 @@ public class BuilderRoleVariant extends SpawnableWithModelBuilder<Role> {
    public SpawnTestResult canSpawn(@Nonnull SpawningContext spawningContext) {
       return this.executeOnSuperRole(
          spawningContext, (roleBuilder, _context) -> ((ISpawnableWithModel)roleBuilder).canSpawn(_context), () -> SpawnTestResult.FAIL_NOT_SPAWNABLE
+      );
+   }
+
+   @Override
+   public void getMovementModes(
+      @Nonnull SpawningContext spawningContext,
+      @Nonnull Set<MovementMode> outSupportedMovementModes,
+      @Nonnull Set<MovementMode> outDefaultMovementModes,
+      @Nonnull Set<MovementMode> outSafeMovementModes
+   ) {
+      this.executeOnSuperRole(spawningContext, (roleBuilder, context) -> {
+         ((ISpawnableWithModel)roleBuilder).getMovementModes(context, outSupportedMovementModes, outDefaultMovementModes, outSafeMovementModes);
+         return null;
+      }, () -> null);
+   }
+
+   @Override
+   public boolean breathesInAir(@Nonnull ExecutionContext context, @Nullable Scope modifierScope) {
+      return this.executeOnSuperRole(
+         context, modifierScope, (roleBuilder, ctx, scope) -> ((ISpawnableWithModel)roleBuilder).breathesInAir(ctx, scope), () -> true
+      );
+   }
+
+   @Override
+   public boolean breathesInWater(@Nonnull ExecutionContext context, @Nullable Scope modifierScope) {
+      return this.executeOnSuperRole(
+         context, modifierScope, (roleBuilder, ctx, scope) -> ((ISpawnableWithModel)roleBuilder).breathesInWater(ctx, scope), () -> false
       );
    }
 
@@ -297,11 +326,13 @@ public class BuilderRoleVariant extends SpawnableWithModelBuilder<Role> {
       Builder<Role> roleBuilder = this.builderManager.getCachedBuilder(this.referenceIndex, Role.class);
       if (!(roleBuilder instanceof ISpawnableWithModel)) {
          return failed.get();
-      } else {
+      } else if (modifierScope != null) {
          Scope oldScope = context.setScope(modifierScope);
          V v = func.apply(roleBuilder, context, modifierScope);
          context.setScope(oldScope);
          return v;
+      } else {
+         return func.apply(roleBuilder, context, null);
       }
    }
 
@@ -311,11 +342,13 @@ public class BuilderRoleVariant extends SpawnableWithModelBuilder<Role> {
       Builder<Role> roleBuilder = this.builderManager.getCachedBuilder(this.referenceIndex, Role.class);
       if (!(roleBuilder instanceof ISpawnableWithModel)) {
          return failed;
-      } else {
+      } else if (modifierScope != null) {
          Scope oldScope = context.setScope(modifierScope);
          int v = func.apply(roleBuilder, context, modifierScope);
          context.setScope(oldScope);
          return v;
+      } else {
+         return func.apply(roleBuilder, context, null);
       }
    }
 }

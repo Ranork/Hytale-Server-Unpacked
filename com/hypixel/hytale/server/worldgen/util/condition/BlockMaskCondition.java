@@ -110,7 +110,7 @@ public class BlockMaskCondition {
          this(false, false);
       }
 
-      private MaskEntry(boolean any, boolean replace) {
+      public MaskEntry(boolean any, boolean replace) {
          this.any = any;
          this.replace = replace;
       }

@@ -21,9 +21,8 @@ import com.hypixel.hytale.server.core.asset.type.blocktype.config.bench.Structur
 import com.hypixel.hytale.server.core.asset.type.item.config.BlockGroup;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.windows.ItemContainerWindow;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
@@ -150,7 +149,7 @@ public class StructuralCraftingWindow extends CraftingWindow implements ItemCont
                   }
 
                   MaterialQuantity primaryOutput = recipe.getPrimaryOutput();
-                  String primaryOutputItemId = primaryOutput.getItemId();
+                  String primaryOutputItemId = primaryOutput != null ? primaryOutput.getItemId() : null;
                   if (primaryOutputItemId != null) {
                      Item primaryOutputItem = Item.getAssetMap().getAsset(primaryOutputItemId);
                      if (primaryOutputItem != null) {
@@ -219,36 +218,21 @@ public class StructuralCraftingWindow extends CraftingWindow implements ItemCont
    @Override
    public boolean onOpen0(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
       super.onOpen0(ref, store);
-      Player playerComponent = store.getComponent(ref, Player.getComponentType());
-
-      assert playerComponent != null;
-
-      Inventory inventory = playerComponent.getInventory();
-      this.inventoryRegistration = inventory.getCombinedHotbarFirst()
-         .registerChangeEvent(
-            event -> {
-               this.windowData
-                  .add(
-                     "inventoryHints",
-                     CraftingManager.generateInventoryHints(CraftingPlugin.getBenchRecipes(this.bench), 0, inventory.getCombinedHotbarFirst())
-                  );
-               this.invalidate();
-            }
-         );
-      this.windowData
-         .add("inventoryHints", CraftingManager.generateInventoryHints(CraftingPlugin.getBenchRecipes(this.bench), 0, inventory.getCombinedHotbarFirst()));
+      CombinedItemContainer combinedInventory = InventoryComponent.getCombined(store, ref, InventoryComponent.HOTBAR_FIRST);
+      this.inventoryRegistration = combinedInventory.registerChangeEvent(event -> {
+         this.windowData.add("inventoryHints", CraftingManager.generateInventoryHints(CraftingPlugin.getBenchRecipes(this.bench), 0, combinedInventory));
+         this.invalidate();
+      });
+      this.windowData.add("inventoryHints", CraftingManager.generateInventoryHints(CraftingPlugin.getBenchRecipes(this.bench), 0, combinedInventory));
       return true;
    }
 
    @Override
    public void onClose0(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       super.onClose0(ref, componentAccessor);
-      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
-
-      assert playerComponent != null;
-
+      CombinedItemContainer combinedInventory = InventoryComponent.getCombined(componentAccessor, ref, InventoryComponent.HOTBAR_FIRST);
       List<ItemStack> itemStacks = this.inputContainer.dropAllItemStacks();
-      SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, playerComponent.getInventory().getCombinedHotbarFirst(), itemStacks);
+      SimpleItemContainer.addOrDropItemStacks(componentAccessor, ref, combinedInventory, itemStacks);
       CraftingManager craftingManagerComponent = componentAccessor.getComponent(ref, CraftingManager.getComponentType());
 
       assert craftingManagerComponent != null;

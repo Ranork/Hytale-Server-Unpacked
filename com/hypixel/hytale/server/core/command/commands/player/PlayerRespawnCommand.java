@@ -21,6 +21,7 @@ public class PlayerRespawnCommand extends AbstractPlayerCommand {
 
    public PlayerRespawnCommand() {
       super("respawn", "server.commands.player.respawn.desc");
+      this.setPermissionGroups("hytale:Adventurer");
       this.addUsageVariant(new PlayerRespawnCommand.PlayerRespawnOtherCommand());
    }
 

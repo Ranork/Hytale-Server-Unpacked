@@ -1,7 +1,7 @@
 package com.hypixel.hytale.builtin.worldgen.modifier;
 
 import com.hypixel.hytale.assetstore.AssetPack;
-import com.hypixel.hytale.builtin.worldgen.modifier.event.EventType;
+import com.hypixel.hytale.builtin.worldgen.modifier.content.Content;
 import com.hypixel.hytale.builtin.worldgen.modifier.event.ModifyEvent;
 import com.hypixel.hytale.builtin.worldgen.modifier.op.Op;
 import com.hypixel.hytale.server.core.asset.AssetModule;
@@ -20,7 +20,7 @@ public final class EventHandler implements AutoCloseable {
    private static final ListPool<EventHandler.Modifier> POOL = new ListPool<>(5, EventHandler.Modifier.EMPTY_ARRAY);
    private static final ListPool<EventHandler.PriorityEntry> ENTRY_POOL = new ListPool<>(5, EventHandler.PriorityEntry.EMPTY_ARRAY);
    @Nonnull
-   private final EnumMap<EventType, EventHandler.Modifier[]> events = new EnumMap<>(EventType.class);
+   private final EnumMap<Content.Type, EventHandler.Modifier[]> events = new EnumMap<>(Content.Type.class);
 
    private EventHandler() {
    }
@@ -44,7 +44,7 @@ public final class EventHandler implements AutoCloseable {
 
          Collections.sort(entries);
 
-         for (EventType type : EventType.VALUES) {
+         for (Content.Type type : Content.Type.VALUES) {
             try (ListPool.Resource<EventHandler.Modifier> modifiers = POOL.acquire()) {
                for (int i = 0; i < entries.size(); i++) {
                   EventHandler.PriorityEntry entryx = (EventHandler.PriorityEntry)entries.get(i);
@@ -61,7 +61,7 @@ public final class EventHandler implements AutoCloseable {
    }
 
    @Nonnull
-   public EventHandler.Modifier[] get(@Nonnull EventType type) {
+   public EventHandler.Modifier[] get(@Nonnull Content.Type type) {
       return this.events.getOrDefault(type, EventHandler.Modifier.EMPTY_ARRAY);
    }
 

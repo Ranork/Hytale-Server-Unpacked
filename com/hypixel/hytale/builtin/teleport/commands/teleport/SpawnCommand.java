@@ -3,9 +3,8 @@ package com.hypixel.hytale.builtin.teleport.commands.teleport;
 import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -24,6 +23,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.spawn.ISpawnProvider;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class SpawnCommand extends AbstractPlayerCommand {
    @Nonnull
@@ -32,6 +32,7 @@ public class SpawnCommand extends AbstractPlayerCommand {
    public SpawnCommand() {
       super("spawn", "server.commands.spawn.desc");
       this.requirePermission(HytalePermissions.fromCommand("spawn.self"));
+      this.setPermissionGroups("hytale:Builder");
       this.addUsageVariant(new SpawnCommand.SpawnOtherCommand());
       this.addSubCommand(new SpawnSetCommand());
       this.addSubCommand(new SpawnSetDefaultCommand());
@@ -50,16 +51,14 @@ public class SpawnCommand extends AbstractPlayerCommand {
 
       assert headRotationComponent != null;
 
-      Vector3d previousPos = transformComponent.getPosition().clone();
-      Vector3f previousRotation = headRotationComponent.getRotation().clone();
+      Vector3d previousPos = new Vector3d(transformComponent.getPosition());
+      Rotation3f previousRotation = new Rotation3f(headRotationComponent.getRotation());
       TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
       teleportHistoryComponent.append(world, previousPos, previousRotation, "World " + world.getName() + "'s spawn");
       Teleport teleportComponent = Teleport.createForPlayer(world, spawnTransform);
       store.addComponent(ref, Teleport.getComponentType(), teleportComponent);
       Vector3d position = spawnTransform.getPosition();
-      context.sendMessage(
-         Message.translation("server.commands.spawn.teleported").param("x", position.getX()).param("y", position.getY()).param("z", position.getZ())
-      );
+      context.sendMessage(Message.translation("server.commands.spawn.teleported").param("x", position.x()).param("y", position.y()).param("z", position.z()));
    }
 
    private static Transform resolveSpawn(
@@ -121,8 +120,8 @@ public class SpawnCommand extends AbstractPlayerCommand {
 
                      assert headRotationComponent != null;
 
-                     Vector3d previousPos = transformComponent.getPosition().clone();
-                     Vector3f previousRotation = headRotationComponent.getRotation().clone();
+                     Vector3d previousPos = new Vector3d(transformComponent.getPosition());
+                     Rotation3f previousRotation = new Rotation3f(headRotationComponent.getRotation());
                      TeleportHistory teleportHistoryComponent = store.ensureAndGetComponent(ref, TeleportHistory.getComponentType());
                      teleportHistoryComponent.append(world, previousPos, previousRotation, "World " + world.getName() + "'s spawn");
                      Teleport teleportComponent = Teleport.createForPlayer(world, spawn);
@@ -131,9 +130,9 @@ public class SpawnCommand extends AbstractPlayerCommand {
                      context.sendMessage(
                         Message.translation("server.commands.spawn.teleportedOther")
                            .param("username", targetPlayerRef.getUsername())
-                           .param("x", position.getX())
-                           .param("y", position.getY())
-                           .param("z", position.getZ())
+                           .param("x", position.x())
+                           .param("y", position.y())
+                           .param("z", position.z())
                      );
                   }
                }

@@ -1,7 +1,9 @@
 package com.hypixel.hytale.protocol;
 
+import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public class IntangibleUpdate extends ComponentUpdate {
@@ -20,10 +22,31 @@ public class IntangibleUpdate extends ComponentUpdate {
       return 0;
    }
 
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 0L;
+   }
+
+   public static IntangibleUpdate toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static IntangibleUpdate toObject(MemorySegment mem, int offset) {
+      if (offset + 0 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("IntangibleUpdate", offset + 0, (int)mem.byteSize());
+      } else {
+         return new IntangibleUpdate();
+      }
+   }
+
    @Override
    public int serialize(@Nonnull ByteBuf buf) {
       int startPos = buf.writerIndex();
       return buf.writerIndex() - startPos;
+   }
+
+   @Override
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      return 0;
    }
 
    @Override

@@ -1,8 +1,8 @@
 package com.hypixel.hytale.server.core.prefab.selection.mask;
 
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.universe.world.accessor.ChunkAccessor;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class MultiBlockMask extends BlockMask {
    private static final String BLOCK_MASK_SEPARATOR = ";";

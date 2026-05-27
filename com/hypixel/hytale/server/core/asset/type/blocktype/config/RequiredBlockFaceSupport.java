@@ -7,13 +7,14 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.common.util.ArrayUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.protocol.SupportMatch;
 import com.hypixel.hytale.server.core.asset.type.blockset.config.BlockSet;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import java.util.Arrays;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class RequiredBlockFaceSupport implements NetworkSerializable<com.hypixel.hytale.protocol.RequiredBlockFaceSupport> {
    public static final BuilderCodec<RequiredBlockFaceSupport> CODEC = BuilderCodec.builder(RequiredBlockFaceSupport.class, RequiredBlockFaceSupport::new)
@@ -57,7 +58,7 @@ public class RequiredBlockFaceSupport implements NetworkSerializable<com.hypixel
          requiredBlockFaceSupport -> requiredBlockFaceSupport.rotate
       )
       .addField(
-         new KeyedCodec<>("Filler", new ArrayCodec<>(Vector3i.CODEC, Vector3i[]::new)),
+         new KeyedCodec<>("Filler", new ArrayCodec<>(Vector3iUtil.CODEC, Vector3i[]::new)),
          (blockFaceSupport, o) -> blockFaceSupport.filler = o,
          blockFaceSupport -> blockFaceSupport.filler
       )

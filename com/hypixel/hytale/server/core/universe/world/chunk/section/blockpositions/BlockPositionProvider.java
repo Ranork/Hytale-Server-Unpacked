@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.function.consumer.IntObjectConsumer;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.modules.LegacyModule;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.chunk.section.BlockSection;
@@ -19,6 +18,7 @@ import java.util.List;
 import java.util.function.BiPredicate;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class BlockPositionProvider implements Component<ChunkStore> {
    private final BitSet searchedBlockSets;
@@ -68,7 +68,7 @@ public class BlockPositionProvider implements Component<ChunkStore> {
                IBlockPositionData entry = data.get(i);
                double entryY = entry.getYCentre();
                if (Math.abs(pos.y - entryY) <= yRange
-                  && pos.distanceSquaredTo(entry.getXCentre(), entryY, entry.getZCentre()) <= range2
+                  && pos.distanceSquared(entry.getXCentre(), entryY, entry.getZCentre()) <= range2
                   && (filter == null || !filter.test(entry, obj))) {
                   resultList.add(entry);
                }

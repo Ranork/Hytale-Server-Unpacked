@@ -5,6 +5,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -127,270 +128,367 @@ public class Model {
 
    @Nonnull
    public static Model deserialize(@Nonnull ByteBuf buf, int offset) {
-      Model obj = new Model();
-      byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
-      obj.scale = buf.getFloatLE(offset + 2);
-      obj.eyeHeight = buf.getFloatLE(offset + 6);
-      obj.crouchOffset = buf.getFloatLE(offset + 10);
-      obj.sittingOffset = buf.getFloatLE(offset + 14);
-      obj.sleepingOffset = buf.getFloatLE(offset + 18);
-      if ((nullBits[0] & 1) != 0) {
-         obj.hitbox = Hitbox.deserialize(buf, offset + 22);
-      }
-
-      if ((nullBits[0] & 2) != 0) {
-         obj.light = ColorLight.deserialize(buf, offset + 46);
-      }
-
-      obj.phobia = Phobia.fromValue(buf.getByte(offset + 50));
-      if ((nullBits[0] & 4) != 0) {
-         int varPos0 = offset + 99 + buf.getIntLE(offset + 51);
-         int assetIdLen = VarInt.peek(buf, varPos0);
-         if (assetIdLen < 0) {
-            throw ProtocolException.negativeLength("AssetId", assetIdLen);
+      if (buf.readableBytes() - offset < 99) {
+         throw ProtocolException.bufferTooSmall("Model", 99, buf.readableBytes() - offset);
+      } else {
+         Model obj = new Model();
+         byte[] nullBits = PacketIO.readBytes(buf, offset, 2);
+         obj.scale = buf.getFloatLE(offset + 2);
+         obj.eyeHeight = buf.getFloatLE(offset + 6);
+         obj.crouchOffset = buf.getFloatLE(offset + 10);
+         obj.sittingOffset = buf.getFloatLE(offset + 14);
+         obj.sleepingOffset = buf.getFloatLE(offset + 18);
+         if ((nullBits[0] & 1) != 0) {
+            obj.hitbox = Hitbox.deserialize(buf, offset + 22);
          }
 
-         if (assetIdLen > 4096000) {
-            throw ProtocolException.stringTooLong("AssetId", assetIdLen, 4096000);
+         if ((nullBits[0] & 2) != 0) {
+            obj.light = ColorLight.deserialize(buf, offset + 46);
          }
 
-         obj.assetId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
-      }
-
-      if ((nullBits[0] & 8) != 0) {
-         int varPos1 = offset + 99 + buf.getIntLE(offset + 55);
-         int pathLen = VarInt.peek(buf, varPos1);
-         if (pathLen < 0) {
-            throw ProtocolException.negativeLength("Path", pathLen);
-         }
-
-         if (pathLen > 4096000) {
-            throw ProtocolException.stringTooLong("Path", pathLen, 4096000);
-         }
-
-         obj.path = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
-      }
-
-      if ((nullBits[0] & 16) != 0) {
-         int varPos2 = offset + 99 + buf.getIntLE(offset + 59);
-         int textureLen = VarInt.peek(buf, varPos2);
-         if (textureLen < 0) {
-            throw ProtocolException.negativeLength("Texture", textureLen);
-         }
-
-         if (textureLen > 4096000) {
-            throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
-         }
-
-         obj.texture = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
-      }
-
-      if ((nullBits[0] & 32) != 0) {
-         int varPos3 = offset + 99 + buf.getIntLE(offset + 63);
-         int gradientSetLen = VarInt.peek(buf, varPos3);
-         if (gradientSetLen < 0) {
-            throw ProtocolException.negativeLength("GradientSet", gradientSetLen);
-         }
-
-         if (gradientSetLen > 4096000) {
-            throw ProtocolException.stringTooLong("GradientSet", gradientSetLen, 4096000);
-         }
-
-         obj.gradientSet = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
-      }
-
-      if ((nullBits[0] & 64) != 0) {
-         int varPos4 = offset + 99 + buf.getIntLE(offset + 67);
-         int gradientIdLen = VarInt.peek(buf, varPos4);
-         if (gradientIdLen < 0) {
-            throw ProtocolException.negativeLength("GradientId", gradientIdLen);
-         }
-
-         if (gradientIdLen > 4096000) {
-            throw ProtocolException.stringTooLong("GradientId", gradientIdLen, 4096000);
-         }
-
-         obj.gradientId = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
-      }
-
-      if ((nullBits[0] & 128) != 0) {
-         int varPos5 = offset + 99 + buf.getIntLE(offset + 71);
-         obj.camera = CameraSettings.deserialize(buf, varPos5);
-      }
-
-      if ((nullBits[1] & 1) != 0) {
-         int varPos6 = offset + 99 + buf.getIntLE(offset + 75);
-         int animationSetsCount = VarInt.peek(buf, varPos6);
-         if (animationSetsCount < 0) {
-            throw ProtocolException.negativeLength("AnimationSets", animationSetsCount);
-         }
-
-         if (animationSetsCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("AnimationSets", animationSetsCount, 4096000);
-         }
-
-         int varIntLen = VarInt.length(buf, varPos6);
-         obj.animationSets = new HashMap<>(animationSetsCount);
-         int dictPos = varPos6 + varIntLen;
-
-         for (int i = 0; i < animationSetsCount; i++) {
-            int keyLen = VarInt.peek(buf, dictPos);
-            if (keyLen < 0) {
-               throw ProtocolException.negativeLength("key", keyLen);
+         obj.phobia = Phobia.fromValue(buf.getByte(offset + 50));
+         if ((nullBits[0] & 4) != 0) {
+            int varPosBase0 = buf.getIntLE(offset + 51);
+            if (varPosBase0 < 0 || varPosBase0 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("AssetId", varPosBase0, buf.readableBytes());
             }
 
-            if (keyLen > 4096000) {
-               throw ProtocolException.stringTooLong("key", keyLen, 4096000);
+            int varPos0 = offset + 99 + varPosBase0;
+            int assetIdLen = VarInt.peek(buf, varPos0);
+            if (assetIdLen < 0) {
+               throw ProtocolException.invalidVarInt("AssetId");
             }
 
-            int keyVarLen = VarInt.length(buf, dictPos);
-            String key = PacketIO.readVarString(buf, dictPos);
-            dictPos += keyVarLen + keyLen;
-            AnimationSet val = AnimationSet.deserialize(buf, dictPos);
-            dictPos += AnimationSet.computeBytesConsumed(buf, dictPos);
-            if (obj.animationSets.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("animationSets", key);
+            int assetIdVarIntLen = VarInt.size(assetIdLen);
+            if (assetIdLen > 4096000) {
+               throw ProtocolException.stringTooLong("AssetId", assetIdLen, 4096000);
+            }
+
+            if (varPos0 + assetIdVarIntLen + assetIdLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("AssetId", varPos0 + assetIdVarIntLen + assetIdLen, buf.readableBytes());
+            }
+
+            obj.assetId = PacketIO.readVarString(buf, varPos0, PacketIO.UTF8);
+         }
+
+         if ((nullBits[0] & 8) != 0) {
+            int varPosBase1 = buf.getIntLE(offset + 55);
+            if (varPosBase1 < 0 || varPosBase1 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("Path", varPosBase1, buf.readableBytes());
+            }
+
+            int varPos1 = offset + 99 + varPosBase1;
+            int pathLen = VarInt.peek(buf, varPos1);
+            if (pathLen < 0) {
+               throw ProtocolException.invalidVarInt("Path");
+            }
+
+            int pathVarIntLen = VarInt.size(pathLen);
+            if (pathLen > 4096000) {
+               throw ProtocolException.stringTooLong("Path", pathLen, 4096000);
+            }
+
+            if (varPos1 + pathVarIntLen + pathLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Path", varPos1 + pathVarIntLen + pathLen, buf.readableBytes());
+            }
+
+            obj.path = PacketIO.readVarString(buf, varPos1, PacketIO.UTF8);
+         }
+
+         if ((nullBits[0] & 16) != 0) {
+            int varPosBase2 = buf.getIntLE(offset + 59);
+            if (varPosBase2 < 0 || varPosBase2 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("Texture", varPosBase2, buf.readableBytes());
+            }
+
+            int varPos2 = offset + 99 + varPosBase2;
+            int textureLen = VarInt.peek(buf, varPos2);
+            if (textureLen < 0) {
+               throw ProtocolException.invalidVarInt("Texture");
+            }
+
+            int textureVarIntLen = VarInt.size(textureLen);
+            if (textureLen > 4096000) {
+               throw ProtocolException.stringTooLong("Texture", textureLen, 4096000);
+            }
+
+            if (varPos2 + textureVarIntLen + textureLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Texture", varPos2 + textureVarIntLen + textureLen, buf.readableBytes());
+            }
+
+            obj.texture = PacketIO.readVarString(buf, varPos2, PacketIO.UTF8);
+         }
+
+         if ((nullBits[0] & 32) != 0) {
+            int varPosBase3 = buf.getIntLE(offset + 63);
+            if (varPosBase3 < 0 || varPosBase3 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("GradientSet", varPosBase3, buf.readableBytes());
+            }
+
+            int varPos3 = offset + 99 + varPosBase3;
+            int gradientSetLen = VarInt.peek(buf, varPos3);
+            if (gradientSetLen < 0) {
+               throw ProtocolException.invalidVarInt("GradientSet");
+            }
+
+            int gradientSetVarIntLen = VarInt.size(gradientSetLen);
+            if (gradientSetLen > 4096000) {
+               throw ProtocolException.stringTooLong("GradientSet", gradientSetLen, 4096000);
+            }
+
+            if (varPos3 + gradientSetVarIntLen + gradientSetLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("GradientSet", varPos3 + gradientSetVarIntLen + gradientSetLen, buf.readableBytes());
+            }
+
+            obj.gradientSet = PacketIO.readVarString(buf, varPos3, PacketIO.UTF8);
+         }
+
+         if ((nullBits[0] & 64) != 0) {
+            int varPosBase4 = buf.getIntLE(offset + 67);
+            if (varPosBase4 < 0 || varPosBase4 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("GradientId", varPosBase4, buf.readableBytes());
+            }
+
+            int varPos4 = offset + 99 + varPosBase4;
+            int gradientIdLen = VarInt.peek(buf, varPos4);
+            if (gradientIdLen < 0) {
+               throw ProtocolException.invalidVarInt("GradientId");
+            }
+
+            int gradientIdVarIntLen = VarInt.size(gradientIdLen);
+            if (gradientIdLen > 4096000) {
+               throw ProtocolException.stringTooLong("GradientId", gradientIdLen, 4096000);
+            }
+
+            if (varPos4 + gradientIdVarIntLen + gradientIdLen > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("GradientId", varPos4 + gradientIdVarIntLen + gradientIdLen, buf.readableBytes());
+            }
+
+            obj.gradientId = PacketIO.readVarString(buf, varPos4, PacketIO.UTF8);
+         }
+
+         if ((nullBits[0] & 128) != 0) {
+            int varPosBase5 = buf.getIntLE(offset + 71);
+            if (varPosBase5 < 0 || varPosBase5 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("Camera", varPosBase5, buf.readableBytes());
+            }
+
+            int varPos5 = offset + 99 + varPosBase5;
+            obj.camera = CameraSettings.deserialize(buf, varPos5);
+         }
+
+         if ((nullBits[1] & 1) != 0) {
+            int varPosBase6 = buf.getIntLE(offset + 75);
+            if (varPosBase6 < 0 || varPosBase6 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("AnimationSets", varPosBase6, buf.readableBytes());
+            }
+
+            int varPos6 = offset + 99 + varPosBase6;
+            int animationSetsCount = VarInt.peek(buf, varPos6);
+            if (animationSetsCount < 0) {
+               throw ProtocolException.invalidVarInt("AnimationSets");
+            }
+
+            int varIntLen = VarInt.size(animationSetsCount);
+            if (animationSetsCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("AnimationSets", animationSetsCount, 4096000);
+            }
+
+            obj.animationSets = new HashMap<>(animationSetsCount);
+            int dictPos = varPos6 + varIntLen;
+
+            for (int i = 0; i < animationSetsCount; i++) {
+               int keyLen = VarInt.peek(buf, dictPos);
+               if (keyLen < 0) {
+                  throw ProtocolException.invalidVarInt("key");
+               }
+
+               int keyVarLen = VarInt.size(keyLen);
+               if (keyLen > 4096000) {
+                  throw ProtocolException.stringTooLong("key", keyLen, 4096000);
+               }
+
+               if (dictPos + keyVarLen + keyLen > buf.readableBytes()) {
+                  throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLen + keyLen, buf.readableBytes());
+               }
+
+               String key = PacketIO.readVarString(buf, dictPos);
+               dictPos += keyVarLen + keyLen;
+               AnimationSet val = AnimationSet.deserialize(buf, dictPos);
+               dictPos += AnimationSet.computeBytesConsumed(buf, dictPos);
+               if (obj.animationSets.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("animationSets", key);
+               }
             }
          }
+
+         if ((nullBits[1] & 2) != 0) {
+            int varPosBase7 = buf.getIntLE(offset + 79);
+            if (varPosBase7 < 0 || varPosBase7 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("Attachments", varPosBase7, buf.readableBytes());
+            }
+
+            int varPos7 = offset + 99 + varPosBase7;
+            int attachmentsCount = VarInt.peek(buf, varPos7);
+            if (attachmentsCount < 0) {
+               throw ProtocolException.invalidVarInt("Attachments");
+            }
+
+            int varIntLen = VarInt.size(attachmentsCount);
+            if (attachmentsCount > 4096000) {
+               throw ProtocolException.arrayTooLong("Attachments", attachmentsCount, 4096000);
+            }
+
+            if (varPos7 + varIntLen + attachmentsCount * 1L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Attachments", varPos7 + varIntLen + attachmentsCount * 1, buf.readableBytes());
+            }
+
+            obj.attachments = new ModelAttachment[attachmentsCount];
+            int elemPos = varPos7 + varIntLen;
+
+            for (int i = 0; i < attachmentsCount; i++) {
+               obj.attachments[i] = ModelAttachment.deserialize(buf, elemPos);
+               elemPos += ModelAttachment.computeBytesConsumed(buf, elemPos);
+            }
+         }
+
+         if ((nullBits[1] & 4) != 0) {
+            int varPosBase8 = buf.getIntLE(offset + 83);
+            if (varPosBase8 < 0 || varPosBase8 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("Particles", varPosBase8, buf.readableBytes());
+            }
+
+            int varPos8 = offset + 99 + varPosBase8;
+            int particlesCount = VarInt.peek(buf, varPos8);
+            if (particlesCount < 0) {
+               throw ProtocolException.invalidVarInt("Particles");
+            }
+
+            int varIntLenx = VarInt.size(particlesCount);
+            if (particlesCount > 4096000) {
+               throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
+            }
+
+            if (varPos8 + varIntLenx + particlesCount * 34L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Particles", varPos8 + varIntLenx + particlesCount * 34, buf.readableBytes());
+            }
+
+            obj.particles = new ModelParticle[particlesCount];
+            int elemPos = varPos8 + varIntLenx;
+
+            for (int i = 0; i < particlesCount; i++) {
+               obj.particles[i] = ModelParticle.deserialize(buf, elemPos);
+               elemPos += ModelParticle.computeBytesConsumed(buf, elemPos);
+            }
+         }
+
+         if ((nullBits[1] & 8) != 0) {
+            int varPosBase9 = buf.getIntLE(offset + 87);
+            if (varPosBase9 < 0 || varPosBase9 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("Trails", varPosBase9, buf.readableBytes());
+            }
+
+            int varPos9 = offset + 99 + varPosBase9;
+            int trailsCount = VarInt.peek(buf, varPos9);
+            if (trailsCount < 0) {
+               throw ProtocolException.invalidVarInt("Trails");
+            }
+
+            int varIntLenxx = VarInt.size(trailsCount);
+            if (trailsCount > 4096000) {
+               throw ProtocolException.arrayTooLong("Trails", trailsCount, 4096000);
+            }
+
+            if (varPos9 + varIntLenxx + trailsCount * 27L > buf.readableBytes()) {
+               throw ProtocolException.bufferTooSmall("Trails", varPos9 + varIntLenxx + trailsCount * 27, buf.readableBytes());
+            }
+
+            obj.trails = new ModelTrail[trailsCount];
+            int elemPos = varPos9 + varIntLenxx;
+
+            for (int i = 0; i < trailsCount; i++) {
+               obj.trails[i] = ModelTrail.deserialize(buf, elemPos);
+               elemPos += ModelTrail.computeBytesConsumed(buf, elemPos);
+            }
+         }
+
+         if ((nullBits[1] & 16) != 0) {
+            int varPosBase10 = buf.getIntLE(offset + 91);
+            if (varPosBase10 < 0 || varPosBase10 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("DetailBoxes", varPosBase10, buf.readableBytes());
+            }
+
+            int varPos10 = offset + 99 + varPosBase10;
+            int detailBoxesCount = VarInt.peek(buf, varPos10);
+            if (detailBoxesCount < 0) {
+               throw ProtocolException.invalidVarInt("DetailBoxes");
+            }
+
+            int varIntLenxxx = VarInt.size(detailBoxesCount);
+            if (detailBoxesCount > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("DetailBoxes", detailBoxesCount, 4096000);
+            }
+
+            obj.detailBoxes = new HashMap<>(detailBoxesCount);
+            int dictPos = varPos10 + varIntLenxxx;
+
+            for (int i = 0; i < detailBoxesCount; i++) {
+               int keyLenx = VarInt.peek(buf, dictPos);
+               if (keyLenx < 0) {
+                  throw ProtocolException.invalidVarInt("key");
+               }
+
+               int keyVarLenx = VarInt.size(keyLenx);
+               if (keyLenx > 4096000) {
+                  throw ProtocolException.stringTooLong("key", keyLenx, 4096000);
+               }
+
+               if (dictPos + keyVarLenx + keyLenx > buf.readableBytes()) {
+                  throw ProtocolException.bufferTooSmall("key", dictPos + keyVarLenx + keyLenx, buf.readableBytes());
+               }
+
+               String key = PacketIO.readVarString(buf, dictPos);
+               dictPos += keyVarLenx + keyLenx;
+               int valLen = VarInt.peek(buf, dictPos);
+               if (valLen < 0) {
+                  throw ProtocolException.invalidVarInt("val");
+               }
+
+               int valVarLen = VarInt.size(valLen);
+               if (valLen > 64) {
+                  throw ProtocolException.arrayTooLong("val", valLen, 64);
+               }
+
+               if (dictPos + valVarLen + valLen * 37L > buf.readableBytes()) {
+                  throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen * 37, buf.readableBytes());
+               }
+
+               dictPos += valVarLen;
+               DetailBox[] val = new DetailBox[valLen];
+
+               for (int valIdx = 0; valIdx < valLen; valIdx++) {
+                  val[valIdx] = DetailBox.deserialize(buf, dictPos);
+                  dictPos += DetailBox.computeBytesConsumed(buf, dictPos);
+               }
+
+               if (obj.detailBoxes.put(key, val) != null) {
+                  throw ProtocolException.duplicateKey("detailBoxes", key);
+               }
+            }
+         }
+
+         if ((nullBits[1] & 32) != 0) {
+            int varPosBase11 = buf.getIntLE(offset + 95);
+            if (varPosBase11 < 0 || varPosBase11 > buf.writerIndex() - offset - 99) {
+               throw ProtocolException.invalidOffset("PhobiaModel", varPosBase11, buf.readableBytes());
+            }
+
+            int varPos11 = offset + 99 + varPosBase11;
+            obj.phobiaModel = deserialize(buf, varPos11);
+         }
+
+         return obj;
       }
-
-      if ((nullBits[1] & 2) != 0) {
-         int varPos7 = offset + 99 + buf.getIntLE(offset + 79);
-         int attachmentsCount = VarInt.peek(buf, varPos7);
-         if (attachmentsCount < 0) {
-            throw ProtocolException.negativeLength("Attachments", attachmentsCount);
-         }
-
-         if (attachmentsCount > 4096000) {
-            throw ProtocolException.arrayTooLong("Attachments", attachmentsCount, 4096000);
-         }
-
-         int varIntLen = VarInt.length(buf, varPos7);
-         if (varPos7 + varIntLen + attachmentsCount * 1L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Attachments", varPos7 + varIntLen + attachmentsCount * 1, buf.readableBytes());
-         }
-
-         obj.attachments = new ModelAttachment[attachmentsCount];
-         int elemPos = varPos7 + varIntLen;
-
-         for (int i = 0; i < attachmentsCount; i++) {
-            obj.attachments[i] = ModelAttachment.deserialize(buf, elemPos);
-            elemPos += ModelAttachment.computeBytesConsumed(buf, elemPos);
-         }
-      }
-
-      if ((nullBits[1] & 4) != 0) {
-         int varPos8 = offset + 99 + buf.getIntLE(offset + 83);
-         int particlesCount = VarInt.peek(buf, varPos8);
-         if (particlesCount < 0) {
-            throw ProtocolException.negativeLength("Particles", particlesCount);
-         }
-
-         if (particlesCount > 4096000) {
-            throw ProtocolException.arrayTooLong("Particles", particlesCount, 4096000);
-         }
-
-         int varIntLen = VarInt.length(buf, varPos8);
-         if (varPos8 + varIntLen + particlesCount * 34L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Particles", varPos8 + varIntLen + particlesCount * 34, buf.readableBytes());
-         }
-
-         obj.particles = new ModelParticle[particlesCount];
-         int elemPos = varPos8 + varIntLen;
-
-         for (int i = 0; i < particlesCount; i++) {
-            obj.particles[i] = ModelParticle.deserialize(buf, elemPos);
-            elemPos += ModelParticle.computeBytesConsumed(buf, elemPos);
-         }
-      }
-
-      if ((nullBits[1] & 8) != 0) {
-         int varPos9 = offset + 99 + buf.getIntLE(offset + 87);
-         int trailsCount = VarInt.peek(buf, varPos9);
-         if (trailsCount < 0) {
-            throw ProtocolException.negativeLength("Trails", trailsCount);
-         }
-
-         if (trailsCount > 4096000) {
-            throw ProtocolException.arrayTooLong("Trails", trailsCount, 4096000);
-         }
-
-         int varIntLen = VarInt.length(buf, varPos9);
-         if (varPos9 + varIntLen + trailsCount * 27L > buf.readableBytes()) {
-            throw ProtocolException.bufferTooSmall("Trails", varPos9 + varIntLen + trailsCount * 27, buf.readableBytes());
-         }
-
-         obj.trails = new ModelTrail[trailsCount];
-         int elemPos = varPos9 + varIntLen;
-
-         for (int i = 0; i < trailsCount; i++) {
-            obj.trails[i] = ModelTrail.deserialize(buf, elemPos);
-            elemPos += ModelTrail.computeBytesConsumed(buf, elemPos);
-         }
-      }
-
-      if ((nullBits[1] & 16) != 0) {
-         int varPos10 = offset + 99 + buf.getIntLE(offset + 91);
-         int detailBoxesCount = VarInt.peek(buf, varPos10);
-         if (detailBoxesCount < 0) {
-            throw ProtocolException.negativeLength("DetailBoxes", detailBoxesCount);
-         }
-
-         if (detailBoxesCount > 4096000) {
-            throw ProtocolException.dictionaryTooLarge("DetailBoxes", detailBoxesCount, 4096000);
-         }
-
-         int varIntLen = VarInt.length(buf, varPos10);
-         obj.detailBoxes = new HashMap<>(detailBoxesCount);
-         int dictPos = varPos10 + varIntLen;
-
-         for (int i = 0; i < detailBoxesCount; i++) {
-            int keyLenx = VarInt.peek(buf, dictPos);
-            if (keyLenx < 0) {
-               throw ProtocolException.negativeLength("key", keyLenx);
-            }
-
-            if (keyLenx > 4096000) {
-               throw ProtocolException.stringTooLong("key", keyLenx, 4096000);
-            }
-
-            int keyVarLen = VarInt.length(buf, dictPos);
-            String key = PacketIO.readVarString(buf, dictPos);
-            dictPos += keyVarLen + keyLenx;
-            int valLen = VarInt.peek(buf, dictPos);
-            if (valLen < 0) {
-               throw ProtocolException.negativeLength("val", valLen);
-            }
-
-            if (valLen > 64) {
-               throw ProtocolException.arrayTooLong("val", valLen, 64);
-            }
-
-            int valVarLen = VarInt.length(buf, dictPos);
-            if (dictPos + valVarLen + valLen * 37L > buf.readableBytes()) {
-               throw ProtocolException.bufferTooSmall("val", dictPos + valVarLen + valLen * 37, buf.readableBytes());
-            }
-
-            dictPos += valVarLen;
-            DetailBox[] val = new DetailBox[valLen];
-
-            for (int valIdx = 0; valIdx < valLen; valIdx++) {
-               val[valIdx] = DetailBox.deserialize(buf, dictPos);
-               dictPos += DetailBox.computeBytesConsumed(buf, dictPos);
-            }
-
-            if (obj.detailBoxes.put(key, val) != null) {
-               throw ProtocolException.duplicateKey("detailBoxes", key);
-            }
-         }
-      }
-
-      if ((nullBits[1] & 32) != 0) {
-         int varPos11 = offset + 99 + buf.getIntLE(offset + 95);
-         obj.phobiaModel = deserialize(buf, varPos11);
-      }
-
-      return obj;
    }
 
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
@@ -398,9 +496,13 @@ public class Model {
       int maxEnd = 99;
       if ((nullBits[0] & 4) != 0) {
          int fieldOffset0 = buf.getIntLE(offset + 51);
+         if (fieldOffset0 < 0 || fieldOffset0 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("AssetId", fieldOffset0, maxEnd);
+         }
+
          int pos0 = offset + 99 + fieldOffset0;
          int sl = VarInt.peek(buf, pos0);
-         pos0 += VarInt.length(buf, pos0) + sl;
+         pos0 += VarInt.size(sl) + sl;
          if (pos0 - offset > maxEnd) {
             maxEnd = pos0 - offset;
          }
@@ -408,9 +510,13 @@ public class Model {
 
       if ((nullBits[0] & 8) != 0) {
          int fieldOffset1 = buf.getIntLE(offset + 55);
+         if (fieldOffset1 < 0 || fieldOffset1 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("Path", fieldOffset1, maxEnd);
+         }
+
          int pos1 = offset + 99 + fieldOffset1;
          int sl = VarInt.peek(buf, pos1);
-         pos1 += VarInt.length(buf, pos1) + sl;
+         pos1 += VarInt.size(sl) + sl;
          if (pos1 - offset > maxEnd) {
             maxEnd = pos1 - offset;
          }
@@ -418,9 +524,13 @@ public class Model {
 
       if ((nullBits[0] & 16) != 0) {
          int fieldOffset2 = buf.getIntLE(offset + 59);
+         if (fieldOffset2 < 0 || fieldOffset2 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("Texture", fieldOffset2, maxEnd);
+         }
+
          int pos2 = offset + 99 + fieldOffset2;
          int sl = VarInt.peek(buf, pos2);
-         pos2 += VarInt.length(buf, pos2) + sl;
+         pos2 += VarInt.size(sl) + sl;
          if (pos2 - offset > maxEnd) {
             maxEnd = pos2 - offset;
          }
@@ -428,9 +538,13 @@ public class Model {
 
       if ((nullBits[0] & 32) != 0) {
          int fieldOffset3 = buf.getIntLE(offset + 63);
+         if (fieldOffset3 < 0 || fieldOffset3 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("GradientSet", fieldOffset3, maxEnd);
+         }
+
          int pos3 = offset + 99 + fieldOffset3;
          int sl = VarInt.peek(buf, pos3);
-         pos3 += VarInt.length(buf, pos3) + sl;
+         pos3 += VarInt.size(sl) + sl;
          if (pos3 - offset > maxEnd) {
             maxEnd = pos3 - offset;
          }
@@ -438,9 +552,13 @@ public class Model {
 
       if ((nullBits[0] & 64) != 0) {
          int fieldOffset4 = buf.getIntLE(offset + 67);
+         if (fieldOffset4 < 0 || fieldOffset4 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("GradientId", fieldOffset4, maxEnd);
+         }
+
          int pos4 = offset + 99 + fieldOffset4;
          int sl = VarInt.peek(buf, pos4);
-         pos4 += VarInt.length(buf, pos4) + sl;
+         pos4 += VarInt.size(sl) + sl;
          if (pos4 - offset > maxEnd) {
             maxEnd = pos4 - offset;
          }
@@ -448,6 +566,10 @@ public class Model {
 
       if ((nullBits[0] & 128) != 0) {
          int fieldOffset5 = buf.getIntLE(offset + 71);
+         if (fieldOffset5 < 0 || fieldOffset5 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("Camera", fieldOffset5, maxEnd);
+         }
+
          int pos5 = offset + 99 + fieldOffset5;
          pos5 += CameraSettings.computeBytesConsumed(buf, pos5);
          if (pos5 - offset > maxEnd) {
@@ -457,13 +579,17 @@ public class Model {
 
       if ((nullBits[1] & 1) != 0) {
          int fieldOffset6 = buf.getIntLE(offset + 75);
+         if (fieldOffset6 < 0 || fieldOffset6 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("AnimationSets", fieldOffset6, maxEnd);
+         }
+
          int pos6 = offset + 99 + fieldOffset6;
          int dictLen = VarInt.peek(buf, pos6);
-         pos6 += VarInt.length(buf, pos6);
+         pos6 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos6);
-            pos6 += VarInt.length(buf, pos6) + sl;
+            pos6 += VarInt.size(sl) + sl;
             pos6 += AnimationSet.computeBytesConsumed(buf, pos6);
          }
 
@@ -474,9 +600,13 @@ public class Model {
 
       if ((nullBits[1] & 2) != 0) {
          int fieldOffset7 = buf.getIntLE(offset + 79);
+         if (fieldOffset7 < 0 || fieldOffset7 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("Attachments", fieldOffset7, maxEnd);
+         }
+
          int pos7 = offset + 99 + fieldOffset7;
          int arrLen = VarInt.peek(buf, pos7);
-         pos7 += VarInt.length(buf, pos7);
+         pos7 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos7 += ModelAttachment.computeBytesConsumed(buf, pos7);
@@ -489,9 +619,13 @@ public class Model {
 
       if ((nullBits[1] & 4) != 0) {
          int fieldOffset8 = buf.getIntLE(offset + 83);
+         if (fieldOffset8 < 0 || fieldOffset8 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("Particles", fieldOffset8, maxEnd);
+         }
+
          int pos8 = offset + 99 + fieldOffset8;
          int arrLen = VarInt.peek(buf, pos8);
-         pos8 += VarInt.length(buf, pos8);
+         pos8 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos8 += ModelParticle.computeBytesConsumed(buf, pos8);
@@ -504,9 +638,13 @@ public class Model {
 
       if ((nullBits[1] & 8) != 0) {
          int fieldOffset9 = buf.getIntLE(offset + 87);
+         if (fieldOffset9 < 0 || fieldOffset9 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("Trails", fieldOffset9, maxEnd);
+         }
+
          int pos9 = offset + 99 + fieldOffset9;
          int arrLen = VarInt.peek(buf, pos9);
-         pos9 += VarInt.length(buf, pos9);
+         pos9 += VarInt.size(arrLen);
 
          for (int i = 0; i < arrLen; i++) {
             pos9 += ModelTrail.computeBytesConsumed(buf, pos9);
@@ -519,15 +657,19 @@ public class Model {
 
       if ((nullBits[1] & 16) != 0) {
          int fieldOffset10 = buf.getIntLE(offset + 91);
+         if (fieldOffset10 < 0 || fieldOffset10 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("DetailBoxes", fieldOffset10, maxEnd);
+         }
+
          int pos10 = offset + 99 + fieldOffset10;
          int dictLen = VarInt.peek(buf, pos10);
-         pos10 += VarInt.length(buf, pos10);
+         pos10 += VarInt.size(dictLen);
 
          for (int i = 0; i < dictLen; i++) {
             int sl = VarInt.peek(buf, pos10);
-            pos10 += VarInt.length(buf, pos10) + sl;
+            pos10 += VarInt.size(sl) + sl;
             sl = VarInt.peek(buf, pos10);
-            pos10 += VarInt.length(buf, pos10);
+            pos10 += VarInt.size(sl);
 
             for (int j = 0; j < sl; j++) {
                pos10 += DetailBox.computeBytesConsumed(buf, pos10);
@@ -541,6 +683,10 @@ public class Model {
 
       if ((nullBits[1] & 32) != 0) {
          int fieldOffset11 = buf.getIntLE(offset + 95);
+         if (fieldOffset11 < 0 || fieldOffset11 > buf.writerIndex() - offset - 99) {
+            throw ProtocolException.invalidOffset("PhobiaModel", fieldOffset11, maxEnd);
+         }
+
          int pos11 = offset + 99 + fieldOffset11;
          pos11 += computeBytesConsumed(buf, pos11);
          if (pos11 - offset > maxEnd) {
@@ -549,6 +695,643 @@ public class Model {
       }
 
       return maxEnd;
+   }
+
+   public static boolean isBufferTooSmall(MemorySegment mem) {
+      return mem.byteSize() < 99L;
+   }
+
+   @Nullable
+   public static String getAssetId(MemorySegment mem) {
+      return getAssetId(mem, 0);
+   }
+
+   @Nullable
+   public static String getAssetId(MemorySegment mem, int offset) {
+      return hasAssetId(mem, offset)
+         ? PacketIO.readVarString("AssetId", mem, offset + getValidatedOffset(mem, offset, 51, 99, "AssetId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getPath(MemorySegment mem) {
+      return getPath(mem, 0);
+   }
+
+   @Nullable
+   public static String getPath(MemorySegment mem, int offset) {
+      return hasPath(mem, offset)
+         ? PacketIO.readVarString("Path", mem, offset + getValidatedOffset(mem, offset, 55, 99, "Path"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem) {
+      return getTexture(mem, 0);
+   }
+
+   @Nullable
+   public static String getTexture(MemorySegment mem, int offset) {
+      return hasTexture(mem, offset)
+         ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 59, 99, "Texture"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getGradientSet(MemorySegment mem) {
+      return getGradientSet(mem, 0);
+   }
+
+   @Nullable
+   public static String getGradientSet(MemorySegment mem, int offset) {
+      return hasGradientSet(mem, offset)
+         ? PacketIO.readVarString("GradientSet", mem, offset + getValidatedOffset(mem, offset, 63, 99, "GradientSet"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static String getGradientId(MemorySegment mem) {
+      return getGradientId(mem, 0);
+   }
+
+   @Nullable
+   public static String getGradientId(MemorySegment mem, int offset) {
+      return hasGradientId(mem, offset)
+         ? PacketIO.readVarString("GradientId", mem, offset + getValidatedOffset(mem, offset, 67, 99, "GradientId"), 4096000, PacketIO.UTF8)
+         : null;
+   }
+
+   @Nullable
+   public static CameraSettings getCamera(MemorySegment mem) {
+      return getCamera(mem, 0);
+   }
+
+   @Nullable
+   public static CameraSettings getCamera(MemorySegment mem, int offset) {
+      return hasCamera(mem, offset) ? CameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 71, 99, "Camera")) : null;
+   }
+
+   public static float getScale(MemorySegment mem) {
+      return getScale(mem, 0);
+   }
+
+   public static float getScale(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 2));
+   }
+
+   public static float getEyeHeight(MemorySegment mem) {
+      return getEyeHeight(mem, 0);
+   }
+
+   public static float getEyeHeight(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 6));
+   }
+
+   public static float getCrouchOffset(MemorySegment mem) {
+      return getCrouchOffset(mem, 0);
+   }
+
+   public static float getCrouchOffset(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 10));
+   }
+
+   public static float getSittingOffset(MemorySegment mem) {
+      return getSittingOffset(mem, 0);
+   }
+
+   public static float getSittingOffset(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 14));
+   }
+
+   public static float getSleepingOffset(MemorySegment mem) {
+      return getSleepingOffset(mem, 0);
+   }
+
+   public static float getSleepingOffset(MemorySegment mem, int offset) {
+      return mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 18));
+   }
+
+   @Nullable
+   public static Map<String, AnimationSet> getAnimationSets(MemorySegment mem) {
+      return getAnimationSets(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, AnimationSet> getAnimationSets(MemorySegment mem, int offset) {
+      if (!hasAnimationSets(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 75, 99, "AnimationSets");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("AnimationSets", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("AnimationSets", len, 4096000);
+         } else {
+            Map<String, AnimationSet> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               long keyPacked = VarInt.getWithLength(mem, off);
+               int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+               String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+               off += nkey;
+               AnimationSet value = AnimationSet.toObject(mem, off);
+               off += value.computeSize();
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("AnimationSets", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   @Nullable
+   public static ModelAttachment[] getAttachments(MemorySegment mem) {
+      return getAttachments(mem, 0);
+   }
+
+   @Nullable
+   public static ModelAttachment[] getAttachments(MemorySegment mem, int offset) {
+      if (!hasAttachments(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 79, 99, "Attachments");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Attachments", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Attachments", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Attachments", off + lenOffset + len, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               ModelAttachment[] data = new ModelAttachment[len];
+
+               for (int i = 0; i < len; i++) {
+                  data[i] = ModelAttachment.toObject(mem, off);
+                  off += data[i].computeSize();
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   @Nullable
+   public static Hitbox getHitbox(MemorySegment mem) {
+      return getHitbox(mem, 0);
+   }
+
+   @Nullable
+   public static Hitbox getHitbox(MemorySegment mem, int offset) {
+      return hasHitbox(mem, offset) ? Hitbox.toObject(mem, offset + 22) : null;
+   }
+
+   @Nullable
+   public static ModelParticle[] getParticles(MemorySegment mem) {
+      return getParticles(mem, 0);
+   }
+
+   @Nullable
+   public static ModelParticle[] getParticles(MemorySegment mem, int offset) {
+      if (!hasParticles(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 83, 99, "Particles");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Particles", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Particles", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Particles", off + lenOffset + len, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               ModelParticle[] data = new ModelParticle[len];
+
+               for (int i = 0; i < len; i++) {
+                  data[i] = ModelParticle.toObject(mem, off);
+                  off += data[i].computeSize();
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   @Nullable
+   public static ModelTrail[] getTrails(MemorySegment mem) {
+      return getTrails(mem, 0);
+   }
+
+   @Nullable
+   public static ModelTrail[] getTrails(MemorySegment mem, int offset) {
+      if (!hasTrails(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 87, 99, "Trails");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("Trails", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.arrayTooLong("Trails", len, 4096000);
+         } else {
+            int lenOffset = (int)(packed >>> 32);
+            if (off + lenOffset + len > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Trails", off + lenOffset + len, (int)mem.byteSize());
+            } else {
+               off += lenOffset;
+               ModelTrail[] data = new ModelTrail[len];
+
+               for (int i = 0; i < len; i++) {
+                  data[i] = ModelTrail.toObject(mem, off);
+                  off += data[i].computeSize();
+               }
+
+               return data;
+            }
+         }
+      }
+   }
+
+   @Nullable
+   public static ColorLight getLight(MemorySegment mem) {
+      return getLight(mem, 0);
+   }
+
+   @Nullable
+   public static ColorLight getLight(MemorySegment mem, int offset) {
+      return hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 46) : null;
+   }
+
+   @Nullable
+   public static Map<String, DetailBox[]> getDetailBoxes(MemorySegment mem) {
+      return getDetailBoxes(mem, 0);
+   }
+
+   @Nullable
+   public static Map<String, DetailBox[]> getDetailBoxes(MemorySegment mem, int offset) {
+      if (!hasDetailBoxes(mem, offset)) {
+         return null;
+      } else {
+         int off = offset + getValidatedOffset(mem, offset, 91, 99, "DetailBoxes");
+         long packed = VarInt.getWithLength(mem, off);
+         int len = (int)packed;
+         if (len < 0) {
+            throw ProtocolException.negativeLength("DetailBoxes", len);
+         } else if (len > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("DetailBoxes", len, 4096000);
+         } else {
+            Map<String, DetailBox[]> data = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               long keyPacked = VarInt.getWithLength(mem, off);
+               int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+               String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+               off += nkey;
+               long valuePacked = VarInt.getWithLength(mem, off);
+               int valueLen = (int)valuePacked;
+               int valueVarLen = (int)(valuePacked >>> 32);
+               if (valueLen < 0) {
+                  throw ProtocolException.negativeLength("value", valueLen);
+               }
+
+               if (valueLen > 64) {
+                  throw ProtocolException.arrayTooLong("value", valueLen, 64);
+               }
+
+               if (off + valueVarLen + valueLen * 37L > mem.byteSize()) {
+                  throw ProtocolException.bufferTooSmall("value", off + valueVarLen + valueLen * 37, (int)mem.byteSize());
+               }
+
+               off += valueVarLen;
+               DetailBox[] value = new DetailBox[valueLen];
+
+               for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+                  value[valueIdx] = DetailBox.toObject(mem, off);
+                  off += value[valueIdx].computeSize();
+               }
+
+               if (data.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("DetailBoxes", key);
+               }
+            }
+
+            return data;
+         }
+      }
+   }
+
+   public static Phobia getPhobia(MemorySegment mem) {
+      return getPhobia(mem, 0);
+   }
+
+   public static Phobia getPhobia(MemorySegment mem, int offset) {
+      return Phobia.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 50)));
+   }
+
+   @Nullable
+   public static Model getPhobiaModel(MemorySegment mem) {
+      return getPhobiaModel(mem, 0);
+   }
+
+   @Nullable
+   public static Model getPhobiaModel(MemorySegment mem, int offset) {
+      return hasPhobiaModel(mem, offset) ? toObject(mem, offset + getValidatedOffset(mem, offset, 95, 99, "PhobiaModel")) : null;
+   }
+
+   public static boolean hasHitbox(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasLight(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasAssetId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasPath(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasTexture(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasGradientSet(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 32) != 0;
+   }
+
+   public static boolean hasGradientId(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 64) != 0;
+   }
+
+   public static boolean hasCamera(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 0));
+      return (b & 128) != 0;
+   }
+
+   public static boolean hasAnimationSets(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1));
+      return (b & 1) != 0;
+   }
+
+   public static boolean hasAttachments(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1));
+      return (b & 2) != 0;
+   }
+
+   public static boolean hasParticles(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1));
+      return (b & 4) != 0;
+   }
+
+   public static boolean hasTrails(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1));
+      return (b & 8) != 0;
+   }
+
+   public static boolean hasDetailBoxes(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1));
+      return (b & 16) != 0;
+   }
+
+   public static boolean hasPhobiaModel(MemorySegment mem, int offset) {
+      byte b = mem.get(PacketIO.PROTO_BYTE, (long)(offset + 1));
+      return (b & 32) != 0;
+   }
+
+   private static int getValidatedOffset(MemorySegment buffer, int base, int slotPosition, int varBlockStart, String fieldName) {
+      int offset = buffer.get(PacketIO.PROTO_INT, (long)(base + slotPosition));
+      if (offset >= 0 && offset <= buffer.byteSize() - base - varBlockStart) {
+         return varBlockStart + offset;
+      } else {
+         throw ProtocolException.invalidOffset(fieldName, offset, (int)buffer.byteSize());
+      }
+   }
+
+   public static Model toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static Model toObject(MemorySegment mem, int offset) {
+      if (offset + 99 > mem.byteSize()) {
+         throw ProtocolException.bufferTooSmall("Model", offset + 99, (int)mem.byteSize());
+      } else {
+         Map<String, AnimationSet> animationSets = null;
+         if (hasAnimationSets(mem, offset)) {
+            int off = offset + getValidatedOffset(mem, offset, 75, 99, "AnimationSets");
+            long packed = VarInt.getWithLength(mem, off);
+            int len = (int)packed;
+            if (len < 0) {
+               throw ProtocolException.negativeLength("AnimationSets", len);
+            }
+
+            if (len > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("AnimationSets", len, 4096000);
+            }
+
+            animationSets = new HashMap<>(len);
+            off += (int)(packed >>> 32);
+
+            for (int i = 0; i < len; i++) {
+               long keyPacked = VarInt.getWithLength(mem, off);
+               int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+               String key = PacketIO.readVarString("key", mem, off, 16384000, PacketIO.UTF8);
+               off += nkey;
+               AnimationSet value = AnimationSet.toObject(mem, off);
+               off += value.computeSize();
+               if (animationSets.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("AnimationSets", key);
+               }
+            }
+         }
+
+         ModelAttachment[] attachments = null;
+         if (hasAttachments(mem, offset)) {
+            int offx = offset + getValidatedOffset(mem, offset, 79, 99, "Attachments");
+            long packedx = VarInt.getWithLength(mem, offx);
+            int lenx = (int)packedx;
+            if (lenx < 0) {
+               throw ProtocolException.negativeLength("Attachments", lenx);
+            }
+
+            if (lenx > 4096000) {
+               throw ProtocolException.arrayTooLong("Attachments", lenx, 4096000);
+            }
+
+            int lenOffset = (int)(packedx >>> 32);
+            if (offx + lenOffset + lenx > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Attachments", offx + lenOffset + lenx, (int)mem.byteSize());
+            }
+
+            offx += lenOffset;
+            attachments = new ModelAttachment[lenx];
+
+            for (int ix = 0; ix < lenx; ix++) {
+               attachments[ix] = ModelAttachment.toObject(mem, offx);
+               offx += attachments[ix].computeSize();
+            }
+         }
+
+         ModelParticle[] particles = null;
+         if (hasParticles(mem, offset)) {
+            int offxx = offset + getValidatedOffset(mem, offset, 83, 99, "Particles");
+            long packedxx = VarInt.getWithLength(mem, offxx);
+            int lenxx = (int)packedxx;
+            if (lenxx < 0) {
+               throw ProtocolException.negativeLength("Particles", lenxx);
+            }
+
+            if (lenxx > 4096000) {
+               throw ProtocolException.arrayTooLong("Particles", lenxx, 4096000);
+            }
+
+            int lenOffset = (int)(packedxx >>> 32);
+            if (offxx + lenOffset + lenxx > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Particles", offxx + lenOffset + lenxx, (int)mem.byteSize());
+            }
+
+            offxx += lenOffset;
+            particles = new ModelParticle[lenxx];
+
+            for (int ix = 0; ix < lenxx; ix++) {
+               particles[ix] = ModelParticle.toObject(mem, offxx);
+               offxx += particles[ix].computeSize();
+            }
+         }
+
+         ModelTrail[] trails = null;
+         if (hasTrails(mem, offset)) {
+            int offxxx = offset + getValidatedOffset(mem, offset, 87, 99, "Trails");
+            long packedxxx = VarInt.getWithLength(mem, offxxx);
+            int lenxxx = (int)packedxxx;
+            if (lenxxx < 0) {
+               throw ProtocolException.negativeLength("Trails", lenxxx);
+            }
+
+            if (lenxxx > 4096000) {
+               throw ProtocolException.arrayTooLong("Trails", lenxxx, 4096000);
+            }
+
+            int lenOffset = (int)(packedxxx >>> 32);
+            if (offxxx + lenOffset + lenxxx > mem.byteSize()) {
+               throw ProtocolException.bufferTooSmall("Trails", offxxx + lenOffset + lenxxx, (int)mem.byteSize());
+            }
+
+            offxxx += lenOffset;
+            trails = new ModelTrail[lenxxx];
+
+            for (int ix = 0; ix < lenxxx; ix++) {
+               trails[ix] = ModelTrail.toObject(mem, offxxx);
+               offxxx += trails[ix].computeSize();
+            }
+         }
+
+         Map<String, DetailBox[]> detailBoxes = null;
+         if (hasDetailBoxes(mem, offset)) {
+            int offxxxx = offset + getValidatedOffset(mem, offset, 91, 99, "DetailBoxes");
+            long packedxxxx = VarInt.getWithLength(mem, offxxxx);
+            int lenxxxx = (int)packedxxxx;
+            if (lenxxxx < 0) {
+               throw ProtocolException.negativeLength("DetailBoxes", lenxxxx);
+            }
+
+            if (lenxxxx > 4096000) {
+               throw ProtocolException.dictionaryTooLarge("DetailBoxes", lenxxxx, 4096000);
+            }
+
+            detailBoxes = new HashMap<>(lenxxxx);
+            offxxxx += (int)(packedxxxx >>> 32);
+
+            for (int ix = 0; ix < lenxxxx; ix++) {
+               long keyPacked = VarInt.getWithLength(mem, offxxxx);
+               int nkey = (int)keyPacked + (int)(keyPacked >>> 32);
+               String key = PacketIO.readVarString("key", mem, offxxxx, 16384000, PacketIO.UTF8);
+               offxxxx += nkey;
+               long valuePacked = VarInt.getWithLength(mem, offxxxx);
+               int valueLen = (int)valuePacked;
+               int valueVarLen = (int)(valuePacked >>> 32);
+               if (valueLen < 0) {
+                  throw ProtocolException.negativeLength("value", valueLen);
+               }
+
+               if (valueLen > 64) {
+                  throw ProtocolException.arrayTooLong("value", valueLen, 64);
+               }
+
+               if (offxxxx + valueVarLen + valueLen * 37L > mem.byteSize()) {
+                  throw ProtocolException.bufferTooSmall("value", offxxxx + valueVarLen + valueLen * 37, (int)mem.byteSize());
+               }
+
+               offxxxx += valueVarLen;
+               DetailBox[] value = new DetailBox[valueLen];
+
+               for (int valueIdx = 0; valueIdx < valueLen; valueIdx++) {
+                  value[valueIdx] = DetailBox.toObject(mem, offxxxx);
+                  offxxxx += value[valueIdx].computeSize();
+               }
+
+               if (detailBoxes.put(key, value) != null) {
+                  throw ProtocolException.duplicateKey("DetailBoxes", key);
+               }
+            }
+         }
+
+         return new Model(
+            hasAssetId(mem, offset)
+               ? PacketIO.readVarString("AssetId", mem, offset + getValidatedOffset(mem, offset, 51, 99, "AssetId"), 4096000, PacketIO.UTF8)
+               : null,
+            hasPath(mem, offset) ? PacketIO.readVarString("Path", mem, offset + getValidatedOffset(mem, offset, 55, 99, "Path"), 4096000, PacketIO.UTF8) : null,
+            hasTexture(mem, offset)
+               ? PacketIO.readVarString("Texture", mem, offset + getValidatedOffset(mem, offset, 59, 99, "Texture"), 4096000, PacketIO.UTF8)
+               : null,
+            hasGradientSet(mem, offset)
+               ? PacketIO.readVarString("GradientSet", mem, offset + getValidatedOffset(mem, offset, 63, 99, "GradientSet"), 4096000, PacketIO.UTF8)
+               : null,
+            hasGradientId(mem, offset)
+               ? PacketIO.readVarString("GradientId", mem, offset + getValidatedOffset(mem, offset, 67, 99, "GradientId"), 4096000, PacketIO.UTF8)
+               : null,
+            hasCamera(mem, offset) ? CameraSettings.toObject(mem, offset + getValidatedOffset(mem, offset, 71, 99, "Camera")) : null,
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 2)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 6)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 10)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 14)),
+            mem.get(PacketIO.PROTO_FLOAT, (long)(offset + 18)),
+            animationSets,
+            attachments,
+            hasHitbox(mem, offset) ? Hitbox.toObject(mem, offset + 22) : null,
+            particles,
+            trails,
+            hasLight(mem, offset) ? ColorLight.toObject(mem, offset + 46) : null,
+            detailBoxes,
+            Phobia.fromValue(mem.get(PacketIO.PROTO_BYTE, (long)(offset + 50))),
+            hasPhobiaModel(mem, offset) ? toObject(mem, offset + getValidatedOffset(mem, offset, 95, 99, "PhobiaModel")) : null
+         );
+      }
    }
 
    public void serialize(@Nonnull ByteBuf buf) {
@@ -785,6 +1568,228 @@ public class Model {
       }
    }
 
+   public int serialize(@Nonnull MemorySegment mem, int offset) {
+      byte nullBits = 0;
+      if (this.hitbox != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.light != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.assetId != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.path != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.texture != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.gradientSet != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      if (this.gradientId != null) {
+         nullBits = (byte)(nullBits | 64);
+      }
+
+      if (this.camera != null) {
+         nullBits = (byte)(nullBits | 128);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 0), nullBits);
+      nullBits = 0;
+      if (this.animationSets != null) {
+         nullBits = (byte)(nullBits | 1);
+      }
+
+      if (this.attachments != null) {
+         nullBits = (byte)(nullBits | 2);
+      }
+
+      if (this.particles != null) {
+         nullBits = (byte)(nullBits | 4);
+      }
+
+      if (this.trails != null) {
+         nullBits = (byte)(nullBits | 8);
+      }
+
+      if (this.detailBoxes != null) {
+         nullBits = (byte)(nullBits | 16);
+      }
+
+      if (this.phobiaModel != null) {
+         nullBits = (byte)(nullBits | 32);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 1), nullBits);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 2), this.scale);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 6), this.eyeHeight);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 10), this.crouchOffset);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 14), this.sittingOffset);
+      mem.set(PacketIO.PROTO_FLOAT, (long)(offset + 18), this.sleepingOffset);
+      if (this.hitbox != null) {
+         this.hitbox.serialize(mem, offset + 22);
+      } else {
+         mem.asSlice(offset + 22, 24L).fill((byte)0);
+      }
+
+      if (this.light != null) {
+         this.light.serialize(mem, offset + 46);
+      } else {
+         mem.asSlice(offset + 46, 4L).fill((byte)0);
+      }
+
+      mem.set(PacketIO.PROTO_BYTE, (long)(offset + 50), (byte)this.phobia.getValue());
+      int varOffset = offset + 99;
+      if (this.assetId != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 51), varOffset - offset - 99);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.assetId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 51), -1);
+      }
+
+      if (this.path != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 55), varOffset - offset - 99);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.path, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 55), -1);
+      }
+
+      if (this.texture != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 59), varOffset - offset - 99);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.texture, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 59), -1);
+      }
+
+      if (this.gradientSet != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 63), varOffset - offset - 99);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.gradientSet, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 63), -1);
+      }
+
+      if (this.gradientId != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 67), varOffset - offset - 99);
+         varOffset += PacketIO.writeVarString(mem, varOffset, this.gradientId, 4096000);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 67), -1);
+      }
+
+      if (this.camera != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 71), varOffset - offset - 99);
+         varOffset += this.camera.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 71), -1);
+      }
+
+      if (this.animationSets != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 75), varOffset - offset - 99);
+         if (this.animationSets.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("AnimationSets", this.animationSets.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.animationSets.size());
+
+         for (Entry<String, AnimationSet> e : this.animationSets.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += e.getValue().serialize(mem, varOffset);
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 75), -1);
+      }
+
+      if (this.attachments != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 79), varOffset - offset - 99);
+         if (this.attachments.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Attachments", this.attachments.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.attachments.length);
+         int attachmentsValueOffset = 0;
+
+         for (int i = 0; i < this.attachments.length; i++) {
+            attachmentsValueOffset += this.attachments[i].serialize(mem, varOffset + attachmentsValueOffset);
+         }
+
+         varOffset += attachmentsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 79), -1);
+      }
+
+      if (this.particles != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 83), varOffset - offset - 99);
+         if (this.particles.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Particles", this.particles.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.particles.length);
+         int particlesValueOffset = 0;
+
+         for (int i = 0; i < this.particles.length; i++) {
+            particlesValueOffset += this.particles[i].serialize(mem, varOffset + particlesValueOffset);
+         }
+
+         varOffset += particlesValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 83), -1);
+      }
+
+      if (this.trails != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 87), varOffset - offset - 99);
+         if (this.trails.length > 4096000) {
+            throw ProtocolException.arrayTooLong("Trails", this.trails.length, 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.trails.length);
+         int trailsValueOffset = 0;
+
+         for (int i = 0; i < this.trails.length; i++) {
+            trailsValueOffset += this.trails[i].serialize(mem, varOffset + trailsValueOffset);
+         }
+
+         varOffset += trailsValueOffset;
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 87), -1);
+      }
+
+      if (this.detailBoxes != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 91), varOffset - offset - 99);
+         if (this.detailBoxes.size() > 4096000) {
+            throw ProtocolException.dictionaryTooLarge("DetailBoxes", this.detailBoxes.size(), 4096000);
+         }
+
+         varOffset += VarInt.set(mem, varOffset, this.detailBoxes.size());
+
+         for (Entry<String, DetailBox[]> e : this.detailBoxes.entrySet()) {
+            varOffset += PacketIO.writeVarString(mem, varOffset, e.getKey(), 16384000);
+            varOffset += VarInt.set(mem, varOffset, e.getValue().length);
+
+            for (DetailBox arrItem : e.getValue()) {
+               varOffset += arrItem.serialize(mem, varOffset);
+            }
+         }
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 91), -1);
+      }
+
+      if (this.phobiaModel != null) {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 95), varOffset - offset - 99);
+         varOffset += this.phobiaModel.serialize(mem, varOffset);
+      } else {
+         mem.set(PacketIO.PROTO_INT, (long)(offset + 95), -1);
+      }
+
+      return varOffset - offset;
+   }
+
    public int computeSize() {
       int size = 99;
       if (this.assetId != null) {
@@ -873,369 +1878,326 @@ public class Model {
          return ValidationResult.error("Buffer too small: expected at least 99 bytes");
       } else {
          byte[] nullBits = PacketIO.readBytes(buffer, offset, 2);
-         if ((nullBits[0] & 4) != 0) {
-            int assetIdOffset = buffer.getIntLE(offset + 51);
-            if (assetIdOffset < 0) {
-               return ValidationResult.error("Invalid offset for AssetId");
-            }
-
-            int pos = offset + 99 + assetIdOffset;
-            if (pos >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for AssetId");
-            }
-
-            int assetIdLen = VarInt.peek(buffer, pos);
-            if (assetIdLen < 0) {
-               return ValidationResult.error("Invalid string length for AssetId");
-            }
-
-            if (assetIdLen > 4096000) {
-               return ValidationResult.error("AssetId exceeds max length 4096000");
-            }
-
-            pos += VarInt.length(buffer, pos);
-            pos += assetIdLen;
-            if (pos > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading AssetId");
-            }
-         }
-
-         if ((nullBits[0] & 8) != 0) {
-            int pathOffset = buffer.getIntLE(offset + 55);
-            if (pathOffset < 0) {
-               return ValidationResult.error("Invalid offset for Path");
-            }
-
-            int posx = offset + 99 + pathOffset;
-            if (posx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Path");
-            }
-
-            int pathLen = VarInt.peek(buffer, posx);
-            if (pathLen < 0) {
-               return ValidationResult.error("Invalid string length for Path");
-            }
-
-            if (pathLen > 4096000) {
-               return ValidationResult.error("Path exceeds max length 4096000");
-            }
-
-            posx += VarInt.length(buffer, posx);
-            posx += pathLen;
-            if (posx > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading Path");
-            }
-         }
-
-         if ((nullBits[0] & 16) != 0) {
-            int textureOffset = buffer.getIntLE(offset + 59);
-            if (textureOffset < 0) {
-               return ValidationResult.error("Invalid offset for Texture");
-            }
-
-            int posxx = offset + 99 + textureOffset;
-            if (posxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Texture");
-            }
-
-            int textureLen = VarInt.peek(buffer, posxx);
-            if (textureLen < 0) {
-               return ValidationResult.error("Invalid string length for Texture");
-            }
-
-            if (textureLen > 4096000) {
-               return ValidationResult.error("Texture exceeds max length 4096000");
-            }
-
-            posxx += VarInt.length(buffer, posxx);
-            posxx += textureLen;
-            if (posxx > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading Texture");
-            }
-         }
-
-         if ((nullBits[0] & 32) != 0) {
-            int gradientSetOffset = buffer.getIntLE(offset + 63);
-            if (gradientSetOffset < 0) {
-               return ValidationResult.error("Invalid offset for GradientSet");
-            }
-
-            int posxxx = offset + 99 + gradientSetOffset;
-            if (posxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for GradientSet");
-            }
-
-            int gradientSetLen = VarInt.peek(buffer, posxxx);
-            if (gradientSetLen < 0) {
-               return ValidationResult.error("Invalid string length for GradientSet");
-            }
-
-            if (gradientSetLen > 4096000) {
-               return ValidationResult.error("GradientSet exceeds max length 4096000");
-            }
-
-            posxxx += VarInt.length(buffer, posxxx);
-            posxxx += gradientSetLen;
-            if (posxxx > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading GradientSet");
-            }
-         }
-
-         if ((nullBits[0] & 64) != 0) {
-            int gradientIdOffset = buffer.getIntLE(offset + 67);
-            if (gradientIdOffset < 0) {
-               return ValidationResult.error("Invalid offset for GradientId");
-            }
-
-            int posxxxx = offset + 99 + gradientIdOffset;
-            if (posxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for GradientId");
-            }
-
-            int gradientIdLen = VarInt.peek(buffer, posxxxx);
-            if (gradientIdLen < 0) {
-               return ValidationResult.error("Invalid string length for GradientId");
-            }
-
-            if (gradientIdLen > 4096000) {
-               return ValidationResult.error("GradientId exceeds max length 4096000");
-            }
-
-            posxxxx += VarInt.length(buffer, posxxxx);
-            posxxxx += gradientIdLen;
-            if (posxxxx > buffer.writerIndex()) {
-               return ValidationResult.error("Buffer overflow reading GradientId");
-            }
-         }
-
-         if ((nullBits[0] & 128) != 0) {
-            int cameraOffset = buffer.getIntLE(offset + 71);
-            if (cameraOffset < 0) {
-               return ValidationResult.error("Invalid offset for Camera");
-            }
-
-            int posxxxxx = offset + 99 + cameraOffset;
-            if (posxxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Camera");
-            }
-
-            ValidationResult cameraResult = CameraSettings.validateStructure(buffer, posxxxxx);
-            if (!cameraResult.isValid()) {
-               return ValidationResult.error("Invalid Camera: " + cameraResult.error());
-            }
-
-            posxxxxx += CameraSettings.computeBytesConsumed(buffer, posxxxxx);
-         }
-
-         if ((nullBits[1] & 1) != 0) {
-            int animationSetsOffset = buffer.getIntLE(offset + 75);
-            if (animationSetsOffset < 0) {
-               return ValidationResult.error("Invalid offset for AnimationSets");
-            }
-
-            int posxxxxxx = offset + 99 + animationSetsOffset;
-            if (posxxxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for AnimationSets");
-            }
-
-            int animationSetsCount = VarInt.peek(buffer, posxxxxxx);
-            if (animationSetsCount < 0) {
-               return ValidationResult.error("Invalid dictionary count for AnimationSets");
-            }
-
-            if (animationSetsCount > 4096000) {
-               return ValidationResult.error("AnimationSets exceeds max length 4096000");
-            }
-
-            posxxxxxx += VarInt.length(buffer, posxxxxxx);
-
-            for (int i = 0; i < animationSetsCount; i++) {
-               int keyLen = VarInt.peek(buffer, posxxxxxx);
-               if (keyLen < 0) {
-                  return ValidationResult.error("Invalid string length for key");
+         int v = buffer.getByte(offset + 50) & 255;
+         if (v >= 3) {
+            return ValidationResult.error("Invalid Phobia value for Phobia");
+         } else {
+            if ((nullBits[0] & 4) != 0) {
+               v = buffer.getIntLE(offset + 51);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for AssetId");
                }
 
-               if (keyLen > 4096000) {
-                  return ValidationResult.error("key exceeds max length 4096000");
+               int pos = offset + 99 + v;
+               int assetIdLen = VarInt.peek(buffer, pos);
+               if (assetIdLen < 0) {
+                  return ValidationResult.error("Invalid string length for AssetId");
                }
 
-               posxxxxxx += VarInt.length(buffer, posxxxxxx);
-               posxxxxxx += keyLen;
-               if (posxxxxxx > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading key");
+               if (assetIdLen > 4096000) {
+                  return ValidationResult.error("AssetId exceeds max length 4096000");
                }
 
-               posxxxxxx += AnimationSet.computeBytesConsumed(buffer, posxxxxxx);
+               pos += VarInt.size(assetIdLen);
+               pos += assetIdLen;
+               if (pos > buffer.writerIndex()) {
+                  return ValidationResult.error("Buffer overflow reading AssetId");
+               }
             }
+
+            if ((nullBits[0] & 8) != 0) {
+               v = buffer.getIntLE(offset + 55);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for Path");
+               }
+
+               int posx = offset + 99 + v;
+               int pathLen = VarInt.peek(buffer, posx);
+               if (pathLen < 0) {
+                  return ValidationResult.error("Invalid string length for Path");
+               }
+
+               if (pathLen > 4096000) {
+                  return ValidationResult.error("Path exceeds max length 4096000");
+               }
+
+               posx += VarInt.size(pathLen);
+               posx += pathLen;
+               if (posx > buffer.writerIndex()) {
+                  return ValidationResult.error("Buffer overflow reading Path");
+               }
+            }
+
+            if ((nullBits[0] & 16) != 0) {
+               v = buffer.getIntLE(offset + 59);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for Texture");
+               }
+
+               int posxx = offset + 99 + v;
+               int textureLen = VarInt.peek(buffer, posxx);
+               if (textureLen < 0) {
+                  return ValidationResult.error("Invalid string length for Texture");
+               }
+
+               if (textureLen > 4096000) {
+                  return ValidationResult.error("Texture exceeds max length 4096000");
+               }
+
+               posxx += VarInt.size(textureLen);
+               posxx += textureLen;
+               if (posxx > buffer.writerIndex()) {
+                  return ValidationResult.error("Buffer overflow reading Texture");
+               }
+            }
+
+            if ((nullBits[0] & 32) != 0) {
+               v = buffer.getIntLE(offset + 63);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for GradientSet");
+               }
+
+               int posxxx = offset + 99 + v;
+               int gradientSetLen = VarInt.peek(buffer, posxxx);
+               if (gradientSetLen < 0) {
+                  return ValidationResult.error("Invalid string length for GradientSet");
+               }
+
+               if (gradientSetLen > 4096000) {
+                  return ValidationResult.error("GradientSet exceeds max length 4096000");
+               }
+
+               posxxx += VarInt.size(gradientSetLen);
+               posxxx += gradientSetLen;
+               if (posxxx > buffer.writerIndex()) {
+                  return ValidationResult.error("Buffer overflow reading GradientSet");
+               }
+            }
+
+            if ((nullBits[0] & 64) != 0) {
+               v = buffer.getIntLE(offset + 67);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for GradientId");
+               }
+
+               int posxxxx = offset + 99 + v;
+               int gradientIdLen = VarInt.peek(buffer, posxxxx);
+               if (gradientIdLen < 0) {
+                  return ValidationResult.error("Invalid string length for GradientId");
+               }
+
+               if (gradientIdLen > 4096000) {
+                  return ValidationResult.error("GradientId exceeds max length 4096000");
+               }
+
+               posxxxx += VarInt.size(gradientIdLen);
+               posxxxx += gradientIdLen;
+               if (posxxxx > buffer.writerIndex()) {
+                  return ValidationResult.error("Buffer overflow reading GradientId");
+               }
+            }
+
+            if ((nullBits[0] & 128) != 0) {
+               v = buffer.getIntLE(offset + 71);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for Camera");
+               }
+
+               int posxxxxx = offset + 99 + v;
+               ValidationResult cameraResult = CameraSettings.validateStructure(buffer, posxxxxx);
+               if (!cameraResult.isValid()) {
+                  return ValidationResult.error("Invalid Camera: " + cameraResult.error());
+               }
+
+               posxxxxx += CameraSettings.computeBytesConsumed(buffer, posxxxxx);
+            }
+
+            if ((nullBits[1] & 1) != 0) {
+               v = buffer.getIntLE(offset + 75);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for AnimationSets");
+               }
+
+               int posxxxxx = offset + 99 + v;
+               int animationSetsCount = VarInt.peek(buffer, posxxxxx);
+               if (animationSetsCount < 0) {
+                  return ValidationResult.error("Invalid dictionary count for AnimationSets");
+               }
+
+               if (animationSetsCount > 4096000) {
+                  return ValidationResult.error("AnimationSets exceeds max length 4096000");
+               }
+
+               posxxxxx += VarInt.size(animationSetsCount);
+
+               for (int i = 0; i < animationSetsCount; i++) {
+                  int keyLen = VarInt.peek(buffer, posxxxxx);
+                  if (keyLen < 0) {
+                     return ValidationResult.error("Invalid string length for key");
+                  }
+
+                  if (keyLen > 4096000) {
+                     return ValidationResult.error("key exceeds max length 4096000");
+                  }
+
+                  posxxxxx += VarInt.size(keyLen);
+                  posxxxxx += keyLen;
+                  if (posxxxxx > buffer.writerIndex()) {
+                     return ValidationResult.error("Buffer overflow reading key");
+                  }
+
+                  posxxxxx += AnimationSet.computeBytesConsumed(buffer, posxxxxx);
+               }
+            }
+
+            if ((nullBits[1] & 2) != 0) {
+               v = buffer.getIntLE(offset + 79);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for Attachments");
+               }
+
+               int posxxxxxx = offset + 99 + v;
+               int attachmentsCount = VarInt.peek(buffer, posxxxxxx);
+               if (attachmentsCount < 0) {
+                  return ValidationResult.error("Invalid array count for Attachments");
+               }
+
+               if (attachmentsCount > 4096000) {
+                  return ValidationResult.error("Attachments exceeds max length 4096000");
+               }
+
+               posxxxxxx += VarInt.size(attachmentsCount);
+
+               for (int i = 0; i < attachmentsCount; i++) {
+                  ValidationResult structResult = ModelAttachment.validateStructure(buffer, posxxxxxx);
+                  if (!structResult.isValid()) {
+                     return ValidationResult.error("Invalid ModelAttachment in Attachments[" + i + "]: " + structResult.error());
+                  }
+
+                  posxxxxxx += ModelAttachment.computeBytesConsumed(buffer, posxxxxxx);
+               }
+            }
+
+            if ((nullBits[1] & 4) != 0) {
+               v = buffer.getIntLE(offset + 83);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for Particles");
+               }
+
+               int posxxxxxxx = offset + 99 + v;
+               int particlesCount = VarInt.peek(buffer, posxxxxxxx);
+               if (particlesCount < 0) {
+                  return ValidationResult.error("Invalid array count for Particles");
+               }
+
+               if (particlesCount > 4096000) {
+                  return ValidationResult.error("Particles exceeds max length 4096000");
+               }
+
+               posxxxxxxx += VarInt.size(particlesCount);
+
+               for (int i = 0; i < particlesCount; i++) {
+                  ValidationResult structResult = ModelParticle.validateStructure(buffer, posxxxxxxx);
+                  if (!structResult.isValid()) {
+                     return ValidationResult.error("Invalid ModelParticle in Particles[" + i + "]: " + structResult.error());
+                  }
+
+                  posxxxxxxx += ModelParticle.computeBytesConsumed(buffer, posxxxxxxx);
+               }
+            }
+
+            if ((nullBits[1] & 8) != 0) {
+               v = buffer.getIntLE(offset + 87);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for Trails");
+               }
+
+               int posxxxxxxxx = offset + 99 + v;
+               int trailsCount = VarInt.peek(buffer, posxxxxxxxx);
+               if (trailsCount < 0) {
+                  return ValidationResult.error("Invalid array count for Trails");
+               }
+
+               if (trailsCount > 4096000) {
+                  return ValidationResult.error("Trails exceeds max length 4096000");
+               }
+
+               posxxxxxxxx += VarInt.size(trailsCount);
+
+               for (int i = 0; i < trailsCount; i++) {
+                  ValidationResult structResult = ModelTrail.validateStructure(buffer, posxxxxxxxx);
+                  if (!structResult.isValid()) {
+                     return ValidationResult.error("Invalid ModelTrail in Trails[" + i + "]: " + structResult.error());
+                  }
+
+                  posxxxxxxxx += ModelTrail.computeBytesConsumed(buffer, posxxxxxxxx);
+               }
+            }
+
+            if ((nullBits[1] & 16) != 0) {
+               v = buffer.getIntLE(offset + 91);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for DetailBoxes");
+               }
+
+               int posxxxxxxxxx = offset + 99 + v;
+               int detailBoxesCount = VarInt.peek(buffer, posxxxxxxxxx);
+               if (detailBoxesCount < 0) {
+                  return ValidationResult.error("Invalid dictionary count for DetailBoxes");
+               }
+
+               if (detailBoxesCount > 4096000) {
+                  return ValidationResult.error("DetailBoxes exceeds max length 4096000");
+               }
+
+               posxxxxxxxxx += VarInt.size(detailBoxesCount);
+
+               for (int i = 0; i < detailBoxesCount; i++) {
+                  int keyLenx = VarInt.peek(buffer, posxxxxxxxxx);
+                  if (keyLenx < 0) {
+                     return ValidationResult.error("Invalid string length for key");
+                  }
+
+                  if (keyLenx > 4096000) {
+                     return ValidationResult.error("key exceeds max length 4096000");
+                  }
+
+                  posxxxxxxxxx += VarInt.size(keyLenx);
+                  posxxxxxxxxx += keyLenx;
+                  if (posxxxxxxxxx > buffer.writerIndex()) {
+                     return ValidationResult.error("Buffer overflow reading key");
+                  }
+
+                  int valueArrCount = VarInt.peek(buffer, posxxxxxxxxx);
+                  if (valueArrCount < 0) {
+                     return ValidationResult.error("Invalid array count for value");
+                  }
+
+                  posxxxxxxxxx += VarInt.size(valueArrCount);
+
+                  for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
+                     posxxxxxxxxx += 37;
+                  }
+               }
+            }
+
+            if ((nullBits[1] & 32) != 0) {
+               v = buffer.getIntLE(offset + 95);
+               if (v < 0 || v > buffer.writerIndex() - offset - 99) {
+                  return ValidationResult.error("Invalid offset for PhobiaModel");
+               }
+
+               int posxxxxxxxxxx = offset + 99 + v;
+               ValidationResult phobiaModelResult = validateStructure(buffer, posxxxxxxxxxx);
+               if (!phobiaModelResult.isValid()) {
+                  return ValidationResult.error("Invalid PhobiaModel: " + phobiaModelResult.error());
+               }
+
+               posxxxxxxxxxx += computeBytesConsumed(buffer, posxxxxxxxxxx);
+            }
+
+            return ValidationResult.OK;
          }
-
-         if ((nullBits[1] & 2) != 0) {
-            int attachmentsOffset = buffer.getIntLE(offset + 79);
-            if (attachmentsOffset < 0) {
-               return ValidationResult.error("Invalid offset for Attachments");
-            }
-
-            int posxxxxxxx = offset + 99 + attachmentsOffset;
-            if (posxxxxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Attachments");
-            }
-
-            int attachmentsCount = VarInt.peek(buffer, posxxxxxxx);
-            if (attachmentsCount < 0) {
-               return ValidationResult.error("Invalid array count for Attachments");
-            }
-
-            if (attachmentsCount > 4096000) {
-               return ValidationResult.error("Attachments exceeds max length 4096000");
-            }
-
-            posxxxxxxx += VarInt.length(buffer, posxxxxxxx);
-
-            for (int i = 0; i < attachmentsCount; i++) {
-               ValidationResult structResult = ModelAttachment.validateStructure(buffer, posxxxxxxx);
-               if (!structResult.isValid()) {
-                  return ValidationResult.error("Invalid ModelAttachment in Attachments[" + i + "]: " + structResult.error());
-               }
-
-               posxxxxxxx += ModelAttachment.computeBytesConsumed(buffer, posxxxxxxx);
-            }
-         }
-
-         if ((nullBits[1] & 4) != 0) {
-            int particlesOffset = buffer.getIntLE(offset + 83);
-            if (particlesOffset < 0) {
-               return ValidationResult.error("Invalid offset for Particles");
-            }
-
-            int posxxxxxxxx = offset + 99 + particlesOffset;
-            if (posxxxxxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Particles");
-            }
-
-            int particlesCount = VarInt.peek(buffer, posxxxxxxxx);
-            if (particlesCount < 0) {
-               return ValidationResult.error("Invalid array count for Particles");
-            }
-
-            if (particlesCount > 4096000) {
-               return ValidationResult.error("Particles exceeds max length 4096000");
-            }
-
-            posxxxxxxxx += VarInt.length(buffer, posxxxxxxxx);
-
-            for (int i = 0; i < particlesCount; i++) {
-               ValidationResult structResult = ModelParticle.validateStructure(buffer, posxxxxxxxx);
-               if (!structResult.isValid()) {
-                  return ValidationResult.error("Invalid ModelParticle in Particles[" + i + "]: " + structResult.error());
-               }
-
-               posxxxxxxxx += ModelParticle.computeBytesConsumed(buffer, posxxxxxxxx);
-            }
-         }
-
-         if ((nullBits[1] & 8) != 0) {
-            int trailsOffset = buffer.getIntLE(offset + 87);
-            if (trailsOffset < 0) {
-               return ValidationResult.error("Invalid offset for Trails");
-            }
-
-            int posxxxxxxxxx = offset + 99 + trailsOffset;
-            if (posxxxxxxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for Trails");
-            }
-
-            int trailsCount = VarInt.peek(buffer, posxxxxxxxxx);
-            if (trailsCount < 0) {
-               return ValidationResult.error("Invalid array count for Trails");
-            }
-
-            if (trailsCount > 4096000) {
-               return ValidationResult.error("Trails exceeds max length 4096000");
-            }
-
-            posxxxxxxxxx += VarInt.length(buffer, posxxxxxxxxx);
-
-            for (int i = 0; i < trailsCount; i++) {
-               ValidationResult structResult = ModelTrail.validateStructure(buffer, posxxxxxxxxx);
-               if (!structResult.isValid()) {
-                  return ValidationResult.error("Invalid ModelTrail in Trails[" + i + "]: " + structResult.error());
-               }
-
-               posxxxxxxxxx += ModelTrail.computeBytesConsumed(buffer, posxxxxxxxxx);
-            }
-         }
-
-         if ((nullBits[1] & 16) != 0) {
-            int detailBoxesOffset = buffer.getIntLE(offset + 91);
-            if (detailBoxesOffset < 0) {
-               return ValidationResult.error("Invalid offset for DetailBoxes");
-            }
-
-            int posxxxxxxxxxx = offset + 99 + detailBoxesOffset;
-            if (posxxxxxxxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for DetailBoxes");
-            }
-
-            int detailBoxesCount = VarInt.peek(buffer, posxxxxxxxxxx);
-            if (detailBoxesCount < 0) {
-               return ValidationResult.error("Invalid dictionary count for DetailBoxes");
-            }
-
-            if (detailBoxesCount > 4096000) {
-               return ValidationResult.error("DetailBoxes exceeds max length 4096000");
-            }
-
-            posxxxxxxxxxx += VarInt.length(buffer, posxxxxxxxxxx);
-
-            for (int i = 0; i < detailBoxesCount; i++) {
-               int keyLenx = VarInt.peek(buffer, posxxxxxxxxxx);
-               if (keyLenx < 0) {
-                  return ValidationResult.error("Invalid string length for key");
-               }
-
-               if (keyLenx > 4096000) {
-                  return ValidationResult.error("key exceeds max length 4096000");
-               }
-
-               posxxxxxxxxxx += VarInt.length(buffer, posxxxxxxxxxx);
-               posxxxxxxxxxx += keyLenx;
-               if (posxxxxxxxxxx > buffer.writerIndex()) {
-                  return ValidationResult.error("Buffer overflow reading key");
-               }
-
-               int valueArrCount = VarInt.peek(buffer, posxxxxxxxxxx);
-               if (valueArrCount < 0) {
-                  return ValidationResult.error("Invalid array count for value");
-               }
-
-               posxxxxxxxxxx += VarInt.length(buffer, posxxxxxxxxxx);
-
-               for (int valueArrIdx = 0; valueArrIdx < valueArrCount; valueArrIdx++) {
-                  posxxxxxxxxxx += 37;
-               }
-            }
-         }
-
-         if ((nullBits[1] & 32) != 0) {
-            int phobiaModelOffset = buffer.getIntLE(offset + 95);
-            if (phobiaModelOffset < 0) {
-               return ValidationResult.error("Invalid offset for PhobiaModel");
-            }
-
-            int posxxxxxxxxxxx = offset + 99 + phobiaModelOffset;
-            if (posxxxxxxxxxxx >= buffer.writerIndex()) {
-               return ValidationResult.error("Offset out of bounds for PhobiaModel");
-            }
-
-            ValidationResult phobiaModelResult = validateStructure(buffer, posxxxxxxxxxxx);
-            if (!phobiaModelResult.isValid()) {
-               return ValidationResult.error("Invalid PhobiaModel: " + phobiaModelResult.error());
-            }
-
-            posxxxxxxxxxxx += computeBytesConsumed(buffer, posxxxxxxxxxxx);
-         }
-
-         return ValidationResult.OK;
       }
    }
 

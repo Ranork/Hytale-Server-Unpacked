@@ -2,36 +2,21 @@ package com.hypixel.hytale.server.core.prefab.config;
 
 import com.hypixel.hytale.assetstore.map.BlockTypeAssetMap;
 import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
-import com.hypixel.hytale.codec.DirectDecodeCodec;
-import com.hypixel.hytale.codec.ExtraInfo;
-import com.hypixel.hytale.component.Archetype;
-import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.Holder;
-import com.hypixel.hytale.component.data.unknown.TempUnknownComponent;
-import com.hypixel.hytale.component.data.unknown.UnknownComponents;
-import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockMigration;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.Rotation;
-import com.hypixel.hytale.server.core.asset.type.blocktype.config.RotationTuple;
 import com.hypixel.hytale.server.core.asset.type.fluid.Fluid;
-import com.hypixel.hytale.server.core.entity.Entity;
-import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.BsonPrefabBufferDeserializer;
 import com.hypixel.hytale.server.core.prefab.selection.standard.BlockSelection;
-import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
-import java.util.logging.Level;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import org.bson.BsonArray;
 import org.bson.BsonDocument;
 import org.bson.BsonInt32;
@@ -54,14 +39,11 @@ public class SelectionPrefabSerializer {
    public static BlockSelection deserialize(@Nonnull BsonDocument doc) {
       BsonValue versionValue = doc.get("version");
       int version = versionValue != null ? versionValue.asInt32().getValue() : -1;
-      if (version <= 0) {
+      if (version < 8) {
          throw new IllegalArgumentException("Prefab version is too old: " + version);
       } else if (version > 8) {
          throw new IllegalArgumentException("Prefab version is too new: " + version + " by expected 8");
       } else {
-         int worldVersion = version < 4 ? readWorldVersion(doc) : 0;
-         BsonValue entityVersionValue = doc.get("entityVersion");
-         int entityVersion = entityVersionValue != null ? entityVersionValue.asInt32().getValue() : 0;
          int anchorX = doc.getInt32("anchorX").getValue();
          int anchorY = doc.getInt32("anchorY").getValue();
          int anchorZ = doc.getInt32("anchorZ").getValue();
@@ -91,116 +73,9 @@ public class SelectionPrefabSerializer {
                int y = innerObj.getInt32("y").getValue();
                int z = innerObj.getInt32("z").getValue();
                String blockTypeStr = innerObj.getString("name").getValue();
-               boolean legacyStripName = false;
-               if (version <= 4) {
-                  Fluid.ConversionResult result = Fluid.convertBlockToFluid(blockTypeStr);
-                  if (result != null) {
-                     legacyStripName = true;
-                     selection.addFluidAtLocalPos(x, y, z, result.fluidId, result.fluidLevel);
-                     if (result.blockTypeStr == null) {
-                        continue;
-                     }
-                  }
-               }
-
-               int support = 0;
-               if (version >= 6) {
-                  support = innerObj.getInt32("support", DEFAULT_SUPPORT_VALUE).getValue();
-               } else if (blockTypeStr.contains("|Deco")) {
-                  legacyStripName = true;
-                  support = 15;
-               } else if (blockTypeStr.contains("|Support=")) {
-                  legacyStripName = true;
-                  int start = blockTypeStr.indexOf("|Support=") + "|Support=".length();
-                  int end = blockTypeStr.indexOf(124, start);
-                  if (end == -1) {
-                     end = blockTypeStr.length();
-                  }
-
-                  support = Integer.parseInt(blockTypeStr, start, end, 10);
-               } else {
-                  support = 0;
-               }
-
-               int filler = 0;
-               if (version >= 7) {
-                  filler = innerObj.getInt32("filler", DEFAULT_FILLER_VALUE).getValue();
-               } else if (blockTypeStr.contains("|Filler=")) {
-                  legacyStripName = true;
-                  int start = blockTypeStr.indexOf("|Filler=") + "|Filler=".length();
-                  int firstComma = blockTypeStr.indexOf(44, start);
-                  if (firstComma == -1) {
-                     throw new IllegalArgumentException("Invalid filler metadata! Missing comma");
-                  }
-
-                  int secondComma = blockTypeStr.indexOf(44, firstComma + 1);
-                  if (secondComma == -1) {
-                     throw new IllegalArgumentException("Invalid filler metadata! Missing second comma");
-                  }
-
-                  int end = blockTypeStr.indexOf(124, start);
-                  if (end == -1) {
-                     end = blockTypeStr.length();
-                  }
-
-                  int fillerX = Integer.parseInt(blockTypeStr, start, firstComma, 10);
-                  int fillerY = Integer.parseInt(blockTypeStr, firstComma + 1, secondComma, 10);
-                  int fillerZ = Integer.parseInt(blockTypeStr, secondComma + 1, end, 10);
-                  filler = FillerBlockUtil.pack(fillerX, fillerY, fillerZ);
-               } else {
-                  filler = 0;
-               }
-
-               int rotation = 0;
-               if (version >= 8) {
-                  rotation = innerObj.getInt32("rotation", DEFAULT_ROTATION_VALUE).getValue();
-               } else {
-                  Rotation yaw = Rotation.None;
-                  Rotation pitch = Rotation.None;
-                  Rotation roll = Rotation.None;
-                  if (blockTypeStr.contains("|Yaw=")) {
-                     legacyStripName = true;
-                     int startx = blockTypeStr.indexOf("|Yaw=") + "|Yaw=".length();
-                     int end = blockTypeStr.indexOf(124, startx);
-                     if (end == -1) {
-                        end = blockTypeStr.length();
-                     }
-
-                     yaw = Rotation.ofDegrees(Integer.parseInt(blockTypeStr, startx, end, 10));
-                  }
-
-                  if (blockTypeStr.contains("|Pitch=")) {
-                     legacyStripName = true;
-                     int startx = blockTypeStr.indexOf("|Pitch=") + "|Pitch=".length();
-                     int end = blockTypeStr.indexOf(124, startx);
-                     if (end == -1) {
-                        end = blockTypeStr.length();
-                     }
-
-                     pitch = Rotation.ofDegrees(Integer.parseInt(blockTypeStr, startx, end, 10));
-                  }
-
-                  if (blockTypeStr.contains("|Roll=")) {
-                     legacyStripName = true;
-                     int startx = blockTypeStr.indexOf("|Roll=") + "|Roll=".length();
-                     int end = blockTypeStr.indexOf(124, startx);
-                     if (end == -1) {
-                        end = blockTypeStr.length();
-                     }
-
-                     pitch = Rotation.ofDegrees(Integer.parseInt(blockTypeStr, startx, end, 10));
-                  }
-
-                  rotation = RotationTuple.index(yaw, pitch, roll);
-               }
-
-               if (legacyStripName) {
-                  int endOfName = blockTypeStr.indexOf(124);
-                  if (endOfName != -1) {
-                     blockTypeStr = blockTypeStr.substring(0, endOfName);
-                  }
-               }
-
+               int support = innerObj.getInt32("support", DEFAULT_SUPPORT_VALUE).getValue();
+               int filler = innerObj.getInt32("filler", DEFAULT_FILLER_VALUE).getValue();
+               int rotation = innerObj.getInt32("rotation", DEFAULT_ROTATION_VALUE).getValue();
                String blockTypeKey = blockTypeStr;
                if (blockMigration != null) {
                   blockTypeKey = blockMigration.apply(blockTypeStr);
@@ -210,11 +85,7 @@ public class SelectionPrefabSerializer {
                Holder<ChunkStore> wrapper = null;
                BsonValue stateValue = innerObj.get("components");
                if (stateValue != null) {
-                  if (version < 4) {
-                     wrapper = ChunkStore.REGISTRY.deserialize(stateValue.asDocument(), worldVersion);
-                  } else {
-                     wrapper = ChunkStore.REGISTRY.deserialize(stateValue.asDocument());
-                  }
+                  wrapper = ChunkStore.REGISTRY.deserialize(stateValue.asDocument());
                }
 
                selection.addBlockAtLocalPos(x, y, z, blockId, rotation, filler, support, wrapper);
@@ -244,16 +115,7 @@ public class SelectionPrefabSerializer {
 
             for (int i = 0; i < entities.size(); i++) {
                BsonDocument bsonDocument = entities.get(i).asDocument();
-               if (version <= 1) {
-                  try {
-                     selection.addEntityHolderRaw(legacyEntityDecode(bsonDocument, entityVersion));
-                  } catch (Throwable var34) {
-                     ((HytaleLogger.Api)HytaleLogger.getLogger().at(Level.WARNING).withCause(var34))
-                        .log("Exception when loading entity state %s", bsonDocument);
-                  }
-               } else {
-                  selection.addEntityHolderRaw(EntityStore.REGISTRY.deserialize(bsonDocument));
-               }
+               selection.addEntityHolderRaw(EntityStore.REGISTRY.deserialize(bsonDocument));
             }
          }
 
@@ -331,46 +193,5 @@ public class SelectionPrefabSerializer {
       }
 
       return out;
-   }
-
-   public static int readWorldVersion(@Nonnull BsonDocument document) {
-      int worldVersion;
-      if (document.containsKey("worldVersion")) {
-         worldVersion = document.getInt32("worldVersion").getValue();
-      } else if (document.containsKey("worldver")) {
-         worldVersion = document.getInt32("worldver").getValue();
-      } else {
-         worldVersion = 5;
-      }
-
-      if (worldVersion == 18553) {
-         throw new IllegalArgumentException("WorldChunk version old format! Update!");
-      } else if (worldVersion > 23) {
-         throw new IllegalArgumentException("WorldChunk version is newer than we understand! Version: " + worldVersion + ", Latest Version: 23");
-      } else {
-         return worldVersion;
-      }
-   }
-
-   @Nullable
-   public static Holder<EntityStore> legacyEntityDecode(@Nonnull BsonDocument document, int version) {
-      String entityTypeStr = document.getString("EntityType").getValue();
-      Class<? extends Entity> entityType = EntityModule.get().getClass(entityTypeStr);
-      if (entityType == null) {
-         UnknownComponents unknownComponents = new UnknownComponents();
-         unknownComponents.addComponent(entityTypeStr, new TempUnknownComponent(document));
-         return EntityStore.REGISTRY.newHolder(Archetype.of(EntityStore.REGISTRY.getUnknownComponentType()), new Component[]{unknownComponents});
-      } else {
-         Function<World, ? extends Entity> constructor = EntityModule.get().getConstructor(entityType);
-         if (constructor == null) {
-            return null;
-         } else {
-            DirectDecodeCodec<? extends Entity> codec = EntityModule.get().getCodec(entityType);
-            Objects.requireNonNull(codec, "Unable to create entity because there is no associated codec");
-            Entity entity = constructor.apply(null);
-            codec.decode(document, entity, new ExtraInfo(version));
-            return entity.toHolder();
-         }
-      }
    }
 }

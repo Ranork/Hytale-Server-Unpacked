@@ -4,6 +4,7 @@ import com.hypixel.hytale.protocol.io.ProtocolException;
 import com.hypixel.hytale.protocol.io.ValidationResult;
 import com.hypixel.hytale.protocol.io.VarInt;
 import io.netty.buffer.ByteBuf;
+import java.lang.foreign.MemorySegment;
 import javax.annotation.Nonnull;
 
 public abstract class MapMarkerComponent {
@@ -12,7 +13,7 @@ public abstract class MapMarkerComponent {
    @Nonnull
    public static MapMarkerComponent deserialize(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return (MapMarkerComponent)(switch (typeId) {
          case 0 -> PlayerMarkerComponent.deserialize(buf, offset + typeIdLen);
@@ -23,9 +24,26 @@ public abstract class MapMarkerComponent {
       });
    }
 
+   public static MapMarkerComponent toObject(MemorySegment mem) {
+      return toObject(mem, 0);
+   }
+
+   public static MapMarkerComponent toObject(MemorySegment mem, int offset) {
+      int typeId = VarInt.get(mem, offset);
+      int typeIdLen = VarInt.size(typeId);
+
+      return (MapMarkerComponent)(switch (typeId) {
+         case 0 -> PlayerMarkerComponent.toObject(mem, offset + typeIdLen);
+         case 1 -> PlacedByMarkerComponent.toObject(mem, offset + typeIdLen);
+         case 2 -> HeightDeltaIconComponent.toObject(mem, offset + typeIdLen);
+         case 3 -> TintComponent.toObject(mem, offset + typeIdLen);
+         default -> throw ProtocolException.unknownPolymorphicType("MapMarkerComponent", typeId);
+      });
+   }
+
    public static int computeBytesConsumed(@Nonnull ByteBuf buf, int offset) {
       int typeId = VarInt.peek(buf, offset);
-      int typeIdLen = VarInt.length(buf, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return typeIdLen + switch (typeId) {
          case 0 -> PlayerMarkerComponent.computeBytesConsumed(buf, offset + typeIdLen);
@@ -52,6 +70,8 @@ public abstract class MapMarkerComponent {
 
    public abstract int serialize(@Nonnull ByteBuf var1);
 
+   public abstract int serialize(@Nonnull MemorySegment var1, int var2);
+
    public abstract int computeSize();
 
    public int serializeWithTypeId(@Nonnull ByteBuf buf) {
@@ -61,13 +81,18 @@ public abstract class MapMarkerComponent {
       return buf.writerIndex() - startPos;
    }
 
+   public int serializeWithTypeId(@Nonnull MemorySegment mem, int offset) {
+      int len = VarInt.set(mem, offset, this.getTypeId());
+      return len + this.serialize(mem, offset + len);
+   }
+
    public int computeSizeWithTypeId() {
       return VarInt.size(this.getTypeId()) + this.computeSize();
    }
 
    public static ValidationResult validateStructure(@Nonnull ByteBuf buffer, int offset) {
       int typeId = VarInt.peek(buffer, offset);
-      int typeIdLen = VarInt.length(buffer, offset);
+      int typeIdLen = VarInt.size(typeId);
 
       return switch (typeId) {
          case 0 -> PlayerMarkerComponent.validateStructure(buffer, offset + typeIdLen);

@@ -6,8 +6,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.shape.Box;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.MovementSettings;
 import com.hypixel.hytale.protocol.MovementStates;
@@ -19,6 +19,9 @@ import com.hypixel.hytale.server.core.asset.type.model.config.camera.CameraSetti
 import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
 import com.hypixel.hytale.server.core.modules.collision.BlockCollisionData;
+import com.hypixel.hytale.server.core.modules.collision.CharacterCollisionData;
+import com.hypixel.hytale.server.core.modules.collision.CollisionConfig;
+import com.hypixel.hytale.server.core.modules.collision.CollisionDataArray;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModule;
 import com.hypixel.hytale.server.core.modules.collision.CollisionModuleConfig;
 import com.hypixel.hytale.server.core.modules.collision.CollisionResult;
@@ -44,6 +47,7 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.movement.MotionKind;
 import com.hypixel.hytale.server.npc.movement.NavState;
 import com.hypixel.hytale.server.npc.movement.Steering;
+import com.hypixel.hytale.server.npc.movement.constraints.RelaxedConstraint;
 import com.hypixel.hytale.server.npc.movement.controllers.builders.BuilderMotionControllerBase;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.role.RoleDebugFlags;
@@ -54,15 +58,20 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
 
 public abstract class MotionControllerBase implements MotionController {
    public static final double FORCE_SCALE = 5.0;
    public static final double BISECT_DIST = 0.05;
    public static final double FILTER_COEFFICIENT = 0.7;
    public static final double DOT_PRODUCT_EPSILON = 0.1;
+   private static final double RAIL_GRAZING_EPSILON = 1.0E-6;
+   private static final double RAIL_GRAZING_RATIO = 0.05;
    public static final double DEFAULT_BLOCK_DRAG = 0.82;
    protected static final HytaleLogger LOGGER = NPCPlugin.get().getLogger();
    public static final boolean DEBUG_APPLIED_FORCES = false;
@@ -71,7 +80,7 @@ public abstract class MotionControllerBase implements MotionController {
    protected final String type;
    protected final double epsilonSpeed;
    protected final float epsilonAngle;
-   protected final double forceVelocityDamping;
+   protected final double externalVelocityDamping;
    protected final double maxHorizontalSpeed;
    protected final double fastMotionThreshold;
    protected final double fastMotionThresholdRange;
@@ -97,8 +106,8 @@ public abstract class MotionControllerBase implements MotionController {
    protected final Vector3d bisectValidPosition = new Vector3d();
    protected final Vector3d bisectInvalidPosition = new Vector3d();
    protected final Vector3d lastValidPosition = new Vector3d();
-   protected final Vector3d forceVelocity = new Vector3d();
-   protected final Vector3d appliedForce = new Vector3d();
+   protected final Vector3d externalVelocity = new Vector3d();
+   protected final Vector3d appliedVelocity = new Vector3d();
    protected boolean ignoreDamping;
    protected final List<MotionControllerBase.AppliedVelocity> appliedVelocities = new ObjectArrayList();
    protected boolean isObstructed;
@@ -106,20 +115,20 @@ public abstract class MotionControllerBase implements MotionController {
    protected double throttleDuration;
    protected double targetDeltaSquared;
    protected boolean recomputePath;
-   protected final Vector3d worldNormal = Vector3d.UP;
-   protected final Vector3d worldAntiNormal = Vector3d.DOWN;
+   private boolean railStepAppliedThisTick;
+   protected final Vector3dc worldNormal = Vector3dUtil.UP;
+   protected final Vector3dc worldAntiNormal = Vector3dUtil.DOWN;
    protected final Vector3d componentSelector = new Vector3d(1.0, 0.0, 1.0);
    protected final Vector3d planarComponentSelector = new Vector3d(1.0, 0.0, 1.0);
    protected boolean enableTriggers = true;
    protected boolean enableBlockDamage = true;
    protected boolean isReceivingBlockDamage;
-   protected boolean isAvoidingBlockDamage = true;
    protected boolean requiresPreciseMovement;
-   protected boolean requiresDepthProbing;
    protected boolean havePreciseMovementTarget;
    @Nonnull
    protected Vector3d preciseMovementTarget = new Vector3d();
-   protected boolean isRelaxedMoveConstraints;
+   @Nonnull
+   protected EnumSet<RelaxedConstraint> relaxedConstraints = EnumSet.noneOf(RelaxedConstraint.class);
    protected boolean isBlendingHeading;
    protected double blendHeading;
    protected boolean haveBlendHeadingPosition;
@@ -139,7 +148,7 @@ public abstract class MotionControllerBase implements MotionController {
    private float yaw;
    private float pitch;
    private float roll;
-   private final Vector3d beforeTriggerForce = new Vector3d();
+   private final Vector3d beforeTriggerExternalVelocity = new Vector3d();
    private final Vector3d beforeTriggerPosition = new Vector3d();
    private boolean processTriggersHasMoved;
    protected MovementSettings movementSettings;
@@ -149,7 +158,7 @@ public abstract class MotionControllerBase implements MotionController {
       this.type = builder.getType();
       this.epsilonSpeed = builder.getEpsilonSpeed();
       this.epsilonAngle = builder.getEpsilonAngle();
-      this.forceVelocityDamping = builder.getForceVelocityDamping();
+      this.externalVelocityDamping = builder.getExternalVelocityDamping();
       this.maxHorizontalSpeed = builder.getMaxHorizontalSpeed(builderSupport);
       this.fastMotionThreshold = builder.getFastHorizontalThreshold(builderSupport);
       this.fastMotionThresholdRange = builder.getFastHorizontalThresholdRange();
@@ -201,11 +210,11 @@ public abstract class MotionControllerBase implements MotionController {
 
       assert transformComponent != null;
 
-      Vector3f bodyRotation = transformComponent.getRotation();
-      this.position.assign(transformComponent.getPosition());
-      this.yaw = bodyRotation.getY();
-      this.pitch = bodyRotation.getPitch();
-      this.roll = bodyRotation.getRoll();
+      Rotation3f bodyRotation = transformComponent.getRotation();
+      this.position.set(transformComponent.getPosition());
+      this.yaw = bodyRotation.y();
+      this.pitch = bodyRotation.pitch();
+      this.roll = bodyRotation.roll();
       this.adjustReadPosition(ref, componentAccessor);
       this.postReadPosition(ref, componentAccessor);
    }
@@ -219,7 +228,7 @@ public abstract class MotionControllerBase implements MotionController {
       assert transformComponent != null;
 
       this.adjustWritePosition(ref, dt, componentAccessor);
-      Vector3f bodyRotation = transformComponent.getRotation();
+      Rotation3f bodyRotation = transformComponent.getRotation();
       bodyRotation.setYaw(this.yaw);
       bodyRotation.setPitch(this.pitch);
       bodyRotation.setRoll(this.roll);
@@ -241,16 +250,16 @@ public abstract class MotionControllerBase implements MotionController {
    public boolean touchesWater(boolean defaultValue, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       World world = componentAccessor.getExternalData().getWorld();
       ChunkStore chunkStore = world.getChunkStore();
-      long chunkIndex = ChunkUtil.indexChunkFromBlock(this.position.getX(), this.position.getZ());
+      long chunkIndex = ChunkUtil.indexChunkFromBlock(this.position.x(), this.position.z());
       Ref<ChunkStore> chunkRef = chunkStore.getChunkReference(chunkIndex);
       if (chunkRef != null && chunkRef.isValid()) {
          WorldChunk worldChunkComponent = chunkStore.getStore().getComponent(chunkRef, WorldChunk.getComponentType());
 
          assert worldChunkComponent != null;
 
-         int blockX = MathUtil.floor(this.position.getX());
-         int blockY = MathUtil.floor(this.position.getY() + this.collisionBoundingBox.min.y);
-         int blockZ = MathUtil.floor(this.position.getZ());
+         int blockX = MathUtil.floor(this.position.x());
+         int blockY = MathUtil.floor(this.position.y() + this.collisionBoundingBox.min.y);
+         int blockZ = MathUtil.floor(this.position.z());
          int fluidId = worldChunkComponent.getFluidId(blockX, blockY, blockZ);
          return fluidId != 0;
       } else {
@@ -271,11 +280,11 @@ public abstract class MotionControllerBase implements MotionController {
       movementStates.swimJumping = false;
       movementStates.inFluid = this.touchesWater(movementStates.inFluid, componentAccessor);
       movementStates.onGround = this.role.isOnGround();
-      double speed = this.waypointDistance(Vector3d.ZERO, velocity);
+      double speed = this.waypointDistance(Vector3dUtil.ZERO, velocity);
       speed = 0.7 * this.previousSpeed + 0.30000000000000004 * speed;
       this.previousSpeed = speed;
       this.fastMotionKind = this.isFastMotionKind(speed);
-      this.idleMotionKind = steering.getTranslation().equals(Vector3d.ZERO);
+      this.idleMotionKind = steering.getTranslation().equals(Vector3dUtil.ZERO);
       this.horizontalIdleKind = this.isHorizontalIdle(speed);
       if (this.motionKind != this.lastMovementStateUpdatedMotionKind
          || lastFastMotion != this.fastMotionKind
@@ -308,7 +317,6 @@ public abstract class MotionControllerBase implements MotionController {
                this.updateDroppingStates(movementStates);
                break;
             case STANDING:
-            default:
                NPCEntity npcComponent = componentAccessor.getComponent(ref, NPCEntity.getComponentType());
 
                assert npcComponent != null;
@@ -405,31 +413,35 @@ public abstract class MotionControllerBase implements MotionController {
       double interval,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
-      this.readEntityPosition(ref, componentAccessor);
-      if (this.debugModeSteer) {
-         double dx = this.position.x;
-         double dz = this.position.z;
-         double st = this.steer0(ref, role, bodySteering, headSteering, interval, componentAccessor);
-         double t = interval - st;
-         dx = this.position.x - dx;
-         dz = this.position.z - dz;
-         double l = Math.sqrt(dx * dx + dz * dz);
-         double v = t > 0.0 ? l / t : 0.0;
-         LOGGER.at(Level.INFO)
-            .log(
-               "==  Steer %s  = t =%.4f dt=%.4f h =%.4f l =%.4f v =%.4f obstr=%s motion=%s",
-               this.getType(),
-               interval,
-               t,
-               (180.0F / (float)Math.PI) * this.yaw,
-               l,
-               v,
-               this.isObstructed ? "yes" : "no",
-               role.getSteeringMotionName()
-            );
-         return st;
+      if (this.railStepAppliedThisTick) {
+         return interval;
       } else {
-         return this.steer0(ref, role, bodySteering, headSteering, interval, componentAccessor);
+         this.readEntityPosition(ref, componentAccessor);
+         if (this.debugModeSteer) {
+            double dx = this.position.x;
+            double dz = this.position.z;
+            double st = this.steer0(ref, role, bodySteering, headSteering, interval, componentAccessor);
+            double t = interval - st;
+            dx = this.position.x - dx;
+            dz = this.position.z - dz;
+            double l = Math.sqrt(dx * dx + dz * dz);
+            double v = t > 0.0 ? l / t : 0.0;
+            LOGGER.at(Level.INFO)
+               .log(
+                  "==  Steer %s  = t =%.4f dt=%.4f h =%.4f l =%.4f v =%.4f obstr=%s motion=%s",
+                  this.getType(),
+                  interval,
+                  t,
+                  (180.0F / (float)Math.PI) * this.yaw,
+                  l,
+                  v,
+                  this.isObstructed ? "yes" : "no",
+                  role.getSteeringMotionName()
+               );
+            return st;
+         } else {
+            return this.steer0(ref, role, bodySteering, headSteering, interval, componentAccessor);
+         }
       }
    }
 
@@ -447,8 +459,8 @@ public abstract class MotionControllerBase implements MotionController {
       assert npcComponent != null;
 
       this.effectHorizontalSpeedMultiplier = npcComponent.getCurrentHorizontalSpeedMultiplier(ref, componentAccessor);
-      this.setAvoidingBlockDamage(this.isAvoidingBlockDamage && !this.isReceivingBlockDamage);
-      this.translation.assign(0.0);
+      this.applyRuntimeRelaxedConstraints(!role.couldBreatheCached());
+      this.translation.zero();
       this.cachedMovementBlocked = this.isMovementBlocked(ref, componentAccessor);
       this.computeMove(ref, role, bodySteering, interval, this.translation, componentAccessor);
       if (this.debugModeMove) {
@@ -456,7 +468,8 @@ public abstract class MotionControllerBase implements MotionController {
             .log(
                "==  Move  %s  = t =%.4f pos=%s motion=%s obstr=%s",
                this.type,
-               Vector3d.formatShortString(this.position),
+               interval,
+               Vector3dUtil.formatShortString(this.position),
                role.getSteeringMotionName(),
                this.isObstructed ? "yes" : "no"
             );
@@ -467,17 +480,18 @@ public abstract class MotionControllerBase implements MotionController {
             throw new IllegalArgumentException(String.valueOf(this.translation));
          }
 
-         if (this.translation.squaredLength() > 1000000.0) {
+         if (this.translation.lengthSquared() > 1000000.0) {
             throw new IllegalStateException(
                String.format(
                   "NPC with role %s has abnormal high speed! (Distance=%s, MotionController=%s)", role.getRoleName(), this.translation.length(), this.type
                )
             );
          }
-      } else if (this.translation.squaredLength() > 1000000.0) {
-         this.translation.assign(Vector3d.ZERO);
+      } else if (this.translation.lengthSquared() > 1000000.0) {
+         this.translation.zero();
       }
 
+      this.applyRuntimeRelaxedConstraints(!role.couldBreatheCached());
       this.executeMove(ref, role, interval, this.translation, componentAccessor);
       if (role.getDebugSupport().isDebugFlagSet(RoleDebugFlags.VisTranslation)) {
          VisHelper.renderDebugVectorTo(this.position, this.translation, VisHelper.DEBUG_COLOR_STEERING_PRE, world);
@@ -485,10 +499,10 @@ public abstract class MotionControllerBase implements MotionController {
 
       this.postExecuteMove();
       this.clearRequirePreciseMovement();
-      this.clearRequireDepthProbing();
       this.clearBlendHeading();
-      this.setAvoidingBlockDamage(!this.isReceivingBlockDamage);
-      this.setRelaxedMoveConstraints(false);
+      boolean cannotBreathe = !role.couldBreatheCached();
+      this.relaxedConstraints.clear();
+      this.applyRuntimeRelaxedConstraints(cannotBreathe);
       float maxBodyRotation = (float)(interval * this.getCurrentMaxBodyRotationSpeed() * bodySteering.getRelativeTurnSpeed());
       float maxHeadRotation = (float)(interval * this.maxHeadRotationSpeed * headSteering.getRelativeTurnSpeed() * this.effectHorizontalSpeedMultiplier);
       this.calculateYaw(ref, bodySteering, headSteering, maxHeadRotation, maxBodyRotation, componentAccessor);
@@ -499,16 +513,16 @@ public abstract class MotionControllerBase implements MotionController {
 
       assert headRotationComponent != null;
 
-      Vector3f headRotation = headRotationComponent.getRotation();
+      Rotation3f headRotation = headRotationComponent.getRotation();
       headRotation.setYaw(headSteering.getYaw());
       headRotation.setPitch(headSteering.getPitch());
       headRotation.setRoll(headSteering.getRoll());
-      if (!this.forceVelocity.equals(Vector3d.ZERO) && !this.ignoreDamping) {
+      if (!this.externalVelocity.equals(Vector3dUtil.ZERO) && !this.ignoreDamping) {
          double movementThresholdSquared = 1.0000000000000002E-10;
-         if (this.forceVelocity.squaredLength() >= movementThresholdSquared) {
-            this.dampForceVelocity(this.forceVelocity, this.forceVelocityDamping, interval, componentAccessor);
+         if (this.externalVelocity.lengthSquared() >= movementThresholdSquared) {
+            this.dampExternalVelocity(this.externalVelocity, this.externalVelocityDamping, interval, componentAccessor);
          } else {
-            this.forceVelocity.assign(Vector3d.ZERO);
+            this.externalVelocity.zero();
          }
       }
 
@@ -543,7 +557,7 @@ public abstract class MotionControllerBase implements MotionController {
                   }
                }
                case Exp -> {
-                  float len = (float)entry.velocity.squaredLength();
+                  float len = (float)entry.velocity.lengthSquared();
                   if (len < entry.config.getThreshold() * entry.config.getThreshold()) {
                      float mul = len / (entry.config.getThreshold() * entry.config.getThreshold());
                      yield min * mul + max * (1.0F - mul);
@@ -562,7 +576,12 @@ public abstract class MotionControllerBase implements MotionController {
          }
       }
 
-      this.appliedVelocities.removeIf(v -> v.velocity.squaredLength() < 0.001);
+      for (int i = this.appliedVelocities.size() - 1; i >= 0; i--) {
+         if (this.appliedVelocities.get(i).velocity.lengthSquared() < 0.001) {
+            this.appliedVelocities.remove(i);
+         }
+      }
+
       return interval;
    }
 
@@ -601,8 +620,8 @@ public abstract class MotionControllerBase implements MotionController {
 
       assert modelComponent != null;
 
-      Vector3f headRotation = headRotationComponent.getRotation();
-      float currentYaw = headRotation.getYaw();
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      float currentYaw = headRotation.yaw();
       float targetYaw = headSteering.getYaw();
       float turnAngle = MathUtil.clamp(NPCPhysicsMath.turnAngle(currentYaw, targetYaw), -maxHeadRotation, maxHeadRotation);
       headSteering.setYaw(PhysicsMath.normalizeTurnAngle(currentYaw + turnAngle));
@@ -645,8 +664,8 @@ public abstract class MotionControllerBase implements MotionController {
 
       assert transformComponent != null;
 
-      Vector3f bodyRotation = transformComponent.getRotation();
-      float currentBodyYaw = bodyRotation.getYaw();
+      Rotation3f bodyRotation = transformComponent.getRotation();
+      float currentBodyYaw = bodyRotation.yaw();
       float targetBodyYaw = MathUtil.wrapAngle(this.yaw + yawOffset);
       float bodyTurnAngle = MathUtil.clamp(NPCPhysicsMath.turnAngle(currentBodyYaw, targetBodyYaw), -maxBodyRotation, maxBodyRotation);
       return MathUtil.wrapAngle(this.yaw + bodyTurnAngle);
@@ -674,8 +693,8 @@ public abstract class MotionControllerBase implements MotionController {
 
       assert headRotationComponent != null;
 
-      Vector3f headRotation = headRotationComponent.getRotation();
-      float currentPitch = headRotation.getPitch();
+      Rotation3f headRotation = headRotationComponent.getRotation();
+      float currentPitch = headRotation.pitch();
       float targetPitch = headSteering.getPitch();
       float turnAngle = MathUtil.clamp(NPCPhysicsMath.turnAngle(currentPitch, targetPitch), -maxHeadRotation, maxHeadRotation);
       headSteering.setPitch(PhysicsMath.normalizeTurnAngle(currentPitch + turnAngle));
@@ -721,14 +740,14 @@ public abstract class MotionControllerBase implements MotionController {
       }
    }
 
-   protected void dampForceVelocity(
-      @Nonnull Vector3d forceVelocity, double forceVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
+   protected void dampExternalVelocity(
+      @Nonnull Vector3d externalVelocity, double externalVelocityDamping, double interval, ComponentAccessor<EntityStore> componentAccessor
    ) {
       World world = componentAccessor.getExternalData().getWorld();
       double drag = 0.0;
       if (this.motionKind != MotionKind.FLYING) {
          if (!this.onGround() && this.motionKind != MotionKind.SWIMMING && this.motionKind != MotionKind.SWIMMING_TURNING) {
-            double horizontalSpeed = Math.sqrt(forceVelocity.x * forceVelocity.x + forceVelocity.z * forceVelocity.z);
+            double horizontalSpeed = Math.sqrt(externalVelocity.x * externalVelocity.x + externalVelocity.z * externalVelocity.z);
             drag = convertToNewRange(
                horizontalSpeed,
                this.movementSettings.airDragMinSpeed,
@@ -745,19 +764,19 @@ public abstract class MotionControllerBase implements MotionController {
       int serverTps = world.getTps();
       double rate = 60.0 / serverTps;
       drag = Math.pow(drag, rate);
-      forceVelocity.x *= drag;
-      forceVelocity.z *= drag;
+      externalVelocity.x *= drag;
+      externalVelocity.z *= drag;
       float velocityEpsilon = 0.1F;
-      if (Math.abs(forceVelocity.x) <= velocityEpsilon) {
-         forceVelocity.x = 0.0;
+      if (Math.abs(externalVelocity.x) <= velocityEpsilon) {
+         externalVelocity.x = 0.0;
       }
 
-      if (Math.abs(forceVelocity.y) <= velocityEpsilon) {
-         forceVelocity.y = 0.0;
+      if (Math.abs(externalVelocity.y) <= velocityEpsilon) {
+         externalVelocity.y = 0.0;
       }
 
-      if (Math.abs(forceVelocity.z) <= velocityEpsilon) {
-         forceVelocity.z = 0.0;
+      if (Math.abs(externalVelocity.z) <= velocityEpsilon) {
+         externalVelocity.z = 0.0;
       }
    }
 
@@ -773,13 +792,140 @@ public abstract class MotionControllerBase implements MotionController {
    @Override
    public double probeMove(
       @Nonnull Ref<EntityStore> ref,
-      @Nonnull Vector3d position,
-      @Nonnull Vector3d direction,
+      @Nonnull Vector3dc position,
+      @Nonnull Vector3dc direction,
       @Nonnull ProbeMoveData probeMoveData,
       @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       probeMoveData.setPosition(position).setDirection(direction);
       return this.probeMove(ref, probeMoveData, componentAccessor);
+   }
+
+   @Override
+   public void applyRailStep(
+      @Nonnull Ref<EntityStore> ref,
+      @Nonnull Role role,
+      @Nonnull Vector3dc translation,
+      @Nonnull RailStepConfig config,
+      @Nonnull RailStepResult result,
+      @Nonnull ComponentAccessor<EntityStore> componentAccessor
+   ) {
+      this.readEntityPosition(ref, componentAccessor);
+      result.reset();
+      this.translation.set(translation);
+      if (this.translation.lengthSquared() == 0.0) {
+         result.appliedFraction = 0.0;
+      } else {
+         this.setMotionKind(MotionKind.MOVING);
+         this.railStepAppliedThisTick = true;
+         Predicate<CollisionConfig> prevFilter = this.collisionResult.setBlockCollisionFilter(config.ignoredBlockFilter);
+         boolean prevCharEnabled = this.collisionResult.isCheckingForCharacterCollisions();
+         boolean prevRecord = this.collisionResult.isRecordingPassThrough();
+         List<Ref<EntityStore>> prevEntities = this.collisionResult.getCollisionEntities();
+         if (config.candidateEntities != null) {
+            this.collisionResult.setCollisionEntities(config.candidateEntities);
+            this.collisionResult.enableCharacterCollsions();
+         } else {
+            this.collisionResult.disableCharacterCollisions();
+         }
+
+         this.collisionResult.setRecordPassThrough(config.ignoredBlockFilter != null);
+
+         try {
+            CollisionModule.findCollisions(this.collisionBoundingBox, this.position, this.translation, false, this.collisionResult, componentAccessor);
+            boolean isSliding = this.collisionResult.isSliding;
+            double slideEnd = this.collisionResult.slideEnd;
+            Vector3dc worldNormal = this.getWorldNormal();
+            double stopT = 1.0;
+            int blockCollisionCount = this.collisionResult.getBlockCollisionCount();
+            double grazingThreshold = Math.max(1.0E-6, 0.05 * this.translation.length());
+
+            for (int i = 0; i < blockCollisionCount; i++) {
+               BlockCollisionData hit = this.collisionResult.getBlockCollision(i);
+               boolean inSlideWindow = isSliding && hit.collisionStart <= slideEnd && hit.collisionNormal.equals(worldNormal);
+               if (!inSlideWindow) {
+                  double dotApproach = this.translation.dot(hit.collisionNormal);
+                  if (!(dotApproach >= -grazingThreshold)) {
+                     double clampedStart = Math.max(0.0, hit.collisionStart);
+                     if (clampedStart < 0.999999) {
+                        stopT = clampedStart;
+                        this.isObstructed = true;
+                        result.obstructed = true;
+                     }
+                     break;
+                  }
+               }
+            }
+
+            if (config.stopOnEntityHit && this.collisionResult.getCharacterCollisionCount() > 0) {
+               CharacterCollisionData firstChar = this.collisionResult.getFirstCharacterCollision();
+               if (firstChar != null) {
+                  double t = firstChar.collisionStart;
+                  if (t < stopT) {
+                     stopT = Math.max(0.0, t);
+                     result.obstructed = true;
+                  }
+               }
+            }
+
+            int passThroughCount = this.collisionResult.getPassThroughCount();
+
+            for (int ix = 0; ix < passThroughCount; ix++) {
+               BlockCollisionData passThroughBlock = this.collisionResult.getPassThrough(ix);
+               if (passThroughBlock.collisionStart > stopT) {
+                  break;
+               }
+
+               result.nextPassThrough()
+                  .assign(
+                     passThroughBlock.x,
+                     passThroughBlock.y,
+                     passThroughBlock.z,
+                     passThroughBlock.blockId,
+                     passThroughBlock.collisionPoint,
+                     passThroughBlock.collisionNormal,
+                     passThroughBlock.collisionStart
+                  );
+            }
+
+            int characterCollisionCount = this.collisionResult.getCharacterCollisionCount();
+
+            for (int ix = 0; ix < characterCollisionCount; ix++) {
+               CharacterCollisionData characterCollision = this.collisionResult.getCharacterCollision(ix);
+               if (characterCollision.collisionStart > stopT) {
+                  break;
+               }
+
+               result.nextEntityHit()
+                  .assign(
+                     characterCollision.entityReference,
+                     characterCollision.isPlayer,
+                     characterCollision.sourcePosition,
+                     characterCollision.targetPosition,
+                     characterCollision.collisionStart
+                  );
+            }
+
+            result.appliedFraction = stopT;
+            this.position.fma(stopT, this.translation);
+            if (config.ignoredBlockFilter != null && !config.ignoredBlocksFireTriggers) {
+               pruneFilteredTriggerBlocks(this.collisionResult);
+            }
+
+            this.processTriggers(ref, this.collisionResult, stopT, componentAccessor);
+            this.moveEntity(ref, 0.0, componentAccessor);
+         } finally {
+            this.collisionResult.setBlockCollisionFilter(prevFilter);
+            if (prevCharEnabled) {
+               this.collisionResult.enableCharacterCollsions();
+            } else {
+               this.collisionResult.disableCharacterCollisions();
+            }
+
+            this.collisionResult.setRecordPassThrough(prevRecord);
+            this.collisionResult.setCollisionEntities(prevEntities);
+         }
+      }
    }
 
    protected void postExecuteMove() {
@@ -836,6 +982,7 @@ public abstract class MotionControllerBase implements MotionController {
    @Override
    public void beforeInstructionSensorsAndActions(double physicsTickDuration) {
       this.recomputePath = false;
+      this.railStepAppliedThisTick = false;
    }
 
    @Override
@@ -848,22 +995,22 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    @Override
-   public boolean canAct(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-      return this.isAlive(ref, componentAccessor)
-         && this.role.couldBreatheCached()
-         && this.forceVelocity.equals(Vector3d.ZERO)
-         && this.appliedVelocities.isEmpty();
+   public boolean isForcePushed() {
+      return !this.externalVelocity.equals(Vector3dUtil.ZERO) || !this.appliedVelocities.isEmpty();
+   }
+
+   @Override
+   public boolean canSteer(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+      return this.isAlive(ref, componentAccessor) && !this.isForcePushed();
    }
 
    @Nullable
    @Override
-   public String canActFailReason(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public String canSteerFailReason(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       if (!this.isAlive(ref, componentAccessor)) {
          return "DEAD";
-      } else if (!this.role.couldBreatheCached()) {
-         return "SUFFOCATING";
       } else {
-         return !this.forceVelocity.equals(Vector3d.ZERO) && !this.appliedVelocities.isEmpty() ? "EXT_FORCE" : null;
+         return this.isForcePushed() ? "EXT_FORCE" : null;
       }
    }
 
@@ -908,72 +1055,87 @@ public abstract class MotionControllerBase implements MotionController {
    ) {
       double validDistance = 0.0;
       double invalidDistance = 1.0;
-      this.bisectValidPosition.assign(validPosition);
-      this.bisectInvalidPosition.assign(invalidPosition);
+      this.bisectValidPosition.set(validPosition);
+      this.bisectInvalidPosition.set(invalidPosition);
       maxDistance *= maxDistance;
       double validWeight = 0.1;
       double invalidWeight = 0.9;
 
-      while (this.bisectValidPosition.distanceSquaredTo(this.bisectInvalidPosition) > maxDistance) {
+      while (this.bisectValidPosition.distanceSquared(this.bisectInvalidPosition) > maxDistance) {
          double distance = validWeight * validDistance + invalidWeight * invalidDistance;
          result.x = validWeight * this.bisectValidPosition.x + invalidWeight * this.bisectInvalidPosition.x;
          result.y = validWeight * this.bisectValidPosition.y + invalidWeight * this.bisectInvalidPosition.y;
          result.z = validWeight * this.bisectValidPosition.z + invalidWeight * this.bisectInvalidPosition.z;
          if (validate.test(t, result)) {
             validDistance = distance;
-            this.bisectValidPosition.assign(result);
+            this.bisectValidPosition.set(result);
             if (this.debugModeMove) {
                LOGGER.at(Level.INFO)
-                  .log("  Bisect valid: d=[%f %f] w=[%f %f] pos=%s", distance, invalidDistance, validWeight, invalidWeight, Vector3d.formatShortString(result));
+                  .log(
+                     "  Bisect valid: d=[%f %f] w=[%f %f] pos=%s",
+                     distance,
+                     invalidDistance,
+                     validWeight,
+                     invalidWeight,
+                     Vector3dUtil.formatShortString(result)
+                  );
             }
          } else {
             invalidDistance = distance;
-            this.bisectInvalidPosition.assign(result);
+            this.bisectInvalidPosition.set(result);
             validWeight = 0.5;
             invalidWeight = 0.5;
             if (this.debugModeMove) {
                LOGGER.at(Level.INFO)
-                  .log("  Bisect invalid: d=[%f %f] w=[%f %f] pos=%s", validDistance, distance, validWeight, invalidWeight, Vector3d.formatShortString(result));
+                  .log(
+                     "  Bisect invalid: d=[%f %f] w=[%f %f] pos=%s",
+                     validDistance,
+                     distance,
+                     validWeight,
+                     invalidWeight,
+                     Vector3dUtil.formatShortString(result)
+                  );
             }
          }
       }
 
-      result.assign(this.bisectValidPosition);
+      result.set(this.bisectValidPosition);
       return validDistance;
    }
 
    @Nonnull
    @Override
-   public Vector3d getForce() {
-      return this.forceVelocity;
+   public Vector3d getExternalVelocity() {
+      return this.externalVelocity;
    }
 
    @Override
-   public void addForce(@Nonnull Vector3d force, VelocityConfig velocityConfig) {
+   public void addVelocity(@Nonnull Vector3d velocity, VelocityConfig velocityConfig) {
       double scale = this.knockbackScale;
       if (!SplitVelocity.SHOULD_MODIFY_VELOCITY && velocityConfig != null) {
-         this.appliedVelocities.add(new MotionControllerBase.AppliedVelocity(new Vector3d(force.x * scale, force.y * scale, force.z * scale), velocityConfig));
+         this.appliedVelocities
+            .add(new MotionControllerBase.AppliedVelocity(new Vector3d(velocity.x * scale, velocity.y * scale, velocity.z * scale), velocityConfig));
       } else {
          double horzMul = 0.18000000000000005 * this.movementSettings.velocityResistance;
-         this.forceVelocity.add(force.x * scale * horzMul, force.y * scale, force.z * scale * horzMul);
-         this.appliedForce.assign(this.forceVelocity);
+         this.externalVelocity.add(velocity.x * scale * horzMul, velocity.y * scale, velocity.z * scale * horzMul);
+         this.appliedVelocity.set(this.externalVelocity);
          this.ignoreDamping = false;
       }
    }
 
    @Override
-   public void forceVelocity(@Nonnull Vector3d velocity, @Nullable VelocityConfig velocityConfig, boolean ignoreDamping) {
+   public void setVelocity(@Nonnull Vector3dc velocity, @Nullable VelocityConfig velocityConfig, boolean ignoreDamping) {
       if (!SplitVelocity.SHOULD_MODIFY_VELOCITY && velocityConfig != null) {
          this.appliedVelocities.clear();
-         this.appliedVelocities.add(new MotionControllerBase.AppliedVelocity(velocity.clone(), velocityConfig));
+         this.appliedVelocities.add(new MotionControllerBase.AppliedVelocity(new Vector3d(velocity), velocityConfig));
       } else {
-         this.forceVelocity.assign(velocity);
+         this.externalVelocity.set(velocity);
          this.ignoreDamping = ignoreDamping;
       }
    }
 
-   public void clearForce() {
-      this.forceVelocity.assign(Vector3d.ZERO);
+   public void clearExternalVelocity() {
+      this.externalVelocity.zero();
    }
 
    protected void dumpCollisionResults() {
@@ -985,7 +1147,7 @@ public abstract class MotionControllerBase implements MotionController {
       LOGGER.at(Level.INFO)
          .log(
             "CollRes: pos=%s yaw=%f count=%d %s",
-            Vector3d.formatShortString(this.position),
+            Vector3dUtil.formatShortString(this.position),
             (180.0F / (float)Math.PI) * this.yaw,
             this.collisionResult.getBlockCollisionCount(),
             slideString
@@ -1011,8 +1173,8 @@ public abstract class MotionControllerBase implements MotionController {
                   cd.y,
                   cd.z,
                   cd.collisionStart,
-                  Vector3d.formatShortString(cd.collisionNormal),
-                  Vector3d.formatShortString(cd.collisionPoint),
+                  Vector3dUtil.formatShortString(cd.collisionNormal),
+                  Vector3dUtil.formatShortString(cd.collisionPoint),
                   materialName,
                   typeName,
                   hitboxName,
@@ -1036,13 +1198,19 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    @Override
-   public void setAvoidingBlockDamage(boolean avoid) {
-      this.isAvoidingBlockDamage = avoid;
+   public boolean isAvoidingBlockDamage() {
+      return !this.relaxedConstraints.contains(RelaxedConstraint.DAMAGE);
    }
 
-   @Override
-   public boolean isAvoidingBlockDamage() {
-      return this.isAvoidingBlockDamage;
+   protected void applyRuntimeRelaxedConstraints(boolean cannotBreathe) {
+      if (this.isReceivingBlockDamage) {
+         this.relaxedConstraints.add(RelaxedConstraint.DAMAGE);
+      }
+
+      if (cannotBreathe) {
+         this.relaxedConstraints.add(RelaxedConstraint.BREATHE);
+         this.relaxedConstraints.add(RelaxedConstraint.WADE);
+      }
    }
 
    public void processTriggers(
@@ -1055,8 +1223,8 @@ public abstract class MotionControllerBase implements MotionController {
          int count = collisionResult.getTriggerBlocks().size();
          if (count != 0) {
             if (this.enableTriggers) {
-               this.beforeTriggerForce.assign(this.getForce());
-               this.beforeTriggerPosition.assign(this.position);
+               this.beforeTriggerExternalVelocity.set(this.getExternalVelocity());
+               this.beforeTriggerPosition.set(this.position);
             }
 
             this.moveEntity(ref, 0.0, componentAccessor);
@@ -1075,8 +1243,19 @@ public abstract class MotionControllerBase implements MotionController {
 
             this.readEntityPosition(ref, componentAccessor);
             if (this.enableTriggers) {
-               this.processTriggersHasMoved = !this.beforeTriggerForce.equals(this.getForce()) || !this.beforeTriggerPosition.equals(this.position);
+               this.processTriggersHasMoved = !this.beforeTriggerExternalVelocity.equals(this.getExternalVelocity())
+                  || !this.beforeTriggerPosition.equals(this.position);
             }
+         }
+      }
+   }
+
+   private static void pruneFilteredTriggerBlocks(@Nonnull CollisionResult collisionResult) {
+      CollisionDataArray<BlockCollisionData> triggerBlocks = collisionResult.getTriggerBlocks();
+
+      for (int i = triggerBlocks.size() - 1; i >= 0; i--) {
+         if (triggerBlocks.get(i).filteredByCollisionFilter) {
+            triggerBlocks.remove(i);
          }
       }
    }
@@ -1144,29 +1323,29 @@ public abstract class MotionControllerBase implements MotionController {
 
    @Override
    public void setComponentSelector(@Nonnull Vector3d componentSelector) {
-      this.componentSelector.assign(componentSelector);
+      this.componentSelector.set(componentSelector);
    }
 
    @Override
-   public Vector3d getWorldNormal() {
+   public Vector3dc getWorldNormal() {
       return this.worldNormal;
    }
 
    @Override
-   public Vector3d getWorldAntiNormal() {
+   public Vector3dc getWorldAntiNormal() {
       return this.worldAntiNormal;
    }
 
    @Override
-   public double waypointDistance(@Nonnull Vector3d p, @Nonnull Vector3d q) {
+   public double waypointDistance(@Nonnull Vector3dc p, @Nonnull Vector3dc q) {
       return Math.sqrt(this.waypointDistanceSquared(p, q));
    }
 
    @Override
-   public double waypointDistanceSquared(@Nonnull Vector3d p, @Nonnull Vector3d q) {
-      double dx = (p.x - q.x) * this.getComponentSelector().x;
-      double dy = (p.y - q.y) * this.getComponentSelector().y;
-      double dz = (p.z - q.z) * this.getComponentSelector().z;
+   public double waypointDistanceSquared(@Nonnull Vector3dc p, @Nonnull Vector3dc q) {
+      double dx = (p.x() - q.x()) * this.getComponentSelector().x;
+      double dy = (p.y() - q.y()) * this.getComponentSelector().y;
+      double dz = (p.z() - q.z()) * this.getComponentSelector().z;
       return dx * dx + dy * dy + dz * dz;
    }
 
@@ -1182,19 +1361,19 @@ public abstract class MotionControllerBase implements MotionController {
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      double dx = (p.x - position.getX()) * this.getComponentSelector().x;
-      double dy = (p.y - position.getY()) * this.getComponentSelector().y;
-      double dz = (p.z - position.getZ()) * this.getComponentSelector().z;
+      double dx = (p.x - position.x()) * this.getComponentSelector().x;
+      double dy = (p.y - position.y()) * this.getComponentSelector().y;
+      double dz = (p.z - position.z()) * this.getComponentSelector().z;
       return dx * dx + dy * dy + dz * dz;
    }
 
    @Override
-   public boolean isValidPosition(@Nonnull Vector3d position, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+   public boolean isValidPosition(@Nonnull Vector3dc position, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
       return this.isValidPosition(position, this.collisionResult, componentAccessor);
    }
 
    public boolean isValidPosition(
-      @Nonnull Vector3d position, @Nonnull CollisionResult collisionResult, @Nonnull ComponentAccessor<EntityStore> componentAccessor
+      @Nonnull Vector3dc position, @Nonnull CollisionResult collisionResult, @Nonnull ComponentAccessor<EntityStore> componentAccessor
    ) {
       World world = componentAccessor.getExternalData().getWorld();
       CollisionModule module = CollisionModule.get();
@@ -1261,7 +1440,7 @@ public abstract class MotionControllerBase implements MotionController {
       this.requiresPreciseMovement = true;
       this.havePreciseMovementTarget = positionHint != null;
       if (this.havePreciseMovementTarget) {
-         this.preciseMovementTarget.assign(positionHint);
+         this.preciseMovementTarget.set(positionHint);
       }
    }
 
@@ -1275,25 +1454,12 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    @Override
-   public void requireDepthProbing() {
-      this.requiresDepthProbing = true;
-   }
-
-   public void clearRequireDepthProbing() {
-      this.requiresDepthProbing = false;
-   }
-
-   public boolean isRequiresDepthProbing() {
-      return this.requiresDepthProbing;
-   }
-
-   @Override
    public void enableHeadingBlending(double heading, @Nullable Vector3d targetPosition, double blendLevel) {
       this.isBlendingHeading = true;
       this.blendHeading = heading;
       this.haveBlendHeadingPosition = targetPosition != null;
       if (this.haveBlendHeadingPosition) {
-         this.blendHeadingPosition.assign(targetPosition);
+         this.blendHeadingPosition.set(targetPosition);
       }
 
       this.blendLevelAtTargetPosition = blendLevel;
@@ -1310,13 +1476,15 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    @Override
-   public void setRelaxedMoveConstraints(boolean relax) {
-      this.isRelaxedMoveConstraints = relax;
+   public void setRelaxedMoveConstraints(@Nonnull EnumSet<RelaxedConstraint> constraints) {
+      this.relaxedConstraints.clear();
+      this.relaxedConstraints.addAll(constraints);
    }
 
+   @Nonnull
    @Override
-   public boolean isRelaxedMoveConstraints() {
-      return this.isRelaxedMoveConstraints;
+   public EnumSet<RelaxedConstraint> getRelaxedConstraints() {
+      return this.relaxedConstraints;
    }
 
    @Override
@@ -1325,9 +1493,9 @@ public abstract class MotionControllerBase implements MotionController {
    }
 
    protected static class AppliedVelocity {
-      protected final Vector3d velocity;
-      protected final VelocityConfig config;
-      protected boolean canClear;
+      public final Vector3d velocity;
+      public final VelocityConfig config;
+      public boolean canClear;
 
       public AppliedVelocity(Vector3d velocity, VelocityConfig config) {
          this.velocity = velocity;

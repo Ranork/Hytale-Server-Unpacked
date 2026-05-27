@@ -1,9 +1,9 @@
 package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
-import com.hypixel.hytale.math.vector.Vector3i;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3i;
 
 public class OffsetPattern extends Pattern {
    @Nonnull
@@ -27,7 +27,7 @@ public class OffsetPattern extends Pattern {
 
    @Override
    public boolean matches(@Nonnull Pattern.Context context) {
-      this.rChildPosition.assign(context.position).add(this.offset);
+      this.rChildPosition.set(context.position).add(this.offset);
       this.rChildContext.assign(context);
       this.rChildContext.position = this.rChildPosition;
       return this.pattern.matches(this.rChildContext);

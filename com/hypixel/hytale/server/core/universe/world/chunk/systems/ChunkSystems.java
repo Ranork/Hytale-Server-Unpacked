@@ -11,9 +11,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.RemoveReason;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.dependency.Dependency;
-import com.hypixel.hytale.component.dependency.Order;
 import com.hypixel.hytale.component.dependency.RootDependency;
-import com.hypixel.hytale.component.dependency.SystemDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.RefChangeSystem;
@@ -28,7 +26,6 @@ import com.hypixel.hytale.protocol.packets.world.ServerSetBlocks;
 import com.hypixel.hytale.protocol.packets.world.SetBlockCmd;
 import com.hypixel.hytale.protocol.packets.world.SetChunk;
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
-import com.hypixel.hytale.server.core.modules.migrations.ChunkColumnMigrationSystem;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.chunk.ChunkColumn;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
@@ -99,55 +96,11 @@ public class ChunkSystems {
 
    public static class OnChunkLoad extends RefSystem<ChunkStore> {
       private static final Query<ChunkStore> QUERY = Query.and(ChunkColumn.getComponentType(), WorldChunk.getComponentType());
-      private static final Set<Dependency<ChunkStore>> DEPENDENCIES = Set.of(new SystemDependency<>(Order.AFTER, ChunkSystems.OnNewChunk.class));
 
       @Override
       public void onEntityAdded(
          @Nonnull Ref<ChunkStore> ref, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store, @Nonnull CommandBuffer<ChunkStore> commandBuffer
       ) {
-         ChunkColumn chunk = commandBuffer.getComponent(ref, ChunkColumn.getComponentType());
-
-         assert chunk != null;
-
-         WorldChunk worldChunk = commandBuffer.getComponent(ref, WorldChunk.getComponentType());
-
-         assert worldChunk != null;
-
-         Ref<ChunkStore>[] sections = chunk.getSections();
-         Holder<ChunkStore>[] sectionHolders = chunk.takeSectionHolders();
-         boolean isNonTicking = commandBuffer.getArchetype(ref).contains(ChunkStore.REGISTRY.getNonTickingComponentType());
-         if (sectionHolders != null && sectionHolders.length > 0 && sectionHolders[0] != null) {
-            for (int i = 0; i < sectionHolders.length; i++) {
-               if (isNonTicking) {
-                  sectionHolders[i].ensureComponent(ChunkStore.REGISTRY.getNonTickingComponentType());
-               } else {
-                  sectionHolders[i].tryRemoveComponent(ChunkStore.REGISTRY.getNonTickingComponentType());
-               }
-
-               ChunkSection section = sectionHolders[i].getComponent(ChunkSection.getComponentType());
-               if (section == null) {
-                  sectionHolders[i].addComponent(ChunkSection.getComponentType(), new ChunkSection(ref, worldChunk.getX(), i, worldChunk.getZ()));
-               } else {
-                  section.load(ref, worldChunk.getX(), i, worldChunk.getZ());
-               }
-            }
-
-            commandBuffer.addEntities(sectionHolders, 0, sections, 0, sections.length, AddReason.LOAD);
-         }
-
-         for (int i = 0; i < sections.length; i++) {
-            if (sections[i] == null) {
-               Holder<ChunkStore> newSection = ChunkStore.REGISTRY.newHolder();
-               if (isNonTicking) {
-                  newSection.ensureComponent(ChunkStore.REGISTRY.getNonTickingComponentType());
-               } else {
-                  newSection.tryRemoveComponent(ChunkStore.REGISTRY.getNonTickingComponentType());
-               }
-
-               newSection.addComponent(ChunkSection.getComponentType(), new ChunkSection(ref, worldChunk.getX(), i, worldChunk.getZ()));
-               sections[i] = commandBuffer.addEntity(newSection, AddReason.SPAWN);
-            }
-         }
       }
 
       @Override
@@ -175,43 +128,6 @@ public class ChunkSystems {
       @Override
       public Query<ChunkStore> getQuery() {
          return QUERY;
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<ChunkStore>> getDependencies() {
-         return DEPENDENCIES;
-      }
-   }
-
-   public static class OnNewChunk extends ChunkColumnMigrationSystem {
-      private static final Query<ChunkStore> QUERY = Query.and(WorldChunk.getComponentType(), Query.not(ChunkColumn.getComponentType()));
-
-      @Override
-      public void onEntityAdd(@Nonnull Holder<ChunkStore> holder, @Nonnull AddReason reason, @Nonnull Store<ChunkStore> store) {
-         Holder[] sectionHolders = new Holder[10];
-
-         for (int i = 0; i < sectionHolders.length; i++) {
-            sectionHolders[i] = ChunkStore.REGISTRY.newHolder();
-         }
-
-         holder.addComponent(ChunkColumn.getComponentType(), new ChunkColumn(sectionHolders));
-      }
-
-      @Override
-      public void onEntityRemoved(@Nonnull Holder<ChunkStore> holder, @Nonnull RemoveReason reason, @Nonnull Store<ChunkStore> store) {
-      }
-
-      @Nonnull
-      @Override
-      public Query<ChunkStore> getQuery() {
-         return QUERY;
-      }
-
-      @Nonnull
-      @Override
-      public Set<Dependency<ChunkStore>> getDependencies() {
-         return RootDependency.firstSet();
       }
    }
 

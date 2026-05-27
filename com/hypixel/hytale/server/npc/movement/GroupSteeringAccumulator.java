@@ -4,14 +4,15 @@ import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.random.RandomExtra;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.physics.component.Velocity;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.npc.util.NPCPhysicsMath;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class GroupSteeringAccumulator {
    @Nonnull
@@ -27,7 +28,7 @@ public class GroupSteeringAccumulator {
    private double xViewDirection;
    private double yViewDirection;
    private double zViewDirection;
-   private Vector3d componentSelector = Vector3d.ALL_ONES;
+   private final Vector3d componentSelector = new Vector3d(Vector3dUtil.ALL_ONES);
    private double maxRangeSquared = Double.MAX_VALUE;
    private double maxDistance = Double.MAX_VALUE;
    private float collisionViewHalfAngleCosine = 1.0F;
@@ -40,9 +41,9 @@ public class GroupSteeringAccumulator {
       this.xViewDirection = xViewDirection;
       this.yViewDirection = yViewDirection;
       this.zViewDirection = zViewDirection;
-      this.sumOfDistances.assign(0.0);
-      this.sumOfPositions.assign(0.0);
-      this.sumOfVelocities.assign(0.0);
+      this.sumOfDistances.zero();
+      this.sumOfPositions.zero();
+      this.sumOfVelocities.zero();
       this.count = 0;
    }
 
@@ -51,7 +52,7 @@ public class GroupSteeringAccumulator {
 
       assert headRotationComponent != null;
 
-      Vector3f headRotation = headRotationComponent.getRotation();
+      Rotation3f headRotation = headRotationComponent.getRotation();
       NPCPhysicsMath.getViewDirection(headRotation, this.temp);
       this.temp.normalize();
       TransformComponent transformComponent = componentAccessor.getComponent(ref, TRANSFORM_COMPONENT_TYPE);
@@ -59,7 +60,7 @@ public class GroupSteeringAccumulator {
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      this.begin(position.getX(), position.getY(), position.getZ(), this.temp.x, this.temp.y, this.temp.z);
+      this.begin(position.x(), position.y(), position.z(), this.temp.x, this.temp.y, this.temp.z);
    }
 
    public void processEntity(@Nonnull Ref<EntityStore> ref, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
@@ -73,9 +74,9 @@ public class GroupSteeringAccumulator {
       assert transformComponent != null;
 
       Vector3d position = transformComponent.getPosition();
-      double xPosition = position.getX();
-      double yPosition = position.getY();
-      double zPosition = position.getZ();
+      double xPosition = position.x();
+      double yPosition = position.y();
+      double zPosition = position.z();
       double dx = xPosition - this.x;
       double dy = yPosition - this.y;
       double dz = zPosition - this.z;
@@ -105,9 +106,9 @@ public class GroupSteeringAccumulator {
       assert velocityComponent != null;
 
       Vector3d velocity = velocityComponent.getVelocity();
-      double dx = position.getX() - this.x;
-      double dy = position.getY() - this.y;
-      double dz = position.getZ() - this.z;
+      double dx = position.x() - this.x;
+      double dy = position.y() - this.y;
+      double dz = position.z() - this.z;
       double d = NPCPhysicsMath.dotProduct(dx, dy, dz, this.componentSelector);
       if (d < this.maxRangeSquared
          && NPCPhysicsMath.isInViewCone(this.xViewDirection, this.yViewDirection, this.zViewDirection, this.collisionViewHalfAngleCosine, dx, dy, dz)) {
@@ -141,9 +142,9 @@ public class GroupSteeringAccumulator {
          double w = Math.pow(d, distanceWeight);
          this.sumOfDistances.add(dx * w, dy * w, dz * w);
          w = Math.pow(d, positionWeight);
-         this.sumOfPositions.addScaled(position, w);
+         this.sumOfPositions.fma(w, position);
          w = Math.pow(d, velocityWeight);
-         this.sumOfVelocities.addScaled(velocity, w);
+         this.sumOfVelocities.fma(w, velocity);
          this.count++;
       }
    }
@@ -151,20 +152,20 @@ public class GroupSteeringAccumulator {
    public void end() {
       if (this.count > 0) {
          if (this.normalizeDistances) {
-            if (this.sumOfDistances.squaredLength() >= 1.0) {
+            if (this.sumOfDistances.lengthSquared() >= 1.0) {
                this.sumOfDistances.normalize();
             }
          } else {
             double scale = 1.0 / this.count;
-            this.sumOfDistances.scale(scale).scale(this.componentSelector);
-            this.sumOfPositions.scale(scale).scale(this.componentSelector);
-            this.sumOfVelocities.scale(scale).scale(this.componentSelector);
+            this.sumOfDistances.mul(scale).mul(this.componentSelector);
+            this.sumOfPositions.mul(scale).mul(this.componentSelector);
+            this.sumOfVelocities.mul(scale).mul(this.componentSelector);
          }
       }
    }
 
    public void setComponentSelector(Vector3d componentSelector) {
-      this.componentSelector = componentSelector;
+      this.componentSelector.set(componentSelector);
    }
 
    public void setMaxRange(double maxRange) {

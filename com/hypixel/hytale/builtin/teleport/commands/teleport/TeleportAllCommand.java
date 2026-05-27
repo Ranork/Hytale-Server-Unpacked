@@ -3,8 +3,7 @@ package com.hypixel.hytale.builtin.teleport.commands.teleport;
 import com.hypixel.hytale.builtin.teleport.components.TeleportHistory;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
@@ -23,6 +22,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.NotificationUtil;
 import javax.annotation.Nonnull;
+import org.joml.Vector3d;
 
 public class TeleportAllCommand extends CommandBase {
    @Nonnull
@@ -44,7 +44,7 @@ public class TeleportAllCommand extends CommandBase {
 
    public TeleportAllCommand() {
       super("all", "server.commands.tpall.desc");
-      this.setPermissionGroup(null);
+      this.setPermissionGroups("hytale:Admin");
       this.requirePermission(HytalePermissions.fromCommand("teleport.all"));
    }
 
@@ -86,9 +86,9 @@ public class TeleportAllCommand extends CommandBase {
                      TransformComponent transformComponent = senderStore.getComponent(senderRefx, TransformComponent.getComponentType());
                      if (transformComponent != null) {
                         Vector3d pos = transformComponent.getPosition();
-                        baseX = pos.getX();
-                        baseY = pos.getY();
-                        baseZ = pos.getZ();
+                        baseX = pos.x();
+                        baseY = pos.y();
+                        baseZ = pos.z();
                      }
                   }
                }
@@ -105,22 +105,20 @@ public class TeleportAllCommand extends CommandBase {
                   TransformComponent transformComponent = store.getComponent(ref, TransformComponent.getComponentType());
                   HeadRotation headRotationComponent = store.getComponent(ref, HeadRotation.getComponentType());
                   if (transformComponent != null && headRotationComponent != null) {
-                     Vector3d previousPos = transformComponent.getPosition().clone();
-                     Vector3f previousHeadRotation = headRotationComponent.getRotation().clone();
-                     Vector3f previousBodyRotation = transformComponent.getRotation().clone();
+                     Vector3d previousPos = new Vector3d(transformComponent.getPosition());
+                     Rotation3f previousHeadRotation = new Rotation3f(headRotationComponent.getRotation());
+                     Rotation3f previousBodyRotation = new Rotation3f(transformComponent.getRotation());
                      float yaw = this.yawArg.provided(context)
-                        ? this.yawArg.get(context).resolve(previousHeadRotation.getYaw() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
+                        ? this.yawArg.get(context).resolve(previousHeadRotation.yaw() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
                         : Float.NaN;
                      float pitch = this.pitchArg.provided(context)
-                        ? this.pitchArg.get(context).resolve(previousHeadRotation.getPitch() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
+                        ? this.pitchArg.get(context).resolve(previousHeadRotation.pitch() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
                         : Float.NaN;
                      float roll = this.rollArg.provided(context)
-                        ? this.rollArg.get(context).resolve(previousHeadRotation.getRoll() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
+                        ? this.rollArg.get(context).resolve(previousHeadRotation.roll() * (180.0F / (float)Math.PI)) * (float) (Math.PI / 180.0)
                         : Float.NaN;
                      Teleport teleport = Teleport.createExact(
-                        new Vector3d(x, y, z),
-                        new Vector3f(previousBodyRotation.getPitch(), yaw, previousBodyRotation.getRoll()),
-                        new Vector3f(pitch, yaw, roll)
+                        new Vector3d(x, y, z), new Rotation3f(previousBodyRotation.pitch(), yaw, previousBodyRotation.roll()), new Rotation3f(pitch, yaw, roll)
                      );
                      store.addComponent(ref, Teleport.getComponentType(), teleport);
                      Player playerComponent = store.getComponent(ref, Player.getComponentType());
@@ -134,16 +132,14 @@ public class TeleportAllCommand extends CommandBase {
                            targetWorld,
                            previousPos,
                            previousHeadRotation,
-                           String.format("Teleport to (%s, %s, %s) by %s", x, y, z, context.sender().getDisplayName())
+                           String.format("Teleport to (%s, %s, %s) by %s", x, y, z, context.sender().getUsername())
                         );
                         if (hasRotation) {
-                           float displayYaw = Float.isNaN(yaw) ? previousHeadRotation.getYaw() * (180.0F / (float)Math.PI) : yaw * (180.0F / (float)Math.PI);
+                           float displayYaw = Float.isNaN(yaw) ? previousHeadRotation.yaw() * (180.0F / (float)Math.PI) : yaw * (180.0F / (float)Math.PI);
                            float displayPitch = Float.isNaN(pitch)
-                              ? previousHeadRotation.getPitch() * (180.0F / (float)Math.PI)
+                              ? previousHeadRotation.pitch() * (180.0F / (float)Math.PI)
                               : pitch * (180.0F / (float)Math.PI);
-                           float displayRoll = Float.isNaN(roll)
-                              ? previousHeadRotation.getRoll() * (180.0F / (float)Math.PI)
-                              : roll * (180.0F / (float)Math.PI);
+                           float displayRoll = Float.isNaN(roll) ? previousHeadRotation.roll() * (180.0F / (float)Math.PI) : roll * (180.0F / (float)Math.PI);
                            NotificationUtil.sendNotification(
                               playerRefComponent.getPacketHandler(),
                               Message.translation("server.commands.teleport.teleportedWithLookNotification")
@@ -153,7 +149,7 @@ public class TeleportAllCommand extends CommandBase {
                                  .param("yaw", displayYaw)
                                  .param("pitch", displayPitch)
                                  .param("roll", displayRoll)
-                                 .param("sender", context.sender().getDisplayName()),
+                                 .param("sender", context.sender().getUsername()),
                               null,
                               "teleportation"
                            );
@@ -164,7 +160,7 @@ public class TeleportAllCommand extends CommandBase {
                                  .param("x", x)
                                  .param("y", y)
                                  .param("z", z)
-                                 .param("sender", context.sender().getDisplayName()),
+                                 .param("sender", context.sender().getUsername()),
                               null,
                               "teleportation"
                            );

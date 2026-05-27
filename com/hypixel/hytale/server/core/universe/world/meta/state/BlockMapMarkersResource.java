@@ -7,7 +7,7 @@ import com.hypixel.hytale.codec.codecs.map.MapCodec;
 import com.hypixel.hytale.component.Resource;
 import com.hypixel.hytale.component.ResourceType;
 import com.hypixel.hytale.math.block.BlockUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.modules.block.BlockModule;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
@@ -17,6 +17,7 @@ import java.util.Iterator;
 import java.util.UUID;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BlockMapMarkersResource implements Resource<ChunkStore> {
    public static final BuilderCodec<BlockMapMarkersResource> CODEC = BuilderCodec.builder(BlockMapMarkersResource.class, BlockMapMarkersResource::new)
@@ -76,7 +77,7 @@ public class BlockMapMarkersResource implements Resource<ChunkStore> {
       public static final BuilderCodec<BlockMapMarkersResource.BlockMapMarkerData> CODEC = BuilderCodec.builder(
             BlockMapMarkersResource.BlockMapMarkerData.class, BlockMapMarkersResource.BlockMapMarkerData::new
          )
-         .append(new KeyedCodec<>("Position", Vector3i.CODEC), (o, v) -> o.position = v, o -> o.position)
+         .append(new KeyedCodec<>("Position", Vector3iUtil.CODEC), (o, v) -> o.position = v, o -> o.position)
          .add()
          .append(new KeyedCodec<>("Name", Codec.STRING), (o, v) -> o.name = v, o -> o.name)
          .add()

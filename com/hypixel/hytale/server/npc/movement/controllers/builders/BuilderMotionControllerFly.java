@@ -6,10 +6,13 @@ import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.asset.builder.holder.DoubleHolder;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleRangeValidator;
 import com.hypixel.hytale.server.npc.asset.builder.validators.DoubleSingleValidator;
+import com.hypixel.hytale.server.npc.movement.MovementMode;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionController;
 import com.hypixel.hytale.server.npc.movement.controllers.MotionControllerFly;
+import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import com.hypixel.hytale.server.spawning.SpawnTestResult;
 import com.hypixel.hytale.server.spawning.SpawningContext;
+import java.util.Set;
 import javax.annotation.Nonnull;
 
 public class BuilderMotionControllerFly extends BuilderMotionControllerBase {
@@ -264,12 +267,20 @@ public class BuilderMotionControllerFly extends BuilderMotionControllerBase {
       return this.rollDamping;
    }
 
-   public double getMinHeightOverGround(BuilderSupport support) {
+   public double getMinHeightOverGround(@Nonnull BuilderSupport support) {
       return this.minHeightOverGround.get(support.getExecutionContext());
    }
 
-   public double getMaxHeightOverGround(BuilderSupport support) {
+   public double getMaxHeightOverGround(@Nonnull BuilderSupport support) {
       return this.maxHeightOverGround.get(support.getExecutionContext());
+   }
+
+   public double getMinHeightOverGround(@Nonnull ExecutionContext executionContext) {
+      return this.minHeightOverGround.get(executionContext);
+   }
+
+   public double getMaxHeightOverGround(@Nonnull ExecutionContext executionContext) {
+      return this.maxHeightOverGround.get(executionContext);
    }
 
    public double getFastFlyThreshold() {
@@ -293,16 +304,31 @@ public class BuilderMotionControllerFly extends BuilderMotionControllerBase {
    @Nonnull
    @Override
    public String getType() {
-      return "fly";
+      return "Fly";
    }
 
    @Nonnull
    @Override
    public SpawnTestResult canSpawn(@Nonnull SpawningContext context) {
-      if (!context.isInAir(2.0)) {
+      double minHeight = this.getMinHeightOverGround(context.getExecutionContext());
+      if (!context.isInAir(minHeight)) {
          return SpawnTestResult.FAIL_NO_POSITION;
       } else {
          return context.validatePosition(22) ? SpawnTestResult.TEST_OK : SpawnTestResult.FAIL_INVALID_POSITION;
+      }
+   }
+
+   @Override
+   public void getMovementModes(
+      @Nonnull SpawningContext context,
+      @Nonnull Set<MovementMode> outSupportedMovementModes,
+      @Nonnull Set<MovementMode> outDefaultMovementModes,
+      @Nonnull Set<MovementMode> outSafeMovementModes
+   ) {
+      outSupportedMovementModes.addAll(MotionControllerFly.SUPPORTED_MOVEMENT_MODES);
+      outDefaultMovementModes.addAll(MotionControllerFly.DEFAULT_SPAWN_MOVEMENT_MODES);
+      if (context.breathesInAir) {
+         outSafeMovementModes.add(MovementMode.FLY);
       }
    }
 
@@ -310,5 +336,11 @@ public class BuilderMotionControllerFly extends BuilderMotionControllerBase {
    @Override
    public Class<? extends MotionController> getClassType() {
       return MotionControllerFly.class;
+   }
+
+   @Nonnull
+   @Override
+   public Set<MovementMode> getSupportedMovementModes() {
+      return MotionControllerFly.SUPPORTED_MOVEMENT_MODES;
    }
 }

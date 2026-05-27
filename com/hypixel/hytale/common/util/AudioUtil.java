@@ -5,6 +5,8 @@ public class AudioUtil {
    public static final float MAX_DECIBEL_VOLUME = 10.0F;
    public static final float MIN_SEMITONE_PITCH = -12.0F;
    public static final float MAX_SEMITONE_PITCH = 12.0F;
+   public static final float MIN_STATE_PITCH_SEMITONES = -60.0F;
+   public static final float MAX_STATE_PITCH_SEMITONES = 12.0F;
 
    public static float decibelsToLinearGain(float decibels) {
       return decibels <= -100.0F ? 0.0F : (float)Math.pow(10.0, decibels / 20.0F);

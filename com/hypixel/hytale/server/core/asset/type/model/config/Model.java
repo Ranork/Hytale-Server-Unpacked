@@ -12,7 +12,6 @@ import com.hypixel.hytale.protocol.ColorLight;
 import com.hypixel.hytale.protocol.ModelTrail;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.Phobia;
-import com.hypixel.hytale.protocol.Vector3f;
 import com.hypixel.hytale.server.core.asset.type.model.config.camera.CameraSettings;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
@@ -29,6 +28,8 @@ import java.util.Objects;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class Model implements NetworkSerializable<com.hypixel.hytale.protocol.Model> {
    public static final String UNKNOWN_TEXTURE = "textures/Unknown.png";
@@ -107,9 +108,11 @@ public class Model implements NetworkSerializable<com.hypixel.hytale.protocol.Mo
       this.trails = trails;
       this.physicsValues = physicsValues;
       this.detailBoxes = detailBoxes;
-      this.crouchBoundingBox = boundingBox == null ? null : new Box(boundingBox.min.clone(), boundingBox.max.clone().add(0.0, crouchOffset, 0.0));
-      this.sittingBoundingBox = boundingBox == null ? null : new Box(boundingBox.min.clone(), boundingBox.max.clone().add(0.0, sittingOffset, 0.0));
-      this.sleepingBoundingBox = boundingBox == null ? null : new Box(boundingBox.min.clone(), boundingBox.max.clone().add(0.0, sleepingOffset, 0.0));
+      this.crouchBoundingBox = boundingBox == null ? null : new Box(new Vector3d(boundingBox.min), new Vector3d(boundingBox.max).add(0.0, crouchOffset, 0.0));
+      this.sittingBoundingBox = boundingBox == null ? null : new Box(new Vector3d(boundingBox.min), new Vector3d(boundingBox.max).add(0.0, sittingOffset, 0.0));
+      this.sleepingBoundingBox = boundingBox == null
+         ? null
+         : new Box(new Vector3d(boundingBox.min), new Vector3d(boundingBox.max).add(0.0, sleepingOffset, 0.0));
       this.phobia = phobia;
       this.phobiaModelAssetId = phobiaModelAssetId;
    }
@@ -632,10 +635,9 @@ public class Model implements NetworkSerializable<com.hypixel.hytale.protocol.Mo
                   ModelTrail trail = trails[i];
                   ModelTrail scaledTrail = new ModelTrail(trail);
                   if (trail.positionOffset != null) {
-                     scaledTrail.positionOffset = new Vector3f();
-                     scaledTrail.positionOffset.x = trail.positionOffset.x * scale;
-                     scaledTrail.positionOffset.y = trail.positionOffset.y * scale;
-                     scaledTrail.positionOffset.z = trail.positionOffset.z * scale;
+                     scaledTrail.positionOffset = new Vector3f(
+                        trail.positionOffset.x() * scale, trail.positionOffset.y() * scale, trail.positionOffset.z() * scale
+                     );
                   }
 
                   scaledTrails[i] = scaledTrail;

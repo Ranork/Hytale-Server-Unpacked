@@ -2,9 +2,10 @@ package com.hypixel.hytale.builtin.hytalegenerator.positionproviders;
 
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Control;
 import com.hypixel.hytale.builtin.hytalegenerator.pipe.Pipe;
-import com.hypixel.hytale.math.vector.Vector3d;
+import java.util.Objects;
 import javax.annotation.Nonnull;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
+import org.joml.Vector3d;
 
 public class BaseHeightPositionProvider extends PositionProvider {
    @Nonnull
@@ -21,8 +22,12 @@ public class BaseHeightPositionProvider extends PositionProvider {
    private final PositionProvider.Context rChildContext;
    @Nonnull
    private final Pipe.One<Vector3d> rChildPipe = new Pipe.One<Vector3d>() {
+      {
+         Objects.requireNonNull(BaseHeightPositionProvider.this);
+      }
+
       public void accept(@NonNullDecl Vector3d position, @NonNullDecl Control control) {
-         BaseHeightPositionProvider.this.rOffsetPosition.assign(position);
+         BaseHeightPositionProvider.this.rOffsetPosition.set(position);
          BaseHeightPositionProvider.this.rOffsetPosition.y = BaseHeightPositionProvider.this.rOffsetPosition.y + BaseHeightPositionProvider.this.baseHeight;
          if (BaseHeightPositionProvider.this.rContext.bounds.contains(BaseHeightPositionProvider.this.rOffsetPosition)) {
             BaseHeightPositionProvider.this.rContext.pipe.accept(BaseHeightPositionProvider.this.rOffsetPosition, control);

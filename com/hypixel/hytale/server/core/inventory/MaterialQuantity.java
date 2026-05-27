@@ -6,6 +6,7 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.validation.Validators;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
+import java.util.Set;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.bson.BsonDocument;
@@ -49,6 +50,8 @@ public class MaterialQuantity implements NetworkSerializable<com.hypixel.hytale.
    protected int quantity = 1;
    @Nullable
    protected BsonDocument metadata;
+   @Nullable
+   protected Set<String> excludedItemIds;
 
    public MaterialQuantity(@Nullable String itemId, @Nullable String resourceTypeId, @Nullable String tag, int quantity, BsonDocument metadata) {
       if (itemId == null && resourceTypeId == null && tag == null) {
@@ -91,7 +94,25 @@ public class MaterialQuantity implements NetworkSerializable<com.hypixel.hytale.
 
    @Nonnull
    public MaterialQuantity clone(int quantity) {
-      return new MaterialQuantity(this.itemId, this.resourceTypeId, this.tag, quantity, this.metadata);
+      MaterialQuantity cloned = new MaterialQuantity(this.itemId, this.resourceTypeId, this.tag, quantity, this.metadata);
+      cloned.tagIndex = this.tagIndex;
+      cloned.excludedItemIds = this.excludedItemIds;
+      return cloned;
+   }
+
+   @Nonnull
+   public MaterialQuantity withExcludedItemIds(@Nullable Set<String> excludedItemIds) {
+      this.excludedItemIds = excludedItemIds != null && !excludedItemIds.isEmpty() ? excludedItemIds : null;
+      return this;
+   }
+
+   @Nullable
+   public Set<String> getExcludedItemIds() {
+      return this.excludedItemIds;
+   }
+
+   public boolean isItemExcluded(@Nullable String candidateItemId) {
+      return this.excludedItemIds != null && candidateItemId != null && this.excludedItemIds.contains(candidateItemId);
    }
 
    @Nullable

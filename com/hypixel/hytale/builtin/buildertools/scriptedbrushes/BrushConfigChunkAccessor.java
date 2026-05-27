@@ -1,11 +1,11 @@
 package com.hypixel.hytale.builtin.buildertools.scriptedbrushes;
 
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.universe.world.accessor.ChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.accessor.LocalCachedChunkAccessor;
 import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class BrushConfigChunkAccessor extends LocalCachedChunkAccessor {
    private final BrushConfigEditStore editOperation;

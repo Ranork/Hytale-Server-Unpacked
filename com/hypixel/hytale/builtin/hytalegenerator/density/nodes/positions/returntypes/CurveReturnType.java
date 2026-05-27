@@ -1,10 +1,10 @@
 package com.hypixel.hytale.builtin.hytalegenerator.density.nodes.positions.returntypes;
 
 import com.hypixel.hytale.builtin.hytalegenerator.density.Density;
-import com.hypixel.hytale.math.vector.Vector3d;
 import it.unimi.dsi.fastutil.doubles.Double2DoubleFunction;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class CurveReturnType extends ReturnType {
    @Nonnull

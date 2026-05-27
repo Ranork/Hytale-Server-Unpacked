@@ -17,7 +17,6 @@ import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.component.system.HolderSystem;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.util.ChunkUtil;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.protocol.BlockPosition;
 import com.hypixel.hytale.protocol.ToClientPacket;
 import com.hypixel.hytale.protocol.packets.world.UpdateBlockDamage;
@@ -43,6 +42,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3i;
 
 public class BlockHealthModule extends JavaPlugin {
    @Nonnull
@@ -211,7 +211,7 @@ public class BlockHealthModule extends JavaPlugin {
                         healthDelta = health - blockHealth.getHealth();
                      }
 
-                     UpdateBlockDamage packet = new UpdateBlockDamage(new BlockPosition(position.getX(), position.getY(), position.getZ()), health, healthDelta);
+                     UpdateBlockDamage packet = new UpdateBlockDamage(new BlockPosition(position.x(), position.y(), position.z()), health, healthDelta);
 
                      for (int i = 0; i < visibleTo.size(); i++) {
                         ((PlayerRef)visibleTo.get(i)).getPacketHandler().writeNoCache(packet);

@@ -5,7 +5,7 @@ import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.logger.HytaleLogger;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.model.config.Model;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
@@ -90,7 +90,7 @@ public class SpawnSuppressionCommand extends AbstractCommandCollection {
          assert transformComponent != null;
 
          SpawnSuppression spawnSuppression = this.suppressionArg.get(context);
-         Vector3f rotation = transformComponent.getRotation();
+         Rotation3f rotation = transformComponent.getRotation();
          Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
          holder.addComponent(SpawnSuppressionComponent.getComponentType(), new SpawnSuppressionComponent(spawnSuppression.getId()));
          holder.addComponent(TransformComponent.getComponentType(), new TransformComponent(transformComponent.getPosition(), rotation));

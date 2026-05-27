@@ -8,13 +8,13 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3i;
 import com.hypixel.hytale.server.core.command.system.CommandManager;
-import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class RunCommandOperation extends SequenceBrushOperation {
    public static final BuilderCodec<RunCommandOperation> CODEC = BuilderCodec.builder(RunCommandOperation.class, RunCommandOperation::new)
@@ -59,10 +59,10 @@ public class RunCommandOperation extends SequenceBrushOperation {
          commandString = commandString.replaceFirst(regexBracketPattern.pattern(), replacementValue);
       }
 
-      Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
+      PlayerRef playerRefComponent = componentAccessor.getComponent(ref, PlayerRef.getComponentType());
 
-      assert playerComponent != null;
+      assert playerRefComponent != null;
 
-      CommandManager.get().handleCommand(playerComponent, commandString);
+      CommandManager.get().handleCommand(playerRefComponent, commandString);
    }
 }

@@ -91,7 +91,6 @@ public class JWTValidator {
                claims.audience = claimsSet.getAudience() != null && !claimsSet.getAudience().isEmpty() ? (String)claimsSet.getAudience().get(0) : null;
                claims.subject = claimsSet.getSubject();
                claims.username = claimsSet.getStringClaim("username");
-               claims.ipAddress = claimsSet.getStringClaim("ip");
                claims.issuedAt = claimsSet.getIssueTime() != null ? claimsSet.getIssueTime().toInstant().getEpochSecond() : null;
                claims.expiresAt = claimsSet.getExpirationTime() != null ? claimsSet.getExpirationTime().toInstant().getEpochSecond() : null;
                claims.notBefore = claimsSet.getNotBeforeTime() != null ? claimsSet.getNotBeforeTime().toInstant().getEpochSecond() : null;
@@ -101,33 +100,35 @@ public class JWTValidator {
                }
 
                if (!this.expectedIssuer.equals(claims.issuer)) {
-                  LOGGER.at(Level.WARNING).log("Invalid issuer: expected %s, got %s", this.expectedIssuer, claims.issuer);
+                  LOGGER.at(Level.WARNING).log("Invalid issuer: expected %s, got %s. Token: %s", this.expectedIssuer, claims.issuer, claims.toLogSummary());
                   return null;
                } else if (!this.expectedAudience.equals(claims.audience)) {
-                  LOGGER.at(Level.WARNING).log("Invalid audience: expected %s, got %s", this.expectedAudience, claims.audience);
+                  LOGGER.at(Level.WARNING)
+                     .log("Invalid audience: expected %s, got %s. Token: %s", this.expectedAudience, claims.audience, claims.toLogSummary());
                   return null;
                } else {
                   long nowSeconds = Instant.now().getEpochSecond();
                   if (claims.expiresAt == null) {
-                     LOGGER.at(Level.WARNING).log("Access token missing expiration claim");
+                     LOGGER.at(Level.WARNING).log("Access token missing expiration claim. Token: %s", claims.toLogSummary());
                      return null;
                   } else if (nowSeconds >= claims.expiresAt + 300L) {
-                     LOGGER.at(Level.WARNING).log("Token expired (exp: %d, now: %d)", claims.expiresAt, nowSeconds);
+                     LOGGER.at(Level.WARNING).log("Token expired (exp: %d, now: %d). Token: %s", claims.expiresAt, nowSeconds, claims.toLogSummary());
                      return null;
                   } else if (claims.notBefore != null && nowSeconds < claims.notBefore - 300L) {
-                     LOGGER.at(Level.WARNING).log("Token not yet valid (nbf: %d, now: %d)", claims.notBefore, nowSeconds);
+                     LOGGER.at(Level.WARNING).log("Token not yet valid (nbf: %d, now: %d). Token: %s", claims.notBefore, nowSeconds, claims.toLogSummary());
                      return null;
                   } else if (claims.issuedAt != null && claims.issuedAt > nowSeconds + 300L) {
-                     LOGGER.at(Level.WARNING).log("Token issued in the future (iat: %d, now: %d)", claims.issuedAt, nowSeconds);
+                     LOGGER.at(Level.WARNING)
+                        .log("Token issued in the future (iat: %d, now: %d). Token: %s", claims.issuedAt, nowSeconds, claims.toLogSummary());
                      return null;
                   } else if (!CertificateUtil.validateCertificateBinding(claims.certificateFingerprint, clientCert)) {
-                     LOGGER.at(Level.WARNING).log("Certificate binding validation failed");
+                     LOGGER.at(Level.WARNING).log("Certificate binding validation failed. Token: %s", claims.toLogSummary());
                      return null;
                   } else if (claims.getSubjectAsUUID() == null) {
-                     LOGGER.at(Level.WARNING).log("Access token has invalid or missing subject UUID");
+                     LOGGER.at(Level.WARNING).log("Access token has invalid or missing subject UUID. Token: %s", claims.toLogSummary());
                      return null;
                   } else {
-                     LOGGER.at(Level.INFO).log("JWT validated successfully for user %s (UUID: %s)", claims.username, claims.subject);
+                     LOGGER.at(Level.INFO).log("JWT validated successfully for user %s. Token: %s", claims.username, claims.toLogSummary());
                      return claims;
                   }
                }
@@ -410,27 +411,30 @@ public class JWTValidator {
                }
 
                if (!this.expectedIssuer.equals(claims.issuer)) {
-                  LOGGER.at(Level.WARNING).log("Invalid identity token issuer: expected %s, got %s", this.expectedIssuer, claims.issuer);
+                  LOGGER.at(Level.WARNING)
+                     .log("Invalid identity token issuer: expected %s, got %s. Token: %s", this.expectedIssuer, claims.issuer, claims.toLogSummary());
                   return null;
                } else {
                   long nowSeconds = Instant.now().getEpochSecond();
                   if (claims.expiresAt == null) {
-                     LOGGER.at(Level.WARNING).log("Identity token missing expiration claim");
+                     LOGGER.at(Level.WARNING).log("Identity token missing expiration claim. Token: %s", claims.toLogSummary());
                      return null;
                   } else if (nowSeconds >= claims.expiresAt + 300L) {
-                     LOGGER.at(Level.WARNING).log("Identity token expired (exp: %d, now: %d)", claims.expiresAt, nowSeconds);
+                     LOGGER.at(Level.WARNING).log("Identity token expired (exp: %d, now: %d). Token: %s", claims.expiresAt, nowSeconds, claims.toLogSummary());
                      return null;
                   } else if (claims.notBefore != null && nowSeconds < claims.notBefore - 300L) {
-                     LOGGER.at(Level.WARNING).log("Identity token not yet valid (nbf: %d, now: %d)", claims.notBefore, nowSeconds);
+                     LOGGER.at(Level.WARNING)
+                        .log("Identity token not yet valid (nbf: %d, now: %d). Token: %s", claims.notBefore, nowSeconds, claims.toLogSummary());
                      return null;
                   } else if (claims.issuedAt != null && claims.issuedAt > nowSeconds + 300L) {
-                     LOGGER.at(Level.WARNING).log("Identity token issued in the future (iat: %d, now: %d)", claims.issuedAt, nowSeconds);
+                     LOGGER.at(Level.WARNING)
+                        .log("Identity token issued in the future (iat: %d, now: %d). Token: %s", claims.issuedAt, nowSeconds, claims.toLogSummary());
                      return null;
                   } else if (claims.getSubjectAsUUID() == null) {
-                     LOGGER.at(Level.WARNING).log("Identity token has invalid or missing subject UUID");
+                     LOGGER.at(Level.WARNING).log("Identity token has invalid or missing subject UUID. Token: %s", claims.toLogSummary());
                      return null;
                   } else {
-                     LOGGER.at(Level.INFO).log("Identity token validated successfully for user %s (UUID: %s)", claims.username, claims.subject);
+                     LOGGER.at(Level.INFO).log("Identity token validated successfully for user %s. Token: %s", claims.username, claims.toLogSummary());
                      return claims;
                   }
                }
@@ -471,27 +475,30 @@ public class JWTValidator {
                claims.notBefore = claimsSet.getNotBeforeTime() != null ? claimsSet.getNotBeforeTime().toInstant().getEpochSecond() : null;
                claims.scope = claimsSet.getStringClaim("scope");
                if (!this.expectedIssuer.equals(claims.issuer)) {
-                  LOGGER.at(Level.WARNING).log("Invalid session token issuer: expected %s, got %s", this.expectedIssuer, claims.issuer);
+                  LOGGER.at(Level.WARNING)
+                     .log("Invalid session token issuer: expected %s, got %s. Token: %s", this.expectedIssuer, claims.issuer, claims.toLogSummary());
                   return null;
                } else {
                   long nowSeconds = Instant.now().getEpochSecond();
                   if (claims.expiresAt == null) {
-                     LOGGER.at(Level.WARNING).log("Session token missing expiration claim");
+                     LOGGER.at(Level.WARNING).log("Session token missing expiration claim. Token: %s", claims.toLogSummary());
                      return null;
                   } else if (nowSeconds >= claims.expiresAt + 300L) {
-                     LOGGER.at(Level.WARNING).log("Session token expired (exp: %d, now: %d)", claims.expiresAt, nowSeconds);
+                     LOGGER.at(Level.WARNING).log("Session token expired (exp: %d, now: %d). Token: %s", claims.expiresAt, nowSeconds, claims.toLogSummary());
                      return null;
                   } else if (claims.notBefore != null && nowSeconds < claims.notBefore - 300L) {
-                     LOGGER.at(Level.WARNING).log("Session token not yet valid (nbf: %d, now: %d)", claims.notBefore, nowSeconds);
+                     LOGGER.at(Level.WARNING)
+                        .log("Session token not yet valid (nbf: %d, now: %d). Token: %s", claims.notBefore, nowSeconds, claims.toLogSummary());
                      return null;
                   } else if (claims.issuedAt != null && claims.issuedAt > nowSeconds + 300L) {
-                     LOGGER.at(Level.WARNING).log("Session token issued in the future (iat: %d, now: %d)", claims.issuedAt, nowSeconds);
+                     LOGGER.at(Level.WARNING)
+                        .log("Session token issued in the future (iat: %d, now: %d). Token: %s", claims.issuedAt, nowSeconds, claims.toLogSummary());
                      return null;
                   } else if (claims.getSubjectAsUUID() == null) {
-                     LOGGER.at(Level.WARNING).log("Session token has invalid or missing subject UUID");
+                     LOGGER.at(Level.WARNING).log("Session token has invalid or missing subject UUID. Token: %s", claims.toLogSummary());
                      return null;
                   } else {
-                     LOGGER.at(Level.INFO).log("Session token validated successfully (UUID: %s)", claims.subject);
+                     LOGGER.at(Level.INFO).log("Session token validated successfully. Token: %s", claims.toLogSummary());
                      return claims;
                   }
                }
@@ -544,6 +551,11 @@ public class JWTValidator {
 
          return false;
       }
+
+      @Nonnull
+      public String toLogSummary() {
+         return JWTValidator.TokenClaimsLogFormatter.format(this.issuer, null, this.subject, this.scope, this.issuedAt, this.expiresAt, this.notBefore, null);
+      }
    }
 
    public static class JWTClaims {
@@ -551,7 +563,6 @@ public class JWTValidator {
       public String audience;
       public String subject;
       public String username;
-      public String ipAddress;
       public Long issuedAt;
       public Long expiresAt;
       public Long notBefore;
@@ -568,6 +579,13 @@ public class JWTValidator {
                return null;
             }
          }
+      }
+
+      @Nonnull
+      public String toLogSummary() {
+         return JWTValidator.TokenClaimsLogFormatter.format(
+            this.issuer, this.audience, this.subject, null, this.issuedAt, this.expiresAt, this.notBefore, this.certificateFingerprint
+         );
       }
    }
 
@@ -605,6 +623,73 @@ public class JWTValidator {
          }
 
          return false;
+      }
+
+      @Nonnull
+      public String toLogSummary() {
+         return JWTValidator.TokenClaimsLogFormatter.format(this.issuer, null, this.subject, this.scope, this.issuedAt, this.expiresAt, this.notBefore, null);
+      }
+   }
+
+   static final class TokenClaimsLogFormatter {
+      private TokenClaimsLogFormatter() {
+      }
+
+      @Nonnull
+      static String format(
+         @Nullable String issuer,
+         @Nullable String audience,
+         @Nullable String subject,
+         @Nullable String scope,
+         @Nullable Long iat,
+         @Nullable Long exp,
+         @Nullable Long nbf,
+         @Nullable String certificateFingerprint
+      ) {
+         long now = Instant.now().getEpochSecond();
+         StringBuilder sb = new StringBuilder();
+         sb.append("iss=").append(issuer == null ? "null" : issuer);
+         if (audience != null) {
+            sb.append(", aud=").append(audience);
+         }
+
+         sb.append(", sub=").append(subject == null ? "null" : subject);
+         if (scope != null) {
+            sb.append(", scope=").append(scope);
+         }
+
+         sb.append(", iat=").append(formatInstant(iat));
+         sb.append(", exp=").append(formatInstantWithDelta(exp, now));
+         if (nbf != null) {
+            sb.append(", nbf=").append(formatInstant(nbf));
+         }
+
+         if (iat != null && exp != null) {
+            sb.append(", lifetime=").append(exp - iat).append("s");
+         }
+
+         if (certificateFingerprint != null) {
+            String prefix = certificateFingerprint.length() > 12 ? certificateFingerprint.substring(0, 12) + "..." : certificateFingerprint;
+            sb.append(", cnf=").append(prefix);
+         }
+
+         return sb.toString();
+      }
+
+      @Nonnull
+      private static String formatInstant(@Nullable Long unixSeconds) {
+         return unixSeconds == null ? "null" : Instant.ofEpochSecond(unixSeconds).toString();
+      }
+
+      @Nonnull
+      private static String formatInstantWithDelta(@Nullable Long unixSeconds, long nowSeconds) {
+         if (unixSeconds == null) {
+            return "null";
+         } else {
+            long delta = unixSeconds - nowSeconds;
+            String sign = delta >= 0L ? "+" : "";
+            return Instant.ofEpochSecond(unixSeconds) + " (" + sign + delta + "s)";
+         }
       }
    }
 }

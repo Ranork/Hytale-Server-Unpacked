@@ -3,7 +3,7 @@ package com.hypixel.hytale.builtin.mounts;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.protocol.BlockMountType;
 import com.hypixel.hytale.protocol.MountController;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
@@ -16,7 +16,7 @@ public class MountedComponent implements Component<EntityStore> {
    private Ref<ChunkStore> mountedToBlock;
    private MountController controller;
    private BlockMountType blockMountType;
-   private Vector3f attachmentOffset = new Vector3f(0.0F, 0.0F, 0.0F);
+   private Rotation3f attachmentOffset = new Rotation3f(0.0F, 0.0F, 0.0F);
    private long mountStartMs;
    private boolean isNetworkOutdated = true;
 
@@ -24,14 +24,14 @@ public class MountedComponent implements Component<EntityStore> {
       return MountPlugin.getInstance().getMountedComponentType();
    }
 
-   public MountedComponent(Ref<EntityStore> mountedToEntity, Vector3f attachmentOffset, MountController controller) {
+   public MountedComponent(Ref<EntityStore> mountedToEntity, Rotation3f attachmentOffset, MountController controller) {
       this.mountedToEntity = mountedToEntity;
       this.attachmentOffset = attachmentOffset;
       this.controller = controller;
       this.mountStartMs = System.currentTimeMillis();
    }
 
-   public MountedComponent(Ref<ChunkStore> mountedToBlock, Vector3f attachmentOffset, BlockMountType blockMountType) {
+   public MountedComponent(Ref<ChunkStore> mountedToBlock, Rotation3f attachmentOffset, BlockMountType blockMountType) {
       this.mountedToBlock = mountedToBlock;
       this.attachmentOffset = attachmentOffset;
       this.controller = MountController.BlockMount;
@@ -49,7 +49,7 @@ public class MountedComponent implements Component<EntityStore> {
       return this.mountedToBlock;
    }
 
-   public Vector3f getAttachmentOffset() {
+   public Rotation3f getAttachmentOffset() {
       return this.attachmentOffset;
    }
 

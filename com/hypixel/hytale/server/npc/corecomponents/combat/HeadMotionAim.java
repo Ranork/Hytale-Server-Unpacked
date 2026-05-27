@@ -5,9 +5,8 @@ import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.shape.Box;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.server.core.entity.entities.ProjectileComponent;
 import com.hypixel.hytale.server.core.modules.debug.DebugUtils;
 import com.hypixel.hytale.server.core.modules.entity.component.BoundingBox;
@@ -33,6 +32,8 @@ import java.util.EnumSet;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugFlagsChangeListener {
    public static final double MIN_RANGED_AIMING_DISTANCE = 4.0;
@@ -84,11 +85,11 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
       if (sensorInfo != null && sensorInfo.hasPosition() && sensorInfo.getPositionProvider() != null) {
          Transform lookVec = TargetUtil.getLook(ref, componentAccessor);
          Vector3d lookPosition = lookVec.getPosition();
-         Vector3f lookRotation = lookVec.getRotation();
+         Rotation3f lookRotation = lookVec.getRotation();
          IPositionProvider positionProvider = sensorInfo.getPositionProvider();
          positionProvider.providePosition(this.targetPosition);
-         this.startPosition.assign(lookPosition);
-         this.relativeVelocity.assign(Vector3d.ZERO);
+         this.startPosition.set(lookPosition);
+         this.relativeVelocity.zero();
          Ref<EntityStore> targetRef = positionProvider.getTarget();
          BallisticData ballisticData = this.aimingData.getBallisticData();
          Box boundingBox = Box.ZERO;
@@ -104,24 +105,24 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
 
             if (ballisticData != null) {
                if (this.deflection) {
-                  this.relativeVelocity.assign(targetVelocityComponent.getVelocity());
+                  this.relativeVelocity.set(targetVelocityComponent.getVelocity());
                }
             } else {
-               double targetY = this.targetPosition.getY();
-               double startY = this.startPosition.getY();
+               double targetY = this.targetPosition.y();
+               double startY = this.startPosition.y();
                double minY = targetY + boundingBox.getMin().y;
                double maxY = targetY + boundingBox.getMax().y;
                if (minY > startY) {
-                  this.targetPosition.setY(minY);
+                  this.targetPosition.y = minY;
                } else if (maxY < startY) {
-                  this.targetPosition.setY(maxY);
+                  this.targetPosition.y = maxY;
                } else {
-                  this.targetPosition.setY(startY);
+                  this.targetPosition.y = startY;
                }
             }
          }
 
-         boolean isNearTarget = this.startPosition.distanceSquaredTo(this.targetPosition) <= 16.0;
+         boolean isNearTarget = this.startPosition.distanceSquared(this.targetPosition) <= 16.0;
          if (ballisticData != null) {
             this.aimingData.setDepthOffset(ballisticData.getDepthShot(), ballisticData.isPitchAdjustShot());
             if (!isNearTarget) {
@@ -130,12 +131,12 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
                   ballisticData.getVerticalCenterShot(),
                   ballisticData.getHorizontalCenterShot(),
                   ballisticData.getDepthShot(),
-                  lookRotation.getYaw(),
-                  lookRotation.getPitch(),
+                  lookRotation.yaw(),
+                  lookRotation.pitch(),
                   this.startOffset
                );
             } else {
-               this.startOffset.assign(Vector3d.ZERO);
+               this.startOffset.zero();
             }
 
             if (targetRef != null && !targetRef.equals(this.lastTargetReference)) {
@@ -145,16 +146,16 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
 
             if (this.aimingData.isHaveAttacked()) {
                ThreadLocalRandom random = ThreadLocalRandom.current();
-               this.spreadOffset.assign(Vector3d.ZERO);
-               this.targetOffset.assign(Vector3d.ZERO);
+               this.spreadOffset.zero();
+               this.targetOffset.zero();
                if (this.spread > 0.0 && random.nextDouble() > this.hitProbability) {
-                  double spread2 = 2.0 * this.spread * this.startPosition.distanceTo(this.targetPosition) / 10.0;
-                  this.spreadOffset.assign(random.nextDouble() - 0.5, random.nextDouble() - 0.5, random.nextDouble() - 0.5).scale(spread2);
+                  double spread2 = 2.0 * this.spread * this.startPosition.distance(this.targetPosition) / 10.0;
+                  this.spreadOffset.set(random.nextDouble() - 0.5, random.nextDouble() - 0.5, random.nextDouble() - 0.5).mul(spread2);
                } else {
                   double start = 0.1;
                   double end = 0.9;
                   this.targetOffset
-                     .assign(
+                     .set(
                         NPCPhysicsMath.lerp(boundingBox.getMin().x, boundingBox.getMax().x, random.nextDouble(0.1, 0.9)),
                         NPCPhysicsMath.lerp(boundingBox.getMin().y, boundingBox.getMax().y, random.nextDouble(0.1, 0.9)),
                         NPCPhysicsMath.lerp(boundingBox.getMin().z, boundingBox.getMax().z, random.nextDouble(0.1, 0.9))
@@ -171,12 +172,12 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
             this.aimingData.setDepthOffset(0.0, false);
          }
 
-         double x = this.targetPosition.getX() - this.startPosition.getX();
-         double y = this.targetPosition.getY() - this.startPosition.getY();
-         double z = this.targetPosition.getZ() - this.startPosition.getZ();
+         double x = this.targetPosition.x() - this.startPosition.x();
+         double y = this.targetPosition.y() - this.startPosition.y();
+         double z = this.targetPosition.z() - this.startPosition.z();
          if (isNearTarget && ballisticData != null) {
-            float yaw = lookRotation.getYaw();
-            float pitch = lookRotation.getPitch();
+            float yaw = lookRotation.yaw();
+            float pitch = lookRotation.pitch();
             double dotXZ = x * x + z * z;
             if (dotXZ >= 1.0E-4) {
                yaw = PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z));
@@ -202,13 +203,13 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
 
             this.aimingData.setOrientation(yaw, pitch);
             this.aimingData.setTarget(targetRef);
-         } else if (this.aimingData.computeSolution(x, y, z, this.relativeVelocity.getX(), this.relativeVelocity.getY(), this.relativeVelocity.getZ())) {
+         } else if (this.aimingData.computeSolution(x, y, z, this.relativeVelocity.x(), this.relativeVelocity.y(), this.relativeVelocity.z())) {
             this.aimingData.setTarget(targetRef);
          } else {
             double dotXZx = x * x + z * z;
             double dotXYZ = dotXZx + y * y;
-            float yawx = dotXZx >= 1.0E-4 ? PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z)) : lookRotation.getYaw();
-            float pitchx = dotXYZ >= 1.0E-4 ? PhysicsMath.pitchFromDirection(x, y, z) : lookRotation.getPitch();
+            float yawx = dotXZx >= 1.0E-4 ? PhysicsMath.normalizeTurnAngle(PhysicsMath.headingFromDirection(x, z)) : lookRotation.yaw();
+            float pitchx = dotXYZ >= 1.0E-4 ? PhysicsMath.pitchFromDirection(x, y, z) : lookRotation.pitch();
             this.aimingData.setOrientation(yawx, pitchx);
             this.aimingData.setTarget(null);
          }
@@ -221,9 +222,9 @@ public class HeadMotionAim extends HeadMotionBase implements DebugSupport.DebugF
 
             World world = ref.getStore().getExternalData().getWorld();
             DebugUtils.addSphere(world, this.targetPosition, color, 0.5, 0.1F);
-            if (this.startPosition.distanceTo(this.targetPosition) > 1.0E-4) {
+            if (this.startPosition.distance(this.targetPosition) > 1.0E-4) {
                DebugUtils.addArrow(
-                  world, this.startPosition, this.targetPosition.clone().subtract(this.startPosition).setLength(1.0), color, 0.1F, DebugUtils.FLAG_FADE
+                  world, this.startPosition, new Vector3d(this.targetPosition).sub(this.startPosition).normalize(), color, 0.1F, DebugUtils.FLAG_FADE
                );
             }
          }

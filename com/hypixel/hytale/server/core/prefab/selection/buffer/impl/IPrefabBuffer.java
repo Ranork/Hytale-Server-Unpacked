@@ -81,6 +81,8 @@ public interface IPrefabBuffer {
       @Nonnull T var5
    );
 
+   <T> void forEachEntity(@Nonnull IPrefabBuffer.EntityConsumer<T> var1, @Nullable T var2);
+
    <T> void forEachRaw(
       @Nonnull IPrefabBuffer.ColumnPredicate<T> var1,
       @Nonnull IPrefabBuffer.RawBlockConsumer<T> var2,
@@ -96,8 +98,6 @@ public interface IPrefabBuffer {
       @Nullable IPrefabBuffer.EntityPredicate<T> var4,
       @Nullable T var5
    );
-
-   void release();
 
    default <T extends PrefabBufferCall> boolean compare(@Nonnull IPrefabBuffer.BlockComparingPredicate<T> blockComparingPredicate, @Nonnull T t) {
       return this.forEachRaw(

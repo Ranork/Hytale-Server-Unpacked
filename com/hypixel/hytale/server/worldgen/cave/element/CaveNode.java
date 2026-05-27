@@ -2,7 +2,6 @@ package com.hypixel.hytale.server.worldgen.cave.element;
 
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.worldgen.cave.CaveNodeType;
 import com.hypixel.hytale.server.worldgen.cave.shape.CaveNodeShape;
 import com.hypixel.hytale.server.worldgen.util.bounds.IWorldBounds;
@@ -13,6 +12,7 @@ import java.util.List;
 import java.util.function.LongConsumer;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class CaveNode implements CaveElement {
    private final CaveNodeType caveNodeType;

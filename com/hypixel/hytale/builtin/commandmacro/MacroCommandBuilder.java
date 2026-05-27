@@ -7,7 +7,7 @@ import com.hypixel.hytale.assetstore.map.JsonAssetWithMap;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
-import com.hypixel.hytale.server.core.command.system.CommandRegistration;
+import com.hypixel.hytale.codec.validation.Validators;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
@@ -26,7 +26,10 @@ public class MacroCommandBuilder implements JsonAssetWithMap<String, DefaultAsse
       .add()
       .append(new KeyedCodec<>("Aliases", Codec.STRING_ARRAY, false), (builder, aliases) -> builder.aliases = aliases, builder -> builder.aliases)
       .add()
-      .append(new KeyedCodec<>("Description", Codec.STRING, true), (builder, description) -> builder.description = description, builder -> builder.description)
+      .<String>append(
+         new KeyedCodec<>("Description", Codec.STRING, true), (builder, description) -> builder.description = description, builder -> builder.description
+      )
+      .addValidator(Validators.serverLocKeyValidator())
       .add()
       .append(
          new KeyedCodec<>("Parameters", new ArrayCodec<>(MacroCommandParameter.CODEC, MacroCommandParameter[]::new), false),
@@ -36,6 +39,12 @@ public class MacroCommandBuilder implements JsonAssetWithMap<String, DefaultAsse
       .add()
       .append(new KeyedCodec<>("Commands", Codec.STRING_ARRAY, true), (builder, commands) -> builder.commands = commands, builder -> builder.commands)
       .add()
+      .append(
+         new KeyedCodec<>("PermissionGroup", Codec.STRING, false),
+         (builder, permissionGroup) -> builder.permissionGroup = permissionGroup,
+         builder -> builder.permissionGroup
+      )
+      .add()
       .build();
    private String id;
    private String name;
@@ -43,16 +52,34 @@ public class MacroCommandBuilder implements JsonAssetWithMap<String, DefaultAsse
    private String description;
    private MacroCommandParameter[] parameters;
    private String[] commands;
+   private String permissionGroup;
    private AssetExtraInfo.Data data;
 
    @Nullable
-   public static CommandRegistration createAndRegisterCommand(@Nonnull MacroCommandBuilder builder) {
-      if (builder.name == null) {
+   public String[] getPathTokens() {
+      if (this.name == null) {
          return null;
       } else {
-         MacroCommandBase macroCommandBase = new MacroCommandBase(builder.name, builder.aliases, builder.description, builder.parameters, builder.commands);
-         return MacroCommandPlugin.get().getCommandRegistry().registerCommand(macroCommandBase);
+         String trimmed = this.name.strip();
+         if (!trimmed.isEmpty() && trimmed.length() == this.name.length()) {
+            String[] tokens = trimmed.split(" ");
+
+            for (String token : tokens) {
+               if (token.isEmpty()) {
+                  return null;
+               }
+            }
+
+            return tokens;
+         } else {
+            return null;
+         }
       }
+   }
+
+   @Nonnull
+   MacroCommandBase createBase(@Nonnull String leafToken, @Nonnull String fullPath) {
+      return new MacroCommandBase(leafToken, fullPath, this.aliases, this.description, this.parameters, this.commands, this.permissionGroup);
    }
 
    public String getName() {

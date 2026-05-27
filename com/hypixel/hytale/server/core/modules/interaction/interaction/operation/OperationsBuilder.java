@@ -4,7 +4,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.InteractionType;
 import com.hypixel.hytale.protocol.WaitForDataFrom;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
-import com.hypixel.hytale.server.core.entity.LivingEntity;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.InteractionRules;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -56,7 +55,6 @@ public class OperationsBuilder {
       @Override
       public void tick(
          @Nonnull Ref<EntityStore> ref,
-         @Nonnull LivingEntity entity,
          boolean firstRun,
          float time,
          @Nonnull InteractionType type,
@@ -64,13 +62,12 @@ public class OperationsBuilder {
          @Nonnull CooldownHandler cooldownHandler
       ) {
          context.setLabels(this.labels);
-         this.inner.tick(ref, entity, firstRun, time, type, context, cooldownHandler);
+         this.inner.tick(ref, firstRun, time, type, context, cooldownHandler);
       }
 
       @Override
       public void simulateTick(
          @Nonnull Ref<EntityStore> ref,
-         @Nonnull LivingEntity entity,
          boolean firstRun,
          float time,
          @Nonnull InteractionType type,
@@ -78,7 +75,7 @@ public class OperationsBuilder {
          @Nonnull CooldownHandler cooldownHandler
       ) {
          context.setLabels(this.labels);
-         this.inner.simulateTick(ref, entity, firstRun, time, type, context, cooldownHandler);
+         this.inner.simulateTick(ref, firstRun, time, type, context, cooldownHandler);
       }
 
       @Override

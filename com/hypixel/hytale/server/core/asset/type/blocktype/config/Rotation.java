@@ -4,19 +4,25 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.math.Axis;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3iUtil;
 import com.hypixel.hytale.server.core.io.NetworkSerializable;
 import com.hypixel.hytale.server.core.util.FillerBlockUtil;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Quaterniond;
+import org.joml.Vector3d;
+import org.joml.Vector3dc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
+import org.joml.Vector3i;
+import org.joml.Vector3ic;
 
 public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.Rotation> {
-   None(0, com.hypixel.hytale.protocol.Rotation.None, Axis.Z, Vector3i.NEG_Z),
-   Ninety(90, com.hypixel.hytale.protocol.Rotation.Ninety, Axis.X, Vector3i.NEG_X),
-   OneEighty(180, com.hypixel.hytale.protocol.Rotation.OneEighty, Axis.Z, Vector3i.POS_Z),
-   TwoSeventy(270, com.hypixel.hytale.protocol.Rotation.TwoSeventy, Axis.X, Vector3i.POS_X);
+   None(0, com.hypixel.hytale.protocol.Rotation.None, Axis.Z, Vector3iUtil.NEG_Z),
+   Ninety(90, com.hypixel.hytale.protocol.Rotation.Ninety, Axis.X, Vector3iUtil.NEG_X),
+   OneEighty(180, com.hypixel.hytale.protocol.Rotation.OneEighty, Axis.Z, Vector3iUtil.POS_Z),
+   TwoSeventy(270, com.hypixel.hytale.protocol.Rotation.TwoSeventy, Axis.X, Vector3iUtil.POS_X);
 
    public static final Rotation[] VALUES = values();
    public static final Rotation[] NORMAL = new Rotation[]{None, Ninety, OneEighty, TwoSeventy};
@@ -24,9 +30,9 @@ public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.
    private final int degrees;
    private final com.hypixel.hytale.protocol.Rotation packet;
    private final Axis axisOfAlignment;
-   private final Vector3i axisDirection;
+   private final Vector3ic axisDirection;
 
-   private Rotation(int degrees, com.hypixel.hytale.protocol.Rotation packet, Axis axisOfAlignment, Vector3i axisDirection) {
+   private Rotation(int degrees, com.hypixel.hytale.protocol.Rotation packet, Axis axisOfAlignment, Vector3ic axisDirection) {
       this.degrees = degrees;
       this.packet = packet;
       this.axisOfAlignment = axisOfAlignment;
@@ -49,7 +55,7 @@ public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.
       return this.axisOfAlignment;
    }
 
-   public Vector3i getAxisDirection() {
+   public Vector3ic getAxisDirection() {
       return this.axisDirection;
    }
 
@@ -99,30 +105,30 @@ public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.
    @Nonnull
    public Vector3i rotateX(@Nonnull Vector3i in, @Nonnull Vector3i out) {
       return switch (this) {
-         case None -> out.assign(in);
-         case Ninety -> out.assign(in.x, -in.z, in.y);
-         case OneEighty -> out.assign(in.x, -in.y, -in.z);
-         case TwoSeventy -> out.assign(in.x, in.z, -in.y);
+         case None -> out.set(in);
+         case Ninety -> out.set(in.x, -in.z, in.y);
+         case OneEighty -> out.set(in.x, -in.y, -in.z);
+         case TwoSeventy -> out.set(in.x, in.z, -in.y);
       };
    }
 
    @Nonnull
    public Vector3f rotateX(@Nonnull Vector3f in, @Nonnull Vector3f out) {
       return switch (this) {
-         case None -> out.assign(in);
-         case Ninety -> out.assign(in.x, -in.z, in.y);
-         case OneEighty -> out.assign(in.x, -in.y, -in.z);
-         case TwoSeventy -> out.assign(in.x, in.z, -in.y);
+         case None -> out.set(in);
+         case Ninety -> out.set(in.x, -in.z, in.y);
+         case OneEighty -> out.set(in.x, -in.y, -in.z);
+         case TwoSeventy -> out.set(in.x, in.z, -in.y);
       };
    }
 
    @Nonnull
    public Vector3d rotateX(@Nonnull Vector3d in, @Nonnull Vector3d out) {
       return switch (this) {
-         case None -> out.assign(in);
-         case Ninety -> out.assign(in.x, -in.z, in.y);
-         case OneEighty -> out.assign(in.x, -in.y, -in.z);
-         case TwoSeventy -> out.assign(in.x, in.z, -in.y);
+         case None -> out.set(in);
+         case Ninety -> out.set(in.x, -in.z, in.y);
+         case OneEighty -> out.set(in.x, -in.y, -in.z);
+         case TwoSeventy -> out.set(in.x, in.z, -in.y);
       };
    }
 
@@ -148,30 +154,30 @@ public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.
    @Nonnull
    public Vector3i rotateY(@Nonnull Vector3i in, @Nonnull Vector3i out) {
       return switch (this) {
-         case None -> out.assign(in);
-         case Ninety -> out.assign(in.z, in.y, -in.x);
-         case OneEighty -> out.assign(-in.x, in.y, -in.z);
-         case TwoSeventy -> out.assign(-in.z, in.y, in.x);
+         case None -> out.set(in);
+         case Ninety -> out.set(in.z, in.y, -in.x);
+         case OneEighty -> out.set(-in.x, in.y, -in.z);
+         case TwoSeventy -> out.set(-in.z, in.y, in.x);
       };
    }
 
    @Nonnull
    public Vector3f rotateY(@Nonnull Vector3f in, @Nonnull Vector3f out) {
       return switch (this) {
-         case None -> out.assign(in);
-         case Ninety -> out.assign(in.z, in.y, -in.x);
-         case OneEighty -> out.assign(-in.x, in.y, -in.z);
-         case TwoSeventy -> out.assign(-in.z, in.y, in.x);
+         case None -> out.set(in);
+         case Ninety -> out.set(in.z, in.y, -in.x);
+         case OneEighty -> out.set(-in.x, in.y, -in.z);
+         case TwoSeventy -> out.set(-in.z, in.y, in.x);
       };
    }
 
    @Nonnull
    public Vector3d rotateY(@Nonnull Vector3d in, @Nonnull Vector3d out) {
       return switch (this) {
-         case None -> out.assign(in);
-         case Ninety -> out.assign(in.z, in.y, -in.x);
-         case OneEighty -> out.assign(-in.x, in.y, -in.z);
-         case TwoSeventy -> out.assign(-in.z, in.y, in.x);
+         case None -> out.set(in);
+         case Ninety -> out.set(in.z, in.y, -in.x);
+         case OneEighty -> out.set(-in.x, in.y, -in.z);
+         case TwoSeventy -> out.set(-in.z, in.y, in.x);
       };
    }
 
@@ -197,30 +203,30 @@ public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.
    @Nonnull
    public Vector3i rotateZ(@Nonnull Vector3i in, @Nonnull Vector3i out) {
       return switch (this) {
-         case None -> out.assign(in);
-         case Ninety -> out.assign(-in.y, in.x, in.z);
-         case OneEighty -> out.assign(-in.x, -in.y, in.z);
-         case TwoSeventy -> out.assign(in.y, -in.x, in.z);
+         case None -> out.set(in);
+         case Ninety -> out.set(-in.y, in.x, in.z);
+         case OneEighty -> out.set(-in.x, -in.y, in.z);
+         case TwoSeventy -> out.set(in.y, -in.x, in.z);
       };
    }
 
    @Nonnull
    public Vector3f rotateZ(@Nonnull Vector3f in, @Nonnull Vector3f out) {
       return switch (this) {
-         case None -> out.assign(in);
-         case Ninety -> out.assign(-in.y, in.x, in.z);
-         case OneEighty -> out.assign(-in.x, -in.y, in.z);
-         case TwoSeventy -> out.assign(in.y, -in.x, in.z);
+         case None -> out.set(in);
+         case Ninety -> out.set(-in.y, in.x, in.z);
+         case OneEighty -> out.set(-in.x, -in.y, in.z);
+         case TwoSeventy -> out.set(in.y, -in.x, in.z);
       };
    }
 
    @Nonnull
    public Vector3d rotateZ(@Nonnull Vector3d in, @Nonnull Vector3d out) {
       return switch (this) {
-         case None -> out.assign(in);
-         case Ninety -> out.assign(-in.y, in.x, in.z);
-         case OneEighty -> out.assign(-in.x, -in.y, in.z);
-         case TwoSeventy -> out.assign(in.y, -in.x, in.z);
+         case None -> out.set(in);
+         case Ninety -> out.set(-in.y, in.x, in.z);
+         case OneEighty -> out.set(-in.x, -in.y, in.z);
+         case TwoSeventy -> out.set(in.y, -in.x, in.z);
       };
    }
 
@@ -256,72 +262,79 @@ public enum Rotation implements NetworkSerializable<com.hypixel.hytale.protocol.
    }
 
    @Nonnull
-   public static Vector3i rotate(@Nonnull Vector3i vector3i, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch) {
-      Vector3i rotated = vector3i.clone();
+   public static Vector3i rotate(@Nonnull Vector3ic vector3i, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch) {
+      Vector3i rotated = new Vector3i(vector3i);
       rotationPitch.rotatePitch(rotated, rotated);
       rotationYaw.rotateYaw(rotated, rotated);
       return rotated;
    }
 
    @Nonnull
-   public static Vector3i rotate(@Nonnull Vector3i vector3i, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      Vector3i rotated = rotate(vector3i, rotationYaw, rotationPitch);
-      rotationRoll.rotateRoll(rotated, rotated);
-      return rotated;
+   public static Vector3i rotate(@Nonnull Vector3ic vector3i, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      Vector3i vector = new Vector3i(vector3i);
+      applyRotationTo(vector, rotationYaw, rotationPitch, rotationRoll);
+      return vector;
    }
 
    @Nonnull
-   public static Vector3f rotate(@Nonnull Vector3f vector3f, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      Vector3f rotated = vector3f.clone();
-      rotationPitch.rotatePitch(rotated, rotated);
-      rotationYaw.rotateYaw(rotated, rotated);
-      rotationRoll.rotateRoll(rotated, rotated);
-      return rotated;
-   }
-
-   @Nonnull
-   public static Vector3d rotate(@Nonnull Vector3d vector3d, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      Vector3d rotated = vector3d.clone();
+   public static Vector3f rotate(@Nonnull Vector3fc vector3f, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      Vector3f rotated = new Vector3f(vector3f);
+      rotationRoll.rotateZ(rotated, rotated);
       rotationPitch.rotateX(rotated, rotated);
       rotationYaw.rotateY(rotated, rotated);
+      return rotated;
+   }
+
+   @Nonnull
+   public static Vector3d rotate(@Nonnull Vector3dc vector3d, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      Vector3d rotated = new Vector3d(vector3d);
       rotationRoll.rotateZ(rotated, rotated);
+      rotationPitch.rotateX(rotated, rotated);
+      rotationYaw.rotateY(rotated, rotated);
       return rotated;
    }
 
    public static void applyRotationTo(@Nonnull Vector3i vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationRoll.rotateZ(vector, vector);
       rotationPitch.rotateX(vector, vector);
       rotationYaw.rotateY(vector, vector);
-      rotationRoll.rotateZ(vector, vector);
    }
 
    public static void applyRotationTo(@Nonnull Vector3f vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationRoll.rotateZ(vector, vector);
       rotationPitch.rotateX(vector, vector);
       rotationYaw.rotateY(vector, vector);
-      rotationRoll.rotateZ(vector, vector);
+   }
+
+   public static void applyRotationTo(
+      @Nonnull Rotation3f rotation, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll
+   ) {
+      Rotation3f thisRotation = new Rotation3f((float)rotationPitch.getRadians(), (float)rotationYaw.getRadians(), (float)rotationRoll.getRadians());
+      thisRotation.mul(rotation.getQuaternion(new Quaterniond()), rotation);
    }
 
    public static void applyRotationTo(@Nonnull Vector3d vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
+      rotationRoll.rotateZ(vector, vector);
       rotationPitch.rotateX(vector, vector);
       rotationYaw.rotateY(vector, vector);
-      rotationRoll.rotateZ(vector, vector);
    }
 
    public static void undoRotationTo(@Nonnull Vector3i vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      rotationRoll.toInverse().rotateZ(vector, vector);
       rotationYaw.toInverse().rotateY(vector, vector);
       rotationPitch.toInverse().rotateX(vector, vector);
+      rotationRoll.toInverse().rotateZ(vector, vector);
    }
 
    public static void undoRotationTo(@Nonnull Vector3f vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      rotationRoll.toInverse().rotateZ(vector, vector);
       rotationYaw.toInverse().rotateY(vector, vector);
       rotationPitch.toInverse().rotateX(vector, vector);
+      rotationRoll.toInverse().rotateZ(vector, vector);
    }
 
    public static void undoRotationTo(@Nonnull Vector3d vector, @Nonnull Rotation rotationYaw, @Nonnull Rotation rotationPitch, @Nonnull Rotation rotationRoll) {
-      rotationRoll.toInverse().rotateZ(vector, vector);
       rotationYaw.toInverse().rotateY(vector, vector);
       rotationPitch.toInverse().rotateX(vector, vector);
+      rotationRoll.toInverse().rotateZ(vector, vector);
    }
 
    public Rotation toInverse() {

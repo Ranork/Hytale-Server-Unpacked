@@ -20,8 +20,7 @@ import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
 import com.hypixel.hytale.math.util.TrigMathUtil;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3i;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock;
@@ -37,6 +36,8 @@ import java.util.UUID;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3i;
 
 public class TreasureMapObjectiveTask extends ObjectiveTask {
    @Nonnull
@@ -212,10 +213,10 @@ public class TreasureMapObjectiveTask extends ObjectiveTask {
          double angle = Math.random() * (float) (Math.PI * 2);
          float radius = MathUtil.randomFloat(chestConfig.getMinRadius(), chestConfig.getMaxRadius());
          Vector3d objectivePosition = objective.getPosition(componentAccessor);
-         Vector3d position = objectivePosition.clone().floor();
+         Vector3d position = new Vector3d(objectivePosition).floor();
          position.add(radius * TrigMathUtil.cos(angle), 0.0, radius * TrigMathUtil.sin(angle));
          position.y = world.getChunk(ChunkUtil.indexChunkFromBlock(position.x, position.z)).getHeight(MathUtil.floor(position.x), MathUtil.floor(position.z));
-         conditionPosition = chestConfig.getWorldLocationProvider().runCondition(world, position.toVector3i());
+         conditionPosition = chestConfig.getWorldLocationProvider().runCondition(world, Vector3dUtil.toVector3i(position));
       }
 
       return conditionPosition;

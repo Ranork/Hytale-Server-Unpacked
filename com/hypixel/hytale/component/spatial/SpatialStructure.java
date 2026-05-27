@@ -1,9 +1,9 @@
 package com.hypixel.hytale.component.spatial;
 
-import com.hypixel.hytale.math.vector.Vector3d;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public interface SpatialStructure<T> {
    int size();

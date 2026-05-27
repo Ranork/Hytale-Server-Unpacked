@@ -1,5 +1,6 @@
 package com.hypixel.hytale.server.core.cosmetics;
 
+import java.util.Arrays;
 import javax.annotation.Nonnull;
 import org.bson.BsonDocument;
 
@@ -20,6 +21,6 @@ public class PlayerSkinGradient extends PlayerSkinTintColor {
    @Nonnull
    @Override
    public String toString() {
-      return "PlayerSkinGradient{texture='" + this.texture + "', id='" + this.id + "', baseColor='" + this.baseColor + "'}";
+      return "PlayerSkinGradient{texture='" + this.texture + "', id='" + this.id + "', baseColor=" + Arrays.toString((Object[])this.baseColor) + "}";
    }
 }

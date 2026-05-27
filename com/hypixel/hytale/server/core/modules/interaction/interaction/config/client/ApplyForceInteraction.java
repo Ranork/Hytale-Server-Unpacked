@@ -13,8 +13,8 @@ import com.hypixel.hytale.component.spatial.SpatialResource;
 import com.hypixel.hytale.component.spatial.SpatialStructure;
 import com.hypixel.hytale.math.range.FloatRange;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.math.vector.Rotation3f;
+import com.hypixel.hytale.math.vector.Vector3dUtil;
 import com.hypixel.hytale.protocol.AppliedForce;
 import com.hypixel.hytale.protocol.ApplyForceState;
 import com.hypixel.hytale.protocol.ChangeVelocityType;
@@ -43,6 +43,8 @@ import java.util.Arrays;
 import java.util.List;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
+import org.joml.Vector3f;
 
 public class ApplyForceInteraction extends SimpleInteraction {
    @Nonnull
@@ -50,7 +52,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
          ApplyForceInteraction.class, ApplyForceInteraction::new, SimpleInteraction.CODEC
       )
       .documentation("Applies a force to the user, optionally waiting for a condition to met before continuing.")
-      .<Vector3d>appendInherited(new KeyedCodec<>("Direction", Vector3d.CODEC), (o, i) -> o.forces[0].direction = i.normalize(), o -> null, (o, p) -> {})
+      .<Vector3d>appendInherited(new KeyedCodec<>("Direction", Vector3dUtil.CODEC), (o, i) -> o.forces[0].direction.set(i.normalize()), o -> null, (o, p) -> {})
       .documentation("The direction of the force to apply.")
       .add()
       .<Boolean>appendInherited(new KeyedCodec<>("AdjustVertical", Codec.BOOLEAN), (o, i) -> o.forces[0].adjustVertical = i, o -> null, (o, p) -> {})
@@ -293,11 +295,11 @@ public class ApplyForceInteraction extends SimpleInteraction {
 
          assert velocityComponent != null;
 
-         Vector3f entityHeadRotation = headRotationComponent.getRotation();
+         Rotation3f entityHeadRotation = headRotationComponent.getRotation();
          ChangeVelocityType velocityType = this.changeVelocityType;
 
          for (ApplyForceInteraction.Force force : this.forces) {
-            Vector3d forceDirection = force.direction.clone();
+            Vector3d forceDirection = new Vector3d(force.direction);
             if (force.adjustVertical) {
                float lookX = entityHeadRotation.x;
                if (this.verticalClamp != null) {
@@ -309,7 +311,7 @@ public class ApplyForceInteraction extends SimpleInteraction {
                forceDirection.rotateX(lookX);
             }
 
-            forceDirection.scale(force.force);
+            forceDirection.mul(force.force);
             forceDirection.rotateY(entityHeadRotation.y);
             switch (velocityType) {
                case Add:
@@ -398,7 +400,9 @@ public class ApplyForceInteraction extends SimpleInteraction {
       public static final BuilderCodec<ApplyForceInteraction.Force> CODEC = BuilderCodec.builder(
             ApplyForceInteraction.Force.class, ApplyForceInteraction.Force::new
          )
-         .appendInherited(new KeyedCodec<>("Direction", Vector3d.CODEC), (o, i) -> o.direction = i, o -> o.direction, (o, p) -> o.direction = p.direction)
+         .appendInherited(
+            new KeyedCodec<>("Direction", Vector3dUtil.CODEC), (o, i) -> o.direction.set(i), o -> o.direction, (o, p) -> o.direction.set(p.direction)
+         )
          .documentation("The direction of the force to apply.")
          .addValidator(Validators.nonNull())
          .add()
@@ -416,16 +420,14 @@ public class ApplyForceInteraction extends SimpleInteraction {
          .afterDecode(o -> o.direction.normalize())
          .build();
       @Nonnull
-      private Vector3d direction = Vector3d.UP;
+      private final Vector3d direction = new Vector3d(Vector3dUtil.UP);
       private boolean adjustVertical = false;
       private double force = 1.0;
 
       @Nonnull
       public AppliedForce toPacket() {
          return new AppliedForce(
-            new com.hypixel.hytale.protocol.Vector3f((float)this.direction.x, (float)this.direction.y, (float)this.direction.z),
-            this.adjustVertical,
-            (float)this.force
+            new Vector3f((float)this.direction.x, (float)this.direction.y, (float)this.direction.z), this.adjustVertical, (float)this.force
          );
       }
    }

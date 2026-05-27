@@ -5,7 +5,6 @@ import com.hypixel.hytale.common.util.StringUtil;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.AnimationSlot;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandUtil;
@@ -29,7 +28,7 @@ public class EmoteCommand extends AbstractPlayerCommand {
 
    public EmoteCommand() {
       super("emote", "server.commands.emote.desc");
-      this.setPermissionGroup(GameMode.Adventure);
+      this.setPermissionGroups("hytale:Adventurer");
    }
 
    @Override

@@ -1,8 +1,8 @@
 package com.hypixel.hytale.math.shape;
 
-import com.hypixel.hytale.math.vector.Vector2d;
 import java.util.Random;
 import javax.annotation.Nonnull;
+import org.joml.Vector2d;
 
 public class Triangle2d {
    private Vector2d a;
@@ -117,7 +117,7 @@ public class Triangle2d {
          q = 1.0 - q;
       }
 
-      vec.assign(-this.a.x * (1.0 - p - q) + this.b.x * p + this.c.x * q, -this.a.y * (1.0 - p - q) + this.b.y * p + this.c.y * q);
+      vec.set(-this.a.x * (1.0 - p - q) + this.b.x * p + this.c.x * q, -this.a.y * (1.0 - p - q) + this.b.y * p + this.c.y * q);
       return vec;
    }
 }

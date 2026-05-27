@@ -18,9 +18,8 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.logger.sentry.SkipSentryException;
 import com.hypixel.hytale.math.block.BlockUtil;
 import com.hypixel.hytale.math.util.ChunkUtil;
+import com.hypixel.hytale.math.vector.Rotation3f;
 import com.hypixel.hytale.math.vector.Transform;
-import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.math.vector.Vector3f;
 import com.hypixel.hytale.metrics.ExecutorMetricsRegistry;
 import com.hypixel.hytale.metrics.metric.HistoricMetric;
 import com.hypixel.hytale.protocol.packets.entities.SetEntitySeed;
@@ -54,7 +53,7 @@ import com.hypixel.hytale.server.core.modules.entity.EntityModule;
 import com.hypixel.hytale.server.core.modules.entity.component.HeadRotation;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.modules.entity.player.ChunkTracker;
-import com.hypixel.hytale.server.core.modules.entity.tracker.LegacyEntityTrackerSystems;
+import com.hypixel.hytale.server.core.modules.entity.tracker.EntityTrackerSystems;
 import com.hypixel.hytale.server.core.modules.time.TimeResource;
 import com.hypixel.hytale.server.core.modules.time.WorldTimeResource;
 import com.hypixel.hytale.server.core.prefab.selection.buffer.impl.IPrefabBuffer;
@@ -84,7 +83,7 @@ import com.hypixel.hytale.server.core.util.io.FileUtil;
 import com.hypixel.hytale.server.core.util.thread.TickingThread;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongIterator;
+import it.unimi.dsi.fastutil.longs.LongListIterator;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.awt.Color;
@@ -98,6 +97,7 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -114,6 +114,7 @@ import java.util.function.IntUnaryOperator;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class World extends TickingThread implements Executor, ExecutorMetricsRegistry.ExecutorMetric, ChunkAccessor<WorldChunk>, IWorldChunks, IMessageReceiver {
    public static final float SAVE_INTERVAL = 10.0F;
@@ -165,6 +166,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
    @Nonnull
    private final Map<ClientFeature, Boolean> features = Collections.synchronizedMap(new EnumMap<>(ClientFeature.class));
    private volatile boolean gcHasRun;
+   private final AtomicInteger savingLocks = new AtomicInteger(0);
 
    public World(@Nonnull String name, @Nonnull Path savePath, @Nonnull WorldConfig worldConfig) throws IOException {
       super("WorldThread - " + name);
@@ -687,13 +689,13 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
 
    @Deprecated
    @Nullable
-   public <T extends Entity> T spawnEntity(T entity, @Nonnull Vector3d position, Vector3f rotation) {
+   public <T extends Entity> T spawnEntity(T entity, @Nonnull Vector3d position, Rotation3f rotation) {
       return this.addEntity(entity, position, rotation, AddReason.SPAWN);
    }
 
    @Deprecated
    @Nullable
-   public <T extends Entity> T addEntity(T entity, @Nonnull Vector3d position, @Nullable Vector3f rotation, @Nonnull AddReason reason) {
+   public <T extends Entity> T addEntity(T entity, @Nonnull Vector3d position, @Nullable Rotation3f rotation, @Nonnull AddReason reason) {
       if (!EntityModule.get().isKnown(entity)) {
          throw new IllegalArgumentException("Unknown entity");
       } else if (entity instanceof Player) {
@@ -704,7 +706,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          throw new IllegalStateException("Expected entity to already have its world set to " + this.getName() + " but it has " + entity.getWorld());
       } else if (entity.getReference() != null && entity.getReference().isValid()) {
          throw new IllegalArgumentException("Entity already has a valid EntityReference: " + entity.getReference());
-      } else if (position.getY() < -32.0) {
+      } else if (position.y() < -32.0) {
          throw new IllegalArgumentException("Unable to spawn entity below the world! -32 < " + position);
       } else if (!this.isInThread()) {
          ((HytaleLogger.Api)this.logger.at(Level.WARNING).withCause(new SkipSentryException())).log("Warning addEntity was called off thread!");
@@ -870,7 +872,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
             }
 
             Vector3d spawnPosition = transformComponent.getPosition();
-            long chunkIndex = ChunkUtil.indexChunkFromBlock(spawnPosition.getX(), spawnPosition.getZ());
+            long chunkIndex = ChunkUtil.indexChunkFromBlock(spawnPosition.x(), spawnPosition.z());
             CompletableFuture<Void> loadTargetChunkFuture = this.chunkStore
                .getChunkReferenceAsync(chunkIndex)
                .thenAccept(v -> playerComponent.startClientReadyTimeout());
@@ -881,7 +883,10 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
             );
             CompletableFuture<Void> playerReadyFuture = clientReadyFuture.orTimeout(30L, TimeUnit.SECONDS);
             return CompletableFuture.allOf(setupPlayerFuture, playerReadyFuture, loadTargetChunkFuture)
-               .thenApplyAsync(aVoid -> this.onFinishPlayerJoining(playerComponent, playerRef, packetHandler, event.getJoinMessage()), this)
+               .thenApplyAsync(
+                  aVoid -> this.onFinishPlayerJoining(playerComponent, playerRef, packetHandler, event.getJoinMessage(), event.shouldBroadcastJoinMessage()),
+                  this
+               )
                .exceptionally(
                   throwable -> {
                      ((HytaleLogger.Api)this.logger.at(Level.WARNING).withCause(throwable)).log("Exception when adding player to world!");
@@ -902,7 +907,11 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
 
    @Nonnull
    private PlayerRef onFinishPlayerJoining(
-      @Nonnull Player playerComponent, @Nonnull PlayerRef playerRefComponent, @Nonnull PacketHandler packetHandler, @Nullable Message joinMessage
+      @Nonnull Player playerComponent,
+      @Nonnull PlayerRef playerRefComponent,
+      @Nonnull PacketHandler packetHandler,
+      @Nullable Message joinMessage,
+      boolean shouldBroadcastJoinMessage
    ) {
       TimeResource timeResource = this.entityStore.getStore().getResource(TimeResource.getResourceType());
       float timeDilationModifier = timeResource.getTimeDilationModifier();
@@ -931,7 +940,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
          WorldMapTracker worldMapTracker = playerComponent.getWorldMapTracker();
          worldMapTracker.clear();
          worldMapTracker.sendSettings(world);
-         if (joinMessage != null) {
+         if (shouldBroadcastJoinMessage) {
             PlayerUtil.broadcastMessageToPlayers(playerUuid, joinMessage, store);
          }
 
@@ -969,7 +978,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       PlayerConfigData configData = playerComponent.getPlayerConfigData();
       configData.setWorld(this.name);
       if (clearWorld) {
-         LegacyEntityTrackerSystems.clear(playerComponent, holder);
+         EntityTrackerSystems.clear(holder);
          ChunkTracker chunkTrackerComponent = holder.getComponent(ChunkTracker.getComponentType());
          if (chunkTrackerComponent != null) {
             chunkTrackerComponent.unloadAll(playerRefComponent);
@@ -1054,6 +1063,20 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       return gcHasRun;
    }
 
+   public boolean isSavingLocked() {
+      return this.savingLocks.get() > 0;
+   }
+
+   public void lockSaving() {
+      this.savingLocks.incrementAndGet();
+   }
+
+   public void unlockSaving() {
+      int result = this.savingLocks.decrementAndGet();
+
+      assert result >= 0 : "savingLocks underflow";
+   }
+
    @Override
    public int hashCode() {
       return this.name != null ? this.name.hashCode() : 0;
@@ -1094,7 +1117,7 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
       this.onStart();
       Store<ChunkStore> store = this.chunkStore.getStore();
       StringBuilder tempBuilder = new StringBuilder();
-      LongIterator var6 = this.chunkStore.getLoader().getIndexes().iterator();
+      LongListIterator var6 = this.chunkStore.getLoader().getIndexes().iterator();
 
       while (var6.hasNext()) {
          long index = (Long)var6.next();
@@ -1135,6 +1158,10 @@ public class World extends TickingThread implements Executor, ExecutorMetricsReg
                                  );
                                  if (options.contains(ValidationOption.BLOCK_FILLER)) {
                                     var fetcher = new FillerBlockUtil.FillerFetcher<BlockSection, ChunkStore>() {
+                                       {
+                                          Objects.requireNonNull(World.this);
+                                       }
+
                                        public int getBlock(BlockSection blockSection, ChunkStore chunkStore, int xx, int yx, int zx) {
                                           if (xx >= 0 && yx >= 0 && zx >= 0 && xx < 32 && yx < 32 && zx < 32) {
                                              return blockSection.get(xx, yx, zx);

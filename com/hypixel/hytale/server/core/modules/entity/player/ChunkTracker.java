@@ -13,7 +13,6 @@ import com.hypixel.hytale.logger.HytaleLogger;
 import com.hypixel.hytale.math.iterator.CircleSpiralIterator;
 import com.hypixel.hytale.math.util.ChunkUtil;
 import com.hypixel.hytale.math.util.MathUtil;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.metrics.MetricsRegistry;
 import com.hypixel.hytale.protocol.NetworkChannel;
 import com.hypixel.hytale.protocol.ToClientPacket;
@@ -41,13 +40,14 @@ import java.util.concurrent.locks.StampedLock;
 import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import org.joml.Vector3d;
 
 public class ChunkTracker implements Component<EntityStore> {
    @Nonnull
    public static final MetricsRegistry<ChunkTracker> METRICS_REGISTRY = new MetricsRegistry<ChunkTracker>()
       .register("ViewRadius", tracker -> tracker.chunkViewRadius, Codec.INTEGER)
-      .register("SentViewRadius", tracker -> tracker.sentViewRadius, Codec.INTEGER)
-      .register("HotRadius", tracker -> tracker.hotRadius, Codec.INTEGER)
+      .register("SentViewRadius", tracker -> tracker.sentViewRadiusColumns, Codec.INTEGER)
+      .register("HotRadius", tracker -> tracker.hotRadiusColumns, Codec.INTEGER)
       .register("LoadedChunksCount", ChunkTracker::getLoadedChunksCount, Codec.INTEGER)
       .register("LoadingChunksCount", ChunkTracker::getLoadingChunksCount, Codec.INTEGER)
       .register("MaxChunksPerSecond", ChunkTracker::getMaxChunksPerSecond, Codec.INTEGER)
@@ -70,19 +70,19 @@ public class ChunkTracker implements Component<EntityStore> {
    @Nonnull
    private final StampedLock loadedLock = new StampedLock();
    @Nonnull
-   private final HLongSet loading = new HLongOpenHashSet();
+   private final HLongSet loadingColumns = new HLongOpenHashSet();
    @Nonnull
-   private final HLongSet loaded = new HLongOpenHashSet();
+   private final HLongSet loadedColumns = new HLongOpenHashSet();
    @Nonnull
-   private final HLongSet reload = new HLongOpenHashSet();
+   private final HLongSet reloadColumns = new HLongOpenHashSet();
    private int maxChunksPerSecond;
    private float inverseMaxChunksPerSecond;
    private int maxChunksPerTick;
    private int minLoadedChunksRadius;
    private int maxHotLoadedChunksRadius;
    private float accumulator;
-   private int sentViewRadius;
-   private int hotRadius;
+   private int sentViewRadiusColumns;
+   private int hotRadiusColumns;
    private int lastChunkX;
    private int lastChunkZ;
    private boolean readyForChunks;
@@ -105,8 +105,8 @@ public class ChunkTracker implements Component<EntityStore> {
       long stamp = this.loadedLock.writeLock();
 
       try {
-         this.loading.clear();
-         LongIterator iterator = this.loaded.iterator();
+         this.loadingColumns.clear();
+         LongIterator iterator = this.loadedColumns.iterator();
 
          while (iterator.hasNext()) {
             long chunkIndex = iterator.nextLong();
@@ -115,9 +115,9 @@ public class ChunkTracker implements Component<EntityStore> {
             playerRefComponent.getPacketHandler().writeNoCache(new UnloadChunk(chunkX, chunkZ));
          }
 
-         this.loaded.clear();
-         this.sentViewRadius = 0;
-         this.hotRadius = 0;
+         this.loadedColumns.clear();
+         this.sentViewRadiusColumns = 0;
+         this.hotRadiusColumns = 0;
       } finally {
          this.loadedLock.unlockWrite(stamp);
       }
@@ -127,10 +127,10 @@ public class ChunkTracker implements Component<EntityStore> {
       long stamp = this.loadedLock.writeLock();
 
       try {
-         this.loading.clear();
-         this.loaded.clear();
-         this.sentViewRadius = 0;
-         this.hotRadius = 0;
+         this.loadingColumns.clear();
+         this.loadedColumns.clear();
+         this.sentViewRadiusColumns = 0;
+         this.hotRadiusColumns = 0;
       } finally {
          this.loadedLock.unlockWrite(stamp);
       }
@@ -147,22 +147,24 @@ public class ChunkTracker implements Component<EntityStore> {
          this.transformComponent = transformComponent;
          int chunkViewRadius = this.chunkViewRadius = playerComponent.getViewRadius();
          Vector3d position = transformComponent.getPosition();
-         int chunkX = MathUtil.floor(position.getX()) >> 5;
-         int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+         int chunkX = MathUtil.floor(position.x()) >> 5;
+         int chunkZ = MathUtil.floor(position.z()) >> 5;
          int xDiff = Math.abs(this.lastChunkX - chunkX);
          int zDiff = Math.abs(this.lastChunkZ - chunkZ);
          int chunkMoveDistance = xDiff <= 0 && zDiff <= 0 ? 0 : (int)Math.ceil(Math.sqrt(xDiff * xDiff + zDiff * zDiff));
-         this.sentViewRadius = Math.max(0, this.sentViewRadius - chunkMoveDistance);
-         this.hotRadius = Math.max(0, this.hotRadius - chunkMoveDistance);
+         this.sentViewRadiusColumns = Math.max(0, this.sentViewRadiusColumns - chunkMoveDistance);
+         this.hotRadiusColumns = Math.max(0, this.hotRadiusColumns - chunkMoveDistance);
          this.lastChunkX = chunkX;
          this.lastChunkZ = chunkZ;
-         if (this.sentViewRadius != chunkViewRadius || this.hotRadius != Math.min(this.maxHotLoadedChunksRadius, chunkViewRadius) || !this.reload.isEmpty()) {
-            if (this.sentViewRadius > chunkViewRadius) {
-               this.sentViewRadius = chunkViewRadius;
+         if (this.sentViewRadiusColumns != chunkViewRadius
+            || this.hotRadiusColumns != Math.min(this.maxHotLoadedChunksRadius, chunkViewRadius)
+            || !this.reloadColumns.isEmpty()) {
+            if (this.sentViewRadiusColumns > chunkViewRadius) {
+               this.sentViewRadiusColumns = chunkViewRadius;
             }
 
-            if (this.hotRadius > chunkViewRadius) {
-               this.hotRadius = chunkViewRadius;
+            if (this.hotRadiusColumns > chunkViewRadius) {
+               this.hotRadiusColumns = chunkViewRadius;
             }
 
             World world = commandBuffer.getExternalData().getWorld();
@@ -172,17 +174,17 @@ public class ChunkTracker implements Component<EntityStore> {
             long stamp = this.loadedLock.writeLock();
 
             try {
-               this.loaded.removeIf(ChunkTracker::tryUnloadChunk, minLoadedRadiusSq, chunkX, chunkZ, playerRefComponent, this.loading);
+               this.loadedColumns.removeIf(ChunkTracker::tryUnloadChunk, minLoadedRadiusSq, chunkX, chunkZ, playerRefComponent, this.loadingColumns);
                this.accumulator += dt;
                int toLoad = Math.min((int)(this.maxChunksPerSecond * this.accumulator), this.maxChunksPerTick);
-               int loadingSize = this.loading.size();
+               int loadingSize = this.loadingColumns.size();
                toLoad -= loadingSize;
-               if (!this.reload.isEmpty()) {
-                  LongIterator iterator = this.reload.iterator();
+               if (!this.reloadColumns.isEmpty()) {
+                  LongIterator iterator = this.reloadColumns.iterator();
 
                   while (iterator.hasNext()) {
                      long chunkCoordinates = iterator.nextLong();
-                     if (!chunkStore.isChunkOnBackoff(chunkCoordinates, MAX_FAILURE_BACKOFF_NANOS) && this.loading.add(chunkCoordinates)) {
+                     if (!chunkStore.isChunkOnBackoff(chunkCoordinates, MAX_FAILURE_BACKOFF_NANOS) && this.loadingColumns.add(chunkCoordinates)) {
                         this.tryLoadChunkAsync(chunkStore, playerRefComponent, chunkCoordinates, transformComponent, commandBuffer);
                         iterator.remove();
                         toLoad--;
@@ -191,35 +193,35 @@ public class ChunkTracker implements Component<EntityStore> {
                   }
                }
 
-               if (this.sentViewRadius < minLoadedRadius) {
+               if (this.sentViewRadiusColumns < minLoadedRadius) {
                   boolean areAllLoaded = true;
-                  this.spiralIterator.init(chunkX, chunkZ, this.sentViewRadius, minLoadedRadius);
+                  this.spiralIterator.init(chunkX, chunkZ, this.sentViewRadiusColumns, minLoadedRadius);
 
                   while (toLoad > 0 && this.spiralIterator.hasNext()) {
                      long chunkCoordinates = this.spiralIterator.next();
-                     if (!this.loaded.contains(chunkCoordinates)) {
+                     if (!this.loadedColumns.contains(chunkCoordinates)) {
                         areAllLoaded = false;
-                        if (!chunkStore.isChunkOnBackoff(chunkCoordinates, MAX_FAILURE_BACKOFF_NANOS) && this.loading.add(chunkCoordinates)) {
+                        if (!chunkStore.isChunkOnBackoff(chunkCoordinates, MAX_FAILURE_BACKOFF_NANOS) && this.loadingColumns.add(chunkCoordinates)) {
                            this.tryLoadChunkAsync(chunkStore, playerRefComponent, chunkCoordinates, transformComponent, commandBuffer);
                            toLoad--;
                            this.accumulator = this.accumulator - this.inverseMaxChunksPerSecond;
                         }
                      } else if (areAllLoaded) {
-                        this.sentViewRadius = this.spiralIterator.getCompletedRadius();
+                        this.sentViewRadiusColumns = this.spiralIterator.getCompletedRadius();
                      }
                   }
 
                   if (areAllLoaded) {
-                     this.sentViewRadius = this.spiralIterator.getCompletedRadius();
+                     this.sentViewRadiusColumns = this.spiralIterator.getCompletedRadius();
                   }
                }
             } finally {
                this.loadedLock.unlockWrite(stamp);
             }
 
-            int var28 = Math.min(this.maxHotLoadedChunksRadius, this.sentViewRadius);
-            if (this.hotRadius < var28) {
-               this.spiralIterator.init(chunkX, chunkZ, this.hotRadius, var28);
+            int var28 = Math.min(this.maxHotLoadedChunksRadius, this.sentViewRadiusColumns);
+            if (this.hotRadiusColumns < var28) {
+               this.spiralIterator.init(chunkX, chunkZ, this.hotRadiusColumns, var28);
 
                while (this.spiralIterator.hasNext()) {
                   Ref<ChunkStore> chunkReference = chunkStore.getChunkReference(this.spiralIterator.next());
@@ -234,10 +236,10 @@ public class ChunkTracker implements Component<EntityStore> {
                   }
                }
 
-               this.hotRadius = var28;
+               this.hotRadiusColumns = var28;
             }
 
-            if (this.sentViewRadius == chunkViewRadius) {
+            if (this.sentViewRadiusColumns == chunkViewRadius) {
                this.accumulator = 0.0F;
             }
          }
@@ -249,7 +251,7 @@ public class ChunkTracker implements Component<EntityStore> {
 
       boolean var5;
       try {
-         var5 = this.loaded.contains(indexChunk);
+         var5 = this.loadedColumns.contains(indexChunk);
       } finally {
          this.loadedLock.unlockRead(stamp);
       }
@@ -262,7 +264,7 @@ public class ChunkTracker implements Component<EntityStore> {
          long stamp = this.loadedLock.writeLock();
 
          try {
-            this.reload.add(indexChunk);
+            this.reloadColumns.add(indexChunk);
          } finally {
             this.loadedLock.unlockWrite(stamp);
          }
@@ -274,8 +276,8 @@ public class ChunkTracker implements Component<EntityStore> {
          return false;
       } else {
          Vector3d position = this.transformComponent.getPosition();
-         int chunkX = MathUtil.floor(position.getX()) >> 5;
-         int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+         int chunkX = MathUtil.floor(position.x()) >> 5;
+         int chunkZ = MathUtil.floor(position.z()) >> 5;
          int x = ChunkUtil.xOfChunkIndex(chunkCoordinates);
          int z = ChunkUtil.zOfChunkIndex(chunkCoordinates);
          int minLoadedRadius = Math.max(this.minLoadedChunksRadius, this.chunkViewRadius);
@@ -289,8 +291,8 @@ public class ChunkTracker implements Component<EntityStore> {
          return ChunkTracker.ChunkVisibility.NONE;
       } else {
          Vector3d position = this.transformComponent.getPosition();
-         int chunkX = MathUtil.floor(position.getX()) >> 5;
-         int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+         int chunkX = MathUtil.floor(position.x()) >> 5;
+         int chunkZ = MathUtil.floor(position.z()) >> 5;
          int x = ChunkUtil.xOfChunkIndex(indexChunk);
          int z = ChunkUtil.zOfChunkIndex(indexChunk);
          int xDiff = Math.abs(x - chunkX);
@@ -354,7 +356,7 @@ public class ChunkTracker implements Component<EntityStore> {
 
    public int getLoadedChunksCount() {
       long stamp = this.loadedLock.tryOptimisticRead();
-      int size = this.loaded.size();
+      int size = this.loadedColumns.size();
       if (this.loadedLock.validate(stamp)) {
          return size;
       } else {
@@ -362,7 +364,7 @@ public class ChunkTracker implements Component<EntityStore> {
 
          int var4;
          try {
-            var4 = this.loaded.size();
+            var4 = this.loadedColumns.size();
          } finally {
             this.loadedLock.unlockRead(stamp);
          }
@@ -373,7 +375,7 @@ public class ChunkTracker implements Component<EntityStore> {
 
    public int getLoadingChunksCount() {
       long stamp = this.loadedLock.tryOptimisticRead();
-      int size = this.loading.size();
+      int size = this.loadingColumns.size();
       if (this.loadedLock.validate(stamp)) {
          return size;
       } else {
@@ -381,7 +383,7 @@ public class ChunkTracker implements Component<EntityStore> {
 
          int var4;
          try {
-            var4 = this.loading.size();
+            var4 = this.loadingColumns.size();
          } finally {
             this.loadedLock.unlockRead(stamp);
          }
@@ -403,7 +405,7 @@ public class ChunkTracker implements Component<EntityStore> {
       for (int x = chunkXMin; x <= chunkXMax; x++) {
          for (int z = chunkZMin; z <= chunkZMax; z++) {
             long index = ChunkUtil.indexChunk(x, z);
-            if (this.loaded.contains(index)) {
+            if (this.loadedColumns.contains(index)) {
                ChunkTracker.ChunkVisibility chunkVisibility = this.getChunkVisibility(index);
                switch (chunkVisibility) {
                   case NONE:
@@ -415,7 +417,7 @@ public class ChunkTracker implements Component<EntityStore> {
                   case COLD:
                      sb.append('&');
                }
-            } else if (this.loading.contains(index)) {
+            } else if (this.loadingColumns.contains(index)) {
                sb.append('%');
             } else {
                sb.append(' ');
@@ -438,11 +440,11 @@ public class ChunkTracker implements Component<EntityStore> {
             .monospace(true)
             .param("grid", this.getLoadedChunksGrid())
             .param("viewRadius", this.chunkViewRadius)
-            .param("sentViewRadius", this.sentViewRadius)
-            .param("hotRadius", this.hotRadius)
+            .param("sentViewRadius", this.sentViewRadiusColumns)
+            .param("hotRadius", this.hotRadiusColumns)
             .param("readyForChunks", this.readyForChunks)
-            .param("loaded", this.loaded.size())
-            .param("loading", this.loading.size());
+            .param("loaded", this.loadedColumns.size())
+            .param("loading", this.loadingColumns.size());
       } finally {
          this.loadedLock.unlockRead(stamp);
       }
@@ -461,15 +463,15 @@ public class ChunkTracker implements Component<EntityStore> {
             + "\nView Radius: "
             + this.chunkViewRadius
             + "\nSent View Radius: "
-            + this.sentViewRadius
+            + this.sentViewRadiusColumns
             + "\nHot Radius: "
-            + this.hotRadius
+            + this.hotRadiusColumns
             + "\nReady For Chunks: "
             + this.readyForChunks
             + "\nLoaded: "
-            + this.loaded.size()
+            + this.loadedColumns.size()
             + "\nLoading: "
-            + this.loading.size();
+            + this.loadingColumns.size();
       } finally {
          this.loadedLock.unlockRead(stamp);
       }
@@ -492,10 +494,10 @@ public class ChunkTracker implements Component<EntityStore> {
          long otherStamp = chunkTracker.loadedLock.readLock();
 
          try {
-            this.loading.addAll(chunkTracker.loading);
-            this.loaded.addAll(chunkTracker.loaded);
-            this.reload.addAll(chunkTracker.reload);
-            this.sentViewRadius = 0;
+            this.loadingColumns.addAll(chunkTracker.loadingColumns);
+            this.loadedColumns.addAll(chunkTracker.loadedColumns);
+            this.reloadColumns.addAll(chunkTracker.reloadColumns);
+            this.sentViewRadiusColumns = 0;
          } finally {
             chunkTracker.loadedLock.unlockRead(otherStamp);
          }
@@ -555,8 +557,8 @@ public class ChunkTracker implements Component<EntityStore> {
    ) {
       World world = componentAccessor.getExternalData().getWorld();
       Vector3d position = transformComponent.getPosition();
-      int chunkX = MathUtil.floor(position.getX()) >> 5;
-      int chunkZ = MathUtil.floor(position.getZ()) >> 5;
+      int chunkX = MathUtil.floor(position.x()) >> 5;
+      int chunkZ = MathUtil.floor(position.z()) >> 5;
       int x = ChunkUtil.xOfChunkIndex(chunkIndex);
       int z = ChunkUtil.zOfChunkIndex(chunkIndex);
       boolean isHot = shouldBeVisible(this.maxHotLoadedChunksRadius, chunkX, chunkZ, x, z);
@@ -582,7 +584,7 @@ public class ChunkTracker implements Component<EntityStore> {
             long stamp = this.loadedLock.readLock();
 
             try {
-               if (!this.loading.contains(chunkIndex)) {
+               if (!this.loadingColumns.contains(chunkIndex)) {
                   return CompletableFuture.completedFuture(null);
                }
             } finally {
@@ -594,7 +596,7 @@ public class ChunkTracker implements Component<EntityStore> {
             long stamp = this.loadedLock.writeLock();
 
             try {
-               this.loading.remove(chunkIndex);
+               this.loadingColumns.remove(chunkIndex);
             } finally {
                this.loadedLock.unlockWrite(stamp);
             }
@@ -605,7 +607,7 @@ public class ChunkTracker implements Component<EntityStore> {
          long stamp = this.loadedLock.writeLock();
 
          try {
-            this.loading.remove(chunkIndex);
+            this.loadingColumns.remove(chunkIndex);
          } finally {
             this.loadedLock.unlockWrite(stamp);
          }
@@ -638,12 +640,12 @@ public class ChunkTracker implements Component<EntityStore> {
          long writeStamp = this.loadedLock.writeLock();
 
          try {
-            if (this.loading.remove(chunkIndex)) {
+            if (this.loadingColumns.remove(chunkIndex)) {
                for (int i = 0; i < packets.size(); i++) {
                   playerRefComponent.getPacketHandler().write(packets.get(i));
                }
 
-               this.loaded.add(chunkIndex);
+               this.loadedColumns.add(chunkIndex);
             }
          } finally {
             this.loadedLock.unlockWrite(writeStamp);

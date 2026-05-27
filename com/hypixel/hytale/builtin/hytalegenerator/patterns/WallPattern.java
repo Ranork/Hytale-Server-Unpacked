@@ -3,10 +3,10 @@ package com.hypixel.hytale.builtin.hytalegenerator.patterns;
 import com.hypixel.hytale.builtin.hytalegenerator.bounds.Bounds3i;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
-import com.hypixel.hytale.math.vector.Vector3i;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nonnull;
+import org.joml.Vector3i;
 
 public class WallPattern extends Pattern {
    @Nonnull
@@ -69,7 +69,7 @@ public class WallPattern extends Pattern {
    }
 
    private boolean matches(@Nonnull Pattern.Context context, @Nonnull WallPattern.WallDirection direction) {
-      this.rWallPosition.assign(context.position);
+      this.rWallPosition.set(context.position);
       switch (direction) {
          case N:
             this.rWallPosition.z--;
